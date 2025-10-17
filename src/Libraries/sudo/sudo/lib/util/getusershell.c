@@ -1,0 +1,138 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, June 24, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * This is an open source non-commercial project. Dear PVS-Studio, please check it.
+ * PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+ */
+
+#include <config.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "sudo_compat.h"
+#include "sudo_debug.h"
+#include "sudo_gettext.h"
+#include "sudo_util.h"
+
+static char **allowed_shells, **current_shell;
+static char *default_shells[] = {
+    "/bin/sh",
+    "/bin/ksh",
+    "/bin/ksh93",
+    "/bin/bash",
+    "/bin/dash",
+    "/bin/zsh",
+    "/bin/csh",
+    "/bin/tcsh",
+    NULL
+};
+
+static char **
+read_shells(void)
+{
+    size_t maxshells = 16, nshells = 0;
+    size_t linesize = 0;
+    char *line = NULL;
+    FILE *fp;
+    debug_decl(read_shells, SUDO_DEBUG_UTIL);
+
+    if ((fp = fopen("/etc/shells", "r")) == NULL)
+	goto bad;
+
+    free(allowed_shells);
+    allowed_shells = reallocarray(NULL, maxshells, sizeof(char *));
+    if (allowed_shells == NULL)
+	goto bad;
+
+    while (sudo_parseln(&line, &linesize, NULL, fp, PARSELN_CONT_IGN) != -1) {
+	if (nshells + 1 >= maxshells) {
+	    char **new_shells;
+
+	    new_shells = reallocarray(NULL, maxshells + 16, sizeof(char *));
+	    if (new_shells == NULL)
+		goto bad;
+	    allowed_shells = new_shells;
+	    maxshells += 16;
+	}
+	if ((allowed_shells[nshells] = strdup(line)) == NULL)
+	    goto bad;
+	nshells++;
+    }
+    allowed_shells[nshells] = NULL;
+
+    free(line);
+    fclose(fp);
+    debug_return_ptr(allowed_shells);
+bad:
+    free(line);
+    if (fp != NULL)
+	fclose(fp);
+    while (nshells != 0)
+	free(allowed_shells[--nshells]);
+    free(allowed_shells);
+    allowed_shells = NULL;
+    debug_return_ptr(default_shells);
+}
+
+void
+sudo_setusershell(void)
+{
+    debug_decl(setusershell, SUDO_DEBUG_UTIL);
+
+    current_shell = read_shells();
+
+    debug_return;
+}
+
+void
+sudo_endusershell(void)
+{
+    debug_decl(endusershell, SUDO_DEBUG_UTIL);
+
+    if (allowed_shells != NULL) {
+	char **shell;
+
+	for (shell = allowed_shells; *shell != NULL; shell++)
+	    free(*shell);
+	free(allowed_shells);
+	allowed_shells = NULL;
+    }
+    current_shell = NULL;
+
+    debug_return;
+}
+
+char *
+sudo_getusershell(void)
+{
+    debug_decl(getusershell, SUDO_DEBUG_UTIL);
+
+    if (current_shell == NULL)
+	current_shell = read_shells();
+
+    debug_return_str(*current_shell++);
+}

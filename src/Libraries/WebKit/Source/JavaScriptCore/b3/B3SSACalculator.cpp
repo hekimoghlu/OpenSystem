@@ -1,0 +1,148 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, May 6, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "B3SSACalculator.h"
+
+#if ENABLE(B3_JIT)
+
+#include <wtf/CommaPrinter.h>
+
+namespace JSC { namespace B3 {
+
+void SSACalculator::Variable::dump(PrintStream& out) const
+{
+    out.print("var", m_index);
+}
+
+void SSACalculator::Variable::dumpVerbose(PrintStream& out) const
+{
+    dump(out);
+    if (!m_blocksWithDefs.isEmpty()) {
+        out.print("(defs: "_s);
+        CommaPrinter comma;
+        for (BasicBlock* block : m_blocksWithDefs)
+            out.print(comma, *block);
+        out.print(")"_s);
+    }
+}
+
+void SSACalculator::Def::dump(PrintStream& out) const
+{
+    out.print("def(", *m_variable, ", ", *m_block, ", ", pointerDump(m_value), ")");
+}
+
+SSACalculator::SSACalculator(Procedure& proc)
+    : m_data(proc.size())
+    , m_proc(proc)
+{
+}
+
+SSACalculator::~SSACalculator() = default;
+
+void SSACalculator::reset()
+{
+    m_variables.clear();
+    m_defs.clear();
+    m_phis.clear();
+    for (unsigned blockIndex = m_data.size(); blockIndex--;) {
+        m_data[blockIndex].m_defs.clear();
+        m_data[blockIndex].m_phis.clear();
+    }
+}
+
+SSACalculator::Variable* SSACalculator::newVariable()
+{
+    return &m_variables.alloc(Variable(m_variables.size()));
+}
+
+SSACalculator::Def* SSACalculator::newDef(Variable* variable, BasicBlock* block, Value* value)
+{
+    Def* def = m_defs.add(Def(variable, block, value));
+    auto result = m_data[block].m_defs.add(variable, def);
+    if (result.isNewEntry)
+        variable->m_blocksWithDefs.append(block);
+    else
+        result.iterator->value = def;
+    return def;
+}
+
+SSACalculator::Def* SSACalculator::nonLocalReachingDef(BasicBlock* block, Variable* variable)
+{
+    return reachingDefAtTail(m_dominators->idom(block), variable);
+}
+
+SSACalculator::Def* SSACalculator::reachingDefAtTail(BasicBlock* startingBlock, Variable* variable)
+{
+    for (BasicBlock* block = startingBlock; block; block = m_dominators->idom(block)) {
+        if (Def* def = m_data[block].m_defs.get(variable)) {
+            for (BasicBlock* otherBlock = startingBlock; otherBlock != block; otherBlock = m_dominators->idom(otherBlock))
+                m_data[block].m_defs.add(variable, def);
+            return def;
+        }
+    }
+    return nullptr;
+}
+
+void SSACalculator::dump(PrintStream& out) const
+{
+    out.print("<Variables: ["_s);
+    CommaPrinter comma;
+    for (unsigned i = 0; i < m_variables.size(); ++i) {
+        out.print(comma);
+        m_variables[i].dumpVerbose(out);
+    }
+    out.print("], Defs: ["_s);
+    comma = CommaPrinter();
+    for (Def* def : const_cast<SSACalculator*>(this)->m_defs)
+        out.print(comma, *def);
+    out.print("], Phis: ["_s);
+    comma = CommaPrinter();
+    for (Def* def : const_cast<SSACalculator*>(this)->m_phis)
+        out.print(comma, *def);
+    out.print("], Block data: ["_s);
+    comma = CommaPrinter();
+    for (unsigned blockIndex = 0; blockIndex < m_proc.size(); ++blockIndex) {
+        BasicBlock* block = m_proc[blockIndex];
+        if (!block)
+            continue;
+        
+        out.print(comma, *block, "=>("_s);
+        out.print("Defs: {"_s);
+        CommaPrinter innerComma;
+        for (auto entry : m_data[block].m_defs)
+            out.print(innerComma, *entry.key, "->"_s, *entry.value);
+        out.print("}, Phis: {"_s);
+        innerComma = CommaPrinter();
+        for (Def* def : m_data[block].m_phis)
+            out.print(innerComma, *def);
+        out.print("})"_s);
+    }
+    out.print("]>"_s);
+}
+
+} } // namespace JSC::B3
+
+#endif // ENABLE(B3_JIT)
+

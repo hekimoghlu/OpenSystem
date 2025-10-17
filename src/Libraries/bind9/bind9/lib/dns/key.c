@@ -1,0 +1,199 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, July 25, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id: key.c,v 1.11 2011/10/20 21:20:02 marka Exp $ */
+
+#include <config.h>
+
+#include <stddef.h>
+#include <stdlib.h>
+
+#include <isc/region.h>
+#include <isc/util.h>
+
+#include <dns/keyvalues.h>
+
+#include <dst/dst.h>
+
+#include "dst_internal.h"
+
+isc_uint16_t
+dst_region_computeid(const isc_region_t *source, unsigned int alg) {
+	isc_uint32_t ac;
+	const unsigned char *p;
+	int size;
+
+	REQUIRE(source != NULL);
+	REQUIRE(source->length >= 4);
+
+	p = source->base;
+	size = source->length;
+
+	if (alg == DST_ALG_RSAMD5)
+		return ((p[size - 3] << 8) + p[size - 2]);
+
+	for (ac = 0; size > 1; size -= 2, p += 2)
+		ac += ((*p) << 8) + *(p + 1);
+
+	if (size > 0)
+		ac += ((*p) << 8);
+	ac += (ac >> 16) & 0xffff;
+
+	return ((isc_uint16_t)(ac & 0xffff));
+}
+
+isc_uint16_t
+dst_region_computerid(const isc_region_t *source, unsigned int alg) {
+	isc_uint32_t ac;
+	const unsigned char *p;
+	int size;
+
+	REQUIRE(source != NULL);
+	REQUIRE(source->length >= 4);
+
+	p = source->base;
+	size = source->length;
+
+	if (alg == DST_ALG_RSAMD5)
+		return ((p[size - 3] << 8) + p[size - 2]);
+
+	ac = ((*p) << 8) + *(p + 1);
+	ac |= DNS_KEYFLAG_REVOKE;
+	for (size -= 2, p +=2; size > 1; size -= 2, p += 2)
+		ac += ((*p) << 8) + *(p + 1);
+
+	if (size > 0)
+		ac += ((*p) << 8);
+	ac += (ac >> 16) & 0xffff;
+
+	return ((isc_uint16_t)(ac & 0xffff));
+}
+
+dns_name_t *
+dst_key_name(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_name);
+}
+
+unsigned int
+dst_key_size(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_size);
+}
+
+unsigned int
+dst_key_proto(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_proto);
+}
+
+unsigned int
+dst_key_alg(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_alg);
+}
+
+isc_uint32_t
+dst_key_flags(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_flags);
+}
+
+dns_keytag_t
+dst_key_id(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_id);
+}
+
+dns_keytag_t
+dst_key_rid(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_rid);
+}
+
+dns_rdataclass_t
+dst_key_class(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_class);
+}
+
+isc_boolean_t
+dst_key_iszonekey(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+
+	if ((key->key_flags & DNS_KEYTYPE_NOAUTH) != 0)
+		return (ISC_FALSE);
+	if ((key->key_flags & DNS_KEYFLAG_OWNERMASK) != DNS_KEYOWNER_ZONE)
+		return (ISC_FALSE);
+	if (key->key_proto != DNS_KEYPROTO_DNSSEC &&
+	    key->key_proto != DNS_KEYPROTO_ANY)
+		return (ISC_FALSE);
+	return (ISC_TRUE);
+}
+
+isc_boolean_t
+dst_key_isnullkey(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+
+	if ((key->key_flags & DNS_KEYFLAG_TYPEMASK) != DNS_KEYTYPE_NOKEY)
+		return (ISC_FALSE);
+	if ((key->key_flags & DNS_KEYFLAG_OWNERMASK) != DNS_KEYOWNER_ZONE)
+		return (ISC_FALSE);
+	if (key->key_proto != DNS_KEYPROTO_DNSSEC &&
+	    key->key_proto != DNS_KEYPROTO_ANY)
+		return (ISC_FALSE);
+	return (ISC_TRUE);
+}
+
+void
+dst_key_setbits(dst_key_t *key, isc_uint16_t bits) {
+	unsigned int maxbits;
+	REQUIRE(VALID_KEY(key));
+	if (bits != 0) {
+		RUNTIME_CHECK(dst_key_sigsize(key, &maxbits) == ISC_R_SUCCESS);
+		maxbits *= 8;
+		REQUIRE(bits <= maxbits);
+	}
+	key->key_bits = bits;
+}
+
+isc_uint16_t
+dst_key_getbits(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_bits);
+}
+
+void
+dst_key_setttl(dst_key_t *key, dns_ttl_t ttl) {
+	REQUIRE(VALID_KEY(key));
+	key->key_ttl = ttl;
+}
+
+dns_ttl_t
+dst_key_getttl(const dst_key_t *key) {
+	REQUIRE(VALID_KEY(key));
+	return (key->key_ttl);
+}
+
+/*! \file */

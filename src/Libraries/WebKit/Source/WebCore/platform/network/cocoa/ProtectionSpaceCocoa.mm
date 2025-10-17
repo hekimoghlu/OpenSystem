@@ -1,0 +1,216 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, February 26, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "config.h"
+#import "ProtectionSpaceCocoa.h"
+
+#import <pal/spi/cf/CFNetworkSPI.h>
+#import <wtf/RuntimeApplicationChecks.h>
+
+namespace WebCore {
+
+static ProtectionSpace::ServerType type(NSURLProtectionSpace *space)
+{
+    if ([space isProxy]) {
+        NSString *proxyType = space.proxyType;
+        if ([proxyType isEqualToString:NSURLProtectionSpaceHTTPProxy])
+            return ProtectionSpace::ServerType::ProxyHTTP;
+        if ([proxyType isEqualToString:NSURLProtectionSpaceHTTPSProxy])
+            return ProtectionSpace::ServerType::ProxyHTTPS;
+// FIXME: rdar://144814079
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        if ([proxyType isEqualToString:NSURLProtectionSpaceFTPProxy])
+            return ProtectionSpace::ServerType::ProxyFTP;
+ALLOW_DEPRECATED_DECLARATIONS_END
+        if ([proxyType isEqualToString:NSURLProtectionSpaceSOCKSProxy])
+            return ProtectionSpace::ServerType::ProxySOCKS;
+
+        ASSERT_NOT_REACHED();
+        return ProtectionSpace::ServerType::ProxyHTTP;
+    }
+
+    NSString *protocol = space.protocol;
+    if ([protocol caseInsensitiveCompare:@"http"] == NSOrderedSame)
+        return ProtectionSpace::ServerType::HTTP;
+    if ([protocol caseInsensitiveCompare:@"https"] == NSOrderedSame)
+        return ProtectionSpace::ServerType::HTTPS;
+    if ([protocol caseInsensitiveCompare:@"ftp"] == NSOrderedSame)
+        return ProtectionSpace::ServerType::FTP;
+    if ([protocol caseInsensitiveCompare:@"ftps"] == NSOrderedSame)
+        return ProtectionSpace::ServerType::FTPS;
+
+    ASSERT_NOT_REACHED();
+    return ProtectionSpace::ServerType::HTTP;
+}
+
+static ProtectionSpace::AuthenticationScheme scheme(NSURLProtectionSpace *space)
+{
+    NSString *method = space.authenticationMethod;
+    if ([method isEqualToString:NSURLAuthenticationMethodDefault])
+        return ProtectionSpace::AuthenticationScheme::Default;
+    if ([method isEqualToString:NSURLAuthenticationMethodHTTPBasic])
+        return ProtectionSpace::AuthenticationScheme::HTTPBasic;
+    if ([method isEqualToString:NSURLAuthenticationMethodHTTPDigest])
+        return ProtectionSpace::AuthenticationScheme::HTTPDigest;
+    if ([method isEqualToString:NSURLAuthenticationMethodHTMLForm])
+        return ProtectionSpace::AuthenticationScheme::HTMLForm;
+    if ([method isEqualToString:NSURLAuthenticationMethodNTLM])
+        return ProtectionSpace::AuthenticationScheme::NTLM;
+    if ([method isEqualToString:NSURLAuthenticationMethodNegotiate])
+        return ProtectionSpace::AuthenticationScheme::Negotiate;
+// FIXME: rdar://144814079
+#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
+    if ([method isEqualToString:NSURLAuthenticationMethodClientCertificate])
+        return ProtectionSpace::AuthenticationScheme::ClientCertificateRequested;
+    if ([method isEqualToString:NSURLAuthenticationMethodServerTrust])
+        return ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested;
+#endif
+    if ([method isEqualToString:NSURLAuthenticationMethodOAuth])
+        return ProtectionSpace::AuthenticationScheme::OAuth;
+
+    ASSERT_NOT_REACHED();
+    return ProtectionSpace::AuthenticationScheme::Default;
+}
+
+ProtectionSpace::ProtectionSpace(NSURLProtectionSpace *space)
+    : ProtectionSpace(space.host, space.port, type(space), space.realm, scheme(space))
+{
+    m_nsSpace = space;
+}
+
+ProtectionSpace::ProtectionSpace(const String& host, int port, ServerType serverType, const String& realm, AuthenticationScheme authenticationScheme, std::optional<PlatformData> platformData)
+    : ProtectionSpaceBase(host, port, serverType, realm, authenticationScheme)
+{
+    if (platformData)
+        m_nsSpace = platformData->nsSpace;
+}
+
+NSURLProtectionSpace *ProtectionSpace::nsSpace() const
+{
+    if (m_nsSpace)
+        return m_nsSpace.get();
+
+    NSString *proxyType = nil;
+    NSString *protocol = nil;
+    switch (serverType()) {
+    case ProtectionSpace::ServerType::HTTP:
+        protocol = @"http";
+        break;
+    case ProtectionSpace::ServerType::HTTPS:
+        protocol = @"https";
+        break;
+    case ProtectionSpace::ServerType::FTP:
+        protocol = @"ftp";
+        break;
+    case ProtectionSpace::ServerType::FTPS:
+        protocol = @"ftps";
+        break;
+    case ProtectionSpace::ServerType::ProxyHTTP:
+        proxyType = NSURLProtectionSpaceHTTPProxy;
+        break;
+    case ProtectionSpace::ServerType::ProxyHTTPS:
+        proxyType = NSURLProtectionSpaceHTTPSProxy;
+        break;
+// FIXME: rdar://144814079
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    case ProtectionSpace::ServerType::ProxyFTP:
+        proxyType = NSURLProtectionSpaceFTPProxy;
+        break;
+ALLOW_DEPRECATED_DECLARATIONS_END
+    case ProtectionSpace::ServerType::ProxySOCKS:
+        proxyType = NSURLProtectionSpaceSOCKSProxy;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+  
+    NSString *method = nil;
+    switch (authenticationScheme()) {
+    case ProtectionSpace::AuthenticationScheme::Default:
+        method = NSURLAuthenticationMethodDefault;
+        break;
+    case ProtectionSpace::AuthenticationScheme::HTTPBasic:
+        method = NSURLAuthenticationMethodHTTPBasic;
+        break;
+    case ProtectionSpace::AuthenticationScheme::HTTPDigest:
+        method = NSURLAuthenticationMethodHTTPDigest;
+        break;
+    case ProtectionSpace::AuthenticationScheme::HTMLForm:
+        method = NSURLAuthenticationMethodHTMLForm;
+        break;
+    case ProtectionSpace::AuthenticationScheme::NTLM:
+        method = NSURLAuthenticationMethodNTLM;
+        break;
+    case ProtectionSpace::AuthenticationScheme::Negotiate:
+        method = NSURLAuthenticationMethodNegotiate;
+        break;
+#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
+    case ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested:
+        method = NSURLAuthenticationMethodServerTrust;
+        break;
+    case ProtectionSpace::AuthenticationScheme::ClientCertificateRequested:
+        method = NSURLAuthenticationMethodClientCertificate;
+        break;
+#endif
+    case ProtectionSpace::AuthenticationScheme::OAuth:
+        method = NSURLAuthenticationMethodOAuth;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+    
+    m_nsSpace = adoptNS(proxyType
+        ? [[NSURLProtectionSpace alloc] initWithProxyHost:host() port:port() type:proxyType realm:realm() authenticationMethod:method]
+        : [[NSURLProtectionSpace alloc] initWithHost:host() port:port() protocol:protocol realm:realm() authenticationMethod:method]);
+
+    return m_nsSpace.get();
+}
+
+bool ProtectionSpace::platformCompare(const ProtectionSpace& a, const ProtectionSpace& b)
+{
+    if (!a.m_nsSpace && !b.m_nsSpace)
+        return true;
+
+    return [a.nsSpace() isEqual:b.nsSpace()];
+}
+
+bool ProtectionSpace::receivesCredentialSecurely() const
+{
+    return nsSpace().receivesCredentialSecurely;
+}
+
+bool ProtectionSpace::encodingRequiresPlatformData(NSURLProtectionSpace *space)
+{
+    return space.distinguishedNames || space.serverTrust;
+}
+
+std::optional<ProtectionSpace::PlatformData> ProtectionSpace::getPlatformDataToSerialize() const
+{
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!isInWebProcess());
+    if (encodingRequiresPlatformData())
+        return PlatformData { nsSpace() };
+    return std::nullopt;
+}
+
+} // namespace WebCore

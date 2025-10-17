@@ -1,0 +1,536 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, March 29, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "config.h"
+#import "WKWebViewPrivateForTestingIOS.h"
+
+#if PLATFORM(IOS_FAMILY)
+
+#import "RemoteLayerTreeDrawingAreaProxy.h"
+#import "RemoteLayerTreeViews.h"
+#import "RemoteScrollingCoordinatorProxy.h"
+#import "SystemPreviewController.h"
+#import "UIKitSPI.h"
+#import "WKContentViewInteraction.h"
+#import "WKFullScreenWindowController.h"
+#import "WKWebViewIOS.h"
+#import "WebPageProxy.h"
+#import "WebProcessProxy.h"
+#import "_WKActivatedElementInfoInternal.h"
+#import "_WKTextInputContextInternal.h"
+#import <WebCore/ColorCocoa.h>
+#import <WebCore/ColorSerialization.h>
+#import <WebCore/ElementContext.h>
+#import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <wtf/SortedArrayMap.h>
+#import <wtf/text/MakeString.h>
+#import <wtf/text/TextStream.h>
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/SeparatedLayerAdditions.h>
+#else
+static void dumpSeparatedLayerProperties(TextStream&, CALayer *) { }
+#endif
+#endif
+
+@implementation WKWebView (WKTestingIOS)
+
+- (void)_requestTextInputContextsInRect:(CGRect)rect completionHandler:(void (^)(NSArray<_WKTextInputContext *> *))completionHandler
+{
+    // Adjust returned bounding rects to be in WKWebView coordinates.
+    auto adjustedRect = [self convertRect:rect toView:_contentView.get()];
+    [_contentView _requestTextInputContextsInRect:adjustedRect completionHandler:[weakSelf = WeakObjCPtr<WKWebView>(self), completionHandler = makeBlockPtr(completionHandler)](NSArray<_WKTextInputContext *> *contexts) {
+        auto strongSelf = weakSelf.get();
+        if (!strongSelf || !contexts.count) {
+            completionHandler(@[ ]);
+            return;
+        }
+        auto adjustedContexts = adoptNS([[NSMutableArray alloc] initWithCapacity:contexts.count]);
+        for (_WKTextInputContext *context in contexts) {
+            auto adjustedContext = context._textInputContext;
+            adjustedContext.boundingRect = [strongSelf convertRect:adjustedContext.boundingRect fromView:strongSelf->_contentView.get()];
+            [adjustedContexts addObject:adoptNS([[_WKTextInputContext alloc] _initWithTextInputContext:adjustedContext]).get()];
+        }
+        completionHandler(adjustedContexts.get());
+    }];
+}
+
+- (void)_focusTextInputContext:(_WKTextInputContext *)context placeCaretAt:(CGPoint)point completionHandler:(void (^)(UIResponder<UITextInput> *))completionHandler
+{
+    auto adjustedPoint = [self convertPoint:point toView:_contentView.get()];
+    [_contentView _focusTextInputContext:context placeCaretAt:adjustedPoint completionHandler:completionHandler];
+}
+
+- (void)_willBeginTextInteractionInTextInputContext:(_WKTextInputContext *)context
+{
+    [_contentView _willBeginTextInteractionInTextInputContext:context];
+}
+
+- (void)selectWordBackwardForTesting
+{
+    [_contentView selectWordBackwardForTesting];
+}
+
+- (void)_didFinishTextInteractionInTextInputContext:(_WKTextInputContext *)context
+{
+    [_contentView _didFinishTextInteractionInTextInputContext:context];
+}
+
+- (BOOL)_mayContainEditableElementsInRect:(CGRect)rect
+{
+#if ENABLE(EDITABLE_REGION)
+    return WebKit::mayContainEditableElementsInRect(_contentView.get(), [self convertRect:rect toView:_contentView.get()]);
+#else
+    return NO;
+#endif
+}
+
+- (void)keyboardAccessoryBarNext
+{
+    [_contentView accessoryTab:YES];
+}
+
+- (void)keyboardAccessoryBarPrevious
+{
+    [_contentView accessoryTab:NO];
+}
+
+- (void)dismissFormAccessoryView
+{
+    [_contentView dismissFormAccessoryView];
+}
+
+- (NSArray<NSString *> *)_filePickerAcceptedTypeIdentifiers
+{
+    return [_contentView filePickerAcceptedTypeIdentifiers];
+}
+
+- (void)_dismissFilePicker
+{
+    [_contentView dismissFilePicker];
+}
+
+- (void)setTimePickerValueToHour:(NSInteger)hour minute:(NSInteger)minute
+{
+    [_contentView setTimePickerValueToHour:hour minute:minute];
+}
+
+- (double)timePickerValueHour
+{
+    return [_contentView timePickerValueHour];
+}
+
+- (double)timePickerValueMinute
+{
+    return [_contentView timePickerValueMinute];
+}
+
+- (void)selectFormAccessoryPickerRow:(int)rowIndex
+{
+    [_contentView selectFormAccessoryPickerRow:rowIndex];
+}
+
+- (BOOL)selectFormAccessoryHasCheckedItemAtRow:(long)rowIndex
+{
+    return [_contentView selectFormAccessoryHasCheckedItemAtRow:rowIndex];
+}
+
+- (NSString *)selectFormPopoverTitle
+{
+    return [_contentView selectFormPopoverTitle];
+}
+
+- (void)setSelectedColorForColorPicker:(UIColor *)color
+{
+    [_contentView setSelectedColorForColorPicker:color];
+}
+
+- (void)_selectDataListOption:(int)optionIndex
+{
+    [_contentView _selectDataListOption:optionIndex];
+}
+
+- (BOOL)_isShowingDataListSuggestions
+{
+    return [_contentView isShowingDataListSuggestions];
+}
+
+- (NSString *)textContentTypeForTesting
+{
+    return [_contentView textContentTypeForTesting];
+}
+
+- (NSString *)formInputLabel
+{
+    return [_contentView formInputLabel];
+}
+
+- (CGRect)_inputViewBoundsInWindow
+{
+    return _inputViewBoundsInWindow;
+}
+
+static String allowListedClassToString(UIView *view)
+{
+    static constexpr ComparableASCIILiteral allowedClassesArray[] = {
+        "UIView"_s,
+        "WKBackdropView"_s,
+        "WKCompositingView"_s,
+        "WKContentView"_s,
+        "WKModelView"_s,
+        "WKScrollView"_s,
+        "WKSeparatedImageView"_s,
+        "WKSeparatedModelView"_s,
+        "WKShapeView"_s,
+        "WKSimpleBackdropView"_s,
+        "WKTransformView"_s,
+        "WKUIRemoteView"_s,
+        "WKWebView"_s,
+        "_UILayerHostView"_s,
+    };
+    static constexpr SortedArraySet allowedClasses { allowedClassesArray };
+
+    String classString { NSStringFromClass(view.class) };
+    if (allowedClasses.contains(classString))
+        return classString;
+
+    return "<class not in allowed list of classes>"_s;
+}
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+static bool shouldDumpSeparatedDetails(UIView *view)
+{
+    static constexpr ComparableASCIILiteral deniedClassesArray[] = {
+        "WKCompositingView"_s,
+        "WKSeparatedImageView"_s,
+    };
+    static constexpr SortedArraySet deniedClasses { deniedClassesArray };
+
+    String classString { NSStringFromClass(view.class) };
+    if (deniedClasses.contains(classString))
+        return false;
+
+    return true;
+}
+#endif
+
+static void dumpUIView(TextStream& ts, UIView *view)
+{
+    auto rectToString = [] (auto rect) {
+        return makeString("[x: "_s, rect.origin.x, " y: "_s, rect.origin.y, " width: "_s, rect.size.width, " height: "_s, rect.size.height, ']');
+    };
+
+    auto pointToString = [] (auto point) {
+        return makeString("[x: "_s, point.x, " y: "_s, point.x, ']');
+    };
+
+
+    ts << "view [class: " << allowListedClassToString(view) << "]";
+
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+    if ([view isKindOfClass:[WKBaseScrollView class]]) {
+        ts.dumpProperty("scrolling behavior", makeString([(WKBaseScrollView *)view _scrollingBehavior]));
+
+        auto rects = [(WKBaseScrollView *)view overlayRegionsForTesting];
+        auto overlaysAsStrings = adoptNS([[NSMutableArray alloc] initWithCapacity:rects.size()]);
+        for (auto rect : rects)
+            [overlaysAsStrings addObject:rectToString(CGRect(rect))];
+
+        [overlaysAsStrings sortUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+        for (NSString *overlayAsString in overlaysAsStrings.get())
+            ts.dumpProperty("overlay region", overlayAsString);
+    }
+#endif
+
+    ts.dumpProperty("layer bounds", rectToString(view.layer.bounds));
+    
+    if (view.layer.position.x != 0 || view.layer.position.y != 0)
+        ts.dumpProperty("layer position", pointToString(view.layer.position));
+    
+    if (view.layer.zPosition != 0)
+        ts.dumpProperty("layer zPosition", makeString(view.layer.zPosition));
+    
+    if (view.layer.anchorPoint.x != 0.5 || view.layer.anchorPoint.y != 0.5)
+        ts.dumpProperty("layer anchorPoint", pointToString(view.layer.anchorPoint));
+    
+    if (view.layer.anchorPointZ != 0)
+        ts.dumpProperty("layer anchorPointZ", makeString(view.layer.anchorPointZ));
+
+    if (view.layer.cornerRadius != 0.0)
+        ts.dumpProperty("layer cornerRadius", makeString(view.layer.cornerRadius));
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    if (view.layer.separated) {
+        TextStream::GroupScope scope(ts);
+        ts << "separated";
+        if (shouldDumpSeparatedDetails(view))
+            dumpSeparatedLayerProperties(ts, view.layer);
+    }
+#endif
+
+    if (view.subviews.count > 0) {
+        TextStream::GroupScope scope(ts);
+        ts << "subviews";
+        for (UIView *subview in view.subviews) {
+            TextStream::GroupScope scope(ts);
+            dumpUIView(ts, subview);
+        }
+    }
+}
+
+- (NSString *)_uiViewTreeAsText
+{
+    TextStream ts(TextStream::LineMode::MultipleLine);
+
+    {
+        TextStream::GroupScope scope(ts);
+        ts << "UIView tree root ";
+        dumpUIView(ts, self);
+    }
+
+    return ts.release();
+}
+
+- (NSString *)_scrollbarState:(unsigned long long)rawScrollingNodeID processID:(unsigned long long)processID isVertical:(bool)isVertical
+{
+    std::optional<WebCore::ScrollingNodeID> scrollingNodeID;
+    if (ObjectIdentifier<WebCore::ProcessIdentifierType>::isValidIdentifier(processID) && ObjectIdentifier<WebCore::ScrollingNodeIDType>::isValidIdentifier(rawScrollingNodeID))
+        scrollingNodeID = WebCore::ScrollingNodeID(ObjectIdentifier<WebCore::ScrollingNodeIDType>(rawScrollingNodeID), ObjectIdentifier<WebCore::ProcessIdentifierType>(processID));
+
+    if (_page->scrollingCoordinatorProxy()->rootScrollingNodeID() == scrollingNodeID) {
+        TextStream ts(TextStream::LineMode::MultipleLine);
+        {
+            TextStream::GroupScope scope(ts);
+            ts << ([_scrollView showsHorizontalScrollIndicator] ? ""_s : "none"_s);
+        }
+        return ts.release();
+    }
+    return _page->scrollbarStateForScrollingNodeID(scrollingNodeID, isVertical);
+}
+
+- (NSNumber *)_stableStateOverride
+{
+    // For subclasses to override.
+    return nil;
+}
+
+- (NSDictionary *)_propertiesOfLayerWithID:(unsigned long long)layerID
+{
+    if (!layerID)
+        return nil;
+    CALayer* layer = downcast<WebKit::RemoteLayerTreeDrawingAreaProxy>(*_page->drawingArea()).layerWithIDForTesting({ ObjectIdentifier<WebCore::PlatformLayerIdentifierType>(layerID), _page->legacyMainFrameProcess().coreProcessIdentifier() });
+    if (!layer)
+        return nil;
+
+    return @{
+        @"bounds" : @{
+            @"x" : @(layer.bounds.origin.x),
+            @"y" : @(layer.bounds.origin.x),
+            @"width" : @(layer.bounds.size.width),
+            @"height" : @(layer.bounds.size.height),
+
+        },
+        @"position" : @{
+            @"x" : @(layer.position.x),
+            @"y" : @(layer.position.y),
+        },
+        @"zPosition" : @(layer.zPosition),
+        @"anchorPoint" : @{
+            @"x" : @(layer.anchorPoint.x),
+            @"y" : @(layer.anchorPoint.y),
+        },
+        @"anchorPointZ" : @(layer.anchorPointZ),
+        @"transform" : @{
+            @"m11" : @(layer.transform.m11),
+            @"m12" : @(layer.transform.m12),
+            @"m13" : @(layer.transform.m13),
+            @"m14" : @(layer.transform.m14),
+
+            @"m21" : @(layer.transform.m21),
+            @"m22" : @(layer.transform.m22),
+            @"m23" : @(layer.transform.m23),
+            @"m24" : @(layer.transform.m24),
+
+            @"m31" : @(layer.transform.m31),
+            @"m32" : @(layer.transform.m32),
+            @"m33" : @(layer.transform.m33),
+            @"m34" : @(layer.transform.m34),
+
+            @"m41" : @(layer.transform.m41),
+            @"m42" : @(layer.transform.m42),
+            @"m43" : @(layer.transform.m43),
+            @"m44" : @(layer.transform.m44),
+        },
+        @"sublayerTransform" : @{
+            @"m11" : @(layer.sublayerTransform.m11),
+            @"m12" : @(layer.sublayerTransform.m12),
+            @"m13" : @(layer.sublayerTransform.m13),
+            @"m14" : @(layer.sublayerTransform.m14),
+
+            @"m21" : @(layer.sublayerTransform.m21),
+            @"m22" : @(layer.sublayerTransform.m22),
+            @"m23" : @(layer.sublayerTransform.m23),
+            @"m24" : @(layer.sublayerTransform.m24),
+
+            @"m31" : @(layer.sublayerTransform.m31),
+            @"m32" : @(layer.sublayerTransform.m32),
+            @"m33" : @(layer.sublayerTransform.m33),
+            @"m34" : @(layer.sublayerTransform.m34),
+
+            @"m41" : @(layer.sublayerTransform.m41),
+            @"m42" : @(layer.sublayerTransform.m42),
+            @"m43" : @(layer.sublayerTransform.m43),
+            @"m44" : @(layer.sublayerTransform.m44),
+        },
+
+        @"hidden" : @(layer.hidden),
+        @"doubleSided" : @(layer.doubleSided),
+        @"masksToBounds" : @(layer.masksToBounds),
+        @"contentsScale" : @(layer.contentsScale),
+        @"rasterizationScale" : @(layer.rasterizationScale),
+        @"opaque" : @(layer.opaque),
+        @"opacity" : @(layer.opacity),
+    };
+}
+
+- (void)_doAfterReceivingEditDragSnapshotForTesting:(dispatch_block_t)action
+{
+    [_contentView _doAfterReceivingEditDragSnapshotForTesting:action];
+}
+
+- (CGRect)_dragCaretRect
+{
+#if ENABLE(DRAG_SUPPORT)
+    return _page->currentDragCaretRect();
+#else
+    return CGRectZero;
+#endif
+}
+
+- (BOOL)_isAnimatingDragCancel
+{
+#if ENABLE(DRAG_SUPPORT)
+    return [_contentView isAnimatingDragCancel];
+#else
+    return NO;
+#endif
+}
+
+- (CGRect)_tapHighlightViewRect
+{
+    return [_contentView tapHighlightViewRect];
+}
+
+- (UIGestureRecognizer *)_imageAnalysisGestureRecognizer
+{
+    return [_contentView imageAnalysisGestureRecognizer];
+}
+
+- (UITapGestureRecognizer *)_singleTapGestureRecognizer
+{
+    return [_contentView singleTapGestureRecognizer];
+}
+
+- (BOOL)_isKeyboardScrollingAnimationRunning
+{
+    return [_contentView isKeyboardScrollingAnimationRunning];
+}
+
+- (void)_simulateElementAction:(_WKElementActionType)actionType atLocation:(CGPoint)location
+{
+    [_contentView _simulateElementAction:actionType atLocation:location];
+}
+
+- (void)_simulateLongPressActionAtLocation:(CGPoint)location
+{
+    [_contentView _simulateLongPressActionAtLocation:location];
+}
+
+- (void)_simulateTextEntered:(NSString *)text
+{
+    [_contentView _simulateTextEntered:text];
+}
+
+- (void)_triggerSystemPreviewActionOnElement:(uint64_t)elementID document:(NSString*)documentID page:(uint64_t)pageID
+{
+#if USE(SYSTEM_PREVIEW)
+    if (_page) {
+        if (auto* previewController = _page->systemPreviewController())
+            previewController->triggerSystemPreviewActionWithTargetForTesting(elementID, documentID, pageID);
+    }
+#endif
+}
+
+- (void)_setDeviceOrientationUserPermissionHandlerForTesting:(BOOL (^)())handler
+{
+    Function<bool()> handlerWrapper;
+    if (handler)
+        handlerWrapper = [handler = makeBlockPtr(handler)] { return handler(); };
+    _page->setDeviceOrientationUserPermissionHandlerForTesting(WTFMove(handlerWrapper));
+}
+
+- (void)_setDeviceHasAGXCompilerServiceForTesting
+{
+    if (_page)
+        _page->setDeviceHasAGXCompilerServiceForTesting();
+}
+
+- (void)_resetObscuredInsetsForTesting
+{
+    if (self._haveSetObscuredInsets)
+        [self _resetObscuredInsets];
+}
+
+- (BOOL)_hasResizeAssertion
+{
+#if HAVE(UIKIT_RESIZABLE_WINDOWS)
+    if (!_resizeAssertions.isEmpty())
+        return YES;
+#endif
+    return NO;
+}
+
+- (void)_simulateSelectionStart
+{
+    [_contentView _simulateSelectionStart];
+}
+
++ (void)_resetPresentLockdownModeMessage
+{
+#if ENABLE(LOCKDOWN_MODE_API)
+    [self _clearLockdownModeWarningNeeded];
+#endif
+}
+
+- (void)_doAfterNextVisibleContentRectAndStablePresentationUpdate:(void (^)(void))updateBlock
+{
+    [self _doAfterNextVisibleContentRectUpdate:makeBlockPtr([strongSelf = retainPtr(self), updateBlock = makeBlockPtr(updateBlock)] {
+        [strongSelf _doAfterNextStablePresentationUpdate:updateBlock.get()];
+    }).get()];
+}
+
+@end
+
+#endif // PLATFORM(IOS_FAMILY)

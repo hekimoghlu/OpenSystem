@@ -1,0 +1,109 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, December 10, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#ifndef KTRACE_HELPERS_H
+#define KTRACE_HELPERS_H
+
+#include <darwintest.h>
+#include <ktrace/ktrace.h>
+#include <libproc.h>
+#include <sys/sysctl.h>
+#include <sys/kdebug.h>
+
+static inline void
+reset_ktrace(void)
+{
+	(void)sysctl((int[]){ CTL_KERN, KERN_KDEBUG, KERN_KDREMOVE }, 3,
+	    NULL, 0, NULL, 0);
+	kperf_reset();
+}
+
+static inline void
+start_controlling_ktrace(void)
+{
+	T_SETUPBEGIN;
+
+	int state = 0;
+	size_t statesz = sizeof(state);
+	int ret = sysctlbyname("ktrace.state", &state, &statesz, NULL, 0);
+	T_QUIET; T_ASSERT_POSIX_SUCCESS(ret, "getting ktrace state");
+
+	if (state == 1) {
+		int ownerpid = 0;
+		size_t pidsz = sizeof(ownerpid);
+		ret = sysctlbyname("ktrace.owning_pid", &ownerpid, &pidsz, NULL, 0);
+		T_QUIET; T_ASSERT_POSIX_SUCCESS(ret, "getting owning pid");
+
+		if (ownerpid <= 0) {
+			T_LOG("ktrace is in foreground, but no owner");
+			goto out;
+		}
+
+		char ownername[1024];
+		ret = proc_name(ownerpid, ownername, sizeof(ownername));
+		if (ret == 0) {
+			T_LOG("ktrace is in foreground, but owner (%d) has no name", ownerpid);
+			goto out;
+		}
+
+		T_LOG("ktrace is in foreground, owned by %s, sending SIGKILL", ownername);
+		kill(ownerpid, SIGKILL);
+		usleep(500000);
+
+		ret = proc_name(ownerpid, ownername, sizeof(ownername));
+		T_QUIET; T_ASSERT_EQ(ret, 0, "should have killed ktrace owner");
+	}
+
+out:
+	reset_ktrace();
+	T_ATEND(reset_ktrace);
+	T_SETUPEND;
+}
+
+static inline void
+assert_kdebug_test(kdebug_test_t flavor, const char *msg)
+{
+	size_t size = flavor;
+	int mib[] = { CTL_KERN, KERN_KDEBUG, KERN_KDTEST };
+	T_ASSERT_POSIX_SUCCESS(sysctl(mib, sizeof(mib) / sizeof(mib[0]), NULL,
+	    &size, NULL, 0), "KERN_KDTEST %d: %s", flavor, msg);
+}
+
+static inline uint64_t
+ns_from_abs(ktrace_session_t s, uint64_t abstime)
+{
+	uint64_t ns = 0;
+	int error = ktrace_convert_timestamp_to_nanoseconds(s, abstime, &ns);
+	T_QUIET; T_ASSERT_POSIX_ZERO(error, "convert abstime to nanoseconds");
+	return ns;
+}
+
+static inline uint64_t
+relns_from_abs(ktrace_session_t s, uint64_t abstime)
+{
+	return ns_from_abs(s, abstime - ktrace_get_earliest_timestamp(s));
+}
+
+#endif /* !defined(KTRACE_HELPERS_H) */

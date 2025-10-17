@@ -1,0 +1,81 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, September 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _UAPI_LINUX_VDPA_H_
+#define _UAPI_LINUX_VDPA_H_
+#define VDPA_GENL_NAME "vdpa"
+#define VDPA_GENL_VERSION 0x1
+enum vdpa_command {
+  VDPA_CMD_UNSPEC,
+  VDPA_CMD_MGMTDEV_NEW,
+  VDPA_CMD_MGMTDEV_GET,
+  VDPA_CMD_DEV_NEW,
+  VDPA_CMD_DEV_DEL,
+  VDPA_CMD_DEV_GET,
+  VDPA_CMD_DEV_CONFIG_GET,
+  VDPA_CMD_DEV_VSTATS_GET,
+  VDPA_CMD_DEV_ATTR_SET,
+};
+enum vdpa_attr {
+  VDPA_ATTR_UNSPEC,
+  VDPA_ATTR_PAD = VDPA_ATTR_UNSPEC,
+  VDPA_ATTR_MGMTDEV_BUS_NAME,
+  VDPA_ATTR_MGMTDEV_DEV_NAME,
+  VDPA_ATTR_MGMTDEV_SUPPORTED_CLASSES,
+  VDPA_ATTR_DEV_NAME,
+  VDPA_ATTR_DEV_ID,
+  VDPA_ATTR_DEV_VENDOR_ID,
+  VDPA_ATTR_DEV_MAX_VQS,
+  VDPA_ATTR_DEV_MAX_VQ_SIZE,
+  VDPA_ATTR_DEV_MIN_VQ_SIZE,
+  VDPA_ATTR_DEV_NET_CFG_MACADDR,
+  VDPA_ATTR_DEV_NET_STATUS,
+  VDPA_ATTR_DEV_NET_CFG_MAX_VQP,
+  VDPA_ATTR_DEV_NET_CFG_MTU,
+  VDPA_ATTR_DEV_NEGOTIATED_FEATURES,
+  VDPA_ATTR_DEV_MGMTDEV_MAX_VQS,
+  VDPA_ATTR_DEV_SUPPORTED_FEATURES,
+  VDPA_ATTR_DEV_QUEUE_INDEX,
+  VDPA_ATTR_DEV_VENDOR_ATTR_NAME,
+  VDPA_ATTR_DEV_VENDOR_ATTR_VALUE,
+  VDPA_ATTR_DEV_FEATURES,
+  VDPA_ATTR_DEV_BLK_CFG_CAPACITY,
+  VDPA_ATTR_DEV_BLK_CFG_SIZE_MAX,
+  VDPA_ATTR_DEV_BLK_CFG_BLK_SIZE,
+  VDPA_ATTR_DEV_BLK_CFG_SEG_MAX,
+  VDPA_ATTR_DEV_BLK_CFG_NUM_QUEUES,
+  VDPA_ATTR_DEV_BLK_CFG_PHY_BLK_EXP,
+  VDPA_ATTR_DEV_BLK_CFG_ALIGN_OFFSET,
+  VDPA_ATTR_DEV_BLK_CFG_MIN_IO_SIZE,
+  VDPA_ATTR_DEV_BLK_CFG_OPT_IO_SIZE,
+  VDPA_ATTR_DEV_BLK_CFG_MAX_DISCARD_SEC,
+  VDPA_ATTR_DEV_BLK_CFG_MAX_DISCARD_SEG,
+  VDPA_ATTR_DEV_BLK_CFG_DISCARD_SEC_ALIGN,
+  VDPA_ATTR_DEV_BLK_CFG_MAX_WRITE_ZEROES_SEC,
+  VDPA_ATTR_DEV_BLK_CFG_MAX_WRITE_ZEROES_SEG,
+  VDPA_ATTR_DEV_BLK_READ_ONLY,
+  VDPA_ATTR_DEV_BLK_FLUSH,
+  VDPA_ATTR_MAX,
+};
+#endif

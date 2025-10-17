@@ -1,0 +1,307 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, March 17, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "LayerTreeHostTextureMapper.h"
+
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+
+#include "DrawingArea.h"
+#include "WebPage.h"
+#include <GLES2/gl2.h>
+#include <WebCore/Document.h>
+#include <WebCore/GraphicsContext.h>
+#include <WebCore/GraphicsLayerTextureMapper.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameView.h>
+#include <WebCore/Page.h>
+#include <WebCore/Settings.h>
+#include <WebCore/TextureMapper.h>
+#include <WebCore/TextureMapperLayer.h>
+#include <wtf/TZoneMallocInlines.h>
+
+namespace WebKit {
+using namespace WebCore;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LayerTreeHost);
+
+bool LayerTreeHost::prepareForRendering()
+{
+    if (!enabled())
+        return false;
+
+    if (!m_context)
+        return false;
+
+    if (!m_context->makeContextCurrent())
+        return false;
+
+    return true;
+}
+
+void LayerTreeHost::compositeLayersToContext()
+{
+    IntSize windowSize = flooredIntSize(m_rootLayer->size() * m_webPage.intrinsicDeviceScaleFactor());
+    glViewport(0, 0, windowSize.width(), windowSize.height());
+
+    m_textureMapper->beginPainting();
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer().paint(*m_textureMapper);
+    m_fpsCounter.updateFPSAndDisplay(*m_textureMapper);
+    m_textureMapper->endPainting();
+
+    m_context->swapBuffers();
+}
+
+bool LayerTreeHost::flushPendingLayerChanges()
+{
+    auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(m_webPage.corePage()->mainFrame());
+    if (!localMainFrame)
+        return false;
+    auto* frameView = localMainFrame->view();
+    m_rootLayer->flushCompositingStateForThisLayerOnly();
+    if (!frameView->flushCompositingStateIncludingSubframes())
+        return false;
+
+    if (m_overlayCompositingLayer)
+        m_overlayCompositingLayer->flushCompositingState(FloatRect(FloatPoint(), m_rootLayer->size()));
+
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers(*m_textureMapper);
+    return true;
+}
+
+void LayerTreeHost::layerFlushTimerFired()
+{
+    if (m_isSuspended)
+        return;
+
+    flushAndRenderLayers();
+
+    if (!enabled())
+        return;
+
+    // In case an animation is running, we should flush again soon.
+    if (downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer().descendantsOrSelfHaveRunningAnimations())
+        m_webPage.corePage()->scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
+}
+
+LayerTreeHost::LayerTreeHost(WebPage& webPage)
+    : m_webPage(webPage)
+    , m_layerFlushTimer(*this, &LayerTreeHost::layerFlushTimerFired)
+{
+    m_layerTreeContext.contextID = reinterpret_cast<uint64_t>(this);
+
+    m_rootLayer = GraphicsLayer::create(nullptr, *this);
+    m_rootLayer->setDrawsContent(true);
+    m_rootLayer->setContentsOpaque(true);
+    m_rootLayer->setSize(m_webPage.size());
+    m_rootLayer->setNeedsDisplay();
+#ifndef NDEBUG
+    m_rootLayer->setName(MAKE_STATIC_STRING_IMPL("Root layer"));
+#endif
+    applyDeviceScaleFactor();
+
+    // The creation of the TextureMapper needs an active OpenGL context.
+    m_context = GLContext::create(window(), PlatformDisplay::sharedDisplay());
+
+    if (!m_context)
+        return;
+
+    m_context->makeContextCurrent();
+
+    m_textureMapper = TextureMapper::create();
+}
+
+LayerTreeHost::~LayerTreeHost() = default;
+
+void LayerTreeHost::setLayerTreeStateIsFrozen(bool)
+{
+}
+
+void LayerTreeHost::scheduleLayerFlush()
+{
+    if (!enabled())
+        return;
+
+    if (m_layerFlushTimer.isActive())
+        return;
+
+    m_layerFlushTimer.startOneShot(0_s);
+}
+
+void LayerTreeHost::cancelPendingLayerFlush()
+{
+    m_layerFlushTimer.stop();
+}
+
+void LayerTreeHost::setRootCompositingLayer(WebCore::GraphicsLayer* graphicsLayer)
+{
+    if (m_rootCompositingLayer == graphicsLayer)
+        return;
+
+    m_rootCompositingLayer = graphicsLayer;
+    m_rootLayer->removeAllChildren();
+    if (m_overlayCompositingLayer)
+        m_rootLayer->addChild(*m_overlayCompositingLayer);
+    if (m_rootCompositingLayer)
+        m_rootLayer->addChild(*m_rootCompositingLayer);
+}
+
+void LayerTreeHost::setViewOverlayRootLayer(WebCore::GraphicsLayer* graphicsLayer)
+{
+    if (m_overlayCompositingLayer == graphicsLayer)
+        return;
+
+    m_overlayCompositingLayer = graphicsLayer;
+    m_rootLayer->removeAllChildren();
+    if (m_overlayCompositingLayer)
+        m_rootLayer->addChild(*m_overlayCompositingLayer);
+    if (m_rootCompositingLayer)
+        m_rootLayer->addChild(*m_rootCompositingLayer);
+}
+
+void LayerTreeHost::setNonCompositedContentsNeedDisplay(const WebCore::IntRect& rect)
+{
+    if (!enabled())
+        return;
+    m_rootLayer->setNeedsDisplayInRect(rect);
+    scheduleLayerFlush();
+}
+
+void LayerTreeHost::scrollNonCompositedContents(const WebCore::IntRect& scrollRect)
+{
+    setNonCompositedContentsNeedDisplay(scrollRect);
+}
+
+void LayerTreeHost::flushAndRenderLayers()
+{
+    if (!enabled())
+        return;
+
+    m_webPage.corePage()->isolatedUpdateRendering();
+
+    if (!prepareForRendering())
+        return;
+
+    if (!flushPendingLayerChanges())
+        return;
+
+    compositeLayersToContext();
+}
+
+void LayerTreeHost::forceRepaint()
+{
+    flushAndRenderLayers();
+}
+
+void LayerTreeHost::forceRepaintAsync(CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void LayerTreeHost::sizeDidChange(const WebCore::IntSize& newSize)
+{
+    if (!enabled())
+        return;
+
+    if (m_rootLayer->size() == newSize)
+        return;
+    m_rootLayer->setSize(newSize);
+    applyDeviceScaleFactor();
+
+    scheduleLayerFlush();
+}
+
+void LayerTreeHost::pauseRendering()
+{
+    m_isSuspended = true;
+}
+
+void LayerTreeHost::resumeRendering()
+{
+    m_isSuspended = false;
+}
+
+WebCore::GraphicsLayerFactory* LayerTreeHost::graphicsLayerFactory()
+{
+    return nullptr;
+}
+
+void LayerTreeHost::contentsSizeChanged(const WebCore::IntSize&)
+{
+}
+
+void LayerTreeHost::setIsDiscardable(bool)
+{
+}
+
+void LayerTreeHost::backgroundColorDidChange()
+{
+}
+
+RefPtr<WebCore::DisplayRefreshMonitor> LayerTreeHost::createDisplayRefreshMonitor(WebCore::PlatformDisplayID)
+{
+    return nullptr;
+}
+
+GLNativeWindowType LayerTreeHost::window()
+{
+    return reinterpret_cast<GLNativeWindowType>(m_webPage.nativeWindowHandle());
+}
+
+bool LayerTreeHost::enabled()
+{
+    return window() && m_rootCompositingLayer;
+}
+
+void LayerTreeHost::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& rectToPaint, OptionSet<GraphicsLayerPaintBehavior>)
+{
+    context.save();
+    context.clip(rectToPaint);
+    if (auto* localMainFrame = dynamicDowncast<WebCore::LocalFrame>(m_webPage.corePage()->mainFrame()))
+        localMainFrame->view()->paint(context, enclosingIntRect(rectToPaint));
+    context.restore();
+}
+
+float LayerTreeHost::deviceScaleFactor() const
+{
+    return m_webPage.corePage()->deviceScaleFactor();
+}
+
+void LayerTreeHost::applyDeviceScaleFactor()
+{
+    float intrinsicDeviceScaleFactor = m_webPage.intrinsicDeviceScaleFactor();
+    const FloatSize& size = m_rootLayer->size();
+
+    TransformationMatrix m;
+    m.scale(intrinsicDeviceScaleFactor);
+    // Center view
+    double tx = (size.width() - size.width() / intrinsicDeviceScaleFactor) / 2.0;
+    double ty = (size.height() - size.height() / intrinsicDeviceScaleFactor) / 2.0;
+    m.translate(tx, ty);
+    m_rootLayer->setTransform(m);
+}
+
+} // namespace WebKit
+
+#endif // USE(GRAPHICS_LAYER_TEXTURE_MAPPER)

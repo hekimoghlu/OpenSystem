@@ -1,0 +1,239 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, August 24, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+//
+//  SOSAccountRecovery.c
+//  Security
+//
+
+#include <AssertMacros.h>
+#include "SOSAccountPriv.h"
+#include "SOSCloudKeychainClient.h"
+
+#include "keychain/SecureObjectSync/SOSPeerInfoCollections.h"
+#include <Security/SecureObjectSync/SOSViews.h>
+#include "keychain/SecureObjectSync/SOSAccountTrustClassic+Circle.h"
+#include "keychain/SecureObjectSync/SOSAccountTrustClassic+Expansion.h"
+
+#include "keychain/SecureObjectSync/SOSInternal.h"
+
+#include "keychain/SecureObjectSync/SOSRecoveryKeyBag.h"
+#include "keychain/SecureObjectSync/SOSRingRecovery.h"
+
+CFStringRef kRecoveryRingKey = CFSTR("recoveryKeyBag");
+
+// When a recovery key is harvested from a recovery ring it's sent here
+bool SOSAccountSetRecoveryKeyBagEntry(CFAllocatorRef allocator, SOSAccount* account, SOSRecoveryKeyBagRef rkbg, CFErrorRef *error) {
+    bool result = false;
+    if(rkbg == NULL) {
+        result = SOSAccountClearValue(account, kRecoveryRingKey, error);
+    } else {
+        CFDataRef recoverKeyData = SOSRecoveryKeyBagGetKeyData(rkbg, NULL);
+        if(CFEqualSafe(recoverKeyData, SOSRKNullKey())) {
+            result = SOSAccountClearValue(account, kRecoveryRingKey, error);
+        } else {
+            CFDataRef rkbg_as_data = SOSRecoveryKeyBagCopyEncoded(rkbg, error);
+            result = rkbg_as_data && SOSAccountSetValue(account, kRecoveryRingKey, rkbg_as_data, error);
+            CFReleaseNull(rkbg_as_data);
+        }
+    }
+    return result;
+}
+
+SOSRecoveryKeyBagRef SOSAccountCopyRecoveryKeyBagEntry(CFAllocatorRef allocator, SOSAccount* account, CFErrorRef *error) {
+    SOSRecoveryKeyBagRef retval = NULL;
+    CFDataRef rkbg_as_data = asData(SOSAccountGetValue(account, kRecoveryRingKey, error), error);
+    require_quiet(rkbg_as_data, errOut);
+    retval = SOSRecoveryKeyBagCreateFromData(allocator, rkbg_as_data, error);
+errOut:
+    return retval;
+}
+
+CFDataRef SOSAccountCopyRecoveryPublic(CFAllocatorRef allocator, SOSAccount* account, CFErrorRef *error) {
+    SOSRecoveryKeyBagRef rkbg = SOSAccountCopyRecoveryKeyBagEntry(allocator, account, error);
+    CFDataRef recKey = NULL;
+    require_quiet(rkbg, errOut);
+    CFDataRef tmpKey = SOSRecoveryKeyBagGetKeyData(rkbg, error);
+    require_quiet(tmpKey, errOut);
+    require_quiet(!CFEqualSafe(tmpKey, SOSRKNullKey()), errOut);
+    recKey = CFDataCreateCopy(kCFAllocatorDefault, tmpKey);
+errOut:
+    CFReleaseNull(rkbg);
+    if(!recKey) {
+        if(error && !(*error)) SOSErrorCreate(kSOSErrorNoKey, error, NULL, CFSTR("No recovery key available"));
+    }
+    return recKey;
+}
+
+static bool SOSAccountUpdateRecoveryRing(SOSAccount* account, CFErrorRef *error,
+                                         SOSRingRef (^modify)(SOSRingRef existing, CFErrorRef *error)) {
+    bool result = SOSAccountUpdateNamedRing(account, kSOSRecoveryRing, error, ^SOSRingRef(CFStringRef ringName, CFErrorRef *error) {
+        return SOSRingCreate(ringName, (__bridge CFStringRef)(account.peerID), kSOSRingRecovery, error);
+    }, modify);
+    if(result) {
+        [account setPublicKeyStatus:kSOSKeyRecordedInRing forKey:kSOSRecoveryKeyStatus];
+    }
+    
+    return result;
+}
+
+bool SOSAccountRemoveRecoveryKey(SOSAccount* account, CFErrorRef *error) {
+    return SOSAccountSetRecoveryKey(account, NULL, error);
+}
+
+
+// Recovery Setting From a Local Client goes through here
+bool SOSAccountSetRecoveryKey(SOSAccount* account, CFDataRef pubData, CFErrorRef *error) {
+    __block bool result = false;
+    __block CFErrorRef cfError = NULL;
+    CFDataRef oldRecoveryKey = NULL;
+    SOSRecoveryKeyBagRef rkbg = NULL;
+
+    if(![account isInCircle:error]) {
+        return false;
+    }
+    oldRecoveryKey = SOSAccountCopyRecoveryPublic(kCFAllocatorDefault, account, NULL); // ok to fail here. don't collect error
+
+    CFDataPerformWithHexString(pubData, ^(CFStringRef recoveryKeyString) {
+        CFDataPerformWithHexString(oldRecoveryKey, ^(CFStringRef oldRecoveryKeyString) {
+            secnotice("recovery", "SetRecoveryPublic: %@ from %@", recoveryKeyString, oldRecoveryKeyString);
+        });
+    });
+    CFReleaseNull(oldRecoveryKey);
+
+    rkbg = SOSRecoveryKeyBagCreateForAccount(kCFAllocatorDefault, (__bridge CFTypeRef)account, pubData, NULL);
+    SOSAccountSetRecoveryKeyBagEntry(kCFAllocatorDefault, account, rkbg, NULL);
+    CFErrorRef accountError = NULL;
+    if (!SOSAccountUpdateRecoveryRing(account, &accountError, ^SOSRingRef(SOSRingRef existing, CFErrorRef *error) {
+        SOSRingRef newRing = NULL;
+        CFMutableSetRef peerInfoIDs = CFSetCreateMutableForCFTypes(kCFAllocatorDefault);
+        SOSCircleForEachValidSyncingPeer(account.trust.trustedCircle, account.accountKey, ^(SOSPeerInfoRef peer) {
+            CFSetAddValue(peerInfoIDs, SOSPeerInfoGetPeerID(peer));
+        });
+        SOSRingSetPeerIDs(existing, peerInfoIDs);
+        CFReleaseNull(peerInfoIDs);
+        if(rkbg) {
+            if (SOSRingSetRecoveryKeyBag(existing, account.fullPeerInfo, rkbg, &cfError)) {
+                result = true;
+            } else {
+                secerror("SetRecoveryKey failed at SOSRingSetRecoveryKeyBag #1: %@", cfError);
+            }
+        } else {
+            SOSRecoveryKeyBagRef ringrkbg = SOSRecoveryKeyBagCreateForAccount(kCFAllocatorDefault, (__bridge CFTypeRef)account, SOSRKNullKey(), &cfError);
+            if (ringrkbg != NULL) {
+                if (SOSRingSetRecoveryKeyBag(existing, account.fullPeerInfo, ringrkbg, &cfError)) {
+                    result = true;
+                } else {
+                    secerror("SetRecoveryKey failed at SOSRingSetRecoveryKeyBag #2: %@", cfError);
+                }
+            } else {
+                secerror("SetRecoveryKey failed at SOSRecoveryKeyBagCreateForAccount: %@", cfError);
+            }
+            CFReleaseNull(ringrkbg);
+        }
+        if (result && !SOSRingGenerationSign(existing, NULL, account.trust.fullPeerInfo, &cfError)) {
+            secerror("SetRecoveryKey failed at SOSRingGenerationSign: %@", cfError);
+            result = false;
+        }
+        newRing = CFRetainSafe(existing);
+        return newRing;
+    })) {
+        CFReleaseNull(cfError);
+        cfError = accountError;
+        result = false;
+    }
+    CFReleaseNull(rkbg);
+
+    if(SOSPeerInfoHasBackupKey(account.trust.peerInfo)) {
+        SOSAccountProcessBackupRings(account);
+    }
+
+    if (!result) {
+        // if we're failing and something above failed to give an error - make a generic one.
+        if (cfError == NULL) {
+            SOSErrorCreate(kSOSErrorProcessingFailure, &cfError, NULL, CFSTR("Failed to set Recovery Key"));
+        }
+        secnotice("recovery", "SetRecoveryPublic Failed: %@", cfError);
+        if (error != nil) {
+            *error = cfError;
+        } else {
+            CFReleaseNull(cfError);
+        }
+    }
+    return result;
+}
+
+bool SOSAccountRecoveryKeyIsInBackupAndCurrentInView(SOSAccount* account, CFStringRef viewname) {
+    bool result = false;
+    CFErrorRef bsError = NULL;
+    CFDataRef backupSliceData = NULL;
+    SOSRingRef ring = NULL;
+    SOSBackupSliceKeyBagRef backupSlice = NULL;
+
+    CFDataRef recoveryKeyFromAccount = SOSAccountCopyRecoveryPublic(kCFAllocatorDefault, account, NULL);
+    require_quiet(recoveryKeyFromAccount, errOut);
+
+    CFStringRef ringName = SOSBackupCopyRingNameForView(viewname);
+    ring = [account.trust copyRing:ringName err:&bsError];
+    CFReleaseNull(ringName);
+    
+    require_quiet(ring, errOut);
+    
+    //grab the backup slice from the ring
+    backupSliceData = SOSRingGetPayload(ring, &bsError);
+    require_quiet(backupSliceData, errOut);
+    
+    backupSlice = SOSBackupSliceKeyBagCreateFromData(kCFAllocatorDefault, backupSliceData, &bsError);
+    require_quiet(backupSlice, errOut);
+
+    result = SOSBKSBPrefixedKeyIsInKeyBag(backupSlice, bskbRkbgPrefix, recoveryKeyFromAccount);
+    CFReleaseNull(backupSlice);
+errOut:
+    CFReleaseNull(ring);
+    CFReleaseNull(recoveryKeyFromAccount);
+    
+    if (bsError) {
+        secnotice("backup", "Failed to find BKSB: %@, %@ (%@)", backupSliceData, backupSlice, bsError);
+    }
+    CFReleaseNull(bsError);
+    return result;
+
+}
+
+static void sosRecoveryAlertAndNotify(SOSAccount* account, SOSRecoveryKeyBagRef oldRingRKBG, SOSRecoveryKeyBagRef ringRKBG) {
+    secnotice("recovery", "Recovery Key changed: old %@ new %@", oldRingRKBG, ringRKBG);
+    notify_post(kSOSCCRecoveryKeyChanged); // Does anything consume this notification?
+}
+
+void SOSAccountEnsureRecoveryRing(SOSAccount* account) {
+    dispatch_assert_queue(account.queue);
+
+    static SOSRecoveryKeyBagRef oldRingRKBG = NULL;
+    SOSRecoveryKeyBagRef acctRKBG = SOSAccountCopyRecoveryKeyBagEntry(kCFAllocatorDefault, account, NULL);
+    if(!CFEqualSafe(acctRKBG, oldRingRKBG)) {
+        sosRecoveryAlertAndNotify(account, oldRingRKBG, acctRKBG);
+        CFRetainAssign(oldRingRKBG, acctRKBG);
+    }
+    CFReleaseNull(acctRKBG);
+}

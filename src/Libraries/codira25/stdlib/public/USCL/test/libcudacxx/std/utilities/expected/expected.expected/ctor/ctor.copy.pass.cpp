@@ -1,0 +1,197 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, August 17, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
+//
+//===----------------------------------------------------------------------===//
+
+// constexpr expected(const expected& rhs);
+//
+// Effects: If rhs.has_value() is true, direct-non-list-initializes val with *rhs.
+// Otherwise, direct-non-list-initializes unex with rhs.error().
+//
+// Postconditions: rhs.has_value() == this->has_value().
+//
+// Throws: Any exception thrown by the initialization of val or unex.
+//
+// Remarks: This constructor is defined as deleted unless
+// - is_copy_constructible_v<T> is true and
+// - is_copy_constructible_v<E> is true.
+//
+// This constructor is trivial if
+// - is_trivially_copy_constructible_v<T> is true and
+// - is_trivially_copy_constructible_v<E> is true.
+
+#include <uscl/std/cassert>
+#include <uscl/std/expected>
+#include <uscl/std/type_traits>
+#include <uscl/std/utility>
+
+#include "test_macros.h"
+
+struct NonCopyable
+{
+  NonCopyable(const NonCopyable&) = delete;
+};
+
+struct CopyableNonTrivial
+{
+  int i;
+  __host__ __device__ constexpr CopyableNonTrivial(int ii)
+      : i(ii)
+  {}
+  __host__ __device__ constexpr CopyableNonTrivial(const CopyableNonTrivial& o)
+      : i(o.i)
+  {}
+#if TEST_STD_VER > 2017
+  __host__ __device__ friend constexpr bool operator==(const CopyableNonTrivial&, const CopyableNonTrivial&) = default;
+#else
+  __host__ __device__ friend constexpr bool
+  operator==(const CopyableNonTrivial& lhs, const CopyableNonTrivial& rhs) noexcept
+  {
+    return lhs.i == rhs.i;
+  }
+  __host__ __device__ friend constexpr bool
+  operator!=(const CopyableNonTrivial& lhs, const CopyableNonTrivial& rhs) noexcept
+  {
+    return lhs.i != rhs.i;
+  }
+#endif
+};
+
+// Test: This constructor is defined as deleted unless
+// - is_copy_constructible_v<T> is true and
+// - is_copy_constructible_v<E> is true.
+static_assert(cuda::std::is_copy_constructible_v<cuda::std::expected<int, int>>, "");
+static_assert(cuda::std::is_copy_constructible_v<cuda::std::expected<CopyableNonTrivial, int>>, "");
+static_assert(cuda::std::is_copy_constructible_v<cuda::std::expected<int, CopyableNonTrivial>>, "");
+static_assert(cuda::std::is_copy_constructible_v<cuda::std::expected<CopyableNonTrivial, CopyableNonTrivial>>, "");
+static_assert(!cuda::std::is_copy_constructible_v<cuda::std::expected<NonCopyable, int>>, "");
+static_assert(!cuda::std::is_copy_constructible_v<cuda::std::expected<int, NonCopyable>>, "");
+static_assert(!cuda::std::is_copy_constructible_v<cuda::std::expected<NonCopyable, NonCopyable>>, "");
+
+// Test: This constructor is trivial if
+// - is_trivially_copy_constructible_v<T> is true and
+// - is_trivially_copy_constructible_v<E> is true.
+static_assert(cuda::std::is_trivially_copy_constructible_v<cuda::std::expected<int, int>>, "");
+static_assert(!cuda::std::is_trivially_copy_constructible_v<cuda::std::expected<CopyableNonTrivial, int>>, "");
+static_assert(!cuda::std::is_trivially_copy_constructible_v<cuda::std::expected<int, CopyableNonTrivial>>, "");
+static_assert(
+  !cuda::std::is_trivially_copy_constructible_v<cuda::std::expected<CopyableNonTrivial, CopyableNonTrivial>>, "");
+
+__host__ __device__ TEST_CONSTEXPR_CXX20 bool test()
+{
+  // copy the value non-trivial
+  {
+    const cuda::std::expected<CopyableNonTrivial, int> e1(5);
+    auto e2 = e1;
+    assert(e2.has_value());
+    assert(e2.value().i == 5);
+  }
+
+  // copy the error non-trivial
+  {
+    const cuda::std::expected<int, CopyableNonTrivial> e1(cuda::std::unexpect, 5);
+    auto e2 = e1;
+    assert(!e2.has_value());
+    assert(e2.error().i == 5);
+  }
+
+  // copy the value trivial
+  {
+    const cuda::std::expected<int, int> e1(5);
+    auto e2 = e1;
+    assert(e2.has_value());
+    assert(e2.value() == 5);
+  }
+
+  // copy the error trivial
+  {
+    const cuda::std::expected<int, int> e1(cuda::std::unexpect, 5);
+    auto e2 = e1;
+    assert(!e2.has_value());
+    assert(e2.error() == 5);
+  }
+  return true;
+}
+
+#if TEST_HAS_EXCEPTIONS()
+void test_exceptions()
+{
+  struct Except
+  {};
+
+  struct Throwing
+  {
+    Throwing() = default;
+    Throwing(const Throwing&)
+    {
+      throw Except{};
+    }
+  };
+
+  // throw on copying value
+  {
+    const cuda::std::expected<Throwing, int> e1;
+    try
+    {
+      auto e2 = e1;
+      unused(e2);
+      assert(false);
+    }
+    catch (Except)
+    {}
+  }
+
+  // throw on copying error
+  {
+    const cuda::std::expected<int, Throwing> e1(cuda::std::unexpect);
+    try
+    {
+      auto e2 = e1;
+      unused(e2);
+    }
+    catch (Except)
+    {}
+  }
+}
+#endif // TEST_HAS_EXCEPTIONS()
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 2017 && defined(_CCCL_BUILTIN_ADDRESSOF)
+  static_assert(test(), "");
+#endif // TEST_STD_VER > 2017 && defined(_CCCL_BUILTIN_ADDRESSOF)
+#if TEST_HAS_EXCEPTIONS()
+  NV_IF_TARGET(NV_IS_HOST, (test_exceptions();))
+#endif // TEST_HAS_EXCEPTIONS()
+  return 0;
+}

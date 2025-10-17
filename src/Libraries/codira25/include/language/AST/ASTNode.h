@@ -1,0 +1,170 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, March 29, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===--- ASTNode.h - Codira Language ASTs ------------------------*- C++ -*-===//
+//
+// Copyright (c) NeXTHub Corporation. All rights reserved.
+// DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+//
+// This code is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// version 2 for more details (a copy is included in the LICENSE file that
+// accompanied this code).
+//
+// Author(-s): Tunjay Akbarli
+//
+
+//===----------------------------------------------------------------------===//
+//
+// This file defines the ASTNode, which is a union of Stmt, Expr, Decl,
+// Pattern, TypeRepr, StmtCondition, and CaseLabelItem.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LANGUAGE_AST_AST_NODE_H
+#define LANGUAGE_AST_AST_NODE_H
+
+#include "toolchain/ADT/ArrayRef.h"
+#include "toolchain/ADT/PointerUnion.h"
+#include "language/Basic/Debug.h"
+#include "language/Basic/SourceManager.h"
+#include "language/AST/TypeAlignments.h"
+
+namespace toolchain {
+  class raw_ostream;
+}
+
+namespace language {
+  class Expr;
+  class Stmt;
+  class Decl;
+  class Pattern;
+  class TypeRepr;
+  class DeclContext;
+  class SourceLoc;
+  class SourceRange;
+  class ASTWalker;
+  class StmtConditionElement;
+  class CaseLabelItem;
+  enum class ExprKind : uint8_t;
+  enum class DeclKind : uint8_t;
+  enum class PatternKind : uint8_t;
+  enum class StmtKind;
+
+  struct ASTNode
+      : public toolchain::PointerUnion<Expr *, Stmt *, Decl *, Pattern *, TypeRepr *,
+                                  StmtConditionElement *, CaseLabelItem *> {
+    // Inherit the constructors from PointerUnion.
+    using PointerUnion::PointerUnion;
+
+    // These are needed for lldb.
+    ASTNode(Expr *E) : PointerUnion(E) {}
+    ASTNode(Stmt *S) : PointerUnion(S) {}
+    ASTNode(Decl *D) : PointerUnion(D) {}
+    ASTNode(Pattern *P) : PointerUnion(P) {}
+    ASTNode(TypeRepr *T) : PointerUnion(T) {}
+    ASTNode(StmtConditionElement *S) : PointerUnion(S) {}
+    ASTNode(CaseLabelItem *C) : PointerUnion(C) {}
+
+    SourceRange getSourceRange() const;
+
+    /// Return the location of the start of the statement.
+    SourceLoc getStartLoc() const;
+  
+    /// Return the location of the end of the statement.
+    SourceLoc getEndLoc() const;
+
+    void walk(ASTWalker &Walker);
+    void walk(ASTWalker &&walker) { walk(walker); }
+
+    /// get the underlying entity as a decl context if it is one,
+    /// otherwise, return nullptr;
+    DeclContext *getAsDeclContext() const;
+
+    /// Provides some utilities to decide detailed node kind.
+#define FUNC(T) bool is##T(T##Kind Kind) const;
+    FUNC(Stmt)
+    FUNC(Expr)
+    FUNC(Decl)
+    FUNC(Pattern)
+#undef FUNC
+
+    static inline ASTNode getFromOpaqueValue(void *ptr) {
+      ASTNode result;
+      result.Val = decltype(result.Val)::getFromOpaqueValue(ptr);
+      return result;
+    }
+
+    LANGUAGE_DEBUG_DUMP;
+    void dump(toolchain::raw_ostream &OS, unsigned Indent = 0) const;
+
+    /// Whether the AST node is implicit.
+    bool isImplicit() const;
+
+    friend toolchain::hash_code hash_value(ASTNode N) {
+      return toolchain::hash_value(N.getOpaqueValue());
+    }
+  };
+
+  /// Find the outermost range that \p range was originally generated from.
+  /// Returns an invalid source range if \p range wasn't generated from a macro.
+  SourceRange getUnexpandedMacroRange(const SourceManager &SM,
+                                      SourceRange range);
+
+} // namespace language
+
+namespace toolchain {
+  using language::ASTNode;
+  template <> struct DenseMapInfo<ASTNode> {
+    static inline ASTNode getEmptyKey() {
+      return DenseMapInfo<language::Expr *>::getEmptyKey();
+    }
+    static inline ASTNode getTombstoneKey() {
+      return DenseMapInfo<language::Expr *>::getTombstoneKey();
+    }
+    static unsigned getHashValue(const ASTNode Val) {
+      return DenseMapInfo<void *>::getHashValue(Val.getOpaqueValue());
+    }
+    static bool isEqual(const ASTNode LHS, const ASTNode RHS) {
+      return LHS.getOpaqueValue() == RHS.getOpaqueValue();
+    }
+  };
+
+  // A ASTNode is "pointer like".
+  template <>
+  struct PointerLikeTypeTraits<ASTNode> {
+  public:
+    static inline void *getAsVoidPointer(ASTNode N) {
+      return (void *)N.getOpaqueValue();
+    }
+    static inline ASTNode getFromVoidPointer(void *P) {
+      return ASTNode::getFromOpaqueValue(P);
+    }
+    enum { NumLowBitsAvailable = language::TypeAlignInBits };
+  };
+}
+
+#endif // TOOLCHAIN_LANGUAGE_AST_AST_NODE_H

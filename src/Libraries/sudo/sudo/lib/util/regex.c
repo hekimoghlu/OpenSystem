@@ -1,0 +1,200 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, November 30, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * This is an open source non-commercial project. Dear PVS-Studio, please check it.
+ * PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+ */
+
+#include <config.h>
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <limits.h>
+#include <regex.h>
+
+#include "sudo_compat.h"
+#include "sudo_debug.h"
+#include "sudo_util.h"
+#include "sudo_gettext.h"
+
+static char errbuf[1024];
+
+/*
+ * Parse a number between 0 and INT_MAX, handling escaped digits.
+ * Returns the number on success or -1 on error.
+ * Sets endp to the first non-matching character.
+ */
+static int
+parse_num(const char *str, char **endp)
+{
+    debug_decl(check_pattern, SUDO_DEBUG_UTIL);
+    const unsigned int lastval = INT_MAX / 10;
+    const unsigned int remainder = INT_MAX % 10;
+    unsigned int result = 0;
+    unsigned char ch;
+
+    while ((ch = *str++) != '\0') {
+	if (ch == '\\' && isdigit((unsigned int)str[0]))
+	    ch = *str++;
+	else if (!isdigit(ch))
+	    break;
+	ch -= '0';
+	if (result > lastval || (result == lastval && ch > remainder)) {
+	    result = -1;
+	    break;
+	}
+	result *= 10;
+	result += ch;
+    }
+    *endp = (char *)(str - 1);
+
+    debug_return_int(result);
+}
+
+/*
+ * Check pattern for invalid repetition sequences.
+ * This is implementation-specific behavior, not all regcomp(3) forbid them.
+ * Glibc allows it but uses excessive memory for repeated '+' ops.
+ */
+static int
+check_pattern(const char *pattern)
+{
+    debug_decl(check_pattern, SUDO_DEBUG_UTIL);
+    const char *cp = pattern;
+    int b1, b2 = 0;
+    char ch, *ep, prev = '\0';
+
+    while ((ch = *cp++) != '\0') {
+	switch (ch) {
+	case '\\':
+	    if (*cp != '\0') {
+		/* Skip escaped character. */
+		cp++;
+		prev = '\0';
+		continue;
+	    }
+	    break;
+	case '?':
+	case '*':
+	case '+':
+	    if (prev == '?' || prev == '*' || prev == '+' || prev == '{' ) {
+		/* Invalid repetition operator. */
+		debug_return_int(REG_BADRPT);
+	    }
+	    break;
+	case '{':
+	    /*
+	     * Try to match bound: {[0-9\\]*\?,[0-9\\]*}
+	     * GNU libc supports escaped digits and commas.
+	     */
+	    b1 = parse_num(cp, &ep);
+	    switch (ep[0]) {
+	    case '\\':
+		if (ep[1] != ',')
+		    break;
+		ep++;
+		FALLTHROUGH;
+	    case ',':
+		cp = ep + 1;
+		b2 = parse_num(cp, &ep);
+		break;
+	    }
+	    cp = ep;
+	    if (*cp == '}') {
+		if (b1 < 0 || b1 > 255 || b2 < 0 || b2 > 255) {
+		    /* Invalid bound value. */
+		    debug_return_int(REG_BADBR);
+		}
+		if (prev == '?' || prev == '*' || prev == '+' || prev == '{' ) {
+		    /* Invalid repetition operator. */
+		    debug_return_int(REG_BADRPT);
+		}
+		/* Skip past '}', prev will be set to '{' below */
+		cp++;
+		break;
+	    }
+	    prev = '\0';
+	    continue;
+	}
+	prev = ch;
+    }
+
+    debug_return_int(0);
+}
+
+/*
+ * Wrapper around regcomp() that handles a regex starting with (?i).
+ * Avoid using regex_t in the function args so we don't need to
+ * include regex.h everywhere.
+ */
+bool
+sudo_regex_compile_v1(void *v, const char *pattern, const char **errstr)
+{
+    int errcode, cflags = REG_EXTENDED|REG_NOSUB;
+    regex_t *preg;
+    char *copy = NULL;
+    const char *cp;
+    regex_t rebuf;
+    debug_decl(regex_compile, SUDO_DEBUG_UTIL);
+
+    /* Some callers just want to check the validity of the pattern. */
+    preg = v ? v : &rebuf;
+
+    /* Limit the length of regular expressions to avoid fuzzer issues. */
+    if (strlen(pattern) > 1024) {
+	*errstr = N_("regular expression too large");
+	debug_return_bool(false);
+    }
+
+    /* Check for (?i) to enable case-insensitive matching. */
+    cp = pattern[0] == '^' ? pattern + 1 : pattern;
+    if (strncmp(cp, "(?i)", 4) == 0) {
+	cflags |= REG_ICASE;
+	copy = strdup(pattern + 4);
+	if (copy == NULL) {
+	    *errstr = N_("unable to allocate memory");
+	    debug_return_bool(false);
+	}
+	if (pattern[0] == '^')
+	    copy[0] = '^';
+	pattern = copy;
+    }
+
+    errcode = check_pattern(pattern);
+    if (errcode == 0)
+	errcode = regcomp(preg, pattern, cflags);
+    if (errcode == 0) {
+	if (preg == &rebuf)
+	    regfree(&rebuf);
+    } else {
+        regerror(errcode, preg, errbuf, sizeof(errbuf));
+        *errstr = errbuf;
+    }
+    free(copy);
+
+    debug_return_bool(errcode == 0);
+}

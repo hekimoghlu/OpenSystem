@@ -1,0 +1,166 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, February 20, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * nasmlib.c	library routines for the Netwide Assembler
+ */
+
+#include "compiler.h"
+
+#include "nctype.h"
+
+#include "nasmlib.h"
+#include "error.h"
+#include "nasm.h"               /* For globl.dollarhex */
+
+#define lib_isnumchar(c)    (nasm_isalnum(c) || (c) == '$' || (c) == '_')
+
+void warn_dollar_hex(void)
+{
+    /*!
+     *!number-deprecated-hex [on] $ prefix for hexadecimal is deprecated
+     *!    warns that the \c{$} prefix for hexadecimal numbers is
+     *!    deprecated, due to the syntactic conflict with \c{$} used
+     *!    as a symbol escape prefix. This syntax may be disabled by
+     *!    default in a future version of NASM. Replace \c{$} with \c{0x}
+     *!    to ensure compatibility with future versions.
+     */
+    nasm_warn(WARN_NUMBER_DEPRECATED_HEX,
+              "$ prefix for hexadecimal is deprecated");
+}
+
+int64_t readnum(const char *str, bool *error)
+{
+    const char *r = str, *q;
+    int32_t pradix, sradix, radix;
+    int plen, slen, len;
+    uint64_t result, checklimit;
+    int digit, last;
+    bool warn = false;
+    int sign = 1;
+
+    if (error)
+        *error = true;
+
+    while (nasm_isspace(*r))
+        r++;                    /* find start of number */
+
+    /*
+     * If the number came from make_tok_num (as a result of an %assign), it
+     * might have a '-' built into it (rather than in a preceding token).
+     */
+    if (*r == '-') {
+        r++;
+        sign = -1;
+    }
+
+    q = r;
+
+    while (lib_isnumchar(*q))
+        q++;                    /* find end of number */
+
+    len = q-r;
+    if (!len) {
+	/* Not numeric */
+        return 0;
+    }
+
+    /*
+     * Handle radix formats:
+     *
+     * 0<radix-letter><string>
+     * $<string>		(hexadecimal)
+     * <string><radix-letter>
+     */
+    pradix = sradix = 0;
+    plen = slen = 0;
+
+    if (len > 2 && *r == '0' && (pradix = radix_letter(r[1])) != 0) {
+	plen = 2;
+    } else if (len > 1 && *r == '$' && globl.dollarhex) {
+        /* Warning here would probably duplicate warnings */
+	pradix = 16, plen = 1;
+    }
+
+    if (len > 1 && (sradix = radix_letter(q[-1])) != 0)
+	slen = 1;
+
+    if (pradix > sradix) {
+	radix = pradix;
+	r += plen;
+    } else if (sradix > pradix) {
+	radix = sradix;
+	q -= slen;
+    } else {
+	/* Either decimal, or invalid -- if invalid, we'll trip up
+	   further down. */
+	radix = 10;
+    }
+
+    /*
+     * `checklimit' must be 2**64 / radix. We can't do that in
+     * 64-bit arithmetic, which we're (probably) using, so we
+     * cheat: since we know that all radices we use are even, we
+     * can divide 2**63 by radix/2 instead.
+     */
+    checklimit = UINT64_C(0x8000000000000000) / (radix >> 1);
+
+    /*
+     * Calculate the highest allowable value for the last digit of a
+     * 64-bit constant... in radix 10, it is 6, otherwise it is 0
+     */
+    last = (radix == 10 ? 6 : 0);
+
+    result = 0;
+    while (*r && r < q) {
+	if (*r != '_') {
+	    if (*r < '0' || (*r > '9' && *r < 'A')
+		|| (digit = numvalue(*r)) >= radix) {
+                return 0;
+	    }
+	    if (result > checklimit ||
+		(result == checklimit && digit >= last)) {
+		warn = true;
+	    }
+
+	    result = radix * result + digit;
+	}
+        r++;
+    }
+
+    if (warn) {
+        /*!
+         *!number-overflow [on] numeric constant does not fit
+         *!    covers warnings about numeric constants which
+         *!    don't fit in 64 bits.
+         */
+        nasm_warn(WARN_NUMBER_OVERFLOW,
+		   "numeric constant %s does not fit in 64 bits",
+		   str);
+    }
+
+    if (error)
+        *error = false;
+    return result * sign;
+}

@@ -1,0 +1,59 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, May 16, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if USE(LIBWPE) && !ENABLE(BUBBLEWRAP_SANDBOX)
+
+#include "ProcessLauncher.h"
+#include <wtf/ProcessID.h>
+
+struct wpe_process_provider;
+
+namespace WebKit {
+
+class ProcessProviderLibWPE {
+    WTF_MAKE_NONCOPYABLE(ProcessProviderLibWPE);
+    friend class NeverDestroyed<ProcessProviderLibWPE>;
+
+public:
+    static ProcessProviderLibWPE& singleton();
+
+    bool isEnabled();
+
+    ProcessID launchProcess(const ProcessLauncher::LaunchOptions&, char** argv, int childProcessSocket);
+
+    void kill(ProcessID);
+
+private:
+    ProcessProviderLibWPE();
+
+    std::unique_ptr<struct wpe_process_provider, void (*)(struct wpe_process_provider*)> m_provider;
+
+    static int wpeProcessType(ProcessLauncher::ProcessType);
+};
+
+} // namespace WebKit
+
+#endif // USE(LIBWPE) && !ENABLE(BUBBLEWRAP_SANDBOX)

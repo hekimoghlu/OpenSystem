@@ -1,0 +1,213 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, February 3, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * This is an open source non-commercial project. Dear PVS-Studio, please check it.
+ * PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+ */
+
+#include <config.h>
+
+#ifdef HAVE_BSD_AUTH_H
+
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <pwd.h>
+#include <signal.h>
+
+#include <login_cap.h>
+#include <bsd_auth.h>
+
+#include "sudoers.h"
+#include "sudo_auth.h"
+
+# ifndef LOGIN_DEFROOTCLASS
+#  define LOGIN_DEFROOTCLASS	"daemon"
+# endif
+
+struct bsdauth_state {
+    auth_session_t *as;
+    login_cap_t *lc;
+};
+
+int
+bsdauth_init(struct passwd *pw, sudo_auth *auth)
+{
+    static struct bsdauth_state state;
+    debug_decl(bsdauth_init, SUDOERS_DEBUG_AUTH);
+
+    /* Only initialize once. */
+    if (auth->data != NULL)
+	debug_return_int(AUTH_SUCCESS);
+
+    /* Get login class based on auth user, which may not be invoking user. */
+    if (pw->pw_class && *pw->pw_class)
+	state.lc = login_getclass(pw->pw_class);
+    else
+	state.lc = login_getclass(pw->pw_uid ? (char *)LOGIN_DEFCLASS : (char *)LOGIN_DEFROOTCLASS);
+    if (state.lc == NULL) {
+	log_warning(0,
+	    N_("unable to get login class for user %s"), pw->pw_name);
+	debug_return_int(AUTH_FATAL);
+    }
+
+    if ((state.as = auth_open()) == NULL) {
+	log_warning(0, N_("unable to begin bsd authentication"));
+	login_close(state.lc);
+	debug_return_int(AUTH_FATAL);
+    }
+
+    /* XXX - maybe check the auth style earlier? */
+    login_style = login_getstyle(state.lc, login_style, (char *)"auth-sudo");
+    if (login_style == NULL) {
+	log_warningx(0, N_("invalid authentication type"));
+	auth_close(state.as);
+	login_close(state.lc);
+	debug_return_int(AUTH_FATAL);
+    }
+
+     if (auth_setitem(state.as, AUTHV_STYLE, login_style) < 0 ||
+	auth_setitem(state.as, AUTHV_NAME, pw->pw_name) < 0 ||
+	auth_setitem(state.as, AUTHV_CLASS, login_class) < 0) {
+	log_warningx(0, N_("unable to initialize BSD authentication"));
+	auth_close(state.as);
+	login_close(state.lc);
+	debug_return_int(AUTH_FATAL);
+    }
+
+    auth->data = (void *) &state;
+    debug_return_int(AUTH_SUCCESS);
+}
+
+int
+bsdauth_verify(struct passwd *pw, const char *prompt, sudo_auth *auth, struct sudo_conv_callback *callback)
+{
+    char *pass;
+    char *s;
+    size_t len;
+    int authok = 0;
+    struct sigaction sa, osa;
+    auth_session_t *as = ((struct bsdauth_state *) auth->data)->as;
+    debug_decl(bsdauth_verify, SUDOERS_DEBUG_AUTH);
+
+    if (IS_NONINTERACTIVE(auth))
+        debug_return_int(AUTH_NONINTERACTIVE);
+
+    /* save old signal handler */
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sa.sa_handler = SIG_DFL;
+    (void) sigaction(SIGCHLD, &sa, &osa);
+
+    /*
+     * If there is a challenge then print that instead of the normal
+     * prompt.  If the user just hits return we prompt again with echo
+     * turned on, which is useful for challenge/response things like
+     * S/Key.
+     */
+    if ((s = auth_challenge(as)) == NULL) {
+	pass = auth_getpass(prompt, SUDO_CONV_PROMPT_ECHO_OFF, callback);
+    } else {
+	pass = auth_getpass(s, SUDO_CONV_PROMPT_ECHO_OFF, callback);
+	if (pass != NULL && *pass == '\0') {
+	    if ((prompt = strrchr(s, '\n')))
+		prompt++;
+	    else
+		prompt = s;
+
+	    /*
+	     * Append '[echo on]' to the last line of the challenge and
+	     * re-prompt with echo turned on.
+	     */
+	    len = strlen(prompt);
+	    while (len > 0 && (isspace((unsigned char)prompt[len - 1]) || prompt[len - 1] == ':'))
+		len--;
+	    if (asprintf(&s, "%.*s [echo on]: ", (int)len, prompt) == -1) {
+		log_warningx(0, N_("unable to allocate memory"));
+		debug_return_int(AUTH_FATAL);
+	    }
+	    free(pass);
+	    pass = auth_getpass(s, SUDO_CONV_PROMPT_ECHO_ON, callback);
+	    free(s);
+	}
+    }
+
+    if (pass) {
+	authok = auth_userresponse(as, pass, 1);
+	freezero(pass, strlen(pass));
+    }
+
+    /* restore old signal handler */
+    (void) sigaction(SIGCHLD, &osa, NULL);
+
+    if (authok)
+	debug_return_int(AUTH_SUCCESS);
+
+    if (!pass)
+	debug_return_int(AUTH_INTR);
+
+    if ((s = auth_getvalue(as, (char *)"errormsg")) != NULL)
+	log_warningx(0, "%s", s);
+    debug_return_int(AUTH_FAILURE);
+}
+
+int
+bsdauth_approval(struct passwd *pw, sudo_auth *auth, bool exempt)
+{
+    struct bsdauth_state *state = auth->data;
+    debug_decl(bsdauth_approval, SUDOERS_DEBUG_AUTH);
+
+    if (auth_approval(state->as, state->lc, pw->pw_name, (char *)"auth-sudo") == 0) {
+	if (auth_getstate(state->as) & AUTH_EXPIRED)
+	    log_warningx(0, "%s", N_("your account has expired"));
+	else
+	    log_warningx(0, "%s", N_("approval failed"));
+	debug_return_int(AUTH_FAILURE);
+    }
+    debug_return_int(AUTH_SUCCESS);
+}
+
+int
+bsdauth_cleanup(struct passwd *pw, sudo_auth *auth, bool force)
+{
+    struct bsdauth_state *state = auth->data;
+    debug_decl(bsdauth_cleanup, SUDOERS_DEBUG_AUTH);
+
+    if (state != NULL) {
+	auth_close(state->as);
+	state->as = NULL;
+	login_close(state->lc);
+	state->lc = NULL;
+	auth->data = NULL;
+    }
+    login_style = NULL;
+
+    debug_return_int(AUTH_SUCCESS);
+}
+
+#endif /* HAVE_BSD_AUTH_H */

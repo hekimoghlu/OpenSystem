@@ -1,0 +1,491 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, December 19, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "DAPrivate.h"
+
+#include "DAInternal.h"
+#include "DALog.h"
+#include "DAMain.h"
+#include "DAMount.h"
+#include "DAQueue.h"
+#include "DAStage.h"
+#include "DAThread.h"
+#include "DASupport.h"
+
+#include <sysexits.h>
+#include <unistd.h>
+#include <FSPrivate.h>
+#include <sys/attr.h>
+#include <sys/mount.h>
+#include <sys/wait.h>
+#include <IOKit/IOBSD.h>
+#include <IOKit/storage/IOMedia.h>
+#include <sys/stat.h>
+
+
+static int __DADiskRefreshRemoveMountPoint( void * context )
+{
+    CFURLRef mountpoint = context;
+
+    DAMountRemoveMountPoint( mountpoint );
+
+    CFRelease( mountpoint );
+
+    return 0;
+}
+
+static int __DAFileSystemSetAdoption( DAFileSystemRef filesystem, CFURLRef mountpoint, Boolean adoption )
+{
+    char * path   = NULL;
+    int    status = 0;
+
+    path = ___CFURLCopyFileSystemRepresentation( mountpoint );
+    if ( path == NULL )  { status = EINVAL; goto __DAFileSystemSetAdoptionErr; }
+
+    status = fork( );
+    if ( status == -1 )  { status = errno; goto __DAFileSystemSetAdoptionErr; }
+
+    if ( status == 0 )
+    {
+        execle( "/usr/sbin/vsdbutil",
+                "/usr/sbin/vsdbutil",
+                adoption ? "-a" : "-d",
+                path,
+                NULL,
+                NULL );
+
+        exit( EX_OSERR );
+    }
+
+    waitpid( status, &status, 0 );
+
+    status = WIFEXITED( status ) ? ( ( char ) WEXITSTATUS( status ) ) : status;
+    if ( status )  { goto __DAFileSystemSetAdoptionErr; }
+
+__DAFileSystemSetAdoptionErr:
+
+    if ( path )  free( path );
+
+    return status;
+}
+
+DAReturn _DADiskRefresh( DADiskRef disk )
+{
+    DAReturn status;
+
+    status = kDAReturnUnsupported;
+
+    if ( DADiskGetDescription( disk, kDADiskDescriptionVolumePathKey ) )
+    {
+        struct statfs * mountList;
+        int             mountListCount;
+        int             mountListIndex;
+
+        mountListCount = getmntinfo( &mountList, MNT_NOWAIT );
+
+        for ( mountListIndex = 0; mountListIndex < mountListCount; mountListIndex++ )
+        {
+            if ( strcmp( _DAVolumeGetID( mountList + mountListIndex ), DADiskGetID( disk ) ) == 0 )
+            {
+                break;
+            }
+        }
+
+        if ( mountListIndex < mountListCount )
+        {
+            CFMutableArrayRef keys;
+
+            keys = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
+
+            if ( keys )
+            {
+                CFTypeRef object;
+///w:start
+                if ( strcmp( mountList[mountListIndex].f_fstypename, "hfs" ) == 0 )
+                {
+                    object = _FSCopyNameForVolumeFormatAtURL( DADiskGetDescription( disk, kDADiskDescriptionVolumePathKey ) );
+
+                    if ( DADiskCompareDescription( disk, kDADiskDescriptionVolumeTypeKey, object ) )
+                    {
+                        DADiskSetDescription( disk, kDADiskDescriptionVolumeTypeKey, object );
+
+                        CFArrayAppendValue( keys, kDADiskDescriptionVolumeTypeKey );
+                    }
+
+                    if ( object )
+                    {
+                        CFRelease( object );
+                    }
+                }
+///w:stop
+                /*
+                 * volume name and mountpoint could change asynchronously depending on the filesystem implementation
+                 * update the name and mountpoint if they have changed
+                 */
+                CFURLRef path;
+                path = CFURLCreateFromFileSystemRepresentation( kCFAllocatorDefault,
+                                                                ( void * ) mountList[mountListIndex].f_mntonname,
+                                                                strlen( mountList[mountListIndex].f_mntonname ),
+                                                                TRUE );
+                if ( path )
+                {
+                    if ( DADiskCompareDescription( disk, kDADiskDescriptionVolumePathKey, path ) )
+                    {
+                        bool ignoreMount =  false;
+                        if ( DADiskGetDescription( disk, kDADiskDescriptionVolumeUUIDKey ) )
+                        {
+                            CFURLRef danglingPath  = CFDictionaryGetValue( gDADanglingVolumeList, DADiskGetDescription( disk, kDADiskDescriptionVolumeUUIDKey ) );
+                           
+                            if ( danglingPath )
+                            {
+                                char source[MAXPATHLEN];
+                                if (CFURLGetFileSystemRepresentation( danglingPath, TRUE, ( void * ) source, sizeof( source ) ) )
+                                {
+                                    if (strncmp( mountList[mountListIndex].f_mntonname, source, strlen( source ) ) == 0 )
+                                    {
+                                        DALogInfo("dangling mountpoint present ignore mountpoint %@", disk);
+                                        ignoreMount = true;
+                                    }
+                                }
+                            }
+                        }
+                        if ( ignoreMount == false) {
+                            DADiskSetBypath( disk, path );
+                            
+                            DADiskSetDescription( disk, kDADiskDescriptionVolumePathKey, path );
+                            
+                            DALogInfo( "volume path changed for %@", disk);
+                            
+                            CFArrayAppendValue( keys, kDADiskDescriptionVolumePathKey );
+                        }
+                    }
+
+#if TARGET_OS_OSX
+                    if ( DAUnitGetState( disk, _kDAUnitStateHasAPFS ) )
+                    {
+                        
+                        uuid_t volUUID;
+                        CFStringRef name = _DAFileSystemCopyNameAndUUID( DADiskGetFileSystem( disk ), path, &volUUID);
+                        CFUUIDRef UUID = NULL;
+                        UUID = CFUUIDCreateWithBytes(kCFAllocatorDefault, volUUID[0], volUUID[1], volUUID[2],
+                                                     volUUID[3], volUUID[4], volUUID[5], volUUID[6],
+                                                     volUUID[7], volUUID[8], volUUID[9], volUUID[10],
+                                                     volUUID[11], volUUID[12], volUUID[13], volUUID[14], volUUID[15]);
+
+                        if ( name && UUID )
+                        {
+                            if ( ( DADiskCompareDescription( disk, kDADiskDescriptionVolumeUUIDKey, UUID ) == kCFCompareEqualTo ) &&
+                                DADiskCompareDescription( disk, kDADiskDescriptionVolumeNameKey, name ) )
+                            {
+                                DALogInfo( "volume name changed for %@ to name %@.", disk, name);
+
+                                DADiskSetDescription( disk, kDADiskDescriptionVolumeNameKey, name );
+
+                                CFArrayAppendValue( keys, kDADiskDescriptionVolumeNameKey );
+
+                                if ( DADiskGetDescription( disk, kDADiskDescriptionMediaPathKey ) )
+                                {
+                                    CFURLRef mountpoint;
+                                    if ( CFEqual( CFURLGetString( path ), CFSTR( "file:///" ) ) )
+                                    {
+                                        mountpoint = DAMountCreateMountPointWithAction( disk, kDAMountPointActionMove );
+
+                                        if ( mountpoint )
+                                        {
+                                            DADiskSetBypath( disk, mountpoint );
+
+                                            CFRelease( mountpoint );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        mountpoint = DAMountCreateMountPointWithAction( disk, kDAMountPointActionMove );
+
+                                        if ( mountpoint )
+                                        {
+                                            DADiskSetBypath( disk, mountpoint );
+
+                                            DADiskSetDescription( disk, kDADiskDescriptionVolumePathKey, mountpoint );
+
+                                            CFArrayAppendValue( keys, kDADiskDescriptionVolumePathKey );
+
+                                            CFRelease( mountpoint );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ( name ) CFRelease( name );
+                        if ( UUID ) CFRelease( UUID );
+                    }
+#endif
+                    CFRelease( path );
+                }
+
+                if ( CFArrayGetCount( keys ) )
+                {
+
+                    DALogInfo( "updated disk, id = %@.", disk );
+
+                    if ( DADiskGetState( disk, kDADiskStateStagedAppear ) )
+                    {
+                        DADiskDescriptionChangedCallback( disk, keys );
+                    }
+                }
+
+                CFRelease( keys );
+            }
+        }
+        else
+        {
+            CFURLRef mountpoint;
+
+            mountpoint = DADiskGetDescription( disk, kDADiskDescriptionVolumePathKey );
+
+            CFRetain( mountpoint );
+
+            DAThreadExecute( __DADiskRefreshRemoveMountPoint, ( void * ) mountpoint, NULL, NULL );
+
+            DADiskSetBypath( disk, NULL );
+
+            if ( DADiskGetDescription( disk, kDADiskDescriptionMediaPathKey ) )
+            {
+                DADiskSetDescription( disk, kDADiskDescriptionVolumePathKey, NULL );
+
+                DADiskDescriptionChangedCallback( disk, kDADiskDescriptionVolumePathKey );
+            }
+            else
+            {
+
+                DALogInfo( "removed disk, id = %@.", disk );
+
+                DADiskDisappearedCallback( disk );
+
+                DADiskSetDescription( disk, kDADiskDescriptionVolumePathKey, NULL );
+
+                DADiskSetState( disk, kDADiskStateZombie, TRUE );
+
+                ___CFArrayRemoveValue( gDADiskList, disk );
+            }
+
+            DAStageSignal( );
+        }
+
+        status = kDAReturnSuccess;
+    }
+    else
+    {
+        struct statfs * mountList;
+        int             mountListCount;
+        int             mountListIndex;
+
+        mountListCount = getmntinfo( &mountList, MNT_NOWAIT );
+
+        for ( mountListIndex = 0; mountListIndex < mountListCount; mountListIndex++ )
+        {
+            if ( strcmp( _DAVolumeGetID( mountList + mountListIndex ), DADiskGetID( disk ) ) == 0 )
+            {
+                break;
+            }
+        }
+
+        if ( mountListIndex < mountListCount )
+        {
+            CFURLRef path;
+
+            path = CFURLCreateFromFileSystemRepresentation( kCFAllocatorDefault,
+                                                            ( void * ) mountList[mountListIndex].f_mntonname,
+                                                            strlen( mountList[mountListIndex].f_mntonname ),
+                                                            TRUE );
+
+            if ( path )
+            {
+                DADiskSetBypath( disk, path );
+
+                DADiskSetDescription( disk, kDADiskDescriptionVolumePathKey, path );
+
+                DADiskDescriptionChangedCallback( disk, kDADiskDescriptionVolumePathKey );
+
+                DAStageSignal( );
+
+                CFRelease( path );
+            }
+        }
+
+        status = kDAReturnSuccess;
+    }
+
+    return status;
+}
+
+DAReturn _DADiskSetAdoption( DADiskRef disk, Boolean adoption )
+{
+    CFURLRef path;
+    DAReturn status;
+
+    path = DADiskGetDescription( disk, kDADiskDescriptionVolumePathKey );
+    if ( path == NULL )  { status = kDAReturnBadArgument; goto _DADiskSetAdoptionErr; }
+
+    status = __DAFileSystemSetAdoption( DADiskGetFileSystem( disk ), path, adoption );
+    if ( status )  { status = unix_err( status ); goto _DADiskSetAdoptionErr; }
+
+_DADiskSetAdoptionErr:
+
+    return status;
+}
+
+int  _DADiskGetEncryptionStatus( void *parameter)
+{
+    __DADiskEncryptionContext *context = parameter;
+    errno_t error = 0;
+#if TARGET_OS_OSX
+    error = _FSGetMediaEncryptionStatusAtPath( DADiskGetBSDPath(context->disk, FALSE), &context->encrypted, &context->detail );
+#endif
+    return error;
+}
+
+void _DADiskEncryptionStatusCallback(int status, void *parameter)
+{
+    __DADiskEncryptionContext *context = parameter;
+    DADiskRef disk = context->disk;
+    CFBooleanRef encrypted = NULL;
+    CFNumberRef  encryptionDetail = NULL;
+    CFMutableArrayRef keys;
+
+    keys = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
+    
+    if (keys)
+    {
+        if ( status == 0 )
+        {
+            encrypted = context->encrypted ? kCFBooleanTrue : kCFBooleanFalse;
+            
+            if ( DADiskCompareDescription( disk, kDADiskDescriptionMediaEncryptedKey, encrypted ) )
+            {
+                DADiskSetDescription( disk, kDADiskDescriptionMediaEncryptedKey, encrypted );
+                
+                CFArrayAppendValue( keys, kDADiskDescriptionMediaEncryptedKey );
+            }
+#if TARGET_OS_OSX
+            encryptionDetail = CFNumberCreate( kCFAllocatorDefault, kCFNumberSInt32Type, &context->detail);
+            
+            if ( DADiskCompareDescription( disk, kDADiskDescriptionMediaEncryptionDetailKey, encryptionDetail ) )
+            {
+                DADiskSetDescription( disk, kDADiskDescriptionMediaEncryptionDetailKey, encryptionDetail );
+                
+                CFArrayAppendValue( keys, kDADiskDescriptionMediaEncryptionDetailKey );
+            }
+#endif
+        }
+    }
+
+    if ( CFArrayGetCount( keys ) )
+    {
+        DALogInfo( "encryption status changed, id = %@.", disk );
+        
+        if ( DADiskGetState( disk, kDADiskStateStagedAppear ) )
+        {
+            DADiskDescriptionChangedCallback( disk, keys );
+        }
+    }
+    
+    if ( keys  )  CFRelease( keys  );
+    if ( encryptionDetail )  CFRelease( encryptionDetail );
+    CFRelease(context->disk);
+    free (context);
+}
+
+Boolean _DAUnitIsUnreadable( DADiskRef disk )
+{
+    CFIndex count;
+    CFIndex index;
+
+    count = CFArrayGetCount( gDADiskList );
+
+    for ( index = 0; index < count; index++ )
+    {
+        DADiskRef item;
+
+        item = ( void * ) CFArrayGetValueAtIndex( gDADiskList, index );
+
+        if ( DADiskGetBSDUnit( disk ) == DADiskGetBSDUnit( item ) )
+        {
+            CFStringRef name;
+
+            name = DADiskGetDescription( item, kDADiskDescriptionMediaBSDNameKey );
+
+            if ( DADiskGetClaim( item ) )
+            {
+                return FALSE;
+            }
+
+            if ( DADiskGetState( item, _kDADiskStateMountAutomatic ) == FALSE )
+            {
+                return FALSE;
+            }
+
+            if ( DADiskGetDescription( item, kDADiskDescriptionVolumeMountableKey ) == kCFBooleanTrue )
+            {
+                return FALSE;
+            }
+
+            if ( DADiskGetDescription( item, kDADiskDescriptionMediaLeafKey ) == kCFBooleanFalse )
+            {
+                CFIndex subcount;
+                CFIndex subindex;
+
+                subcount = CFArrayGetCount( gDADiskList );
+
+                for ( subindex = 0; subindex < subcount; subindex++ )
+                {
+                    DADiskRef subitem;
+
+                    subitem = ( void * ) CFArrayGetValueAtIndex( gDADiskList, subindex );
+
+                    if ( item != subitem )
+                    {
+                        CFStringRef subname;
+
+                        subname = DADiskGetDescription( subitem, kDADiskDescriptionMediaBSDNameKey );
+
+                        if ( subname )
+                        {
+                            if ( CFStringHasPrefix( subname, name ) )
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if ( subindex == subcount )
+                {
+                    return FALSE;
+                }
+            }
+        }
+    }
+
+    return TRUE;
+}

@@ -1,0 +1,61 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, August 8, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* { dg-do run } */
+#include "ffitest.h"
+static long long return_ll(long long ll)
+{
+  return ll;
+}
+
+int main (void)
+{
+  ffi_cif cif;
+  ffi_type *args[MAX_ARGS];
+  void *values[MAX_ARGS];
+  long long rlonglong;
+  long long ll;
+
+  args[0] = &ffi_type_sint64;
+  values[0] = &ll;
+
+  /* Initialize the cif */
+  CHECK(ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, 
+		     &ffi_type_sint64, args) == FFI_OK);
+
+	/*	BC:	Incrementing from signed 0 doesn't result in 1.
+		Starting from 1 now.	*/
+  for (ll = 1LL; ll < 100LL; ll++)
+    {
+      ffi_call(&cif, FFI_FN(return_ll), &rlonglong, values);
+      CHECK(rlonglong == ll);
+    }
+  
+  for (ll = 55555555555000LL; ll < 55555555555100LL; ll++)
+    {
+      ffi_call(&cif, FFI_FN(return_ll), &rlonglong, values);
+      CHECK(rlonglong == ll);
+    }
+  exit(0);
+}

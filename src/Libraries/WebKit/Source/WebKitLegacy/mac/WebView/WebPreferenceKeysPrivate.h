@@ -1,0 +1,276 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, May 10, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+// These are private because callers should be using the cover methods. They are in
+// a Private (as opposed to Internal) header file because Safari uses some of them
+// for managed preferences.
+#define WebKitStandardFontPreferenceKey @"WebKitStandardFont"
+#define WebKitFixedFontPreferenceKey @"WebKitFixedFont"
+#define WebKitSerifFontPreferenceKey @"WebKitSerifFont"
+#define WebKitSansSerifFontPreferenceKey @"WebKitSansSerifFont"
+#define WebKitCursiveFontPreferenceKey @"WebKitCursiveFont"
+#define WebKitFantasyFontPreferenceKey @"WebKitFantasyFont"
+#define WebKitPictographFontPreferenceKey @"WebKitPictographFont"
+#define WebKitMinimumFontSizePreferenceKey @"WebKitMinimumFontSize"
+#define WebKitMinimumLogicalFontSizePreferenceKey @"WebKitMinimumLogicalFontSize"
+#define WebKitDefaultFontSizePreferenceKey @"WebKitDefaultFontSize"
+#define WebKitDefaultFixedFontSizePreferenceKey @"WebKitDefaultFixedFontSize"
+#define WebKitDefaultTextEncodingNamePreferenceKey @"WebKitDefaultTextEncodingName"
+#define WebKitUsesEncodingDetectorPreferenceKey @"WebKitUsesEncodingDetector"
+#define WebKitUserStyleSheetEnabledPreferenceKey @"WebKitUserStyleSheetEnabledPreferenceKey"
+#define WebKitUserStyleSheetLocationPreferenceKey @"WebKitUserStyleSheetLocationPreferenceKey"
+#define WebKitShouldPrintBackgroundsPreferenceKey @"WebKitShouldPrintBackgroundsPreferenceKey"
+#if !TARGET_OS_IPHONE
+#define WebKitTextAreasAreResizablePreferenceKey @"WebKitTextAreasAreResizable"
+#endif
+#define WebKitShrinksStandaloneImagesToFitPreferenceKey @"WebKitShrinksStandaloneImagesToFit"
+#define WebKitJavaScriptEnabledPreferenceKey @"WebKitJavaScriptEnabled"
+#define WebKitJavaScriptMarkupEnabledPreferenceKey @"WebKitJavaScriptMarkupEnabled"
+#define WebKitWebSecurityEnabledPreferenceKey @"WebKitWebSecurityEnabled"
+#define WebKitAllowUniversalAccessFromFileURLsPreferenceKey @"WebKitAllowUniversalAccessFromFileURLs"
+#define WebKitAllowFileAccessFromFileURLsPreferenceKey @"WebKitAllowFileAccessFromFileURLs"
+#define WebKitAllowTopNavigationToDataURLsPreferenceKey @"WebKitAllowTopNavigationToDataURLs"
+#define WebKitNeedsStorageAccessFromFileURLsQuirkKey @"WebKitNeedsStorageAccessFromFileURLsQuirk"
+#define WebKitJavaScriptCanOpenWindowsAutomaticallyPreferenceKey @"WebKitJavaScriptCanOpenWindowsAutomatically"
+#define WebKitDatabasesEnabledPreferenceKey @"WebKitDatabasesEnabledPreferenceKey"
+#define WebKitLocalStorageEnabledPreferenceKey @"WebKitLocalStorageEnabledPreferenceKey"
+#define WebKitAllowAnimatedImagesPreferenceKey @"WebKitAllowAnimatedImagesPreferenceKey"
+#define WebKitAllowAnimatedImageLoopingPreferenceKey @"WebKitAllowAnimatedImageLoopingPreferenceKey"
+#define WebKitDisplayImagesKey @"WebKitDisplayImagesKey"
+#define WebKitAdditionalSupportedImageTypesKey  @"WebKitAdditionalSupportedImageTypesKey"
+#define WebKitBackForwardCacheExpirationIntervalKey @"WebKitBackForwardCacheExpirationIntervalKey"
+#if !TARGET_OS_IPHONE
+#define WebKitTabToLinksPreferenceKey @"WebKitTabToLinksPreferenceKey"
+#endif
+#define WebKitPrivateBrowsingEnabledPreferenceKey @"WebKitPrivateBrowsingEnabled"
+#define WebSmartInsertDeleteEnabled @"WebSmartInsertDeleteEnabled"
+#if !TARGET_OS_IPHONE
+#define WebContinuousSpellCheckingEnabled @"WebContinuousSpellCheckingEnabled"
+#define WebGrammarCheckingEnabled @"WebGrammarCheckingEnabled"
+#endif
+#define WebAutomaticQuoteSubstitutionEnabled @"WebAutomaticQuoteSubstitutionEnabled"
+#define WebAutomaticLinkDetectionEnabled @"WebAutomaticLinkDetectionEnabled"
+#define WebAutomaticDashSubstitutionEnabled @"WebAutomaticDashSubstitutionEnabled"
+#define WebAutomaticTextReplacementEnabled @"WebAutomaticTextReplacementEnabled"
+#define WebAutomaticSpellingCorrectionEnabled @"WebAutomaticSpellingCorrectionEnabled"
+#define WebKitDOMPasteAllowedPreferenceKey @"WebKitDOMPasteAllowedPreferenceKey"
+#define WebKitUsesPageCachePreferenceKey @"WebKitUsesPageCachePreferenceKey"
+#define WebKitPageCacheSupportsPluginsPreferenceKey @"WebKitPageCacheSupportsPluginsPreferenceKey"
+#define WebKitFTPDirectoryTemplatePath @"WebKitFTPDirectoryTemplatePath"
+#define WebKitForceFTPDirectoryListings @"WebKitForceFTPDirectoryListings"
+#define WebKitDeveloperExtrasEnabledPreferenceKey @"WebKitDeveloperExtrasEnabledPreferenceKey"
+#define WebKitJavaScriptRuntimeFlagsPreferenceKey @"WebKitJavaScriptRuntimeFlagsPreferenceKey"
+#define WebKitAuthorAndUserStylesEnabledPreferenceKey @"WebKitAuthorAndUserStylesEnabledPreferenceKey"
+#define WebKitDOMTimersThrottlingEnabledPreferenceKey @"WebKitDOMTimersThrottlingEnabledPreferenceKey"
+#define WebKitWebArchiveDebugModeEnabledPreferenceKey @"WebKitWebArchiveDebugModeEnabledPreferenceKey"
+#define WebKitLocalFileContentSniffingEnabledPreferenceKey @"WebKitLocalFileContentSniffingEnabledPreferenceKey"
+#define WebKitLocalStorageDatabasePathPreferenceKey @"WebKitLocalStorageDatabasePathPreferenceKey"
+#define WebKitEnableFullDocumentTeardownPreferenceKey @"WebKitEnableFullDocumentTeardown"
+#define WebKitOfflineWebApplicationCacheEnabledPreferenceKey @"WebKitOfflineWebApplicationCacheEnabled"
+#define WebKitApplicationCacheTotalQuota @"WebKitApplicationCacheTotalQuota"
+#define WebKitZoomsTextOnlyPreferenceKey @"WebKitZoomsTextOnly"
+#define WebKitJavaScriptCanAccessClipboardPreferenceKey @"WebKitJavaScriptCanAccessClipboard"
+#define WebKitAcceleratedDrawingEnabledPreferenceKey @"WebKitAcceleratedDrawingEnabled"
+#define WebKitCanvasUsesAcceleratedDrawingPreferenceKey @"WebKitCanvasUsesAcceleratedDrawing"
+#define WebKitAcceleratedCompositingEnabledPreferenceKey @"WebKitAcceleratedCompositingEnabled"
+#define WebKitShowDebugBordersPreferenceKey @"WebKitShowDebugBorders"
+#define WebKitSubpixelAntialiasedLayerTextEnabledPreferenceKey @"WebKitSubpixelAntialiasedLayerTextEnabled"
+#define WebKitSimpleLineLayoutEnabledPreferenceKey @"WebKitSimpleLineLayoutEnabled"
+#define WebKitLegacyLineLayoutVisualCoverageEnabledPreferenceKey @"WebKitLegacyLineLayoutVisualCoverageEnabled"
+#define WebKitLegacyPluginQuirkForMailSignaturesEnabledPreferenceKey @"WebKitLegacyPluginQuirkForMailSignaturesEnabled"
+#define WebKitContentChangeObserverEnabledPreferenceKey @"WebKitContentChangeObserverEnabled"
+#define WebKitShowRepaintCounterPreferenceKey @"WebKitShowRepaintCounter"
+#define WebKitWebAudioEnabledPreferenceKey @"WebKitWebAudioEnabled"
+#define WebKitWebGLEnabledPreferenceKey @"WebKitWebGLEnabled"
+#define WebKitForceWebGLUsesLowPowerPreferenceKey @"WebKitForceWebGLUsesLowPower"
+#define WebKitAccelerated2dCanvasEnabledPreferenceKey @"WebKitAccelerated2dCanvasEnabled"
+#define WebKitAsyncFrameScrollingEnabledPreferenceKey @"WebKitAsyncFrameScrollingEnabled"
+#define WebKitSpatialNavigationEnabledPreferenceKey @"WebKitSpatialNavigationEnabled"
+#define WebKitDNSPrefetchingEnabledPreferenceKey @"WebKitDNSPrefetchingEnabled"
+#define WebKitFullScreenEnabledPreferenceKey @"WebKitFullScreenEnabled"
+#define WebKitAsynchronousSpellCheckingEnabledPreferenceKey @"WebKitAsynchronousSpellCheckingEnabled"
+#define WebKitHyperlinkAuditingEnabledPreferenceKey @"WebKitHyperlinkAuditingEnabled"
+#define WebKitAVFoundationEnabledKey @"WebKitAVFoundationEnabled"
+#define WebKitRequiresUserGestureForMediaPlaybackPreferenceKey @"WebKitMediaPlaybackRequiresUserGesture"
+#define WebKitRequiresUserGestureForVideoPlaybackPreferenceKey @"WebKitVideoPlaybackRequiresUserGesture"
+#define WebKitRequiresUserGestureForAudioPlaybackPreferenceKey @"WebKitAudioPlaybackRequiresUserGesture"
+#define WebKitMainContentUserGestureOverrideEnabledPreferenceKey @"WebKitMainContentUserGestureOverrideEnabled"
+#define WebKitAllowsInlineMediaPlaybackPreferenceKey @"WebKitMediaPlaybackAllowsInline"
+#define WebKitAllowsInlineMediaPlaybackAfterFullscreenPreferenceKey @"WebKitAllowsInlineMediaPlaybackAfterFullscreen"
+#define WebKitInlineMediaPlaybackRequiresPlaysInlineAttributeKey @"InlineMediaPlaybackRequiresPlaysInlineAttribute"
+#define WebKitInvisibleAutoplayNotPermittedKey @"InvisibleAutoplayNotPermitted"
+#define WebKitAllowsPictureInPictureMediaPlaybackPreferenceKey @"WebKitAllowsPictureInPictureMediaPlayback"
+#define WebKitAllowsAirPlayForMediaPlaybackPreferenceKey @"WebKitMediaPlaybackAllowsAirPlay"
+#define WebKitMediaControlsScaleWithPageZoomPreferenceKey @"WebKitMediaControlsScaleWithPageZoom"
+#define WebKitMockScrollbarsEnabledPreferenceKey @"WebKitMockScrollbarsEnabled"
+#define WebKitShouldDisplaySubtitlesPreferenceKey @"WebKitShouldDisplaySubtitles"
+#define WebKitShouldDisplayCaptionsPreferenceKey @"WebKitShouldDisplayCaptions"
+#define WebKitShouldDisplayTextDescriptionsPreferenceKey @"WebKitShouldDisplayTextDescriptions"
+#define WebKitNotificationsEnabledKey @"WebKitNotificationsEnabled"
+#define WebKitSuppressesIncrementalRenderingKey @"WebKitSuppressesIncrementalRendering"
+#define WebKitResourceLoadStatisticsEnabledPreferenceKey @"WebKitResourceLoadStatisticsEnabled"
+#define WebKitLargeImageAsyncDecodingEnabledPreferenceKey @"WebKitLargeImageAsyncDecodingEnabled"
+#define WebKitAnimatedImageAsyncDecodingEnabledPreferenceKey @"WebKitAnimatedImageAsyncDecodingEnabled"
+#if TARGET_OS_IPHONE
+#define WebKitAudioSessionCategoryOverride @"WebKitAudioSessionCategoryOverride"
+#endif
+#define WebKitShouldRespectImageOrientationKey @"WebKitShouldRespectImageOrientation"
+#define WebKitRequestAnimationFrameEnabledPreferenceKey @"WebKitRequestAnimationFrameEnabled"
+#define WebKitDiagnosticLoggingEnabledKey @"WebKitDiagnosticLoggingEnabled"
+#define WebKitStorageBlockingPolicyKey @"WebKitStorageBlockingPolicy"
+#define WebKitPlugInSnapshottingEnabledPreferenceKey @"WebKitPlugInSnapshottingEnabled"
+#define WebKitHiddenPageDOMTimerThrottlingEnabledPreferenceKey @"WebKitHiddenPageDOMTimerThrottlingEnabled"
+#define WebKitHiddenPageCSSAnimationSuspensionEnabledPreferenceKey @"WebKitHiddenPageCSSAnimationSuspensionEnabled"
+#define WebKitLowPowerVideoAudioBufferSizeEnabledPreferenceKey @"WebKitLowPowerVideoAudioBufferSizeEnabled"
+#define WebKitMediaSourceEnabledPreferenceKey @"WebKitMediaSourceEnabled"
+#define WebKitSourceBufferChangeTypeEnabledPreferenceKey @"WebKitSourceBufferChangeTypeEnabled"
+#define WebKitShouldConvertPositionStyleOnCopyPreferenceKey @"WebKitShouldConvertPositionStyleOnCopy"
+#define WebKitGamepadsEnabledPreferenceKey @"WebKitGamepadsEnabled"
+#define WebKitServiceControlsEnabledPreferenceKey @"WebKitServiceControlsEnabled"
+#define WebKitMediaKeysStorageDirectoryKey @"WebKitMediaKeysStorageDirectory"
+#define WebKitDataTransferItemsEnabledPreferenceKey @"WebKitDataTransferItemsEnabled"
+#define WebKitCustomPasteboardDataEnabledPreferenceKey @"WebKitCustomPasteboardDataEnabled"
+#define WebKitKeygenElementEnabledPreferenceKey @"WebKitKeygenElementEnabledPreferenceKey"
+#define WebKitCacheAPIEnabledPreferenceKey @"WebKitCacheAPIEnabled"
+#define WebKitDownloadAttributeEnabledPreferenceKey @"WebKitDownloadAttributeEnabled"
+#define WebKitDirectoryUploadEnabledPreferenceKey @"WebKitDirectoryUploadEnabled"
+#define WebKitCSSOMViewScrollingAPIEnabledPreferenceKey @"WebKitCSSOMViewScrollingAPIEnabled"
+#define WebKitSubtleCryptoEnabledPreferenceKey @"WebKitSubtleCryptoEnabled"
+#define WebKitMediaDevicesEnabledPreferenceKey @"WebKitMediaDevicesEnabled"
+#define WebKitMediaStreamEnabledPreferenceKey @"WebKitMediaStreamEnabled"
+#define WebKitPeerConnectionEnabledPreferenceKey @"WebKitPeerConnectionEnabled"
+#define WebKitLinkPreloadEnabledPreferenceKey @"WebKitLinkPreloadEnabled"
+#define WebKitMediaPreloadingEnabledPreferenceKey @"WebKitMediaPreloadingEnabled"
+#define WebKitMediaUserGestureInheritsFromDocument @"WebKitMediaUserGestureInheritsFromDocument"
+#define WebKitColorFilterEnabledPreferenceKey @"WebKitColorFilterEnabled"
+#define WebKitPunchOutWhiteBackgroundsInDarkModePreferenceKey @"WebKitPunchOutWhiteBackgroundsInDarkMode"
+#define WebKitLayoutFormattingContextIntegrationEnabledPreferenceKey @"WebKitLayoutFormattingContextIntegrationEnabled"
+#define WebKitWebSQLEnabledPreferenceKey @"WebKitWebSQLEnabled"
+
+#if !TARGET_OS_IPHONE
+// These are private both because callers should be using the cover methods and because the
+// cover methods themselves are private.
+#define WebKitRespectStandardStyleKeyEquivalentsPreferenceKey @"WebKitRespectStandardStyleKeyEquivalents"
+#define WebKitShowsURLsInToolTipsPreferenceKey @"WebKitShowsURLsInToolTips"
+#define WebKitShowsToolTipOverTruncatedTextPreferenceKey @"WebKitShowsToolTipOverTruncatedText"
+#define WebKitPDFDisplayModePreferenceKey @"WebKitPDFDisplayMode"
+#define WebKitPDFScaleFactorPreferenceKey @"WebKitPDFScaleFactor"
+#endif
+
+#define WebKitUseSiteSpecificSpoofingPreferenceKey @"WebKitUseSiteSpecificSpoofing"
+#define WebKitEditableLinkBehaviorPreferenceKey @"WebKitEditableLinkBehavior"
+#define WebKitCacheModelPreferenceKey @"WebKitCacheModelPreferenceKey"
+#define WebKitTextDirectionSubmenuInclusionBehaviorPreferenceKey @"WebKitTextDirectionSubmenuInclusionBehaviorPreferenceKey"
+#define WebKitUsePreHTML5ParserQuirksKey @"WebKitUsePreHTML5ParserQuirks"
+#define WebKitBackspaceKeyNavigationEnabledKey @"WebKitBackspaceKeyNavigationEnabled"
+#define WebKitIncrementalRenderingSuppressionTimeoutInSecondsKey @"WebKitIncrementalRenderingSuppressionTimeoutInSeconds"
+#define WebKitWantsBalancedSetDefersLoadingBehaviorKey @"WebKitWantsBalancedSetDefersLoadingBehavior"
+#define WebKitDebugFullPageZoomPreferenceKey @"WebKitDebugFullPageZoomPreferenceKey"
+#define WebKitMinimumZoomFontSizePreferenceKey @"WebKitMinimumZoomFontSizePreferenceKey"
+#define WebKitTextAutosizingEnabledPreferenceKey @"WebKitTextAutosizingEnabled"
+#define WebKitHTTPEquivEnabledPreferenceKey @"WebKitHTTPEquivEnabled"
+#define WebKitUseSystemAppearancePreferenceKey @"WebKitUseSystemAppearance"
+
+#if TARGET_OS_IPHONE
+#define WebKitStandalonePreferenceKey @"WebKitStandalonePreferenceKey"
+#define WebKitTelephoneParsingEnabledPreferenceKey @"WebKitTelephoneParsingEnabledPreferenceKey"
+#define WebKitAllowMultiElementImplicitFormSubmissionPreferenceKey @"WebKitAllowMultiElementImplicitFormSubmissionPreferenceKey"
+#define WebKitAlwaysRequestGeolocationPermissionPreferenceKey @"WebKitAlwaysRequestGeolocationPermission"
+#define WebKitMaxParseDurationPreferenceKey @"WebKitMaxParseDurationPreferenceKey"
+#define WebKitStorageTrackerEnabledPreferenceKey @"WebKitStorageTrackerEnabledPreferenceKey"
+#define WebKitInterpolationQualityPreferenceKey @"WebKitInterpolationQualityPreferenceKey"
+#define WebKitPasswordEchoEnabledPreferenceKey @"WebKitEnablePasswordEchoPreferenceKey"
+#define WebKitPasswordEchoDurationPreferenceKey @"WebKitPasswordEchoDurationPreferenceKey"
+#define WebKitNetworkInterfaceNamePreferenceKey @"WebKitNetworkInterfaceNamePreferenceKey"
+#define WebKitQuickLookDocumentSavingPreferenceKey @"WebKitQuickLookDocumentSavingPreferenceKey"
+#endif
+
+#define WebKitEnableInheritURIQueryComponentPreferenceKey @"WebKitEnableInheritURIQueryComponent"
+#define WebKitMediaDataLoadsAutomaticallyPreferenceKey @"WebKitMediaDataLoadsAutomatically"
+#define WebKitMockCaptureDevicesEnabledPreferenceKey @"WebKitMockCaptureDevicesEnabled"
+#define WebKitMockCaptureDevicesPromptEnabledPreferenceKey @"WebKitMockCaptureDevicesPromptEnabled"
+#define WebKitEnumeratingAllNetworkInterfacesEnabledPreferenceKey @"WebKitEnumeratingAllNetworkInterfacesEnabled"
+#define WebKitICECandidateFilteringEnabledPreferenceKey @"WebKitICECandidateFilteringEnabled"
+#define WebKitMediaCaptureRequiresSecureConnectionPreferenceKey @"WebKitMediaCaptureRequiresSecureConnection"
+#define WebKitAttachmentElementEnabledPreferenceKey @"WebKitAttachmentElementEnabled"
+#define WebKitUserTimingEnabledPreferenceKey @"WebKitUserTimingEnabled"
+#define WebKitResourceTimingEnabledPreferenceKey @"WebKitResourceTimingEnabled"
+#define WebKitMediaContentTypesRequiringHardwareSupportPreferenceKey @"WebKitMediaContentTypesRequiringHardwareSupport"
+#define WebKitLegacyEncryptedMediaAPIEnabledKey @"WebKitLegacyEncryptedMediaAPIEnabled"
+#define WebKitEncryptedMediaAPIEnabledKey @"WebKitEncryptedMediaAPIEnabled"
+#define WebKitPictureInPictureAPIEnabledKey @"WebKitPictureInPictureAPIEnabled"
+#define WebKitAllowMediaContentTypesRequiringHardwareSupportAsFallbackKey @"WebKitAllowMediaContentTypesRequiringHardwareSupportAsFallback"
+#define WebKitMediaCapabilitiesEnabledPreferenceKey @"WebKitMediaCapabilitiesEnabled"
+#define WebKitDebugInAppBrowserPrivacyEnabledPreferenceKey @"WebKitDebugInAppBrowserPrivacyEnabled"
+#define WebKitSiteSpecificQuirksModeEnabledPreferenceKey @"WebKitNeedsSiteSpecificQuirks"
+
+
+// These are all now generated via GeneratePreferences.rb
+// FIXME: If these are not used anywhere, we should remove them and only use WebFeature mechanism for the preference.
+#define WebKitUserGesturePromisePropagationEnabledPreferenceKey @"WebKitUserGesturePromisePropagationEnabled"
+#define WebKitRequestIdleCallbackEnabledPreferenceKey @"WebKitRequestIdleCallbackEnabled"
+#define WebKitAsyncClipboardAPIEnabledPreferenceKey @"WebKitAsyncClipboardAPIEnabled"
+#define WebKitVisualViewportAPIEnabledPreferenceKey @"WebKitVisualViewportAPIEnabled"
+#define WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey @"WebKitCSSOMViewSmoothScrollingEnabled"
+#define WebKitWebAnimationsCompositeOperationsEnabledPreferenceKey @"WebKitWebAnimationsCompositeOperationsEnabled"
+#define WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey @"WebKitWebAnimationsMutableTimelinesEnabled"
+#define WebKitPrivateClickMeasurementEnabledPreferenceKey @"WebKitPrivateClickMeasurementEnabled"
+#define WebKitGenericCueAPIEnabledKey @"WebKitGenericCueAPIEnabled"
+#define WebKitCoreMathMLEnabledPreferenceKey @"WebKitCoreMathMLEnabled"
+#define WebKitRemotePlaybackEnabledPreferenceKey @"WebKitRemotePlaybackEnabled"
+#define WebKitReadableByteStreamAPIEnabledPreferenceKey @"WebKitReadableByteStreamAPIEnabled"
+#define WebKitMediaRecorderEnabledPreferenceKey @"WebKitMediaRecorderEnabled"
+#define WebKitContactPickerAPIEnabledPreferenceKey @"WebKitContactPickerAPIEnabled"
+#define WebKitSpeechRecognitionEnabledPreferenceKey @"WebKitSpeechRecognitionEnabled"
+#define WebKitPitchCorrectionAlgorithmPreferenceKey @"WebKitPitchCorrectionAlgorithm"
+
+// The preference keys below this point are deprecated and have no effect. They should
+// be removed when it is considered safe to do so.
+#define WebKitLinkPreloadResponsiveImagesEnabledPreferenceKey @"WebKitLinkPreloadResponsiveImagesEnabled"
+#define WebKitConstantPropertiesEnabledPreferenceKey @"WebKitConstantPropertiesEnabled"
+#define WebKitMaskWebGLStringsEnabledPreferenceKey @"WebKitMaskWebGLStringsEnabled"
+#define WebKitCSSCustomPropertiesAndValuesEnabledPreferenceKey @"WebKitCSSCustomPropertiesAndValuesEnabled"
+#define WebKitAllowCrossOriginSubresourcesToAskForCredentialsKey @"WebKitAllowCrossOriginSubresourcesToAskForCredentials"
+#define WebKitAspectRatioOfImgFromWidthAndHeightEnabledPreferenceKey @"WebKitAspectRatioOfImgFromWidthAndHeightEnabled"
+#define WebKitResizeObserverEnabledPreferenceKey @"WebKitResizeObserverEnabled"
+#define WebKitShadowDOMEnabledPreferenceKey @"WebKitShadowDOMEnabled"
+#define WebKitHixie76WebSocketProtocolEnabledKey @"WebKitHixie76WebSocketProtocolEnabled"
+#define WebKitCustomElementsEnabledPreferenceKey @"WebKitCustomElementsEnabled"
+#define WebKitFetchAPIEnabledPreferenceKey @"WebKitFetchAPIEnabled"
+#define WebKitFetchAPIKeepAliveEnabledPreferenceKey @"WebKitFetchAPIKeepAliveEnabled"
+#define WebKitIsSecureContextAttributeEnabledPreferenceKey @"WebKitIsSecureContextAttributeEnabled"
+#define WebKitCSSShadowPartsEnabledPreferenceKey @"WebKitCSSShadowPartsEnabled"
+#define WebKitSubpixelCSSOMElementMetricsEnabledPreferenceKey @"WebKitSubpixelCSSOMElementMetricsEnabled"
+#define WebKitExperimentalNotificationsEnabledPreferenceKey @"WebKitExperimentalNotificationsEnabledPreferenceKey"
+#define WebKitXSSAuditorEnabledPreferenceKey @"WebKitXSSAuditorEnabled"
+#define WebKitAVFoundationNSURLSessionEnabledKey @"WebKitAVFoundationNSURLSessionEnabled"
+#define WebKitDisplayListDrawingEnabledPreferenceKey @"WebKitDisplayListDrawingEnabled"
+#define WebKitTransformStreamAPIEnabledPreferenceKey @"WebKitTransformStreamAPIEnabled"
+#define WebKitIntersectionObserverEnabledPreferenceKey @"WebKitIntersectionObserverEnabled"
+#define WebKitSyntheticEditingCommandsEnabledPreferenceKey @"WebKitSyntheticEditingCommandsEnabled"
+#define WebKitServerTimingEnabledPreferenceKey @"WebKitServerTimingEnabled"
+
+#if TARGET_OS_IPHONE
+#define WebKitNetworkDataUsageTrackingEnabledPreferenceKey @"WebKitNetworkDataUsageTrackingEnabledPreferenceKey"
+#endif

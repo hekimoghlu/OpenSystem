@@ -1,0 +1,99 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, September 24, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "removefile.h"
+
+#include <sys/stat.h>
+#include <sys/param.h>
+#include <sys/mount.h>
+
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <fts.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+#include <unistd.h>
+
+/* 
+ * This structure contains variables necessary to keep track of verification,
+ * the flags set by the user, as well as associated buffers and file
+ * attributes.  These were defined previously by srm as global variables but a
+ * structure is a much cleaner way of organizing the information and passing
+ * it between functions.
+ */
+
+struct _removefile_state {
+	removefile_callback_t confirm_callback;
+	void * confirm_context;
+	removefile_callback_t error_callback;
+	void * error_context;
+	int error_num;  // clear on proceed
+	removefile_callback_t status_callback;
+	void * status_context;
+	FTSENT * recurse_entry;
+	uint8_t runtime_flags;
+
+	// globals for srm
+	int urand_file;
+	off_t random_bytes_read;
+	int file;
+	off_t file_size;
+	unsigned char * buffer;
+	uint32_t buffsize;
+	uint32_t allocated_buffsize;
+	int unlink_flags;
+	int cancelled;
+};
+
+int __removefile_rename_unlink(const char*path, removefile_state_t state);
+int __removefile_tree_walker(char ** trees, removefile_state_t state);
+int __removefile_tree_walker_slim(const char *path, removefile_state_t state);
+int __removefile_sunlink(const char * path, removefile_state_t state);
+void __removefile_init_random(const unsigned int seed, removefile_state_t state);
+char __removefile_random_char(removefile_state_t state);
+void __removefile_randomize_buffer(unsigned char *buffer, size_t length, removefile_state_t state);
+
+#define __removefile_state_test_cancel(s) ((s)->cancelled != 0)
+
+#ifdef __cplusplus
+}
+#endif
+
+#if __APPLE__
+#ifndef AT_REMOVEDIR_DATALESS
+#define AT_REMOVEDIR_DATALESS   0x0100  /* Remove a dataless directory without materializing first */
+#endif
+#ifndef AT_SYSTEM_DISCARDED
+#define AT_SYSTEM_DISCARDED     0x1000  /* Indicated file/folder was discarded by system */
+#endif
+#endif

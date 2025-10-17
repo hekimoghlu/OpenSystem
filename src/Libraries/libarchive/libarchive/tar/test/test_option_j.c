@@ -1,0 +1,57 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, October 16, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "test.h"
+
+DEFINE_TEST(test_option_j)
+{
+	char *p;
+	int r;
+	size_t s;
+
+	/* Create a file. */
+	assertMakeFile("f", 0644, "a");
+
+	/* Archive it with bzip2 compression. */
+	r = systemf("%s -jcf archive.out f 2>archive.err", testprog);
+	p = slurpfile(&s, "archive.err");
+	p[s] = '\0';
+	if (r != 0) {
+		if (!canBzip2()) {
+			skipping("bzip2 is not supported on this platform");
+			goto done;
+		}
+		failure("-j option is broken");
+		assertEqualInt(r, 0);
+		goto done;
+	}
+	free(p);
+	assertEmptyFile("archive.err");
+	/* Check that the archive file has a bzip2 signature. */
+	p = slurpfile(&s, "archive.out");
+	assert(s > 2);
+	assertEqualMem(p, "BZh9", 4);
+done:
+	free(p);
+}

@@ -1,0 +1,251 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, October 13, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include <wtf/SHA1.h>
+
+#include <cstddef>
+#include <wtf/Assertions.h>
+#include <wtf/HexNumber.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
+
+#if USE(CF)
+#include <wtf/cf/VectorCF.h>
+#endif
+
+namespace WTF {
+
+#if PLATFORM(COCOA)
+
+SHA1::SHA1()
+{
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    CC_SHA1_Init(&m_context);
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+void SHA1::addBytes(std::span<const std::byte> input)
+{
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    CC_SHA1_Update(&m_context, input.data(), input.size());
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+void SHA1::computeHash(Digest& hash)
+{
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    CC_SHA1_Final(hash.data(), &m_context);
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+#else
+
+// A straightforward SHA-1 implementation based on RFC 3174.
+// http://www.ietf.org/rfc/rfc3174.txt
+// The names of functions and variables (such as "a", "b", and "f") follow notations in RFC 3174.
+
+static inline uint32_t f(int t, uint32_t b, uint32_t c, uint32_t d)
+{
+    ASSERT(t >= 0 && t < 80);
+    if (t < 20)
+        return (b & c) | ((~b) & d);
+    if (t < 40)
+        return b ^ c ^ d;
+    if (t < 60)
+        return (b & c) | (b & d) | (c & d);
+    return b ^ c ^ d;
+}
+
+static inline uint32_t k(int t)
+{
+    ASSERT(t >= 0 && t < 80);
+    if (t < 20)
+        return 0x5a827999;
+    if (t < 40)
+        return 0x6ed9eba1;
+    if (t < 60)
+        return 0x8f1bbcdc;
+    return 0xca62c1d6;
+}
+
+static inline uint32_t rotateLeft(int n, uint32_t x)
+{
+    ASSERT(n >= 0 && n < 32);
+    return (x << n) | (x >> (32 - n));
+}
+
+SHA1::SHA1()
+{
+    reset();
+}
+
+void SHA1::addBytes(std::span<const std::byte> input)
+{
+    for (auto byte : input) {
+        ASSERT(m_cursor < 64);
+        m_buffer[m_cursor++] = std::to_integer<uint8_t>(byte);
+        ++m_totalBytes;
+        if (m_cursor == 64)
+            processBlock();
+    }
+}
+
+void SHA1::computeHash(Digest& digest)
+{
+    finalize();
+
+    for (size_t i = 0; i < 5; ++i) {
+        // Treat hashValue as a big-endian value.
+        uint32_t hashValue = m_hash[i];
+        for (int j = 0; j < 4; ++j) {
+            digest[4 * i + (3 - j)] = hashValue & 0xFF;
+            hashValue >>= 8;
+        }
+    }
+
+    reset();
+}
+
+void SHA1::finalize()
+{
+    ASSERT(m_cursor < 64);
+    m_buffer[m_cursor++] = 0x80;
+    if (m_cursor > 56) {
+        // Pad out to next block.
+        while (m_cursor < 64)
+            m_buffer[m_cursor++] = 0x00;
+        processBlock();
+    }
+
+    for (size_t i = m_cursor; i < 56; ++i)
+        m_buffer[i] = 0x00;
+
+    // Write the length as a big-endian 64-bit value.
+    uint64_t bits = m_totalBytes * 8;
+    for (int i = 0; i < 8; ++i) {
+        m_buffer[56 + (7 - i)] = bits & 0xFF;
+        bits >>= 8;
+    }
+    m_cursor = 64;
+    processBlock();
+}
+
+void SHA1::processBlock()
+{
+    ASSERT(m_cursor == 64);
+
+    std::array <uint32_t, 80> w { };
+    for (int t = 0; t < 16; ++t)
+        w[t] = (m_buffer[t * 4] << 24) | (m_buffer[t * 4 + 1] << 16) | (m_buffer[t * 4 + 2] << 8) | m_buffer[t * 4 + 3];
+    for (int t = 16; t < 80; ++t)
+        w[t] = rotateLeft(1, w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16]);
+
+    uint32_t a = m_hash[0];
+    uint32_t b = m_hash[1];
+    uint32_t c = m_hash[2];
+    uint32_t d = m_hash[3];
+    uint32_t e = m_hash[4];
+
+    for (int t = 0; t < 80; ++t) {
+        uint32_t temp = rotateLeft(5, a) + f(t, b, c, d) + e + w[t] + k(t);
+        e = d;
+        d = c;
+        c = rotateLeft(30, b);
+        b = a;
+        a = temp;
+    }
+
+    m_hash[0] += a;
+    m_hash[1] += b;
+    m_hash[2] += c;
+    m_hash[3] += d;
+    m_hash[4] += e;
+
+    m_cursor = 0;
+}
+
+void SHA1::reset()
+{
+    m_cursor = 0;
+    m_totalBytes = 0;
+    m_hash[0] = 0x67452301;
+    m_hash[1] = 0xefcdab89;
+    m_hash[2] = 0x98badcfe;
+    m_hash[3] = 0x10325476;
+    m_hash[4] = 0xc3d2e1f0;
+
+    // Clear the buffer after use in case it's sensitive.
+    m_buffer.fill(0);
+}
+
+#endif
+
+void SHA1::addUTF8Bytes(StringView string)
+{
+    if (string.containsOnlyASCII()) {
+        if (string.is8Bit())
+            addBytes(string.span8());
+        else
+            addBytes(String::make8Bit(string.span16()).span8());
+    } else
+        addBytes(string.utf8().span());
+}
+
+#if USE(CF)
+void SHA1::addUTF8Bytes(CFStringRef string)
+{
+    if (auto characters = CFStringGetASCIICStringSpan(string); characters.data()) {
+        addBytes(byteCast<uint8_t>(characters));
+        return;
+    }
+
+    constexpr size_t bufferSize = 1024;
+    if (size_t length = CFStringGetLength(string); length <= bufferSize) {
+        std::array<UInt8, bufferSize> buffer;
+        CFIndex usedBufferLength = 0;
+        CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingASCII, 0, false, buffer.data(), buffer.size(), &usedBufferLength);
+        if (length == static_cast<size_t>(usedBufferLength)) {
+            addBytes(std::span { buffer }.first(length));
+            return;
+        }
+    }
+
+    addUTF8Bytes(String(string));
+}
+#endif // USE(CF)
+
+CString SHA1::hexDigest(const Digest& digest)
+{
+    return toHexCString(digest);
+}
+
+CString SHA1::computeHexDigest()
+{
+    Digest digest;
+    computeHash(digest);
+    return hexDigest(digest);
+}
+
+} // namespace WTF

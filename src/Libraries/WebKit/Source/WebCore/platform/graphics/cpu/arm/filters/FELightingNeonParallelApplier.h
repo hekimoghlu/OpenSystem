@@ -1,0 +1,91 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, October 12, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if (CPU(ARM_NEON) && CPU(ARM_TRADITIONAL) && COMPILER(GCC_COMPATIBLE))
+
+#include "FELightingSoftwareApplier.h"
+#include <wtf/TZoneMalloc.h>
+
+namespace WebCore {
+
+class FELightingNeonParallelApplier final : public FELightingSoftwareApplier {
+    WTF_MAKE_TZONE_ALLOCATED(FELightingNeonParallelApplier);
+
+public:
+    using FELightingSoftwareApplier::FELightingSoftwareApplier;
+
+    // Must be aligned to 16 bytes.
+    struct FloatArguments {
+        float surfaceScale;
+        float minusSurfaceScaleDividedByFour;
+        float diffuseConstant;
+        float padding1;
+
+        float coneCutOffLimit;
+        float coneFullLight;
+        float coneCutOffRange;
+        float constOne;
+
+        float lightX;
+        float lightY;
+        float lightZ;
+        float padding2;
+
+        float directionX;
+        float directionY;
+        float directionZ;
+        float padding3;
+
+        float colorRed;
+        float colorGreen;
+        float colorBlue;
+        float padding4;
+    };
+
+    struct ApplyParameters {
+        const unsigned char* pixels;
+        float yStart;
+        int widthDecreasedByTwo;
+        int absoluteHeight;
+        // Combination of FLAG constants above.
+        int flags;
+        int specularExponent;
+        int coneExponent;
+        FloatArguments* floatArguments;
+        const short* paintingConstants;
+    };
+
+private:
+    static const short* feLightingConstants();
+    static int getPowerCoefficients(float exponent);
+    static void applyPlatformWorker(ApplyParameters*);
+
+    void applyPlatformParallel(const LightingData&, const LightSource::PaintingData&) const final;
+};
+
+} // namespace WebCore
+
+#endif // (CPU(ARM_NEON) && CPU(ARM_TRADITIONAL) && COMPILER(GCC_COMPATIBLE))

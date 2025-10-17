@@ -1,0 +1,357 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, May 27, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _NETSMB_SMB_SUBR_H_
+#define _NETSMB_SMB_SUBR_H_
+
+#include <os/log.h>
+
+#if (!defined(_KERNEL) && !defined(MC_TESTER))
+#error "This file shouldn't be included from userland programs"
+#endif
+
+
+#define SMB_NO_LOG_LEVEL		   0x0000
+#define SMB_LOW_LOG_LEVEL		   0x0001
+#define SMB_ACL_LOG_LEVEL		   0x0002
+#define SMB_IO_LOG_LEVEL		   0x0004
+#define SMB_AUTH_LOG_LEVEL		   0x0008
+#define SMB_KTRACE_LOG_LEVEL       0x0010
+#define SMB_DIR_CACHE_LOG_LEVEL    0x0020
+#define SMB_DIR_CACHE_LOG_LEVEL2   0x0040
+#define SMB_MC_LOG_LEVEL           0x0080
+#define SMB_MC_REF_LOG_LEVEL       0x0100
+#define SMB_LEASING_LOG_LEVEL      0x0200
+#define SMB_FILE_OPS_LOG_LEVEL     0x0400
+#define SMB_UBC_LOG_LEVEL          0x0800
+#define SMB_COMPRESSION_LOG_LEVEL  0x1000
+
+extern int smbfs_loglevel;
+
+#ifdef SMB_DEBUG
+#define SMBDEBUG(format, args...) os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args)
+
+#define SMBDEBUG_LOCK(np, format, args...) do { \
+    lck_rw_lock_shared(&(np)->n_name_rwlock); \
+    os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } while(0)
+
+#ifdef DEBUG_SYMBOLIC_LINKS
+#define SMBSYMDEBUG SMBDEBUG
+#define SMBSYMDEBUG_LOCK SMBDEBUG_LOCK
+#else // DEBUG_SYMBOLIC_LINKS
+#define SMBSYMDEBUG(format, args...)
+#define SMBSYMDEBUG_LOCK(np, format, args...)
+#endif // DEBUG_SYMBOLIC_LINKS
+#else // SMB_DEBUG
+#define SMBDEBUG(format, args...)
+#define SMBDEBUG_LOCK(np, format, args...)
+#define SMBSYMDEBUG(format, args...)
+#define SMBSYMDEBUG_LOCK(np, format, args...)
+#endif // SMB_DEBUG
+
+#define SMBERROR(format, args...) os_log_error(OS_LOG_DEFAULT ,"%s: " format, __FUNCTION__ ,## args)
+
+#define SMBERROR_LOCK(np, format, args...) do { \
+    lck_rw_lock_shared(&(np)->n_name_rwlock); \
+    os_log_error(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } while(0)
+
+#define SMBWARNING_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMBWARNING(format, args...) do { \
+    if (smbfs_loglevel) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_AUTH_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_AUTH_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMB_LOG_AUTH(format, args...) do { \
+    if (smbfs_loglevel & SMB_AUTH_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_ACCESS_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_ACL_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMB_LOG_ACCESS(format, args...) do { \
+    if (smbfs_loglevel & SMB_ACL_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_IO_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_IO_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMB_LOG_IO(format, args...) do { \
+    if (smbfs_loglevel & SMB_IO_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+/*
+ * Ariadne only shows 4 args, so only use 4 args
+ * Using "args..." and passing "args" to KDBG_RELEASE() doesnt work
+ */
+#define SMB_LOG_KTRACE(code, arg1, arg2, arg3, arg4, arg5) do { \
+    if (smbfs_loglevel & SMB_KTRACE_LOG_LEVEL) \
+        KDBG_RELEASE(code, arg1, arg2, arg3, arg4); \
+    } while(0)
+
+#define SMB_LOG_DIR_CACHE(format, args...) do { \
+    if (smbfs_loglevel & SMB_DIR_CACHE_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_DIR_CACHE_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_DIR_CACHE_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMB_LOG_DIR_CACHE2(format, args...) do { \
+    if (smbfs_loglevel & SMB_DIR_CACHE_LOG_LEVEL2) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_DIR_CACHE2_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_DIR_CACHE_LOG_LEVEL2) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMB_LOG_MC(format, args...) do { \
+    if (smbfs_loglevel & SMB_MC_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_MC_REF(format, args...) do { \
+    if (smbfs_loglevel & SMB_MC_REF_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_LEASING(format, args...) do { \
+    if (smbfs_loglevel & SMB_LEASING_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_LEASING_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_LEASING_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+#define SMB_LOG_FILE_OPS(format, args...) do { \
+    if (smbfs_loglevel & SMB_FILE_OPS_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_FILE_OPS_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_FILE_OPS_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+#define SMB_LOG_UBC(format, args...) do { \
+    if (smbfs_loglevel & SMB_UBC_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_UBC_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_UBC_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+#define SMB_LOG_COMPRESS(format, args...) do { \
+    if (smbfs_loglevel & SMB_COMPRESSION_LOG_LEVEL) \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+    } while(0)
+
+#define SMB_LOG_COMPRESS_LOCK(np, format, args...) do { \
+    if (smbfs_loglevel & SMB_COMPRESSION_LOG_LEVEL) { \
+        lck_rw_lock_shared(&(np)->n_name_rwlock); \
+        os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args); \
+        lck_rw_unlock_shared(&(np)->n_name_rwlock); \
+    } \
+    } while(0)
+
+
+
+
+#define SMB_ASSERT(exp, msg) { \
+	if (!(exp)) { \
+		panic("%s: assertion '%s' failed, msg: <%s>", __FUNCTION__, #exp, msg); \
+	} \
+}
+
+#ifdef SMB_DEBUG
+#define DBG_ASSERT(a) { \
+    if (!(a)) { \
+        panic("assertion '%s' failed", #a); \
+    } \
+}
+#define DBG_LOCKLIST_ASSERT(lock_cnt, lock_order) { \
+	int jj, kk; \
+	for (jj=0; jj < lock_cnt; jj++) \
+		for (kk=0; kk < lock_cnt; kk++)	\
+			if ((jj != kk) && (lock_order[jj] == lock_order[kk]))	\
+				panic("lock_order[%d] == lock_order[%d]", jj, kk); \
+}
+
+#else // SMB_DEBUG
+#define DBG_ASSERT(a)
+#define DBG_LOCKLIST_ASSERT(lock_cnt, lock_order)
+#endif // SMB_DEBUG
+
+#ifdef SMB_SOCKET_DEBUG
+#define SMBSDEBUG(format, args...) os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args)
+#else
+#define SMBSDEBUG(format, args...)
+#endif
+
+#ifdef SMB_IOD_DEBUG
+#define SMBIODEBUG(format, args...) os_log(OS_LOG_DEFAULT, "%s: " format, __FUNCTION__ ,## args)
+#else
+#define SMBIODEBUG(format, args...)
+#endif
+
+#ifdef SMB_SOCKETDATA_DEBUG
+void m_dumpm(mbuf_t m);
+#else
+#define m_dumpm(m)
+#endif
+
+#define	SMB_SIGMASK	(sigmask(SIGINT)|sigmask(SIGTERM)|sigmask(SIGKILL)| \
+			 sigmask(SIGHUP)|sigmask(SIGQUIT))
+
+/*
+ * Compatibility wrappers for simple locks
+ */
+
+#include <sys/lock.h>
+
+typedef uint16_t	smb_unichar;
+typedef	smb_unichar	*smb_uniptr;
+
+struct mbchain;
+struct mdchain;
+struct smb_session;
+struct smb_rq;
+struct smbiod;
+
+#ifdef SMB_DEBUG
+void smb_hexdump(const char *func, const char *s, unsigned char *buf, size_t inlen);
+#else // SMB_DEBUG
+#define smb_hexdump(a,b,c,d)
+#endif // SMB_DEBUG
+char *smb_strndup(const char *s, size_t maxlen, size_t* alloc_size);
+void *smb_memdup(const void *umem, int len);
+void *smb_memdupin(user_addr_t umem, int len);
+void *smb_str_memdupin(user_addr_t umem, int len, int *errp);
+void smb_reset_sig(struct smb_session *sessionp);
+
+int  smb_lmresponse(const u_char *apwd, u_char *C8, u_char *RN);
+void  smb_ntlmresponse(const u_char *apwd, u_char *C8, u_char *RN);
+
+int smb_ntlmv2hash(const u_char *apwd, const u_char *user,
+                   const u_char *destination, u_char *v2hash);
+int smb_ntlmv2response(u_char *v2hash, u_char *C8, const u_char *blob,
+                       size_t bloblen, u_char **RN, size_t *RNlen);
+
+
+
+void *make_target_info(struct smb_session *sessionp, uint16_t *target_len);
+uint32_t smb_errClassCodes_to_ntstatus(uint8_t errClass, uint16_t errCode);
+uint32_t smb_ntstatus_to_errno(uint32_t ntstatus);
+int smb_put_dmem(struct mbchain *mbp, const char *src, size_t srcSize, 
+				 int flags, int usingUnicode, size_t *lenp);
+int smb_put_dstring(struct mbchain *mbp, int usingUnicode, const char *src, 
+					size_t maxlen, int flags);
+int  smb_put_string(struct smb_rq *rqp, const char *src);
+int  smb_put_asunistring(struct smb_rq *rqp, const char *src);
+struct sockaddr *smb_dup_sockaddr(struct sockaddr *sa, int canwait);
+int  smb_rq_sign(struct smb_rq *rqp);
+int  smb_rq_verify(struct smb_rq *rqp);
+
+int smb2_rq_compress_chunk(struct smb_session *sessionp, uint16_t algorithm,
+                           uint8_t *write_bufferp, uint32_t write_buffer_len,
+                           uint32_t *forward_data_repetitions, char *forward_data_char,
+                           uint32_t *backward_data_repetitions, char *backward_data_char,
+                           uint8_t *compress_startp, uint32_t *data_len,
+                           size_t *actual_len);
+int smb2_rq_compress_write(struct smb_rq *rqp);
+int smb2_rq_decompress_read(struct smb_session *sessionp, mbuf_t *mpp);
+
+int  smb2_rq_sign(struct smb_rq *rqp);
+int  smb2_rq_verify(struct smb_rq *rqp, struct mdchain *mdp, uint8_t *signature);
+int  smb3_derive_channel_keys(struct smbiod *iod);
+int  smb3_derive_keys(struct smbiod *iod);
+int  smb3_rq_encrypt(struct smb_rq *rqp);
+int  smb3_msg_decrypt(struct smb_session *sessionp, mbuf_t *m);
+int smb3_verify_session_setup(struct smb_session *sessionp, struct smbiod *iod,
+                              uint8_t *sess_setup_reply, size_t sess_setup_len);
+
+int smb311_pre_auth_integrity_hash_init(struct smbiod *iod, uint16_t command, mbuf_t m0);
+int smb311_pre_auth_integrity_hash_update(struct smbiod *iod, mbuf_t m0);
+int smb311_pre_auth_integrity_hash_print(struct smbiod *iod);
+
+#if 0
+void smb_test_crypt_performance(struct smb_session *sessionp, size_t orig_packet_len,
+								size_t orig_mb_len);
+#endif
+
+vm_offset_t smb_hideaddr(void *);
+
+#endif /* !_NETSMB_SMB_SUBR_H_ */

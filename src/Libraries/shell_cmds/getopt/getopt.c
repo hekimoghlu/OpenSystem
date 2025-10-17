@@ -1,0 +1,72 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, January 31, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+/*
+ * This material, written by Henry Spencer, was released by him
+ * into the public domain and is thus not subject to any copyright.
+ */
+
+#ifndef __APPLE__
+#include <capsicum_helpers.h>
+#include <err.h>
+#include <errno.h>
+#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int
+main(int argc, char *argv[])
+{
+	int c;
+	int status = 0;
+
+#ifndef __APPLE__
+	if (caph_limit_stdio() < 0 || caph_enter() < 0)
+		err(1, "capsicum");
+#endif
+
+	optind = 2;	/* Past the program name and the option letters. */
+	while ((c = getopt(argc, argv, argv[1])) != -1)
+		switch (c) {
+		case '?':
+			status = 1;	/* getopt routine gave message */
+			break;
+		default:
+			if (optarg != NULL)
+				printf(" -%c %s", c, optarg);
+			else
+				printf(" -%c", c);
+			break;
+		}
+	printf(" --");
+	for (; optind < argc; optind++)
+		printf(" %s", argv[optind]);
+	printf("\n");
+	return status;
+}

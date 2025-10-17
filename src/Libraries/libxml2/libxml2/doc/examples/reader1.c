@@ -1,0 +1,118 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, March 12, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <stdio.h>
+#include <libxml/xmlreader.h>
+
+#ifdef LIBXML_READER_ENABLED
+
+/**
+ * processNode:
+ * @reader: the xmlReader
+ *
+ * Dump information about the current node
+ */
+static void
+processNode(xmlTextReaderPtr reader) {
+    const xmlChar *name, *value;
+
+    name = xmlTextReaderConstName(reader);
+    if (name == NULL)
+	name = BAD_CAST "--";
+
+    value = xmlTextReaderConstValue(reader);
+
+    printf("%d %d %s %d %d", 
+	    xmlTextReaderDepth(reader),
+	    xmlTextReaderNodeType(reader),
+	    name,
+	    xmlTextReaderIsEmptyElement(reader),
+	    xmlTextReaderHasValue(reader));
+    if (value == NULL)
+	printf("\n");
+    else {
+        if (xmlStrlen(value) > 40)
+            printf(" %.40s...\n", value);
+        else
+	    printf(" %s\n", value);
+    }
+}
+
+/**
+ * streamFile:
+ * @filename: the file name to parse
+ *
+ * Parse and print information about an XML file.
+ */
+static void
+streamFile(const char *filename) {
+    xmlTextReaderPtr reader;
+    int ret;
+
+    reader = xmlReaderForFile(filename, NULL, 0);
+    if (reader != NULL) {
+        ret = xmlTextReaderRead(reader);
+        while (ret == 1) {
+            processNode(reader);
+            ret = xmlTextReaderRead(reader);
+        }
+        xmlFreeTextReader(reader);
+        if (ret != 0) {
+            fprintf(stderr, "%s : failed to parse\n", filename);
+        }
+    } else {
+        fprintf(stderr, "Unable to open %s\n", filename);
+    }
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2)
+        return(1);
+
+    /*
+     * this initialize the library and check potential ABI mismatches
+     * between the version it was compiled for and the actual shared
+     * library used.
+     */
+    LIBXML_TEST_VERSION
+
+    streamFile(argv[1]);
+
+    /*
+     * Cleanup function for the XML library.
+     */
+    xmlCleanupParser();
+    /*
+     * this is to debug memory for regression tests
+     */
+    xmlMemoryDump();
+    return(0);
+}
+
+#else
+int main(void) {
+    fprintf(stderr, "XInclude support not compiled in\n");
+    exit(1);
+}
+#endif

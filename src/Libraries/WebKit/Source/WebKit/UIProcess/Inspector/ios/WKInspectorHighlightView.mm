@@ -1,0 +1,307 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, October 8, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "config.h"
+#import "WKInspectorHighlightView.h"
+
+#if PLATFORM(IOS_FAMILY)
+
+#import <WebCore/FloatQuad.h>
+#import <WebCore/FloatRect.h>
+#import <WebCore/GeometryUtilities.h>
+#import <WebCore/GraphicsContextCG.h>
+
+@implementation WKInspectorHighlightView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (!(self = [super initWithFrame:frame]))
+        return nil;
+    _layers = adoptNS([[NSMutableArray alloc] init]);
+    self.opaque = NO;
+    self.userInteractionEnabled = NO;
+    return self;
+}
+
+- (void)dealloc
+{
+    [self _removeAllLayers];
+    [super dealloc];
+}
+
+- (void)_removeAllLayers
+{
+    for (CAShapeLayer *layer in _layers.get())
+        [layer removeFromSuperlayer];
+    [_layers removeAllObjects];
+}
+
+- (void)_createLayers:(NSUInteger)numLayers
+{
+    if ([_layers count] == numLayers)
+        return;
+
+    for (NSUInteger i = 0; i < numLayers; ++i) {
+        auto layer = adoptNS([[CAShapeLayer alloc] init]);
+        layer.get().position = CGPointMake(-self.frame.origin.x, -self.frame.origin.y);
+        [_layers addObject:layer.get()];
+        [self.layer addSublayer:layer.get()];
+    }
+}
+
+static bool findIntersectionOnLineBetweenPoints(const WebCore::FloatPoint& p1, const WebCore::FloatPoint& p2, const WebCore::FloatPoint& d1, const WebCore::FloatPoint& d2, WebCore::FloatPoint& intersection) 
+{
+    // Do the lines intersect?
+    WebCore::FloatPoint temporaryIntersectionPoint;
+    if (!findIntersection(p1, p2, d1, d2, temporaryIntersectionPoint))
+        return false;
+
+    // Is the intersection between the two points on the line?
+    if (p1.x() >= p2.x()) {
+        if (temporaryIntersectionPoint.x() > p1.x() || temporaryIntersectionPoint.x() < p2.x())
+            return false;
+    } else {
+        if (temporaryIntersectionPoint.x() > p2.x() || temporaryIntersectionPoint.x() < p1.x())
+            return false;
+    }
+    if (p1.y() >= p2.y()) {
+        if (temporaryIntersectionPoint.y() > p1.y() || temporaryIntersectionPoint.y() < p2.y())
+            return false;
+    } else {
+        if (temporaryIntersectionPoint.y() > p2.y() || temporaryIntersectionPoint.y() < p1.y())
+            return false;
+    }
+
+    intersection = temporaryIntersectionPoint;
+    return true;
+}
+
+// This quad intersection works because the two quads are known to be at the same
+// rotation and clockwise-ness.
+static WebCore::FloatQuad quadIntersection(WebCore::FloatQuad bounds, WebCore::FloatQuad toClamp)
+{
+    // Resulting points.
+    WebCore::FloatPoint p1, p2, p3, p4;
+    bool containsPoint1 = false;
+    bool containsPoint2 = false;
+    bool containsPoint3 = false;
+    bool containsPoint4 = false;
+    bool intersectForPoint1 = false;
+    bool intersectForPoint2 = false;
+    bool intersectForPoint3 = false;
+    bool intersectForPoint4 = false;
+
+    // Top / bottom vertical clamping.
+    if (bounds.containsPoint(toClamp.p1())) {
+        containsPoint1 = true;
+        p1 = toClamp.p1();
+    } else if (!(intersectForPoint1 = findIntersectionOnLineBetweenPoints(bounds.p1(), bounds.p2(), toClamp.p1(), toClamp.p4(), p1)))
+        p1 = toClamp.p1();
+
+    if (bounds.containsPoint(toClamp.p2())) {
+        containsPoint2 = true;
+        p2 = toClamp.p2();
+    } else if (!(intersectForPoint2 = findIntersectionOnLineBetweenPoints(bounds.p1(), bounds.p2(), toClamp.p2(), toClamp.p3(), p2)))
+        p2 = toClamp.p2();
+
+    if (bounds.containsPoint(toClamp.p3())) {
+        containsPoint3 = true;
+        p3 = toClamp.p3();
+    } else if (!(intersectForPoint3 = findIntersectionOnLineBetweenPoints(bounds.p4(), bounds.p3(), toClamp.p2(), toClamp.p3(), p3)))
+        p3 = toClamp.p3();
+
+    if (bounds.containsPoint(toClamp.p4())) {
+        containsPoint4 = true;
+        p4 = toClamp.p4();
+    } else if (!(intersectForPoint4 = findIntersectionOnLineBetweenPoints(bounds.p4(), bounds.p3(), toClamp.p1(), toClamp.p4(), p4)))
+        p4 = toClamp.p4();
+
+    // If only one of the points intersected on either the top or bottom line then we
+    // can clamp the other point on that line to the corner of the bounds.
+    if (!containsPoint1 && intersectForPoint2 && !intersectForPoint1) {
+        containsPoint1 = true;
+        p1 = bounds.p1();
+    } else if (!containsPoint2 && intersectForPoint1 && !intersectForPoint2) {
+        containsPoint2 = true;
+        p2 = bounds.p2();
+    }
+    if (!containsPoint4 && intersectForPoint3 && !intersectForPoint4) {
+        containsPoint4 = true;
+        p4 = bounds.p4();
+    } else if (!containsPoint3 && intersectForPoint4 && !intersectForPoint3) {
+        containsPoint3 = true;
+        p3 = bounds.p3();
+    }
+
+    // Now we only need to perform horizontal clamping for unadjusted points.
+    if (!containsPoint2 && !intersectForPoint2)
+        findIntersectionOnLineBetweenPoints(bounds.p2(), bounds.p3(), p1, p2, p2);
+    if (!containsPoint3 && !intersectForPoint3)
+        findIntersectionOnLineBetweenPoints(bounds.p2(), bounds.p3(), p4, p3, p3);
+    if (!containsPoint1 && !intersectForPoint1)
+        findIntersectionOnLineBetweenPoints(bounds.p1(), bounds.p4(), p1, p2, p1);
+    if (!containsPoint4 && !intersectForPoint4)
+        findIntersectionOnLineBetweenPoints(bounds.p1(), bounds.p4(), p4, p3, p4);
+
+    return WebCore::FloatQuad(p1, p2, p3, p4);
+}
+
+static void layerPathWithHole(CAShapeLayer *layer, const WebCore::FloatQuad& outerQuad, const WebCore::FloatQuad& holeQuad)
+{
+    // Nothing to show.
+    if (outerQuad == holeQuad || holeQuad.containsQuad(outerQuad)) {
+        layer.path = NULL;
+        return;
+    }
+
+    // If there is a negative margin / padding then the outer box might not
+    // fully contain the hole box. In such cases we recalculate the hole to
+    // be the intersection of the two quads.
+    WebCore::FloatQuad innerHole;
+    if (outerQuad.containsQuad(holeQuad))
+        innerHole = holeQuad;
+    else
+        innerHole = quadIntersection(outerQuad, holeQuad);
+
+    // Clockwise inside rect (hole), Counter-Clockwise outside rect (fill).
+    auto path = adoptCF(CGPathCreateMutable());
+    CGPathMoveToPoint(path.get(), 0, innerHole.p1().x(), innerHole.p1().y());
+    CGPathAddLineToPoint(path.get(), 0, innerHole.p2().x(), innerHole.p2().y());
+    CGPathAddLineToPoint(path.get(), 0, innerHole.p3().x(), innerHole.p3().y());
+    CGPathAddLineToPoint(path.get(), 0, innerHole.p4().x(), innerHole.p4().y());
+    CGPathMoveToPoint(path.get(), 0, outerQuad.p1().x(), outerQuad.p1().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p4().x(), outerQuad.p4().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p3().x(), outerQuad.p3().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p2().x(), outerQuad.p2().y());
+    layer.path = path.get();
+}
+
+static void layerPath(CAShapeLayer *layer, const WebCore::FloatQuad& outerQuad)
+{
+    auto path = adoptCF(CGPathCreateMutable());
+    CGPathMoveToPoint(path.get(), 0, outerQuad.p1().x(), outerQuad.p1().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p4().x(), outerQuad.p4().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p3().x(), outerQuad.p3().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p2().x(), outerQuad.p2().y());
+    CGPathCloseSubpath(path.get());
+    layer.path = path.get();
+}
+
+- (void)_layoutForNodeHighlight:(const WebCore::InspectorOverlay::Highlight&)highlight offset:(unsigned)offset
+{
+    ASSERT([_layers count] >= offset + 4);
+    ASSERT(highlight.quads.size() >= offset + 4);
+    if ([_layers count] < offset + 4 || highlight.quads.size() < offset + 4)
+        return;
+
+    CAShapeLayer *marginLayer = [_layers objectAtIndex:offset];
+    CAShapeLayer *borderLayer = [_layers objectAtIndex:offset + 1];
+    CAShapeLayer *paddingLayer = [_layers objectAtIndex:offset + 2];
+    CAShapeLayer *contentLayer = [_layers objectAtIndex:offset + 3];
+
+    WebCore::FloatQuad marginQuad = highlight.quads[offset];
+    WebCore::FloatQuad borderQuad = highlight.quads[offset + 1];
+    WebCore::FloatQuad paddingQuad = highlight.quads[offset + 2];
+    WebCore::FloatQuad contentQuad = highlight.quads[offset + 3];
+
+    marginLayer.fillColor = cachedCGColor(highlight.marginColor).get();
+    borderLayer.fillColor = cachedCGColor(highlight.borderColor).get();
+    paddingLayer.fillColor = cachedCGColor(highlight.paddingColor).get();
+    contentLayer.fillColor = cachedCGColor(highlight.contentColor).get();
+
+    layerPathWithHole(marginLayer, marginQuad, borderQuad);
+    layerPathWithHole(borderLayer, borderQuad, paddingQuad);
+    layerPathWithHole(paddingLayer, paddingQuad, contentQuad);
+    layerPath(contentLayer, contentQuad);
+}
+
+- (void)_layoutForNodeListHighlight:(const WebCore::InspectorOverlay::Highlight&)highlight
+{
+    if (!highlight.quads.size())
+        return;
+
+    unsigned nodeCount = highlight.quads.size() / 4;
+    [self _createLayers:nodeCount * 4];
+
+    for (unsigned i = 0; i < nodeCount; ++i)
+        [self _layoutForNodeHighlight:highlight offset:i * 4];
+}
+
+- (void)_layoutForRectsHighlight:(const WebCore::InspectorOverlay::Highlight&)highlight
+{
+    NSUInteger numLayers = highlight.quads.size();
+    if (!numLayers)
+        return;
+
+    [self _createLayers:numLayers];
+
+    auto contentColor = cachedCGColor(highlight.contentColor);
+    for (NSUInteger i = 0; i < numLayers; ++i) {
+        CAShapeLayer *layer = [_layers objectAtIndex:i];
+        layer.fillColor = contentColor.get();
+        layerPath(layer, highlight.quads[i]);
+    }
+}
+
+- (void)drawRect:(CGRect)dirtyRect
+{
+    [super drawRect:dirtyRect];
+
+    if (!_highlight)
+        return;
+
+    auto context = WebCore::GraphicsContextCG(UIGraphicsGetCurrentContext());
+    context.clip({ dirtyRect });
+    context.translate(-self.frame.origin.x, -self.frame.origin.y);
+
+    for (auto gridHighlightOverlay : _highlight->gridHighlightOverlays)
+        WebCore::InspectorOverlay::drawGridOverlay(context, gridHighlightOverlay);
+
+    for (auto flexHighlightOverlay : _highlight->flexHighlightOverlays)
+        WebCore::InspectorOverlay::drawFlexOverlay(context, flexHighlightOverlay);
+}
+
+- (void)update:(const WebCore::InspectorOverlay::Highlight&)highlight scale:(double)scale frame:(const WebCore::FloatRect&)frame
+{
+    [self _removeAllLayers];
+
+    _highlight = highlight;
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // FIXME: <rdar://131638772> UIScreen.mainScreen is deprecated.
+    self.contentScaleFactor = UIScreen.mainScreen.scale * scale;
+ALLOW_DEPRECATED_DECLARATIONS_END
+    self.frame = frame;
+
+    if (highlight.type == WebCore::InspectorOverlay::Highlight::Type::Node || highlight.type == WebCore::InspectorOverlay::Highlight::Type::NodeList)
+        [self _layoutForNodeListHighlight:highlight];
+    else if (highlight.type == WebCore::InspectorOverlay::Highlight::Type::Rects)
+        [self _layoutForRectsHighlight:highlight];
+
+    
+    [self setNeedsDisplay];
+}
+
+@end
+
+#endif

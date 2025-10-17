@@ -1,0 +1,78 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, November 16, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===- Trace.cpp - Implementation of Trace class --------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This class represents a single trace of LLVM basic blocks.  A trace is a
+// single entry, multiple exit, region of code that is often hot.  Trace-based
+// optimizations treat traces almost like they are a large, strange, basic
+// block: because the trace path is assumed to be hot, optimizations for the
+// fall-through path are made at the expense of the non-fall-through paths.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Analysis/Trace.h"
+#include "llvm/Function.h"
+#include "llvm/Assembly/Writer.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+using namespace llvm;
+
+Function *Trace::getFunction() const {
+  return getEntryBasicBlock()->getParent();
+}
+
+Module *Trace::getModule() const {
+  return getFunction()->getParent();
+}
+
+/// print - Write trace to output stream.
+///
+void Trace::print(raw_ostream &O) const {
+  Function *F = getFunction();
+  O << "; Trace from function " << F->getName() << ", blocks:\n";
+  for (const_iterator i = begin(), e = end(); i != e; ++i) {
+    O << "; ";
+    WriteAsOperand(O, *i, true, getModule());
+    O << "\n";
+  }
+  O << "; Trace parent function: \n" << *F;
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// dump - Debugger convenience method; writes trace to standard error
+/// output stream.
+///
+void Trace::dump() const {
+  print(dbgs());
+}
+#endif

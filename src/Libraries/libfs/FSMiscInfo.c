@@ -1,0 +1,213 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, October 10, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <System/sys/mount.h>
+#include <sys/param.h>
+#include <errno.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+
+#include "FSPrivate.h"
+
+#if TARGET_OS_SIMULATOR
+#define statfs_ext(path, buf, flags) statfs((path), (buf))
+#define fstatfs_ext(fd, buf, flags) fstatfs((fd), &(buf))
+#endif
+
+static bool
+check_mntfromname(const char *fstype)
+{
+    return strcmp(fstype, "lifs") == 0 ||
+           strcmp(fstype, "fskit") == 0;
+}
+
+errno_t
+_FSGetTypeInfoFromStatfs(const struct statfs *sfs, char *typenamebuf,
+    size_t typenamebufsize, uint32_t *subtypep)
+{
+    /*
+     * In the event that the caller passes sfs->f_fstypename as typenamebuf,
+     * working in a local buffer will avoid having to deal with overlapping
+     * copies.
+     */
+    char fstype[MFSTYPENAMELEN];
+
+    if (check_mntfromname(sfs->f_fstypename)) {
+        /*
+         * The form that FSKit uses is a regular form like so:
+         *
+         *      fstype://location/volname
+         *
+         * N.B. This might look like a URL, **but it is not a URL**.
+         */
+        const char *cp = strstr(sfs->f_mntfromname, "://");
+        if (cp == NULL) {
+            /* Something is wrong ??? */
+            return EINVAL;
+        }
+        ptrdiff_t len = cp - sfs->f_mntfromname;
+
+        /* Clamp the name if necessary (N.B. should never be necessary). */
+        if (len > sizeof(fstype) - 1) {
+            len = sizeof(fstype) - 1;
+        }
+        memcpy(fstype, sfs->f_mntfromname, len);
+        fstype[len] = '\0';
+    } else {
+        strlcpy(fstype, sfs->f_fstypename, sizeof(fstype));
+    }
+
+    /* Copy out the results. */
+    if (typenamebuf != NULL) {
+        strlcpy(typenamebuf, fstype, typenamebufsize);
+    }
+    if (subtypep != NULL) {
+        *subtypep = sfs->f_fssubtype;
+    }
+
+    return 0;
+}
+
+errno_t
+_FSGetTypeInfoForPath(const char *path, char *typenamebuf,
+    size_t typenamebufsize, uint32_t *subtypep)
+{
+    struct statfs sfs;
+
+    if (statfs_ext(path, &sfs, STATFS_EXT_NOBLOCK) == -1) {
+        return errno;
+    }
+    return _FSGetTypeInfoFromStatfs(&sfs, typenamebuf, typenamebufsize,
+                                    subtypep);
+}
+
+errno_t
+_FSGetTypeInfoForFileDescriptor(int fd, char *typenamebuf,
+    size_t typenamebufsize, uint32_t *subtypep)
+{
+    struct statfs sfs;
+
+    if (fstatfs_ext(fd, &sfs, STATFS_EXT_NOBLOCK) == -1) {
+        return errno;
+    }
+    return _FSGetTypeInfoFromStatfs(&sfs, typenamebuf, typenamebufsize,
+                                    subtypep);
+}
+
+errno_t
+_FSGetLocationFromStatfs(const struct statfs *sfs, char *locationbuf,
+    size_t locationbufsize)
+{
+    /* This is 1KB, so don't use the stack. */
+    char *locbuf = calloc(1, MNAMELEN);
+    int error = 0;
+
+    if (locbuf == NULL) {
+        error = ENOMEM;
+        goto out;
+    }
+
+    if (check_mntfromname(sfs->f_fstypename)) {
+        /*
+         * The form that FSKit uses is a regular form like so:
+         *
+         *      fstype://location/volname
+         *
+         * N.B. This might look like a URL, **but it is not a URL**.
+         */
+        const char *cp1 = strstr(sfs->f_mntfromname, "://");
+        if (cp1 == NULL) {
+            /* Something is wrong ??? */
+            error = EINVAL;
+            goto out;
+        }
+        /* Advance past type delimeter. */
+        cp1 += 3;
+
+        const char *cp2 = strchr(cp1, '/');
+        if (cp2 == NULL) {
+            /* Something is wrong ??? */
+            error = EINVAL;
+            goto out;
+        }
+        ptrdiff_t len = cp2 - cp1;
+
+        /* Clamp the location if necessary (N.B. should never be necessary). */
+        if (len > MNAMELEN - 1) {
+            len = MNAMELEN - 1;
+        }
+        memcpy(locbuf, cp1, len);
+        locbuf[len] = '\0';
+    } else {
+        const char *cp = sfs->f_mntfromname;
+
+        /*
+         * Special-case block devices, so that the return is consistent with
+         * the FSKit case (which will be of the form diskNsM, no leading "/dev/").
+         */
+        if (strncmp(cp, "/dev/disk", strlen("/dev/disk")) == 0) {
+            cp += 5;
+        } else if (strncmp(cp, "/dev/rdisk", strlen("/dev/rdisk")) == 0) {
+            /* This case should never happen but what the heck. */
+            cp += 6;
+        }
+        strlcpy(locbuf, cp, MNAMELEN);
+    }
+
+    if (locationbuf != NULL) {
+        strlcpy(locationbuf, locbuf, locationbufsize);
+    }
+
+ out:
+    if (locbuf != NULL) {
+        free(locbuf);
+    }
+    return error;
+}
+
+errno_t
+_FSGetLocationForPath(const char *path, char *locationbuf,
+    size_t locationbufsize)
+{
+    struct statfs sfs;
+
+    if (statfs_ext(path, &sfs, STATFS_EXT_NOBLOCK) == -1) {
+        return errno;
+    }
+    return _FSGetLocationFromStatfs(&sfs, locationbuf, locationbufsize);
+}
+
+errno_t
+_FSGetLocationForFileDescriptor(int fd, char *locationbuf,
+    size_t locationbufsize)
+{
+    struct statfs sfs;
+
+    if (fstatfs_ext(fd, &sfs, STATFS_EXT_NOBLOCK) == -1) {
+        return errno;
+    }
+    return _FSGetLocationFromStatfs(&sfs, locationbuf, locationbufsize);
+}

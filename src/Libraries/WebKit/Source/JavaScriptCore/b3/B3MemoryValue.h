@@ -1,0 +1,160 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, October 30, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if ENABLE(B3_JIT)
+
+#include "B3Bank.h"
+#include "B3HeapRange.h"
+#include "B3Value.h"
+#include <type_traits>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+namespace JSC { namespace B3 {
+
+class JS_EXPORT_PRIVATE MemoryValue : public Value {
+public:
+    static bool accepts(Kind kind)
+    {
+        return isMemoryAccess(kind.opcode());
+    }
+
+    ~MemoryValue() override;
+
+    OffsetType offset() const { return m_offset; }
+    template<typename Int, typename = IsLegalOffset<Int>>
+    void setOffset(Int offset) { m_offset = offset; }
+
+    // You don't have to worry about using legal offsets unless you've entered quirks mode.
+    template<typename Int,
+        typename = typename std::enable_if<std::is_integral<Int>::value>::type,
+        typename = typename std::enable_if<std::is_signed<Int>::value>::type
+    >
+    bool isLegalOffset(Int offset) const { return isLegalOffsetImpl(offset); }
+
+    // A necessary consequence of MemoryValue having an offset is that it participates in instruction
+    // selection. This tells you if this will get lowered to something that requires an offsetless
+    // address.
+    inline bool requiresSimpleAddr() const;
+
+    const HeapRange& range() const { return m_range; }
+    void setRange(const HeapRange& range) { m_range = range; }
+    
+    // This is an alias for range.
+    const HeapRange& accessRange() const { return range(); }
+    void setAccessRange(const HeapRange& range) { setRange(range); }
+    
+    const HeapRange& fenceRange() const { return m_fenceRange; }
+    void setFenceRange(const HeapRange& range) { m_fenceRange = range; }
+
+    bool isStore() const { return B3::isStore(opcode()); }
+    bool isLoad() const { return B3::isLoad(opcode()); }
+
+    bool hasFence() const { return !!fenceRange(); }
+    bool isExotic() const { return hasFence() || isAtom(opcode()); }
+
+    Type accessType() const;
+    Bank accessBank() const;
+    size_t accessByteSize() const;
+    
+    inline Width accessWidth() const;
+
+    inline bool isCanonicalWidth() const;
+
+    B3_SPECIALIZE_VALUE_FOR_NON_VARARGS_CHILDREN
+
+protected:
+    void dumpMeta(CommaPrinter&, PrintStream&) const override;
+    
+    template<typename Int, typename = IsLegalOffset<Int>, typename... Arguments>
+    MemoryValue(CheckedOpcodeTag, Kind kind, Type type, NumChildren numChildren, Origin origin, Int offset, HeapRange range, HeapRange fenceRange, Arguments... arguments)
+        : Value(CheckedOpcode, kind, type, numChildren, origin, static_cast<Value*>(arguments)...)
+        , m_offset(offset)
+        , m_range(range)
+        , m_fenceRange(fenceRange)
+    {
+    }
+    
+private:
+    friend class Procedure;
+    friend class Value;
+
+    inline bool isLegalOffsetImpl(int32_t offset) const;
+    bool isLegalOffsetImpl(int64_t offset) const;
+
+    enum MemoryValueLoad { MemoryValueLoadTag };
+    enum MemoryValueLoadImplied { MemoryValueLoadImpliedTag };
+    enum MemoryValueStore { MemoryValueStoreTag };
+
+    // Use this form for Load (but not Load8Z, Load8S, or any of the Loads that have a suffix that
+    // describes the returned type).
+    MemoryValue(Kind kind, Type type, Origin origin, Value* pointer)
+        : MemoryValue(MemoryValueLoadTag, kind, type, origin, pointer)
+    {
+    }
+    template<typename Int, typename = IsLegalOffset<Int>>
+    MemoryValue(Kind kind, Type type, Origin origin, Value* pointer, Int offset, HeapRange range = HeapRange::top(), HeapRange fenceRange = HeapRange())
+        : MemoryValue(MemoryValueLoadTag, kind, type, origin, pointer, offset, range, fenceRange)
+    {
+    }
+
+    // Use this form for loads where the return type is implied.
+    MemoryValue(Kind kind, Origin origin, Value* pointer)
+        : MemoryValue(MemoryValueLoadImpliedTag, kind, origin, pointer)
+    {
+    }
+    template<typename Int, typename = IsLegalOffset<Int>>
+    MemoryValue(Kind kind, Origin origin, Value* pointer, Int offset, HeapRange range = HeapRange::top(), HeapRange fenceRange = HeapRange())
+        : MemoryValue(MemoryValueLoadImpliedTag, kind, origin, pointer, offset, range, fenceRange)
+    {
+    }
+
+    // Use this form for stores.
+    MemoryValue(Kind kind, Origin origin, Value* value, Value* pointer)
+        : MemoryValue(MemoryValueStoreTag, kind, origin, value, pointer)
+    {
+    }
+    template<typename Int, typename = IsLegalOffset<Int>>
+    MemoryValue(Kind kind, Origin origin, Value* value, Value* pointer, Int offset, HeapRange range = HeapRange::top(), HeapRange fenceRange = HeapRange())
+        : MemoryValue(MemoryValueStoreTag, kind, origin, value, pointer, offset, range, fenceRange)
+    {
+    }
+
+    // The above templates forward to these implementations.
+    MemoryValue(MemoryValueLoad, Kind, Type, Origin, Value* pointer, OffsetType = 0, HeapRange = HeapRange::top(), HeapRange fenceRange = HeapRange());
+    MemoryValue(MemoryValueLoadImplied, Kind, Origin, Value* pointer, OffsetType = 0, HeapRange = HeapRange::top(), HeapRange fenceRange = HeapRange());
+    MemoryValue(MemoryValueStore, Kind, Origin, Value*, Value* pointer, OffsetType = 0, HeapRange = HeapRange::top(), HeapRange fenceRange = HeapRange());
+
+    OffsetType m_offset { 0 };
+    HeapRange m_range { HeapRange::top() };
+    HeapRange m_fenceRange { HeapRange() };
+};
+
+} } // namespace JSC::B3
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // ENABLE(B3_JIT)

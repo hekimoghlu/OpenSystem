@@ -1,0 +1,149 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, September 26, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef SUDOERS_LDAP_CONF_H
+#define SUDOERS_LDAP_CONF_H
+
+/* Macros for checking strlcpy/strlcat/sudo_ldap_value_cat return value. */
+#define CHECK_STRLCPY(d, s, l) do {					       \
+	if (strlcpy((d), (s), (l)) >= (l)) {				       \
+	    goto overflow;						       \
+	}								       \
+} while (0)
+#define CHECK_STRLCAT(d, s, l) do {					       \
+	if (strlcat((d), (s), (l)) >= (l)) {				       \
+	    goto overflow;						       \
+	}								       \
+} while (0)
+#define CHECK_LDAP_VCAT(d, s, l) do {					       \
+	if (sudo_ldap_value_cat((d), (s), (l)) >= (l)) {		       \
+	    goto overflow;						       \
+	}								       \
+} while (0)
+
+#if defined(__GNUC__) && __GNUC__ == 2
+# define DPRINTF1(fmt...) do {						\
+    sudo_debug_printf(SUDO_DEBUG_DIAG, fmt);				\
+    if (ldap_conf.debug >= 1) {						\
+	sudo_warnx_nodebug(fmt);					\
+    }									\
+} while (0)
+# define DPRINTF2(fmt...) do {						\
+    sudo_debug_printf(SUDO_DEBUG_INFO, fmt);				\
+    if (ldap_conf.debug >= 2) {						\
+	sudo_warnx_nodebug(fmt);					\
+    }									\
+} while (0)
+#else
+# define DPRINTF1(...) do {						\
+    sudo_debug_printf(SUDO_DEBUG_DIAG, __VA_ARGS__);			\
+    if (ldap_conf.debug >= 1) {						\
+	sudo_warnx_nodebug(__VA_ARGS__);				\
+    }									\
+} while (0)
+# define DPRINTF2(...) do {						\
+    sudo_debug_printf(SUDO_DEBUG_INFO, __VA_ARGS__);			\
+    if (ldap_conf.debug >= 2) {						\
+	sudo_warnx_nodebug(__VA_ARGS__);				\
+    }									\
+} while (0)
+#endif
+
+/*
+ * Configuration data types.
+ * When adding a new data type, be sure to update sudo_ldap_parse_keyword()
+ * and sudo_ldap_set_options_table().
+ */
+#define CONF_BOOL		0
+#define CONF_INT		1
+#define CONF_STR		2
+#define CONF_LIST_STR		4
+#define CONF_DEREF_VAL		5
+#define CONF_REQCERT_VAL	6
+
+#define SUDO_LDAP_CLEAR		0
+#define SUDO_LDAP_SSL		1
+#define SUDO_LDAP_STARTTLS	2
+
+struct ldap_config_table {
+    const char *conf_str;	/* config file string */
+    int type;			/* CONF_* value, see above */
+    int opt_val;		/* LDAP_OPT_* (or -1 for sudo internal) */
+    void *valp;			/* pointer into ldap_conf */
+};
+
+struct ldap_config_str {
+    STAILQ_ENTRY(ldap_config_str) entries;
+    char val[1];
+};
+STAILQ_HEAD(ldap_config_str_list, ldap_config_str);
+
+/* LDAP configuration structure */
+struct ldap_config {
+    int port;
+    int version;
+    int debug;
+    int ldap_debug;
+    int tls_checkpeer;
+    int tls_reqcert;
+    int timelimit;
+    int timeout;
+    int bind_timelimit;
+    int use_sasl;
+    int rootuse_sasl;
+    int ssl_mode;
+    int timed;
+    int deref;
+    char *host;
+    struct ldap_config_str_list uri;
+    char *binddn;
+    char *bindpw;
+    char *rootbinddn;
+    struct ldap_config_str_list base;
+    struct ldap_config_str_list netgroup_base;
+    char *search_filter;
+    char *netgroup_search_filter;
+    char *ssl;
+    char *tls_cacertfile;
+    char *tls_cacertdir;
+    char *tls_random_file;
+    char *tls_cipher_suite;
+    char *tls_certfile;
+    char *tls_keyfile;
+    char *tls_keypw;
+    char *sasl_mech;
+    char *sasl_auth_id;
+    char *rootsasl_auth_id;
+    char *sasl_secprops;
+    char *krb5_ccname;
+};
+
+extern struct ldap_config ldap_conf;
+
+const char *sudo_krb5_ccname_path(const char *old_ccname);
+bool sudo_ldap_read_config(void);
+int sudo_ldap_set_options_global(void);
+int sudo_ldap_set_options_conn(LDAP *ld);
+
+#endif /* SUDOERS_LDAP_CONF_H */

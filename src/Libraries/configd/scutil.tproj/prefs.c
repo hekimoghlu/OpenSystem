@@ -1,0 +1,1465 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, November 14, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Modification History
+ *
+ * May 29, 2003			Allan Nathanson <ajn@apple.com>
+ * - initial revision
+ */
+
+#include <TargetConditionals.h>
+#include <unistd.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <os/feature_private.h>
+#include "scutil.h"
+#include "commands.h"
+#include "prefs.h"
+
+#include <SystemConfiguration/SCNetworkConfigurationPrivate.h>
+#include "SCNetworkConfigurationInternal.h"
+
+
+
+/* -------------------- */
+
+#if	!TARGET_OS_IPHONE
+
+#include <Security/Authorization.h>
+
+__private_extern__
+AuthorizationRef
+_prefs_AuthorizationCreate(void)
+{
+	AuthorizationRef	authorization	= NULL;
+
+	if (getenv("SCPREFERENCES_USE_ENTITLEMENTS") != NULL) {
+		authorization = kSCPreferencesUseEntitlementAuthorization;
+	} else {
+		AuthorizationFlags	flags	= kAuthorizationFlagDefaults;
+		OSStatus		status;
+
+		status = AuthorizationCreate(NULL,
+					     kAuthorizationEmptyEnvironment,
+					     flags,
+					     &authorization);
+		if (status != errAuthorizationSuccess) {
+			SCPrint(TRUE,
+				stdout,
+				CFSTR("AuthorizationCreate() failed: status = %d\n"),
+				(int)status);
+			return NULL;
+		}
+	}
+
+	return authorization;
+}
+
+
+__private_extern__
+void
+_prefs_AuthorizationFree(AuthorizationRef authorization)
+{
+	if (authorization != kSCPreferencesUseEntitlementAuthorization) {
+		AuthorizationFree(authorization, kAuthorizationFlagDefaults);
+//		AuthorizationFree(authorization, kAuthorizationFlagDestroyRights);
+	}
+
+	return;
+}
+
+#endif	/* !TARGET_OS_IPHONE */
+
+/* -------------------- */
+
+
+__private_extern__ Boolean	_prefs_changed	= FALSE;
+
+
+__private_extern__
+Boolean
+_prefs_open(CFStringRef name, const char *path)
+{
+	char			*env		= NULL;
+	CFMutableDictionaryRef	options		= NULL;
+	CFStringRef		prefsID		= NULL;
+	Boolean			useHelper	= FALSE;
+	Boolean			useOptions	= FALSE;
+
+	authorization = NULL;
+
+	if (geteuid() != 0) {
+		// if we need to use a helper
+		useHelper = TRUE;
+
+#if	!TARGET_OS_IPHONE
+		authorization = _prefs_AuthorizationCreate();
+#else
+		authorization = kSCPreferencesUseEntitlementAuthorization;
+#endif	/* !TARGET_OS_IPHONE */
+	}
+
+	if (getenv("SCPREFERENCES_ALLOW_MODEL_CONFLICT") != NULL) {
+		if (options == NULL) {
+			options = CFDictionaryCreateMutable(NULL,
+							    0,
+							    &kCFTypeDictionaryKeyCallBacks,
+							    &kCFTypeDictionaryValueCallBacks);
+			useOptions = TRUE;
+		}
+		CFDictionarySetValue(options, kSCPreferencesOptionAllowModelConflict, kCFBooleanTrue);
+	}
+
+	if (getenv("SCPREFERENCES_REMOVE_WHEN_EMPTY") != NULL) {
+		if (options == NULL) {
+			options = CFDictionaryCreateMutable(NULL,
+							    0,
+							    &kCFTypeDictionaryKeyCallBacks,
+							    &kCFTypeDictionaryValueCallBacks);
+			useOptions = TRUE;
+		}
+		CFDictionarySetValue(options, kSCPreferencesOptionRemoveWhenEmpty, kCFBooleanTrue);
+	}
+
+	env = getenv("SCPREFERENCES_PROTECTION_CLASS");
+	if (env != NULL) {
+		CFStringRef	str;
+
+		if (options == NULL) {
+			options = CFDictionaryCreateMutable(NULL,
+							    0,
+							    &kCFTypeDictionaryKeyCallBacks,
+							    &kCFTypeDictionaryValueCallBacks);
+			useOptions = TRUE;
+		}
+		str = CFStringCreateWithCString(NULL, env, kCFStringEncodingASCII);
+		CFDictionarySetValue(options, kSCPreferencesOptionProtectionClass, str);
+		CFRelease(str);
+	}
+
+	if (path != NULL) {
+		prefsPath = strdup(path);
+		prefsID = CFStringCreateWithCString(NULL, path, kCFStringEncodingUTF8);
+	}
+
+	if (!useHelper && !useOptions) {
+		// if no helper/options needed
+		prefs = SCPreferencesCreate(NULL, name, prefsID);
+	} else if (!useOptions) {
+		// if no options needed
+		prefs = SCPreferencesCreateWithAuthorization(NULL, name, prefsID, authorization);
+	} else {
+		prefs = SCPreferencesCreateWithOptions(NULL, name, prefsID, authorization, options);
+		CFRelease(options);
+	}
+
+	if (prefsID != NULL) CFRelease(prefsID);
+	if (prefs == NULL) {
+		if (prefsPath != NULL) free(prefsPath);
+		prefsPath = NULL;
+		return FALSE;
+	}
+
+	_prefs_changed = FALSE;
+	return TRUE;
+}
+
+
+__private_extern__
+void
+_prefs_save(void)
+{
+	if (!SCPreferencesCommitChanges(prefs)) {
+		switch (SCError()) {
+			case kSCStatusAccessError :
+				SCPrint(TRUE, stderr, CFSTR("Permission denied.\n"));
+				break;
+			default :
+				SCPrint(TRUE,
+					stdout,
+					CFSTR("SCPreferencesCommitChanges() failed: %s\n"),
+					SCErrorString(SCError()));
+				break;
+		}
+		exit (1);
+	}
+
+	if (!SCPreferencesApplyChanges(prefs)) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("SCPreferencesApplyChanges() failed: %s\n"),
+			SCErrorString(SCError()));
+		exit (1);
+	}
+
+	_prefs_changed = FALSE;
+
+	if (ni_prefs != NULL) {
+		if (!SCPreferencesCommitChanges(ni_prefs)) {
+			switch (SCError()) {
+				case kSCStatusAccessError :
+					SCPrint(TRUE, stderr, CFSTR("Permission denied.\n"));
+					break;
+				default :
+					SCPrint(TRUE,
+						stdout,
+						CFSTR("SCPreferencesCommitChanges( <NetworkInterfaces.plist> ) failed: %s\n"),
+						SCErrorString(SCError()));
+					break;
+			}
+			exit (1);
+		}
+
+		if (!SCPreferencesApplyChanges(ni_prefs)) {
+			SCPrint(TRUE,
+				stdout,
+				CFSTR("SCPreferencesApplyChanges( <NetworkInterfaces.plist> ) failed: %s\n"),
+				SCErrorString(SCError()));
+			exit (1);
+		}
+	}
+
+	return;
+}
+
+
+__private_extern__
+void
+_prefs_close(void)
+{
+	if (prefsPath != NULL) {
+		free(prefsPath);
+		prefsPath = NULL;
+	}
+
+	if (prefs != NULL) {
+		CFRelease(prefs);
+		prefs = NULL;
+		_prefs_changed = FALSE;
+	}
+
+	if (ni_prefs != NULL) {
+		CFRelease(ni_prefs);
+		ni_prefs = NULL;
+	}
+
+	if (authorization != NULL) {
+#if	!TARGET_OS_IPHONE
+		_prefs_AuthorizationFree(authorization);
+#else	/* !TARGET_OS_IPHONE */
+		// Uh...if authorization isn't NULL, something went horribly wrong.
+#endif	/* !TARGET_OS_IPHONE */
+		authorization = NULL;
+	}
+
+	return;
+}
+
+
+__private_extern__
+Boolean
+_prefs_commitRequired(int argc, char * const argv[], const char *command)
+{
+	if (_prefs_changed) {
+		if ((currentInput != NULL)			&&
+		    isatty(fileno(currentInput->fp))		&&
+		    ((argc < 1) || (strcmp(argv[0], "!") != 0))
+		   ) {
+			SCPrint(TRUE, stdout,
+				CFSTR("preference changes have not been committed\n"
+				      "use \"commit\" to save changes"));
+			if (command != NULL) {
+				SCPrint(TRUE, stdout,
+					CFSTR(" or \"%s !\" to abandon changes"),
+					command);
+			}
+			SCPrint(TRUE, stdout, CFSTR("\n"));
+			return TRUE;
+		}
+
+		SCPrint(TRUE, stdout, CFSTR("preference changes abandoned\n"));
+	}
+
+	return FALSE;
+}
+
+
+/* -------------------- */
+
+
+static void
+get_ComputerName(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	CFStringEncoding	encoding;
+	CFStringRef		hostname;
+
+	hostname = SCDynamicStoreCopyComputerName(NULL, &encoding);
+	if (hostname == NULL) {
+		int	sc_status	= SCError();
+
+		switch (sc_status) {
+			case kSCStatusNoKey :
+				SCPrint(TRUE,
+					stderr,
+					CFSTR("ComputerName: not set\n"));
+				break;
+			default :
+				SCPrint(TRUE,
+					stderr,
+					CFSTR("SCDynamicStoreCopyComputerName() failed: %s\n"),
+					SCErrorString(SCError()));
+				break;
+		}
+		exit (1);
+	}
+
+	SCPrint(TRUE, stdout, CFSTR("%@\n"), hostname);
+	CFRelease(hostname);
+
+	return;
+}
+
+
+static void
+set_ComputerName(int argc, char * const argv[])
+{
+	CFStringRef	hostname	= NULL;
+	Boolean		ok;
+
+	ok = _prefs_open(CFSTR("scutil --set ComputerName"), NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		exit(1);
+	}
+
+	if (argc == 0) {
+		CFStringEncoding	old_encoding;
+		CFStringRef		old_hostname;
+
+		old_hostname = SCDynamicStoreCopyComputerName(NULL, &old_encoding);
+		hostname = _copyStringFromSTDIN(CFSTR("ComputerName"), old_hostname);
+		if (old_hostname) CFRelease(old_hostname);
+	} else if (strlen(argv[0]) > 0) {
+		hostname = CFStringCreateWithCString(NULL, argv[0], kCFStringEncodingUTF8);
+	}
+
+	ok = SCPreferencesSetComputerName(prefs, hostname, kCFStringEncodingUTF8);
+	if (hostname != NULL) CFRelease(hostname);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		_prefs_close();
+		exit (1);
+	}
+
+	_prefs_save();
+	_prefs_close();
+	return;
+}
+
+
+static void
+get_HostName(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	CFStringRef	hostname;
+	Boolean		ok;
+
+	ok = _prefs_open(CFSTR("scutil --get HostName"), NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("SCPreferencesCreate() failed: %s\n"),
+			SCErrorString(SCError()));
+		exit(1);
+	}
+
+	hostname = SCPreferencesGetHostName(prefs);
+	if (hostname == NULL) {
+		int	sc_status	= SCError();
+
+		switch (sc_status) {
+			case kSCStatusNoKey :
+				SCPrint(TRUE,
+					stderr,
+					CFSTR("HostName: not set\n"));
+				break;
+			default :
+				SCPrint(TRUE,
+					stderr,
+					CFSTR("SCPreferencesGetHostName() failed: %s\n"),
+					SCErrorString(SCError()));
+				break;
+		}
+		_prefs_close();
+		exit (1);
+	}
+
+	SCPrint(TRUE, stdout, CFSTR("%@\n"), hostname);
+	_prefs_close();
+	return;
+}
+
+
+static void
+set_HostName(int argc, char * const argv[])
+{
+	CFStringRef	hostname = NULL;
+	Boolean		ok;
+
+	ok = _prefs_open(CFSTR("scutil --set HostName"), NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		exit(1);
+	}
+
+	if (argc == 0) {
+		hostname = _copyStringFromSTDIN(CFSTR("HostName"), SCPreferencesGetHostName(prefs));
+	} else if (strlen(argv[0]) > 0) {
+		hostname = CFStringCreateWithCString(NULL, argv[0], kCFStringEncodingUTF8);
+	}
+
+	ok = SCPreferencesSetHostName(prefs, hostname);
+	if (hostname != NULL) CFRelease(hostname);
+	if (!ok) {
+		SCPrint(TRUE,
+			stderr,
+			CFSTR("SCPreferencesSetHostName() failed: %s\n"),
+			SCErrorString(SCError()));
+		_prefs_close();
+		exit (1);
+	}
+
+	_prefs_save();
+	_prefs_close();
+	return;
+}
+
+
+static void
+get_LocalHostName(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	CFStringRef	hostname;
+
+	hostname = SCDynamicStoreCopyLocalHostName(NULL);
+	if (hostname == NULL) {
+		int	sc_status	= SCError();
+
+		switch (sc_status) {
+			case kSCStatusNoKey :
+				SCPrint(TRUE,
+					stderr,
+					CFSTR("LocalHostName: not set\n"));
+				break;
+			default :
+				SCPrint(TRUE,
+					stderr,
+					CFSTR("SCDynamicStoreCopyLocalHostName() failed: %s\n"),
+					SCErrorString(SCError()));
+				break;
+		}
+		exit (1);
+	}
+
+	SCPrint(TRUE, stdout, CFSTR("%@\n"), hostname);
+	CFRelease(hostname);
+
+	return;
+}
+
+
+static void
+set_LocalHostName(int argc, char * const argv[])
+{
+	CFStringRef	hostname	= NULL;
+	Boolean		ok;
+
+	ok = _prefs_open(CFSTR("scutil --set LocalHostName"), NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		exit(1);
+	}
+
+	if (argc == 0) {
+		CFStringRef	old_hostname;
+
+		old_hostname = SCDynamicStoreCopyLocalHostName(NULL);
+		hostname = _copyStringFromSTDIN(CFSTR("LocalHostName"), old_hostname);
+		if (old_hostname) CFRelease(old_hostname);
+	} else if (strlen(argv[0]) > 0) {
+		hostname = CFStringCreateWithCString(NULL, argv[0], kCFStringEncodingUTF8);
+	}
+
+	ok = SCPreferencesSetLocalHostName(prefs, hostname);
+	if (hostname != NULL) CFRelease(hostname);
+	if (!ok) {
+		SCPrint(TRUE,
+			stderr,
+			CFSTR("SCPreferencesSetLocalHostName() failed: %s\n"),
+			SCErrorString(SCError()));
+		_prefs_close();
+		exit (1);
+	}
+
+	_prefs_save();
+	_prefs_close();
+	return;
+}
+
+
+/* -------------------- */
+
+
+typedef void (*pref_func) (int argc, char * const argv[]);
+
+static const struct {
+	char		*pref;
+	pref_func	get;
+	pref_func	set;
+} pref_keys[] = {
+	{ "ComputerName",	get_ComputerName,	set_ComputerName	},
+	{ "HostName",		get_HostName,		set_HostName		},
+	{ "LocalHostName",	get_LocalHostName,	set_LocalHostName	}
+};
+#define	N_PREF_KEYS	(sizeof(pref_keys) / sizeof(pref_keys[0]))
+
+
+__private_extern__
+int
+findPref(char *pref)
+{
+	int	i;
+
+	for (i = 0; i < (int)N_PREF_KEYS; i++) {
+		if (strcmp(pref, pref_keys[i].pref) == 0) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+
+__private_extern__
+void
+do_getPref(char *pref, int argc, char * const argv[])
+{
+	int	i;
+
+	if (argc == 0) {
+		i = findPref(pref);
+		if (i >= 0) {
+			(*pref_keys[i].get)(argc, argv);
+		}
+		return;
+	}
+
+	// process extended get
+	// ie. scutil --get <filename> <prefs path> <key>
+	do_prefs_init();
+
+	do_prefs_open(argc, argv);
+	if (SCError() != kSCStatusOK) {
+		SCPrint(TRUE, stderr, CFSTR("%s\n"), SCErrorString(SCError()));
+		_prefs_close();
+		exit(1);
+	}
+
+	do_prefs_get(--argc, ++argv);
+	if (value != NULL) {
+		CFStringRef key;
+		CFStringRef prefs_val;
+
+		key = CFStringCreateWithCString(NULL, *(++argv), kCFStringEncodingUTF8);
+		prefs_val = CFDictionaryGetValue(value, key);
+		CFRelease(key);
+
+		if (prefs_val != NULL) {
+			SCPrint(TRUE, stdout, CFSTR("%@\n"), prefs_val);
+			_prefs_close();
+			return;
+		}
+	}
+
+	// if path or key not found
+	_prefs_close();
+	exit(1);
+}
+
+
+__private_extern__
+void
+do_setPref(char *pref, int argc, char * const argv[])
+{
+	int	i;
+
+	i = findPref(pref);
+	if (i >= 0) {
+		(*pref_keys[i].set)(argc, argv);
+	}
+	return;
+}
+
+
+/* -------------------- */
+
+
+__private_extern__
+void
+do_prefs_init(void)
+{
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_open(int argc, char * const argv[])
+{
+	Boolean		ok;
+
+	if (prefs != NULL) {
+		if (_prefs_commitRequired(argc, argv, "close")) {
+			return;
+		}
+
+		do_prefs_close(0, NULL);
+	}
+
+	ok = _prefs_open(CFSTR("scutil --prefs"), (argc > 0) ? argv[0] : NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		return;
+	}
+
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_lock(int argc, char * const argv[])
+{
+#pragma unused(argv)
+	Boolean	wait	= (argc > 0) ? TRUE : FALSE;
+
+	if (!SCPreferencesLock(prefs, wait)) {
+		SCPrint(TRUE, stdout, CFSTR("%s\n"), SCErrorString(SCError()));
+		return;
+	}
+
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_unlock(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	if (!SCPreferencesUnlock(prefs)) {
+		SCPrint(TRUE, stdout, CFSTR("%s\n"), SCErrorString(SCError()));
+		return;
+	}
+
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_commit(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	if (!SCPreferencesCommitChanges(prefs)) {
+		SCPrint(TRUE, stdout, CFSTR("%s\n"), SCErrorString(SCError()));
+		return;
+	}
+
+	_prefs_changed = FALSE;
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_apply(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	if (!SCPreferencesApplyChanges(prefs)) {
+		SCPrint(TRUE, stdout, CFSTR("%s\n"), SCErrorString(SCError()));
+	}
+
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_close(int argc, char * const argv[])
+{
+	if (_prefs_commitRequired(argc, argv, "close")) {
+		return;
+	}
+
+	_prefs_close();
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_quit(int argc, char * const argv[])
+{
+	if (_prefs_commitRequired(argc, argv, "quit")) {
+		return;
+	}
+
+	_prefs_close();
+
+	termRequested = TRUE;
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_synchronize(int argc, char * const argv[])
+{
+#pragma unused(argc)
+#pragma unused(argv)
+	SCPreferencesSynchronize(prefs);
+	if (ni_prefs != NULL) {
+		SCPreferencesSynchronize(ni_prefs);
+	}
+
+	return;
+}
+
+
+static CFComparisonResult
+sort_paths(const void *p1, const void *p2, void *context)
+{
+#pragma unused(context)
+	CFStringRef path1 = (CFStringRef)p1;
+	CFStringRef path2 = (CFStringRef)p2;
+	return CFStringCompare(path1, path2, 0);
+}
+
+
+__private_extern__
+void
+do_prefs_list(int argc, char * const argv[])
+{
+	int			i;
+	CFIndex			n;
+	CFMutableArrayRef	paths		= NULL;
+	CFStringRef		prefix;
+	CFDictionaryRef		entity;
+
+	prefix = CFStringCreateWithCString(NULL,
+					   (argc >= 1) ? argv[0] : "/",
+					   kCFStringEncodingUTF8);
+
+	entity = SCPreferencesPathGetValue(prefs, prefix);
+	if (entity == NULL) {
+		SCPrint(TRUE, stdout, CFSTR("  %s\n"), SCErrorString(SCError()));
+		goto done;
+	}
+
+	paths = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+
+	n = isA_CFDictionary(entity) ? CFDictionaryGetCount(entity) : 0;
+	if (n > 0) {
+		CFIndex		i;
+		const void **	keys;
+		const void **	vals;
+
+		keys = CFAllocatorAllocate(NULL, n * sizeof(CFStringRef), 0);
+		vals = CFAllocatorAllocate(NULL, n * sizeof(CFPropertyListRef), 0);
+		CFDictionaryGetKeysAndValues(entity, keys, vals);
+		for (i = 0; i < n; i++) {
+			if (isA_CFDictionary(vals[i])) {
+				CFArrayAppendValue(paths, keys[i]);
+			}
+		}
+		CFAllocatorDeallocate(NULL, keys);
+		CFAllocatorDeallocate(NULL, vals);
+	}
+
+	n = CFArrayGetCount(paths);
+	CFArraySortValues(paths,
+			  CFRangeMake(0, n),
+			  sort_paths,
+			  NULL);
+
+	if (n > 0) {
+		for (i = 0; i < n; i++) {
+			SCPrint(TRUE,
+				stdout,
+				CFSTR("  path [%d] = %@/%@\n"),
+				i,
+				CFEqual(prefix, CFSTR("/")) ? CFSTR("") : prefix,
+				CFArrayGetValueAtIndex(paths, i));
+		}
+	} else {
+		SCPrint(TRUE, stdout, CFSTR("  no paths.\n"));
+	}
+
+	CFRelease(paths);
+
+    done :
+
+	CFRelease(prefix);
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_get(int argc, char * const argv[])
+{
+#pragma unused(argc)
+	CFDictionaryRef		dict;
+	CFStringRef		link;
+	CFIndex			n;
+	CFMutableDictionaryRef	newDict;
+	CFStringRef		path;
+
+	path = CFStringCreateWithCString(NULL, argv[0], kCFStringEncodingUTF8);
+
+	link = SCPreferencesPathGetLink(prefs, path);
+	if (link != NULL) {
+		SCPrint(TRUE, stdout, CFSTR("  --> %@\n"), link);
+	}
+
+	dict = SCPreferencesPathGetValue(prefs, path);
+	CFRelease(path);
+	if (dict == NULL) {
+		SCPrint(TRUE, stdout, CFSTR("  %s\n"), SCErrorString(SCError()));
+		return;
+	}
+
+	newDict = CFDictionaryCreateMutable(NULL,
+					     0,
+					     &kCFTypeDictionaryKeyCallBacks,
+					     &kCFTypeDictionaryValueCallBacks);
+
+	// remove [path] children
+	n = isA_CFDictionary(dict) ? CFDictionaryGetCount(dict) : 0;
+	if (n > 0) {
+		CFIndex		i;
+		const void **	keys;
+		const void **	vals;
+
+		keys = CFAllocatorAllocate(NULL, n * sizeof(CFStringRef), 0);
+		vals = CFAllocatorAllocate(NULL, n * sizeof(CFPropertyListRef), 0);
+		CFDictionaryGetKeysAndValues(dict, keys, vals);
+		for (i = 0; i < n; i++) {
+			if (!isA_CFDictionary(vals[i])) {
+				CFDictionaryAddValue(newDict, keys[i], vals[i]);
+			}
+		}
+		CFAllocatorDeallocate(NULL, keys);
+		CFAllocatorDeallocate(NULL, vals);
+	}
+
+	if (value != NULL) {
+		CFRelease(value);		/* we have new information, release the old */
+	}
+
+	value = newDict;
+
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_set(int argc, char * const argv[])
+{
+	CFDictionaryRef		dict;
+	CFMutableDictionaryRef	newDict	= NULL;
+	CFStringRef		path;
+
+	path    = CFStringCreateWithCString(NULL, argv[0], kCFStringEncodingUTF8);
+	newDict = CFDictionaryCreateMutableCopy(NULL, 0, value);
+
+	dict = SCPreferencesPathGetValue(prefs, path);
+	if (dict != NULL) {
+		CFIndex	n;
+
+		// retain [path] children
+		n = CFDictionaryGetCount(dict);
+		if (n > 0) {
+			CFIndex		i;
+			const void **	keys;
+			const void **	vals;
+
+			keys = CFAllocatorAllocate(NULL, n * sizeof(CFStringRef), 0);
+			vals = CFAllocatorAllocate(NULL, n * sizeof(CFPropertyListRef), 0);
+			CFDictionaryGetKeysAndValues(dict, keys, vals);
+			for (i = 0; i < n; i++) {
+				if (isA_CFDictionary(vals[i])) {
+					if (CFDictionaryContainsKey(newDict, keys[i])) {
+						SCPrint(TRUE, stdout, CFSTR("  key %@ is already a path component and cannot be replaced\n"), keys[i]);
+						goto done;
+					}
+					CFDictionaryAddValue(newDict, keys[i], vals[i]);
+				}
+			}
+			CFAllocatorDeallocate(NULL, keys);
+			CFAllocatorDeallocate(NULL, vals);
+		}
+	} else if (SCError() == kSCStatusInvalidArgument) {
+		SCPrint(TRUE, stdout, CFSTR("  a path component is not a dictionary\n"));
+		goto done;
+	} else if (SCError() != kSCStatusNoKey) {
+		SCPrint(TRUE, stdout, CFSTR("  %s\n"), SCErrorString(SCError()));
+		goto done;
+	}
+
+	if (argc > 1) {
+		CFStringRef	link;
+		Boolean		ok;
+
+		// set link
+		link = CFStringCreateWithCString(NULL, argv[1], kCFStringEncodingUTF8);
+		ok = SCPreferencesPathSetLink(prefs, path, link);
+		CFRelease(link);
+		if (!ok) {
+			SCPrint(TRUE, stdout, CFSTR("  %s\n"), SCErrorString(SCError()));
+			goto done;
+		}
+	} else {
+		// set value
+		if (!SCPreferencesPathSetValue(prefs, path, newDict)) {
+			SCPrint(TRUE, stdout, CFSTR("  %s\n"), SCErrorString(SCError()));
+			goto done;
+		}
+	}
+
+	_prefs_changed = TRUE;
+
+    done :
+
+	CFRelease(newDict);
+	CFRelease(path);
+	return;
+}
+
+
+__private_extern__
+void
+do_prefs_remove(int argc, char * const argv[])
+{
+#pragma unused(argc)
+	CFStringRef	path;
+
+	path = CFStringCreateWithCString(NULL, argv[0], kCFStringEncodingUTF8);
+
+	if (!SCPreferencesPathRemoveValue(prefs, path)) {
+		SCPrint(TRUE, stdout, CFSTR("  %s\n"), SCErrorString(SCError()));
+		goto done;
+	}
+
+	_prefs_changed = TRUE;
+
+    done :
+
+	CFRelease(path);
+	return;
+}
+
+static const char *
+on_off_str(Boolean on)
+{
+	return (on ? "on" : "off");
+}
+
+/* -------------------- */
+
+#include "InterfaceNamerControlPrefs.h"
+
+static void
+bool_usage(const char * name)
+{
+	fprintf(stderr,
+		"usage: scutil --%s [on|off]\n",
+		name);
+}
+
+static void
+configure_new_interfaces_usage(void)
+{
+	bool_usage(CONFIGURE_NEW_INTERFACES);
+}
+
+__private_extern__
+void
+do_configure_new_interfaces(char * pref, int argc, char * const argv[])
+{
+	Boolean			configure = FALSE;
+	_SCControlPrefsRef	control;
+
+	if (argc > 1) {
+		configure_new_interfaces_usage();
+		exit(1);
+	}
+	if (strcmp(pref, CONFIGURE_NEW_INTERFACES)) {
+		return;
+	}
+	control = InterfaceNamerControlPrefsInit(NULL, NULL);
+	if (argc == 0) {
+		configure = InterfaceNamerControlPrefsConfigureNewInterfaces(control);
+		SCPrint(TRUE, stdout, CFSTR("ConfigureNewInterfaces is %s\n"),
+			on_off_str(configure));
+		return;
+	}
+	if (!get_bool_from_string(argv[0], FALSE, &configure, NULL)) {
+		configure_new_interfaces_usage();
+		exit(1);
+	}
+
+	if (!InterfaceNamerControlPrefsSetConfigureNewInterfaces(control,
+								 configure)) {
+		SCPrint(TRUE, stderr, CFSTR("failed to set preferences\n"));
+		exit(2);
+	}
+	return;
+}
+
+
+#if	!TARGET_OS_IPHONE
+
+static void
+allow_new_interfaces_usage(void)
+{
+	bool_usage(ALLOW_NEW_INTERFACES);
+}
+
+__private_extern__
+void
+do_allow_new_interfaces(char * pref, int argc, char * const argv[])
+{
+	Boolean			allow = FALSE;
+	_SCControlPrefsRef	control;
+
+	if (argc > 1) {
+		allow_new_interfaces_usage();
+		exit(1);
+	}
+	if (strcmp(pref, ALLOW_NEW_INTERFACES)) {
+		return;
+	}
+	control = InterfaceNamerControlPrefsInit(NULL, NULL);
+	if (argc == 0) {
+		allow = InterfaceNamerControlPrefsAllowNewInterfaces(control);
+		SCPrint(TRUE, stdout, CFSTR("AllowNewInterfaces is %s\n"),
+			on_off_str(allow));
+		return;
+	}
+	if (!get_bool_from_string(argv[0], FALSE, &allow, NULL)) {
+		allow_new_interfaces_usage();
+		exit(1);
+	}
+	if (!InterfaceNamerControlPrefsSetAllowNewInterfaces(control, allow)) {
+		SCPrint(TRUE, stderr, CFSTR("failed to set preferences\n"));
+		exit(2);
+	}
+	return;
+}
+
+#endif	// !TARGET_OS_IPHONE
+
+/* -------------------- */
+
+#include "IPMonitorControlPrefs.h"
+
+__private_extern__
+void
+do_log(char * log, int argc, char * const argv[])
+{
+	Boolean	verbose	= FALSE;
+
+	if (strcmp(log, "IPMonitor")) {
+		return;
+	}
+
+	if (argc == 0) {
+		SCPrint(TRUE, stdout, CFSTR("IPMonitor log is %s\n"),
+			on_off_str(IPMonitorControlPrefsIsVerbose()));
+		return;
+	}
+
+	if (!get_bool_from_string(argv[0], FALSE, &verbose, NULL)) {
+		SCPrint(TRUE, stdout, CFSTR("invalid value, must be 'on' or 'off'\n"));
+		exit(1);
+	}
+
+	if (!IPMonitorControlPrefsSetVerbose(verbose)) {
+		SCPrint(TRUE, stderr, CFSTR("failed to set preferences\n"));
+		exit(2);
+	}
+
+	return;
+}
+
+
+static void
+disable_service_coupling_usage(void)
+{
+	fprintf(stderr,
+		"usage: scutil --" DISABLE_SERVICE_COUPLING " [on|off]\n");
+	return;
+}
+
+__private_extern__
+void
+do_disable_service_coupling(int argc, char * const argv[])
+{
+	Boolean	disable_coupling = FALSE;
+
+	if (argc > 1) {
+		disable_service_coupling_usage();
+		exit(1);
+	}
+	if (argc == 0) {
+		Boolean		val;
+
+		val = IPMonitorControlPrefsGetDisableServiceCoupling();
+		SCPrint(TRUE, stdout, CFSTR(DISABLE_SERVICE_COUPLING " is %s\n"),
+			on_off_str(val));
+		return;
+	}
+
+	if (!get_bool_from_string(argv[0], FALSE, &disable_coupling, NULL)) {
+		disable_service_coupling_usage();
+		exit(1);
+	}
+
+	if (!IPMonitorControlPrefsSetDisableServiceCoupling(disable_coupling)) {
+		SCPrint(TRUE, stderr, CFSTR("failed to set preferences\n"));
+		exit(2);
+	}
+
+	return;
+}
+
+/* -------------------- */
+
+static SCNetworkInterfaceRef
+copy_configured_interface(SCPreferencesRef prefs, CFStringRef if_name)
+{
+	SCNetworkSetRef		current_set = NULL;
+	CFIndex			count;
+	CFIndex			i;
+	SCNetworkInterfaceRef	ret_if = NULL;
+	CFArrayRef		services = NULL;
+
+	if (prefs == NULL) {
+		goto done;
+	}
+	current_set = SCNetworkSetCopyCurrent(prefs);
+	if (current_set == NULL) {
+		goto done;
+	}
+	services = SCNetworkSetCopyServices(current_set);
+	if (services == NULL) {
+		goto done;
+	}
+
+	count = CFArrayGetCount(services);
+	for (i = 0; i < count; i++) {
+		CFStringRef		this_if_name;
+		SCNetworkInterfaceRef	this_if;
+		SCNetworkServiceRef	s;
+
+		s = (SCNetworkServiceRef)CFArrayGetValueAtIndex(services, i);
+		if (!SCNetworkServiceGetEnabled(s)) {
+			/* skip disabled services */
+			continue;
+		}
+		this_if = SCNetworkServiceGetInterface(s);
+		if (this_if == NULL) {
+			continue;
+		}
+		this_if_name = SCNetworkInterfaceGetBSDName(this_if);
+		if (this_if_name == NULL) {
+			continue;
+		}
+		if (CFEqual(this_if_name, if_name)) {
+			CFRetain(this_if);
+			ret_if = this_if;
+			break;
+		}
+	}
+
+ done:
+	if (current_set != NULL) {
+		CFRelease(current_set);
+	}
+	if (services != NULL) {
+		CFRelease(services);
+	}
+	return (ret_if);
+}
+
+typedef Boolean (*get_func_ref)(SCNetworkInterfaceRef interface);
+typedef Boolean (*set_func_ref)(SCNetworkInterfaceRef interface, Boolean value);
+typedef Boolean (*remove_func_ref)(SCNetworkInterfaceRef interface, CFTypeRef value);
+
+static void  __attribute__((noreturn))
+interface_usage(const char * attribute)
+{
+	fprintf(stderr, "usage: scutil --%s <interfaceName> [on|off|default]\n",
+		attribute);
+	exit(1);
+}
+
+static void
+do_interface_bool(int argc, char * const argv[],
+		  const char * attribute,
+		  get_func_ref get_func,
+		  set_func_ref set_func,
+		  remove_func_ref remove_func)
+{
+	const char * 		if_name;
+	CFStringRef		if_name_cf;
+	SCNetworkInterfaceRef	net_if;
+	Boolean			on		= FALSE;
+	Boolean			ok;
+	Boolean			set_default	= FALSE;
+	Boolean			set_value	= FALSE;
+
+	if (argc < 1 || argc > 2) {
+		interface_usage(attribute);
+	}
+	if_name = argv[0];
+	if (argc > 1) {
+		if (!get_bool_from_string(argv[1], TRUE, &on, &set_default)) {
+			interface_usage(attribute);
+		}
+		set_value = TRUE;
+	}
+	ok = _prefs_open(CFSTR("scutil"), NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		exit(1);
+	}
+	if_name_cf = CFStringCreateWithCStringNoCopy(NULL,
+						     if_name,
+						     kCFStringEncodingUTF8,
+						     kCFAllocatorNull);
+	net_if = copy_configured_interface(prefs, if_name_cf);
+	CFRelease(if_name_cf);
+	if (net_if == NULL) {
+		fprintf(stderr, "%s is not configured\n", if_name);
+		exit(1);
+	}
+	if (set_value) {
+		if (!set_default) {
+			ok = (*set_func)(net_if, on);
+		} else {
+			ok = (*remove_func)(net_if, NULL);
+		}
+		if (!ok) {
+			fprintf(stderr,
+				"failed to set %s: %s\n",
+				attribute,
+				SCErrorString(SCError()));
+			exit(1);
+		}
+		_prefs_save();
+	} else {
+		on = (*get_func)(net_if);
+		printf("%s %s is %s\n", if_name, attribute, on_off_str(on));
+	}
+	_prefs_close();
+	CFRelease(net_if);
+
+	return;
+}
+
+__private_extern__
+void
+do_disable_until_needed(int argc, char * const argv[])
+{
+	do_interface_bool(argc, argv, DISABLE_UNTIL_NEEDED,
+			  SCNetworkInterfaceGetDisableUntilNeeded,
+			  SCNetworkInterfaceSetDisableUntilNeeded,
+			  __SCNetworkInterfaceSetDisableUntilNeededValue);
+}
+
+/* -------------------- */
+
+
+__private_extern__
+void
+do_disable_private_relay(int argc, char * const argv[])
+{
+	do_interface_bool(argc, argv, DISABLE_PRIVATE_RELAY,
+			  SCNetworkInterfaceGetDisablePrivateRelay,
+			  SCNetworkInterfaceSetDisablePrivateRelay,
+			  __SCNetworkInterfaceSetDisablePrivateRelayValue);
+}
+
+/* -------------------- */
+
+
+__private_extern__
+void
+do_enable_low_data_mode(int argc, char * const argv[])
+{
+	if (!os_feature_enabled(Network, low_data_mode)) {
+		fprintf(stderr,
+			"Warning: Low Data Mode feature is disabled.\n");
+	}
+	do_interface_bool(argc, argv, ENABLE_LOW_DATA_MODE,
+			  SCNetworkInterfaceGetEnableLowDataMode,
+			  SCNetworkInterfaceSetEnableLowDataMode,
+			  __SCNetworkInterfaceSetEnableLowDataModeValue);
+}
+
+/* -------------------- */
+
+static void  __attribute__((noreturn))
+override_expensive_usage(void)
+{
+	fprintf(stderr,
+		"usage: scutil --%s wifi [expensive|inexpensive|default]\n",
+		OVERRIDE_EXPENSIVE);
+	exit(1);
+}
+
+void
+do_override_expensive(int argc, char * const argv[])
+{
+	SCNetworkInterfaceCost 	cost = kSCNetworkInterfaceCostUnspecified;
+	Boolean			ok;
+	Boolean			set_value = FALSE;
+	const char * 		type;
+	CFStringRef		type_cf;
+
+	if (argc < 1 || argc > 2) {
+		override_expensive_usage();
+	}
+	type = argv[0];
+	if (strcasecmp(type, "wifi") == 0
+	    || strcasecmp(type, "ieee80211") == 0) {
+		type_cf = kSCNetworkInterfaceTypeIEEE80211;
+	}
+	else {
+		override_expensive_usage();
+	}
+	if (argc > 1) {
+		const char *	str = argv[1];
+
+		if (strcasecmp(str, "expensive") == 0) {
+			cost = kSCNetworkInterfaceCostExpensive;
+		}
+		else if (strcasecmp(str, "inexpensive") == 0) {
+			cost = kSCNetworkInterfaceCostInexpensive;
+		}
+		else if (strcasecmp(str, "default") == 0) {
+			cost = kSCNetworkInterfaceCostUnspecified;
+		}
+		else {
+			override_expensive_usage();
+		}
+		set_value = TRUE;
+	}
+	ok = _prefs_open(CFSTR("scutil"), NULL);
+	if (!ok) {
+		SCPrint(TRUE,
+			stdout,
+			CFSTR("Could not open prefs: %s\n"),
+			SCErrorString(SCError()));
+		exit(1);
+	}
+	if (set_value) {
+		Boolean			ok;
+
+		ok = SCNetworkInterfaceTypeSetTemporaryOverrideCost(prefs,
+								    type_cf,
+								    cost);
+		if (!ok) {
+			fprintf(stderr,
+				"failed to set expensive override: %s\n",
+				SCErrorString(SCError()));
+			exit(1);
+		}
+		_prefs_save();
+	} else {
+		const char *	cost_str;
+
+		cost = SCNetworkInterfaceTypeGetTemporaryOverrideCost(prefs,
+								      type_cf);
+		switch (cost) {
+		case kSCNetworkInterfaceCostExpensive:
+			cost_str = "override is expensive";
+			break;
+		case kSCNetworkInterfaceCostInexpensive:
+			cost_str = "override is inexpensive";
+			break;
+		case kSCNetworkInterfaceCostUnspecified:
+		default:
+			cost_str = "no override";
+			break;
+		}
+		SCPrint(TRUE, stdout, CFSTR("%@: %s\n"), type_cf, cost_str);
+	}
+	_prefs_close();
+	CFRelease(type_cf);
+
+	return;
+}
+

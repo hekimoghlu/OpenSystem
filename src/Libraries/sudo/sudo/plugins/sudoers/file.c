@@ -1,0 +1,176 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, July 1, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * This is an open source non-commercial project. Dear PVS-Studio, please check it.
+ * PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+ */
+
+#include <config.h>
+#ifdef __APPLE_MDM_SUPPORT__
+#include <os/log.h>
+#endif // __APPLE_MDM_SUPPORT__
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "sudoers.h"
+#include "parse.h"
+#include "sudo_lbuf.h"
+#include <gram.h>
+
+#ifdef __APPLE_MDM_SUPPORT__
+bool copyMdmPath(const char **result, const char *fullPath, bool isDir);
+#endif // __APPLE_MDM_SUPPORT__
+
+struct sudo_file_handle {
+    FILE *fp;
+    struct sudoers_parse_tree parse_tree;
+};
+
+static int
+sudo_file_close(struct sudo_nss *nss)
+{
+    debug_decl(sudo_file_close, SUDOERS_DEBUG_NSS);
+    struct sudo_file_handle *handle = nss->handle;
+
+    if (handle != NULL) {
+	fclose(handle->fp);
+	sudoersin = NULL;
+
+	free_parse_tree(&handle->parse_tree);
+	free(handle);
+	nss->handle = NULL;
+    }
+
+    debug_return_int(0);
+}
+
+static int
+sudo_file_open(struct sudo_nss *nss)
+{
+    debug_decl(sudo_file_open, SUDOERS_DEBUG_NSS);
+    struct sudo_file_handle *handle;
+
+    /* Note: relies on defaults being initialized early. */
+    if (def_ignore_local_sudoers)
+	debug_return_int(-1);
+
+    if (nss->handle != NULL) {
+	sudo_debug_printf(SUDO_DEBUG_ERROR,
+	    "%s: called with non-NULL handle %p", __func__, nss->handle);
+	sudo_file_close(nss);
+    }
+	
+#ifdef __APPLE_MDM_SUPPORT__
+    const char *mdmPath = NULL;
+    copyMdmPath(&mdmPath, sudoers_file, false); // do not care about the result because we have probably no better option than continue with the original file in case of the problem
+    os_log(OS_LOG_DEFAULT, "Reading%s config", mdmPath ? " managed":"");
+#endif // __APPLE_MDM_SUPPORT__
+
+    handle = malloc(sizeof(*handle));
+    if (handle != NULL) {
+#ifdef __APPLE_MDM_SUPPORT__
+	handle->fp = open_sudoers(mdmPath ?:sudoers_file, false, NULL);
+#else
+	handle->fp = open_sudoers(sudoers_file, false, NULL);
+#endif // __APPLE_MDM_SUPPORT__
+
+	if (handle->fp != NULL) {
+	    init_parse_tree(&handle->parse_tree, NULL, NULL);
+	} else {
+	    free(handle);
+	    handle = NULL;
+	}
+    }
+#ifdef __APPLE_MDM_SUPPORT__
+    if (mdmPath) {
+	sudo_rcstr_delref(mdmPath);
+    }
+#endif // __APPLE_MDM_SUPPORT__
+
+    nss->handle = handle;
+    debug_return_int(nss->handle ? 0 : -1);
+}
+
+/*
+ * Parse and return the specified sudoers file.
+ */
+static struct sudoers_parse_tree *
+sudo_file_parse(struct sudo_nss *nss)
+{
+    debug_decl(sudo_file_close, SUDOERS_DEBUG_NSS);
+    struct sudo_file_handle *handle = nss->handle;
+    int error;
+
+    if (handle == NULL || handle->fp == NULL) {
+	sudo_debug_printf(SUDO_DEBUG_ERROR, "%s: called with NULL %s",
+	    __func__, handle ? "file pointer" : "handle");
+	debug_return_ptr(NULL);
+    }
+
+    sudoersin = handle->fp;
+    error = sudoersparse();
+    if (error || (parse_error && !sudoers_recovery)) {
+	/* unrecoverable error */
+	debug_return_ptr(NULL);
+    }
+
+    /* Move parsed sudoers policy to nss handle. */
+    reparent_parse_tree(&handle->parse_tree);
+
+    debug_return_ptr(&handle->parse_tree);
+}
+
+/*
+ * No need for explicit sudoers queries, the parse function handled it.
+ */
+static int
+sudo_file_query(struct sudo_nss *nss, struct passwd *pw)
+{
+    debug_decl(sudo_file_query, SUDOERS_DEBUG_NSS);
+    debug_return_int(0);
+}
+
+/*
+ * No need to get defaults for sudoers file, the parse function handled it.
+ */
+static int
+sudo_file_getdefs(struct sudo_nss *nss)
+{
+    debug_decl(sudo_file_getdefs, SUDOERS_DEBUG_NSS);
+    debug_return_int(0);
+}
+
+/* sudo_nss implementation */
+struct sudo_nss sudo_nss_file = {
+    { NULL, NULL },
+    "sudoers",
+    sudo_file_open,
+    sudo_file_close,
+    sudo_file_parse,
+    sudo_file_query,
+    sudo_file_getdefs
+};

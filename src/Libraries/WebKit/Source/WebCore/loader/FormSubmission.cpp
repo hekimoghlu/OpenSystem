@@ -1,0 +1,277 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, March 30, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "FormSubmission.h"
+
+#include "CommonAtomStrings.h"
+#include "ContentSecurityPolicy.h"
+#include "DOMFormData.h"
+#include "DocumentInlines.h"
+#include "ElementInlines.h"
+#include "Event.h"
+#include "FormData.h"
+#include "FormDataBuilder.h"
+#include "FormState.h"
+#include "FrameLoadRequest.h"
+#include "FrameLoader.h"
+#include "HTMLFormControlElement.h"
+#include "HTMLFormElement.h"
+#include "HTMLInputElement.h"
+#include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "ScriptDisallowedScope.h"
+#include <pal/text/TextEncoding.h>
+#include <wtf/WallTime.h>
+#include <wtf/text/MakeString.h>
+
+namespace WebCore {
+
+using namespace HTMLNames;
+
+static int64_t generateFormDataIdentifier()
+{
+    // Initialize to the current time to reduce the likelihood of generating
+    // identifiers that overlap with those from past/future browser sessions.
+    static int64_t nextIdentifier = static_cast<int64_t>(WallTime::now().secondsSinceEpoch().microseconds());
+    return ++nextIdentifier;
+}
+
+// FIXME: This function copies the body a lot and is really inefficient.
+static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const String& encodingType)
+{
+    String body = data.flattenToString();
+
+    if (equalLettersIgnoringASCIICase(encodingType, "text/plain"_s)) {
+        // Convention seems to be to decode, and s/&/\r\n/. Also, spaces are encoded as %20.
+        body = PAL::decodeURLEscapeSequences(makeStringByReplacingAll(makeStringByReplacingAll(body, '&', "\r\n"_s), '+', ' '));
+    }
+
+    Vector<uint8_t> bodyData("body="_span);
+    FormDataBuilder::encodeStringAsFormData(bodyData, body.utf8());
+    body = makeStringByReplacingAll(bodyData.span(), '+', "%20"_s);
+
+    auto query = url.query();
+    if (query.isEmpty())
+        url.setQuery(body);
+    else
+        url.setQuery(makeString(query, '&', body));
+}
+
+ASCIILiteral FormSubmission::Attributes::methodString(Method method)
+{
+    if (method == Method::Dialog)
+        return "dialog"_s;
+    if (method == Method::Post)
+        return "post"_s;
+    return "get"_s;
+}
+
+void FormSubmission::Attributes::parseAction(const String& action)
+{
+    // FIXME: Can we parse into a URL? Then we also don't need to trim anymore.
+    m_action = action.trim(isASCIIWhitespace);
+}
+
+String FormSubmission::Attributes::parseEncodingType(const String& type)
+{
+    if (equalLettersIgnoringASCIICase(type, "multipart/form-data"_s))
+        return "multipart/form-data"_s;
+    if (equalLettersIgnoringASCIICase(type, "text/plain"_s))
+        return textPlainContentTypeAtom();
+    return "application/x-www-form-urlencoded"_s;
+}
+
+void FormSubmission::Attributes::updateEncodingType(const String& type)
+{
+    m_encodingType = parseEncodingType(type);
+    m_isMultiPartForm = (m_encodingType == "multipart/form-data"_s);
+}
+
+FormSubmission::Method FormSubmission::Attributes::parseMethodType(const String& type)
+{
+    if (equalLettersIgnoringASCIICase(type, "dialog"_s))
+        return FormSubmission::Method::Dialog;
+
+    if (equalLettersIgnoringASCIICase(type, "post"_s))
+        return FormSubmission::Method::Post;
+
+    return FormSubmission::Method::Get;
+}
+
+void FormSubmission::Attributes::updateMethodType(const String& type)
+{
+    m_method = parseMethodType(type);
+}
+
+inline FormSubmission::FormSubmission(Method method, const String& returnValue, const URL& action, const AtomString& target, const String& contentType, LockHistory lockHistory, Event* event)
+    : m_method(method)
+    , m_action(action)
+    , m_target(target)
+    , m_contentType(contentType)
+    , m_lockHistory(lockHistory)
+    , m_event(event)
+    , m_returnValue(returnValue)
+{
+}
+
+inline FormSubmission::FormSubmission(Method method, const URL& action, const AtomString& target, const String& contentType, Ref<FormState>&& state, Ref<FormData>&& data, const String& boundary, LockHistory lockHistory, Event* event)
+    : m_method(method)
+    , m_action(action)
+    , m_target(target)
+    , m_contentType(contentType)
+    , m_formState(WTFMove(state))
+    , m_formData(WTFMove(data))
+    , m_boundary(boundary)
+    , m_lockHistory(lockHistory)
+    , m_event(event)
+{
+}
+
+static PAL::TextEncoding encodingFromAcceptCharset(const String& acceptCharset, Document& document)
+{
+    String normalizedAcceptCharset = makeStringByReplacingAll(acceptCharset, ',', ' ');
+
+    for (auto charset : StringView { normalizedAcceptCharset }.split(' ')) {
+        PAL::TextEncoding encoding(charset);
+        if (encoding.isValid())
+            return encoding;
+    }
+
+    return document.textEncoding();
+}
+
+Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormControlElement* overrideSubmitter, const Attributes& attributes, Event* event, LockHistory lockHistory, FormSubmissionTrigger trigger)
+{
+    auto copiedAttributes = attributes;
+
+    RefPtr submitter = overrideSubmitter ? overrideSubmitter : form.findSubmitter(event);
+    if (submitter) {
+        AtomString attributeValue;
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formactionAttr)).isNull())
+            copiedAttributes.parseAction(attributeValue);
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formenctypeAttr)).isNull())
+            copiedAttributes.updateEncodingType(attributeValue);
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formmethodAttr)).isNull())
+            copiedAttributes.updateMethodType(attributeValue);
+        if (!(attributeValue = submitter->attributeWithoutSynchronization(formtargetAttr)).isNull())
+            copiedAttributes.setTarget(attributeValue);
+    }
+
+    Ref document = form.document();
+    auto encodingType = copiedAttributes.encodingType();
+    auto actionURL = document->completeURL(copiedAttributes.action().isEmpty() ? document->url().string() : copiedAttributes.action());
+
+    if (copiedAttributes.method() == Method::Dialog) {
+        String returnValue = submitter ? submitter->resultForDialogSubmit() : emptyString();
+        return adoptRef(*new FormSubmission(copiedAttributes.method(), returnValue, actionURL, form.effectiveTarget(event, submitter.get()), encodingType, lockHistory, event));
+    }
+
+    ASSERT(copiedAttributes.method() == Method::Post || copiedAttributes.method() == Method::Get);
+
+    bool isMailtoForm = actionURL.protocolIs("mailto"_s);
+    bool isMultiPartForm = false;
+
+    document->checkedContentSecurityPolicy()->upgradeInsecureRequestIfNeeded(actionURL, ContentSecurityPolicy::InsecureRequestType::FormSubmission);
+
+    if (copiedAttributes.method() == Method::Post) {
+        isMultiPartForm = copiedAttributes.isMultiPartForm();
+        if (isMultiPartForm && isMailtoForm) {
+            encodingType = "application/x-www-form-urlencoded"_s;
+            isMultiPartForm = false;
+        }
+    }
+
+    auto dataEncoding = isMailtoForm ? PAL::UTF8Encoding() : encodingFromAcceptCharset(copiedAttributes.acceptCharset(), document);
+    auto domFormData = DOMFormData::create(document.ptr(), dataEncoding.encodingForFormSubmissionOrURLParsing());
+    StringPairVector formValues;
+
+    auto result = form.constructEntryList(submitter.copyRef(), WTFMove(domFormData), &formValues);
+    RELEASE_ASSERT(result);
+    domFormData = result.releaseNonNull();
+
+    RefPtr<FormData> formData;
+    String boundary;
+
+    if (isMultiPartForm) {
+        formData = FormData::createMultiPart(domFormData);
+        boundary = String(formData->boundary());
+    } else {
+        formData = FormData::create(domFormData, attributes.method() == Method::Get ? FormData::EncodingType::FormURLEncoded : FormData::parseEncodingType(encodingType));
+        if (copiedAttributes.method() == Method::Post && isMailtoForm) {
+            // Convert the form data into a string that we put into the URL.
+            appendMailtoPostFormDataToURL(actionURL, *formData, encodingType);
+            formData = FormData::create();
+        }
+    }
+
+    formData->setIdentifier(generateFormDataIdentifier());
+
+    auto formState = FormState::create(form, WTFMove(formValues), document, trigger);
+
+    return adoptRef(*new FormSubmission(copiedAttributes.method(), actionURL, form.effectiveTarget(event, submitter.get()), encodingType, WTFMove(formState), formData.releaseNonNull(), boundary, lockHistory, event));
+}
+
+URL FormSubmission::requestURL() const
+{
+    if (m_method == Method::Post)
+        return m_action;
+
+    URL requestURL(m_action);
+    if (m_method == Method::Get && !requestURL.protocolIsJavaScript())
+        requestURL.setQuery(m_formData->flattenToString());
+    return requestURL;
+}
+
+RefPtr<Event> FormSubmission::protectedEvent() const
+{
+    return m_event;
+}
+
+void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
+{
+    ASSERT(m_method == Method::Post || m_method == Method::Get);
+
+    if (!m_target.isEmpty())
+        frameRequest.setFrameName(m_target);
+
+    if (!m_referrer.isEmpty())
+        frameRequest.resourceRequest().setHTTPReferrer(m_referrer);
+
+    if (m_method == Method::Post) {
+        frameRequest.resourceRequest().setHTTPMethod("POST"_s);
+        frameRequest.resourceRequest().setHTTPBody(m_formData.copyRef());
+
+        // construct some user headers if necessary
+        if (m_boundary.isEmpty())
+            frameRequest.resourceRequest().setHTTPContentType(m_contentType);
+        else
+            frameRequest.resourceRequest().setHTTPContentType(makeString(m_contentType, "; boundary="_s, m_boundary));
+    }
+
+    frameRequest.resourceRequest().setURL(requestURL());
+    FrameLoader::addHTTPOriginIfNeeded(frameRequest.resourceRequest(), m_origin);
+}
+
+}

@@ -1,0 +1,174 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, April 24, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "lf_hfs_utils.h"
+#include "lf_hfs_vfsutils.h"
+
+/*
+ * General routine to allocate a hash table.
+ */
+void *
+hashinit(int elements, u_long *hashmask)
+{
+    int hashsize = 0;
+    LIST_HEAD(generic, generic) *hashtbl;
+    int i;
+
+    if (elements <= 0)
+        return NULL;
+    for (hashsize = 1; hashsize <= elements; hashsize <<= 1)
+    {
+        continue;
+    }
+
+    hashsize >>= 1;
+    hashtbl = hfs_malloc(hashsize * sizeof(*hashtbl));
+    if (hashtbl != NULL)
+    {
+        for (i = 0; i < hashsize; i++)
+        {
+            LIST_INIT(&hashtbl[i]);
+        }
+        *hashmask = hashsize - 1;
+    }
+    return (hashtbl);
+}
+
+/*
+ * General routine to free a hash table.
+ */
+void
+hashDeinit(void* pvHashTbl)
+{
+    LIST_HEAD(generic, generic) *hashtbl = pvHashTbl;
+    hfs_free(hashtbl);
+}
+
+/*
+ * to_bsd_time - convert from Mac OS time (seconds since 1/1/1904)
+ *         to BSD time (seconds since 1/1/1970)
+ */
+time_t
+to_bsd_time(u_int32_t hfs_time, bool expanded)
+{
+    u_int32_t gmt = hfs_time;
+
+	if (expanded) {
+		/*
+		 * If expanded times are in use, then we are using
+		 * BSD time as native. Do not convert it.
+		 */
+		return (time_t) gmt;
+	}
+
+    if (gmt > MAC_GMT_FACTOR) {
+        gmt -= MAC_GMT_FACTOR;
+	}
+    else {
+        gmt = 0;    /* don't let date go negative! */
+	}
+
+    return (time_t)gmt;
+}
+
+/*
+ * to_hfs_time - convert from BSD time (seconds since 1/1/1970)
+ *         to Mac OS time (seconds since 1/1/1904)
+ */
+u_int32_t
+to_hfs_time(time_t bsd_time, bool expanded)
+{
+	bool negative = (bsd_time < 0);
+	u_int32_t hfs_time = (u_int32_t)bsd_time;
+
+	if (expanded) {
+		/*
+		 * If expanded times are in use, then the BSD time
+		 * is native. Do not convert it with the Mac factor.
+		 * In this mode, zero is legitimate (now implying 1/1/1970).
+		 *
+		 * In addition, clip the timestamp to 0, ensuring that we treat
+		 * the value as an unsigned int32.
+		 */
+		if (negative) {
+			hfs_time = 0;
+		}
+		return hfs_time;
+	}
+
+    /* don't adjust zero - treat as uninitialzed */
+    if (hfs_time != 0) {
+        hfs_time += MAC_GMT_FACTOR;
+	}
+
+    return (hfs_time);
+}
+
+void
+microuptime(struct timeval *tvp)
+{
+    struct timespec ts;
+    clock_gettime( CLOCK_MONOTONIC, &ts );
+    TIMESPEC_TO_TIMEVAL(tvp, &ts);
+}
+
+void
+microtime(struct timeval *tvp)
+{
+    struct timespec ts;
+    clock_gettime( CLOCK_REALTIME, &ts );
+    TIMESPEC_TO_TIMEVAL(tvp, &ts);
+}
+
+void* lf_hfs_utils_allocate_and_copy_string( char *pcName, size_t uLen )
+{
+    //Check the validity of the uLen
+    if (uLen > kHFSPlusMaxFileNameChars) {
+        return NULL;
+    }
+
+    //Checkk the validity of the pcName
+    if (strlen(pcName) != uLen) {
+        return NULL;
+    }
+
+    void *pvTmp = hfs_malloc( uLen+1 );
+    if ( pvTmp == NULL ) {
+        return NULL;
+    }
+    
+    memcpy(pvTmp, pcName, uLen);
+    //Add Null terminated at the end of the name
+    char *pcLastChar = pvTmp + uLen;
+    *pcLastChar = '\0';
+
+    return pvTmp;
+}
+
+off_t
+blk_to_bytes(uint32_t blk, uint32_t blk_size)
+{
+    return (off_t)blk * blk_size;         // Avoid the overflow
+}
+

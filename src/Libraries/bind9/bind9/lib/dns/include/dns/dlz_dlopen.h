@@ -1,0 +1,183 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, October 27, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id$ */
+
+/*! \file dns/dlz_open.h */
+
+#ifndef DLZ_DLOPEN_H
+#define DLZ_DLOPEN_H
+
+#include <dns/sdlz.h>
+
+ISC_LANG_BEGINDECLS
+
+/*
+ * This header provides a minimal set of defines and typedefs needed
+ * for the entry points of an external DLZ module for bind9.
+ */
+
+#define DLZ_DLOPEN_VERSION 3
+#define DLZ_DLOPEN_AGE 0
+
+/*
+ * dlz_dlopen_version() is required for all DLZ external drivers. It
+ * should return DLZ_DLOPEN_VERSION
+ */
+typedef int dlz_dlopen_version_t(unsigned int *flags);
+
+/*
+ * dlz_dlopen_create() is required for all DLZ external drivers.
+ */
+typedef isc_result_t dlz_dlopen_create_t(const char *dlzname,
+					 unsigned int argc,
+					 char *argv[],
+					 void **dbdata,
+					 ...);
+
+/*
+ * dlz_dlopen_destroy() is optional, and will be called when the
+ * driver is unloaded if supplied
+ */
+typedef void dlz_dlopen_destroy_t(void *dbdata);
+
+/*
+ * dlz_dlopen_findzonedb() is required for all DLZ external drivers
+ */
+typedef isc_result_t dlz_dlopen_findzonedb_t(void *dbdata,
+					     const char *name,
+					     dns_clientinfomethods_t *methods,
+					     dns_clientinfo_t *clientinfo);
+
+/*
+ * dlz_dlopen_lookup() is required for all DLZ external drivers
+ */
+typedef isc_result_t dlz_dlopen_lookup_t(const char *zone,
+					 const char *name,
+					 void *dbdata,
+					 dns_sdlzlookup_t *lookup,
+					 dns_clientinfomethods_t *methods,
+					 dns_clientinfo_t *clientinfo);
+
+/*
+ * dlz_dlopen_authority is optional() if dlz_dlopen_lookup()
+ * supplies authority information for the dns record
+ */
+typedef isc_result_t dlz_dlopen_authority_t(const char *zone,
+					    void *dbdata,
+					    dns_sdlzlookup_t *lookup);
+
+/*
+ * dlz_dlopen_allowzonexfr() is optional, and should be supplied if
+ * you want to support zone transfers
+ */
+typedef isc_result_t dlz_dlopen_allowzonexfr_t(void *dbdata,
+					       const char *name,
+					       const char *client);
+
+/*
+ * dlz_dlopen_allnodes() is optional, but must be supplied if supply a
+ * dlz_dlopen_allowzonexfr() function
+ */
+typedef isc_result_t dlz_dlopen_allnodes_t(const char *zone,
+					   void *dbdata,
+					   dns_sdlzallnodes_t *allnodes);
+
+/*
+ * dlz_dlopen_newversion() is optional. It should be supplied if you
+ * want to support dynamic updates.
+ */
+typedef isc_result_t dlz_dlopen_newversion_t(const char *zone,
+					     void *dbdata,
+					     void **versionp);
+
+/*
+ * dlz_closeversion() is optional, but must be supplied if you supply
+ * a dlz_newversion() function
+ */
+typedef void dlz_dlopen_closeversion_t(const char *zone,
+				       isc_boolean_t commit,
+				       void *dbdata,
+				       void **versionp);
+
+/*
+ * dlz_dlopen_configure() is optional, but must be supplied if you
+ * want to support dynamic updates
+ */
+typedef isc_result_t dlz_dlopen_configure_t(dns_view_t *view,
+					    dns_dlzdb_t *dlzdb,
+					    void *dbdata);
+
+/*
+ * dlz_dlopen_setclientcallback() is optional, but must be supplied if you
+ * want to retrieve information about the client (e.g., source address)
+ * before sending a replay.
+ */
+typedef isc_result_t dlz_dlopen_setclientcallback_t(dns_view_t *view,
+						    void *dbdata);
+
+
+/*
+ * dlz_dlopen_ssumatch() is optional, but must be supplied if you want
+ * to support dynamic updates
+ */
+typedef isc_boolean_t dlz_dlopen_ssumatch_t(const char *signer,
+					    const char *name,
+					    const char *tcpaddr,
+					    const char *type,
+					    const char *key,
+					    isc_uint32_t keydatalen,
+					    unsigned char *keydata,
+					    void *dbdata);
+
+/*
+ * dlz_dlopen_addrdataset() is optional, but must be supplied if you
+ * want to support dynamic updates
+ */
+typedef isc_result_t dlz_dlopen_addrdataset_t(const char *name,
+					      const char *rdatastr,
+					      void *dbdata,
+					      void *version);
+
+/*
+ * dlz_dlopen_subrdataset() is optional, but must be supplied if you
+ * want to support dynamic updates
+ */
+typedef isc_result_t dlz_dlopen_subrdataset_t(const char *name,
+					      const char *rdatastr,
+					      void *dbdata,
+					      void *version);
+
+/*
+ * dlz_dlopen_delrdataset() is optional, but must be supplied if you
+ * want to support dynamic updates
+ */
+typedef isc_result_t dlz_dlopen_delrdataset_t(const char *name,
+					      const char *type,
+					      void *dbdata,
+					      void *version);
+
+ISC_LANG_ENDDECLS
+
+#endif

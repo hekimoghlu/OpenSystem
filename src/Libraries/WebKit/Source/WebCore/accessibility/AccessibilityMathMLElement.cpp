@@ -1,0 +1,466 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, April 24, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+
+#if ENABLE(MATHML)
+#include "AccessibilityMathMLElement.h"
+
+#include "AXObjectCache.h"
+#include "MathMLNames.h"
+#include "RenderStyleInlines.h"
+
+namespace WebCore {
+
+AccessibilityMathMLElement::AccessibilityMathMLElement(AXID axID, RenderObject& renderer, bool isAnonymousOperator)
+    : AccessibilityRenderObject(axID, renderer)
+    , m_isAnonymousOperator(isAnonymousOperator)
+{
+}
+
+AccessibilityMathMLElement::~AccessibilityMathMLElement() = default;
+
+Ref<AccessibilityMathMLElement> AccessibilityMathMLElement::create(AXID axID, RenderObject& renderer, bool isAnonymousOperator)
+{
+    return adoptRef(*new AccessibilityMathMLElement(axID, renderer, isAnonymousOperator));
+}
+
+AccessibilityRole AccessibilityMathMLElement::determineAccessibilityRole()
+{
+    if (!m_renderer)
+        return AccessibilityRole::Unknown;
+
+    if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Unknown)
+        return m_ariaRole;
+
+    Node* node = m_renderer->node();
+    if (node && node->hasTagName(MathMLNames::mathTag))
+        return AccessibilityRole::DocumentMath;
+
+    // It's not clear which role a platform should choose for a math element.
+    // Declaring a math element role should give flexibility to platforms to choose.
+    return AccessibilityRole::MathElement;
+}
+
+void AccessibilityMathMLElement::addChildren()
+{
+    if (!hasTagName(MathMLNames::mfencedTag)) {
+        AccessibilityRenderObject::addChildren();
+        return;
+    }
+
+    // mfenced elements generate lots of anonymous renderers due to their `open`, `close`, and `separators` attributes.
+    // Because of this, default to walking the render tree when adding their children (unlike most other object types for
+    // which we walk the DOM). This may cause unexpected behavior for `display:contents` descendants of mfenced elements.
+    // However, this element is very deprecated, and even the most simple usages of it do not render consistently across
+    // browsers, so it's already unlikely to be used by web developers, even more so with `display:contents` mixed in.
+    m_childrenInitialized = true;
+    for (auto& object : AXChildIterator(*this))
+        addChild(object);
+
+    m_subtreeDirty = false;
+}
+
+String AccessibilityMathMLElement::textUnderElement(TextUnderElementMode mode) const
+{
+    if (m_isAnonymousOperator && !mode.isHidden()) {
+        UChar operatorChar = downcast<RenderMathMLOperator>(*m_renderer).textContent();
+        return operatorChar ? String(span(operatorChar)) : String();
+    }
+
+    return AccessibilityRenderObject::textUnderElement(mode);
+}
+
+String AccessibilityMathMLElement::stringValue() const
+{
+    if (m_isAnonymousOperator)
+        return textUnderElement();
+
+    return AccessibilityRenderObject::stringValue();
+}
+
+bool AccessibilityMathMLElement::isIgnoredElementWithinMathTree() const
+{
+    if (m_isAnonymousOperator)
+        return false;
+
+    // Only math elements that we explicitly recognize should be included
+    // We don't want things like <mstyle> to appear in the tree.
+    if (isMathFraction() || isMathFenced() || isMathSubscriptSuperscript() || isMathRow()
+        || isMathUnderOver() || isMathRoot() || isMathText() || isMathNumber()
+        || isMathOperator() || isMathFenceOperator() || isMathSeparatorOperator()
+        || isMathIdentifier() || isMathTable() || isMathTableRow() || isMathTableCell() || isMathMultiscript())
+        return false;
+
+    return true;
+}
+
+bool AccessibilityMathMLElement::isMathFraction() const
+{
+    return m_renderer && m_renderer->isRenderMathMLFraction();
+}
+
+bool AccessibilityMathMLElement::isMathFenced() const
+{
+    return m_renderer && m_renderer->isRenderMathMLFenced();
+}
+
+bool AccessibilityMathMLElement::isMathSubscriptSuperscript() const
+{
+    return m_renderer && m_renderer->isRenderMathMLScripts() && !isMathMultiscript();
+}
+
+bool AccessibilityMathMLElement::isMathRow() const
+{
+    return m_renderer && m_renderer->isRenderMathMLRow() && !isMathRoot() && !isMathUnderOver() && !isMathMultiscript() && !isMathFraction();
+}
+
+bool AccessibilityMathMLElement::isMathUnderOver() const
+{
+    return m_renderer && m_renderer->isRenderMathMLUnderOver();
+}
+
+bool AccessibilityMathMLElement::isMathSquareRoot() const
+{
+    return m_renderer && m_renderer->isRenderMathMLSquareRoot();
+}
+
+bool AccessibilityMathMLElement::isMathToken() const
+{
+    return m_renderer && m_renderer->isRenderMathMLToken();
+}
+
+bool AccessibilityMathMLElement::isMathRoot() const
+{
+    return m_renderer && m_renderer->isRenderMathMLRoot();
+}
+
+bool AccessibilityMathMLElement::isMathOperator() const
+{
+    return m_renderer && m_renderer->isRenderMathMLOperator();
+}
+
+bool AccessibilityMathMLElement::isAnonymousMathOperator() const
+{
+    return m_isAnonymousOperator;
+}
+
+bool AccessibilityMathMLElement::isMathFenceOperator() const
+{
+    auto* mathMLOperator = dynamicDowncast<RenderMathMLOperator>(renderer());
+    return mathMLOperator && mathMLOperator->hasOperatorFlag(MathMLOperatorDictionary::Fence);
+}
+
+bool AccessibilityMathMLElement::isMathSeparatorOperator() const
+{
+    auto* mathMLOperator = dynamicDowncast<RenderMathMLOperator>(renderer());
+    return mathMLOperator && mathMLOperator->hasOperatorFlag(MathMLOperatorDictionary::Separator);
+}
+
+bool AccessibilityMathMLElement::isMathText() const
+{
+    return node() && (node()->hasTagName(MathMLNames::mtextTag) || hasTagName(MathMLNames::msTag));
+}
+
+bool AccessibilityMathMLElement::isMathNumber() const
+{
+    return node() && node()->hasTagName(MathMLNames::mnTag);
+}
+
+bool AccessibilityMathMLElement::isMathIdentifier() const
+{
+    return node() && node()->hasTagName(MathMLNames::miTag);
+}
+
+bool AccessibilityMathMLElement::isMathMultiscript() const
+{
+    return node() && node()->hasTagName(MathMLNames::mmultiscriptsTag);
+}
+
+bool AccessibilityMathMLElement::isMathTable() const
+{
+    return node() && node()->hasTagName(MathMLNames::mtableTag);
+}
+
+bool AccessibilityMathMLElement::isMathTableRow() const
+{
+    return node() && (node()->hasTagName(MathMLNames::mtrTag) || hasTagName(MathMLNames::mlabeledtrTag));
+}
+
+bool AccessibilityMathMLElement::isMathTableCell() const
+{
+    return node() && node()->hasTagName(MathMLNames::mtdTag);
+}
+
+bool AccessibilityMathMLElement::isMathScriptObject(AccessibilityMathScriptObjectType type) const
+{
+    RefPtr parent = parentObjectUnignored();
+    if (!parent)
+        return false;
+
+    return type == AccessibilityMathScriptObjectType::Subscript ? this == parent->mathSubscriptObject() : this == parent->mathSuperscriptObject();
+}
+
+bool AccessibilityMathMLElement::isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType type) const
+{
+    RefPtr parent = parentObjectUnignored();
+    if (!parent || !parent->isMathMultiscript())
+        return false;
+
+    // The scripts in a MathML <mmultiscripts> element consist of one or more
+    // subscript, superscript pairs. In order to determine if this object is
+    // a scripted token, we need to examine each set of pairs to see if the
+    // this token is present and in the position corresponding with the type.
+
+    AccessibilityMathMultiscriptPairs pairs;
+    if (type == AccessibilityMathMultiscriptObjectType::PreSubscript || type == AccessibilityMathMultiscriptObjectType::PreSuperscript)
+        parent->mathPrescripts(pairs);
+    else
+        parent->mathPostscripts(pairs);
+
+    for (const auto& pair : pairs) {
+        if (this == pair.first)
+            return (type == AccessibilityMathMultiscriptObjectType::PreSubscript || type == AccessibilityMathMultiscriptObjectType::PostSubscript);
+        if (this == pair.second)
+            return (type == AccessibilityMathMultiscriptObjectType::PreSuperscript || type == AccessibilityMathMultiscriptObjectType::PostSuperscript);
+    }
+
+    return false;
+}
+
+std::optional<AXCoreObject::AccessibilityChildrenVector> AccessibilityMathMLElement::mathRadicand() 
+{
+    if (!isMathRoot())
+        return std::nullopt;
+
+    const auto& children = this->unignoredChildren();
+    if (!children.size())
+        return std::nullopt;
+
+    if (isMathSquareRoot())
+        return children;
+    return { { children[0] } };
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathRootIndexObject()
+{
+    if (!isMathRoot() || isMathSquareRoot())
+        return nullptr;
+
+    const auto& children = this->unignoredChildren();
+    if (children.size() < 2)
+        return nullptr;
+
+    return children[1].ptr();
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathNumeratorObject()
+{
+    if (!isMathFraction())
+        return nullptr;
+
+    const auto& children = this->unignoredChildren();
+    if (children.size() != 2)
+        return nullptr;
+
+    return children[0].ptr();
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathDenominatorObject()
+{
+    if (!isMathFraction())
+        return nullptr;
+
+    const auto& children = this->unignoredChildren();
+    if (children.size() != 2)
+        return nullptr;
+
+    return children[1].ptr();
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathUnderObject()
+{
+    if (!isMathUnderOver() || !node())
+        return nullptr;
+
+    const auto& children = this->unignoredChildren();
+    if (children.size() < 2)
+        return nullptr;
+
+    if (node()->hasTagName(MathMLNames::munderTag) || node()->hasTagName(MathMLNames::munderoverTag))
+        return children[1].ptr();
+
+    return nullptr;
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathOverObject()
+{
+    if (!isMathUnderOver() || !node())
+        return nullptr;
+
+    const auto& children = unignoredChildren();
+    if (children.size() >= 2 && node()->hasTagName(MathMLNames::moverTag))
+        return children[1].ptr();
+
+    if (children.size() >= 3 && node()->hasTagName(MathMLNames::munderoverTag))
+        return children[2].ptr();
+
+    return nullptr;
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathBaseObject()
+{
+    if (!isMathSubscriptSuperscript() && !isMathUnderOver() && !isMathMultiscript())
+        return nullptr;
+
+    const auto& children = unignoredChildren();
+    // The base object in question is always the first child.
+    if (children.size() > 0)
+        return children[0].ptr();
+
+    return nullptr;
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathSubscriptObject()
+{
+    if (!isMathSubscriptSuperscript() || !node())
+        return nullptr;
+
+    const auto& children = unignoredChildren();
+    if (children.size() < 2)
+        return nullptr;
+
+    if (node()->hasTagName(MathMLNames::msubTag) || node()->hasTagName(MathMLNames::msubsupTag))
+        return children[1].ptr();
+
+    return nullptr;
+}
+
+AXCoreObject* AccessibilityMathMLElement::mathSuperscriptObject()
+{
+    if (!isMathSubscriptSuperscript() || !node())
+        return nullptr;
+
+    const auto& children = unignoredChildren();
+    unsigned count = children.size();
+
+    if (count >= 2 && node()->hasTagName(MathMLNames::msupTag))
+        return children[1].ptr();
+
+    if (count >= 3 && node()->hasTagName(MathMLNames::msubsupTag))
+        return children[2].ptr();
+
+    return nullptr;
+}
+
+String AccessibilityMathMLElement::mathFencedOpenString() const
+{
+    if (!isMathFenced())
+        return String();
+
+    return getAttribute(MathMLNames::openAttr);
+}
+
+String AccessibilityMathMLElement::mathFencedCloseString() const
+{
+    if (!isMathFenced())
+        return String();
+
+    return getAttribute(MathMLNames::closeAttr);
+}
+
+void AccessibilityMathMLElement::mathPrescripts(AccessibilityMathMultiscriptPairs& prescripts)
+{
+    if (!isMathMultiscript() || !node())
+        return;
+
+    bool foundPrescript = false;
+    std::pair<AccessibilityObject*, AccessibilityObject*> prescriptPair;
+    for (Node* child = node()->firstChild(); child; child = child->nextSibling()) {
+        if (foundPrescript) {
+            AccessibilityObject* axChild = axObjectCache()->getOrCreate(*child);
+            if (axChild && axChild->isMathElement()) {
+                if (!prescriptPair.first)
+                    prescriptPair.first = axChild;
+                else {
+                    prescriptPair.second = axChild;
+                    prescripts.append(prescriptPair);
+                    prescriptPair.first = nullptr;
+                    prescriptPair.second = nullptr;
+                }
+            }
+        } else if (child->hasTagName(MathMLNames::mprescriptsTag))
+            foundPrescript = true;
+    }
+
+    // Handle the odd number of pre scripts case.
+    if (prescriptPair.first)
+        prescripts.append(prescriptPair);
+}
+
+void AccessibilityMathMLElement::mathPostscripts(AccessibilityMathMultiscriptPairs& postscripts)
+{
+    if (!isMathMultiscript() || !node())
+        return;
+
+    // In Multiscripts, the post-script elements start after the first element (which is the base)
+    // and continue until a <mprescripts> tag is found
+    std::pair<AccessibilityObject*, AccessibilityObject*> postscriptPair;
+    bool foundBaseElement = false;
+    for (Node* child = node()->firstChild(); child; child = child->nextSibling()) {
+        if (child->hasTagName(MathMLNames::mprescriptsTag))
+            break;
+
+        AccessibilityObject* axChild = axObjectCache()->getOrCreate(*child);
+        if (axChild && axChild->isMathElement()) {
+            if (!foundBaseElement)
+                foundBaseElement = true;
+            else if (!postscriptPair.first)
+                postscriptPair.first = axChild;
+            else {
+                postscriptPair.second = axChild;
+                postscripts.append(postscriptPair);
+                postscriptPair.first = nullptr;
+                postscriptPair.second = nullptr;
+            }
+        }
+    }
+
+    // Handle the odd number of post scripts case.
+    if (postscriptPair.first)
+        postscripts.append(postscriptPair);
+}
+
+int AccessibilityMathMLElement::mathLineThickness() const
+{
+    auto* fraction = dynamicDowncast<RenderMathMLFraction>(renderer());
+    if (!fraction)
+        return -1;
+
+    return fraction->relativeLineThickness();
+}
+
+} // namespace WebCore
+
+#endif // ENABLE(MATHML)

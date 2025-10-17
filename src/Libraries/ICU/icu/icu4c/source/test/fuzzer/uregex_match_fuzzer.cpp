@@ -1,0 +1,61 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, April 22, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+// Â© 2024 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
+
+#include <cstring>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+
+#include "fuzzer_utils.h"
+#include "unicode/regex.h"
+
+IcuEnvironment* env = new IcuEnvironment();
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+  UErrorCode status = U_ZERO_ERROR;
+
+  size_t unistr_size = size/2;
+  std::unique_ptr<char16_t[]> fuzzbuff(new char16_t[unistr_size]);
+  std::memcpy(fuzzbuff.get(), data, unistr_size * 2);
+  icu::UnicodeString fuzzstr(false, fuzzbuff.get(), unistr_size);
+
+  icu::UnicodeString regex = fuzzstr.tempSubString (0, fuzzstr.length() / 4);
+  icu::UnicodeString haystack = fuzzstr.tempSubString (regex.length());
+
+  std::unique_ptr<icu::RegexPattern> re(icu::RegexPattern::compile(regex, UREGEX_CASE_INSENSITIVE, status));
+  if (U_FAILURE(status)) {
+    return -1;  // invalid regex, don't explore further
+  }
+  std::unique_ptr<icu::RegexMatcher> regex_matcher(re->matcher(haystack, status));
+  if (U_SUCCESS(status)) {
+    regex_matcher->setTimeLimit(300, status);
+    regex_matcher->find(0, status);
+  }
+  return 0;
+}

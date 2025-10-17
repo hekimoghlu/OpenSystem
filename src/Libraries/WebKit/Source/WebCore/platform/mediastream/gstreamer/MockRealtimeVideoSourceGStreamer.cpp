@@ -1,0 +1,152 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, October 13, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+
+#if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
+#include "MockRealtimeVideoSourceGStreamer.h"
+
+#include "GStreamerCaptureDeviceManager.h"
+#include "MockRealtimeMediaSourceCenter.h"
+#include "PixelBuffer.h"
+#include "VideoFrameGStreamer.h"
+#include <gst/app/gstappsrc.h>
+
+namespace WebCore {
+
+CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
+{
+#ifndef NDEBUG
+    auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(deviceID);
+    ASSERT(device);
+    if (!device)
+        return CaptureSourceOrError({ "No mock camera device"_s , MediaAccessDenialReason::PermissionDenied });
+#endif
+
+    Ref<RealtimeMediaSource> source = adoptRef(*new MockRealtimeVideoSourceGStreamer(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalts), pageIdentifier));
+    if (constraints) {
+        if (auto error = source->applyConstraints(*constraints))
+            return CaptureSourceOrError(CaptureSourceError { error->invalidConstraint });
+    }
+
+    return source;
+}
+
+MockRealtimeVideoSourceGStreamer::MockRealtimeVideoSourceGStreamer(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
+    : MockRealtimeVideoSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalts), pageIdentifier)
+{
+    ensureGStreamerInitialized();
+    auto& singleton = GStreamerVideoCaptureDeviceManager::singleton();
+    auto device = singleton.gstreamerDeviceWithUID(this->captureDevice().persistentId());
+    ASSERT(device);
+    if (!device)
+        return;
+
+    device->setIsMockDevice(true);
+    m_capturer = adoptRef(*new GStreamerVideoCapturer(WTFMove(*device)));
+    m_capturer->addObserver(*this);
+    m_capturer->setupPipeline();
+    m_capturer->setSinkVideoFrameCallback([this](auto&& videoFrame) {
+        if (!isProducingData() || muted())
+            return;
+        dispatchVideoFrameToObservers(WTFMove(videoFrame), { });
+    });
+    singleton.registerCapturer(m_capturer);
+}
+
+MockRealtimeVideoSourceGStreamer::~MockRealtimeVideoSourceGStreamer()
+{
+    m_capturer->stop();
+    m_capturer->removeObserver(*this);
+
+    auto& singleton = GStreamerVideoCaptureDeviceManager::singleton();
+    singleton.unregisterCapturer(*m_capturer);
+}
+
+void MockRealtimeVideoSourceGStreamer::startProducingData()
+{
+    if (deviceType() == CaptureDevice::DeviceType::Camera)
+        m_capturer->setSize(size());
+
+    m_capturer->setFrameRate(frameRate());
+    m_capturer->start();
+    MockRealtimeVideoSource::startProducingData();
+}
+
+void MockRealtimeVideoSourceGStreamer::stopProducingData()
+{
+    m_capturer->stop();
+    MockRealtimeVideoSource::stopProducingData();
+}
+
+void MockRealtimeVideoSourceGStreamer::captureEnded()
+{
+    // NOTE: We could call captureFailed() like in the mock audio source, but that would trigger new
+    // test failures. For some reason we want 'ended' MediaStreamTrack notifications only for audio
+    // devices removal.
+}
+
+std::pair<GstClockTime, GstClockTime> MockRealtimeVideoSourceGStreamer::queryCaptureLatency() const
+{
+    if (!m_capturer)
+        return { GST_CLOCK_TIME_NONE, GST_CLOCK_TIME_NONE };
+
+    return m_capturer->queryLatency();
+}
+
+void MockRealtimeVideoSourceGStreamer::updateSampleBuffer()
+{
+    RefPtr imageBuffer = this->imageBufferInternal();
+    if (!imageBuffer)
+        return;
+
+    auto pixelBuffer = imageBuffer->getPixelBuffer({ AlphaPremultiplication::Premultiplied, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }, { { }, imageBuffer->truncatedLogicalSize() });
+    if (!pixelBuffer)
+        return;
+
+    VideoFrameTimeMetadata metadata;
+    metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();
+    auto presentationTime = MediaTime::createWithDouble((elapsedTime()).seconds());
+    auto videoFrame = VideoFrameGStreamer::createFromPixelBuffer(pixelBuffer.releaseNonNull(), VideoFrameGStreamer::CanvasContentType::Canvas2D, videoFrameRotation(), presentationTime, m_capturer->size(), frameRate(), false, WTFMove(metadata));
+    if (!videoFrame)
+        return;
+
+    // Mock GstDevice is an appsrc, see webkitMockDeviceCreateElement().
+    ASSERT(GST_IS_APP_SRC(m_capturer->source()));
+    gst_app_src_push_sample(GST_APP_SRC_CAST(m_capturer->source()), videoFrame->sample());
+}
+
+void MockRealtimeVideoSourceGStreamer::setSizeFrameRateAndZoom(const VideoPresetConstraints& constraints)
+{
+    MockRealtimeVideoSource::setSizeFrameRateAndZoom(constraints);
+
+    if (!constraints.width || !constraints.height)
+        return;
+
+    m_capturer->setSize({ *constraints.width, *constraints.height });
+}
+
+} // namespace WebCore
+
+#endif // ENABLE(MEDIA_STREAM) && USE(GSTREAMER)

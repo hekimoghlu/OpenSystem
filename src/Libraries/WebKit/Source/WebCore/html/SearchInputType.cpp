@@ -1,0 +1,203 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, January 9, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "SearchInputType.h"
+
+#include "ElementInlines.h"
+#include "HTMLInputElement.h"
+#include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
+#include "InputTypeNames.h"
+#include "KeyboardEvent.h"
+#include "NodeRenderStyle.h"
+#include "RenderSearchField.h"
+#include "ScriptDisallowedScope.h"
+#include "ShadowRoot.h"
+#include "TextControlInnerElements.h"
+#include "UserAgentParts.h"
+#include <wtf/TZoneMallocInlines.h>
+
+namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SearchInputType);
+
+using namespace HTMLNames;
+
+SearchInputType::SearchInputType(HTMLInputElement& element)
+    : BaseTextInputType(Type::Search, element)
+{
+    ASSERT(needsShadowSubtree());
+}
+
+void SearchInputType::addSearchResult()
+{
+#if !PLATFORM(IOS_FAMILY)
+    // Normally we've got the correct renderer by the time we get here. However when the input type changes
+    // we don't update the associated renderers until after the next tree update, so we could actually end up here
+    // with a mismatched renderer (e.g. through form submission).
+    ASSERT(element());
+    if (CheckedPtr renderer = dynamicDowncast<RenderSearchField>(element()->renderer()))
+        renderer->addSearchResult();
+#endif
+}
+
+static void updateResultButtonPseudoType(SearchFieldResultsButtonElement& resultButton, int maxResults)
+{
+    if (!maxResults)
+        resultButton.setUserAgentPart(UserAgentParts::webkitSearchResultsDecoration());
+    else if (maxResults < 0)
+        resultButton.setUserAgentPart(UserAgentParts::webkitSearchDecoration());
+    else
+        resultButton.setUserAgentPart(UserAgentParts::webkitSearchResultsButton());
+}
+
+void SearchInputType::attributeChanged(const QualifiedName& name)
+{
+    if (name == resultsAttr) {
+        if (m_resultsButton) {
+            if (auto* element = this->element())
+                updateResultButtonPseudoType(*m_resultsButton, element->maxResults());
+        }
+    }
+    BaseTextInputType::attributeChanged(name);
+}
+
+RenderPtr<RenderElement> SearchInputType::createInputRenderer(RenderStyle&& style)
+{
+    ASSERT(element());
+    return createRenderer<RenderSearchField>(*element(), WTFMove(style));
+}
+
+const AtomString& SearchInputType::formControlType() const
+{
+    return InputTypeNames::search();
+}
+
+bool SearchInputType::needsContainer() const
+{
+    return true;
+}
+
+void SearchInputType::createShadowSubtree()
+{
+    ASSERT(needsShadowSubtree());
+    ASSERT(!m_resultsButton);
+    ASSERT(!m_cancelButton);
+
+    TextFieldInputType::createShadowSubtree();
+    RefPtr<HTMLElement> container = containerElement();
+    RefPtr<HTMLElement> textWrapper = innerBlockElement();
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *container };
+    ASSERT(container);
+    ASSERT(textWrapper);
+
+    ASSERT(element());
+    m_resultsButton = SearchFieldResultsButtonElement::create(element()->document());
+    container->insertBefore(*m_resultsButton, textWrapper.copyRef());
+    updateResultButtonPseudoType(*m_resultsButton, element()->maxResults());
+
+    m_cancelButton = SearchFieldCancelButtonElement::create(element()->document());
+    container->insertBefore(*m_cancelButton, textWrapper->protectedNextSibling());
+}
+
+HTMLElement* SearchInputType::resultsButtonElement() const
+{
+    return m_resultsButton.get();
+}
+
+HTMLElement* SearchInputType::cancelButtonElement() const
+{
+    return m_cancelButton.get();
+}
+
+auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
+{
+    ASSERT(element());
+    if (!element()->isMutable())
+        return TextFieldInputType::handleKeydownEvent(event);
+
+    const String& key = event.keyIdentifier();
+    if (key == "U+001B"_s) {
+        Ref<HTMLInputElement> protectedInputElement(*element());
+        protectedInputElement->setValue(emptyString(), DispatchChangeEvent);
+        event.setDefaultHandled();
+        return ShouldCallBaseEventHandler::Yes;
+    }
+    return TextFieldInputType::handleKeydownEvent(event);
+}
+
+void SearchInputType::removeShadowSubtree()
+{
+    TextFieldInputType::removeShadowSubtree();
+    m_resultsButton = nullptr;
+    m_cancelButton = nullptr;
+}
+
+void SearchInputType::didSetValueByUserEdit()
+{
+    ASSERT(element());
+    if (m_cancelButton) {
+        if (CheckedPtr renderer = dynamicDowncast<RenderSearchField>(element()->renderer()))
+            renderer->updateCancelButtonVisibility();
+    }
+
+    TextFieldInputType::didSetValueByUserEdit();
+}
+
+bool SearchInputType::sizeShouldIncludeDecoration(int, int& preferredSize) const
+{
+    ASSERT(element());
+    preferredSize = element()->size();
+    // https://html.spec.whatwg.org/multipage/input.html#the-size-attribute
+    // If the attribute is present, then its value must be parsed using the rules for parsing non-negative integers, and if the
+    // result is a number greater than zero, then the user agent should ensure that at least that many characters are visible.
+    if (!element()->hasAttributeWithoutSynchronization(sizeAttr))
+        return false;
+    if (auto parsedSize = parseHTMLNonNegativeInteger(element()->attributeWithoutSynchronization(sizeAttr)))
+        return static_cast<int>(parsedSize.value()) == preferredSize;
+    return false;
+}
+
+float SearchInputType::decorationWidth() const
+{
+    float width = 0;
+    if (m_resultsButton && m_resultsButton->renderStyle())
+        width += m_resultsButton->renderStyle()->logicalWidth().value();
+    if (m_cancelButton && m_cancelButton->renderStyle())
+        width += m_cancelButton->renderStyle()->logicalWidth().value();
+    return width;
+}
+
+void SearchInputType::setValue(const String& sanitizedValue, bool valueChanged, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
+{
+    bool emptinessChanged = valueChanged && sanitizedValue.isEmpty() != element()->value().isEmpty();
+
+    BaseTextInputType::setValue(sanitizedValue, valueChanged, eventBehavior, selection);
+
+    if (m_cancelButton && emptinessChanged)
+        m_cancelButton->invalidateStyleInternal();
+}
+
+} // namespace WebCore

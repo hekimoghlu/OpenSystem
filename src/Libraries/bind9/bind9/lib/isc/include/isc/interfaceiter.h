@@ -1,0 +1,140 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, December 2, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id: interfaceiter.h,v 1.17 2007/06/19 23:47:18 tbox Exp $ */
+
+#ifndef ISC_INTERFACEITER_H
+#define ISC_INTERFACEITER_H 1
+
+/*****
+ ***** Module Info
+ *****/
+
+/*! \file isc/interfaceiter.h
+ * \brief Iterates over the list of network interfaces.
+ *
+ * Interfaces whose address family is not supported are ignored and never
+ * returned by the iterator.  Interfaces whose netmask, interface flags,
+ * or similar cannot be obtained are also ignored, and the failure is logged.
+ *
+ * Standards:
+ *	The API for scanning varies greatly among operating systems.
+ *	This module attempts to hide the differences.
+ */
+
+/***
+ *** Imports
+ ***/
+
+#include <isc/lang.h>
+#include <isc/netaddr.h>
+#include <isc/types.h>
+
+/*!
+ * \brief Public structure describing a network interface.
+ */
+
+struct isc_interface {
+	char name[32];			/*%< Interface name, null-terminated. */
+	unsigned int af;		/*%< Address family. */
+	isc_netaddr_t address;		/*%< Local address. */
+	isc_netaddr_t netmask;		/*%< Network mask. */
+	isc_netaddr_t dstaddress; 	/*%< Destination address (point-to-point only). */
+	isc_uint32_t flags;		/*%< Flags; see INTERFACE flags. */
+};
+
+/*@{*/
+/*! Interface flags. */
+
+#define INTERFACE_F_UP			0x00000001U
+#define INTERFACE_F_POINTTOPOINT	0x00000002U
+#define INTERFACE_F_LOOPBACK		0x00000004U
+/*@}*/
+
+/***
+ *** Functions
+ ***/
+
+ISC_LANG_BEGINDECLS
+
+isc_result_t
+isc_interfaceiter_create(isc_mem_t *mctx, isc_interfaceiter_t **iterp);
+/*!<
+ * \brief Create an iterator for traversing the operating system's list
+ * of network interfaces.
+ *
+ * Returns:
+ *\li	#ISC_R_SUCCESS
+ * \li	#ISC_R_NOMEMORY
+ *\li	Various network-related errors
+ */
+
+isc_result_t
+isc_interfaceiter_first(isc_interfaceiter_t *iter);
+/*!<
+ * \brief Position the iterator on the first interface.
+ *
+ * Returns:
+ *\li	#ISC_R_SUCCESS		Success.
+ *\li	#ISC_R_NOMORE		There are no interfaces.
+ */
+
+isc_result_t
+isc_interfaceiter_current(isc_interfaceiter_t *iter,
+			  isc_interface_t *ifdata);
+/*!<
+ * \brief Get information about the interface the iterator is currently
+ * positioned at and store it at *ifdata.
+ *
+ * Requires:
+ *\li 	The iterator has been successfully positioned using
+ * 	isc_interface_iter_first() / isc_interface_iter_next().
+ *
+ * Returns:
+ *\li	#ISC_R_SUCCESS		Success.
+ */
+
+isc_result_t
+isc_interfaceiter_next(isc_interfaceiter_t *iter);
+/*!<
+ * \brief Position the iterator on the next interface.
+ *
+ * Requires:
+ * \li	The iterator has been successfully positioned using
+ * 	isc_interface_iter_first() / isc_interface_iter_next().
+ *
+ * Returns:
+ *\li	#ISC_R_SUCCESS		Success.
+ *\li	#ISC_R_NOMORE		There are no more interfaces.
+ */
+
+void
+isc_interfaceiter_destroy(isc_interfaceiter_t **iterp);
+/*!<
+ * \brief Destroy the iterator.
+ */
+
+ISC_LANG_ENDDECLS
+
+#endif /* ISC_INTERFACEITER_H */

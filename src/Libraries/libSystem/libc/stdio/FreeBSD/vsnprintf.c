@@ -1,0 +1,90 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, December 25, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)vsnprintf.c	8.1 (Berkeley) 6/4/93";
+#endif /* LIBC_SCCS and not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/lib/libc/stdio/vsnprintf.c,v 1.24 2008/04/17 22:17:54 jhb Exp $");
+
+#include "xlocale_private.h"
+
+#include <limits.h>
+#include <stdio.h>
+#include "local.h"
+
+__private_extern__ int
+_vsnprintf(printf_comp_t __restrict pc, printf_domain_t __restrict domain, char * __restrict str, size_t n, locale_t __restrict loc, const char * __restrict fmt, __va_list ap)
+{
+	size_t on;
+	int ret;
+	char dummy[2];
+	FILE f;
+	struct __sFILEX ext;
+	f._extra = &ext;
+	INITEXTRA(&f);
+
+	on = n;
+	if (n != 0)
+		n--;
+#if defined(__i386__)
+	/* <rdar://problem/16329527> don't corrupt the output buffer at all if the size underflowed */
+	if (n > INT_MAX)
+		on = n = 0;
+#else
+	if (n > INT_MAX)
+		n = INT_MAX;
+#endif
+
+	/* Stdio internals do not deal correctly with zero length buffer */
+	if (n == 0) {
+		if (on > 0)
+	  		*str = '\0';
+		str = dummy;
+		n = 1;
+	}
+	f._file = -1;
+	f._flags = __SWR | __SSTR;
+	f._bf._base = f._p = (unsigned char *)str;
+	f._bf._size = f._w = n;
+	f._orientation = 0;
+	memset(&f._mbstate, 0, sizeof(mbstate_t));
+	ret = __v2printf(pc, domain, &f, loc, fmt, ap);
+	if (on > 0)
+		*f._p = '\0';
+	return (ret);
+}
+int
+vsnprintf_l(char * __restrict str, size_t n, locale_t __restrict loc, const char * __restrict fmt,
+    __va_list ap)
+{
+	return _vsnprintf(XPRINTF_PLAIN, NULL, str, n, loc, fmt, ap);
+}
+
+int
+vsnprintf(char * __restrict str, size_t n, const char * __restrict fmt,
+    __va_list ap)
+{
+	return _vsnprintf(XPRINTF_PLAIN, NULL, str, n, __current_locale(), fmt, ap);
+}

@@ -1,0 +1,173 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, January 1, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+// Â© 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
+/********************************************************************
+ * COPYRIGHT: 
+ * Copyright (c) 1997-2009, International Business Machines Corporation and
+ * others. All Rights Reserved.
+ ********************************************************************/
+
+#include "unicode/utypes.h"
+
+#if !UCONFIG_NO_COLLATION
+
+#include "decoll.h"
+
+#ifndef _COLL
+#include "unicode/coll.h"
+#endif
+
+#ifndef _TBLCOLL
+#include "unicode/tblcoll.h"
+#endif
+
+#ifndef _UNISTR
+#include "unicode/unistr.h"
+#endif
+
+#ifndef _SORTKEY
+#include "unicode/sortkey.h"
+#endif
+
+#ifndef _DECOLL
+#include "decoll.h"
+#endif
+
+#include "sfwdchit.h"
+
+CollationGermanTest::CollationGermanTest()
+: myCollation(nullptr)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    myCollation = Collator::createInstance(Locale::getGermany(), status);
+    if(!myCollation || U_FAILURE(status)) {
+        errcheckln(status, __FILE__ "failed to create! err " + UnicodeString(u_errorName(status)));
+        /* if it wasn't already: */
+        delete myCollation;
+        myCollation = nullptr;
+    }
+}
+
+CollationGermanTest::~CollationGermanTest()
+{
+    delete myCollation;
+}
+
+const char16_t CollationGermanTest::testSourceCases[][CollationGermanTest::MAX_TOKEN_LEN] =
+{
+    {0x47, 0x72, 0x00F6, 0x00DF, 0x65, 0},
+    {0x61, 0x62, 0x63, 0},
+    {0x54, 0x00F6, 0x6e, 0x65, 0},
+    {0x54, 0x00F6, 0x6e, 0x65, 0},
+    {0x54, 0x00F6, 0x6e, 0x65, 0},
+    {0x61, 0x0308, 0x62, 0x63, 0},
+    {0x00E4, 0x62, 0x63, 0},
+    {0x00E4, 0x62, 0x63, 0},
+    {0x53, 0x74, 0x72, 0x61, 0x00DF, 0x65, 0},
+    {0x65, 0x66, 0x67, 0},
+    {0x00E4, 0x62, 0x63, 0},
+    {0x53, 0x74, 0x72, 0x61, 0x00DF, 0x65, 0}
+};
+
+const char16_t CollationGermanTest::testTargetCases[][CollationGermanTest::MAX_TOKEN_LEN] =
+{
+    {0x47, 0x72, 0x6f, 0x73, 0x73, 0x69, 0x73, 0x74, 0},
+    {0x61, 0x0308, 0x62, 0x63, 0},
+    {0x54, 0x6f, 0x6e, 0},
+    {0x54, 0x6f, 0x64, 0},
+    {0x54, 0x6f, 0x66, 0x75, 0},
+    {0x41, 0x0308, 0x62, 0x63, 0},
+    {0x61, 0x0308, 0x62, 0x63, 0},
+    {0x61, 0x65, 0x62, 0x63, 0},
+    {0x53, 0x74, 0x72, 0x61, 0x73, 0x73, 0x65, 0},
+    {0x65, 0x66, 0x67, 0},
+    {0x61, 0x65, 0x62, 0x63, 0},
+    {0x53, 0x74, 0x72, 0x61, 0x73, 0x73, 0x65, 0}
+};
+
+const Collator::EComparisonResult CollationGermanTest::results[][2] =
+{
+      //  Primary                Tertiary
+        { Collator::LESS,        Collator::LESS },
+        { Collator::EQUAL,        Collator::LESS },
+        { Collator::GREATER,    Collator::GREATER },
+        { Collator::GREATER,    Collator::GREATER },
+        { Collator::GREATER,    Collator::GREATER },
+        { Collator::EQUAL,        Collator::LESS },
+        { Collator::EQUAL,        Collator::EQUAL },
+        { Collator::LESS,        Collator::LESS },
+        { Collator::EQUAL,        Collator::GREATER },
+        { Collator::EQUAL,        Collator::EQUAL },
+        { Collator::LESS,        Collator::LESS },
+        { Collator::EQUAL,        Collator::GREATER }
+};
+
+
+void CollationGermanTest::TestTertiary(/* char* par */)
+{
+    if(myCollation == nullptr ) {
+        dataerrln("decoll: cannot start test, collator is null\n");
+        return;
+    }
+
+    int32_t i = 0;
+    UErrorCode status = U_ZERO_ERROR;
+    myCollation->setStrength(Collator::TERTIARY);
+    myCollation->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
+    for (i = 0; i < 12 ; i++)
+    {
+        doTest(myCollation, testSourceCases[i], testTargetCases[i], results[i][1]);
+    }
+}
+void CollationGermanTest::TestPrimary(/* char* par */)
+{
+    if(myCollation == nullptr ) {
+        dataerrln("decoll: cannot start test, collator is null\n");
+        return;
+    }
+    int32_t i;
+    UErrorCode status = U_ZERO_ERROR;
+    myCollation->setStrength(Collator::PRIMARY);
+    myCollation->setAttribute(UCOL_NORMALIZATION_MODE, UCOL_ON, status);
+    for (i = 0; i < 12 ; i++)
+    {
+        doTest(myCollation, testSourceCases[i], testTargetCases[i], results[i][0]);
+    }
+}
+
+void CollationGermanTest::runIndexedTest( int32_t index, UBool exec, const char* &name, char* /*par*/ )
+{
+    if (exec) logln("TestSuite CollationGermanTest: ");
+    switch (index)
+    {
+        case 0: name = "TestPrimary";   if (exec)   TestPrimary(/* par */); break;
+        case 1: name = "TestTertiary";  if (exec)   TestTertiary(/* par */); break;
+        default: name = ""; break;
+    }
+}
+
+#endif /* #if !UCONFIG_NO_COLLATION */

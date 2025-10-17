@@ -1,0 +1,84 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, September 8, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Copyright (c) 2007,2009 Dale Rahn <drahn@openbsd.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+void prcm_setclock(int clock, int speed);
+void prcm_enablemodule(int mod);
+
+#define PRCM_CLK_SPEED_32	0
+#define PRCM_CLK_SPEED_SYS	1
+
+enum PRCM_MODULES {
+	PRCM_TIMER0,
+	PRCM_TIMER1,
+	PRCM_TIMER2,
+	PRCM_TIMER3,
+	PRCM_GPIO0,
+	PRCM_GPIO1,
+	PRCM_GPIO2,
+	PRCM_GPIO3,
+	PRCM_GPIO4,
+	PRCM_GPIO5,
+	PRCM_TPCC,
+	PRCM_TPTC0,
+	PRCM_TPTC1,
+	PRCM_TPTC2,
+	PRCM_MMC0,
+	PRCM_MMC1,
+	PRCM_MMC2,
+	PRCM_MMC3,
+	PRCM_MMC4,
+	PRCM_USB,
+	PRCM_USBTLL,
+	PRCM_USBP1_PHY,
+	PRCM_USBP1_UTMI,
+	PRCM_USBP1_HSIC,
+	PRCM_USBP2_PHY,
+	PRCM_USBP2_UTMI,
+	PRCM_USBP2_HSIC,
+	PRCM_I2C0,
+	PRCM_I2C1,
+	PRCM_I2C2,
+	PRCM_I2C3,
+	PRCM_LCDC,
+	PRCM_RNG,
+};
+
+#define PRCM_REG_MAX	6
+/* need interface for CM_AUTOIDLE */

@@ -1,0 +1,124 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, January 1, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _UAPI_LWTUNNEL_H_
+#define _UAPI_LWTUNNEL_H_
+#include <linux/types.h>
+enum lwtunnel_encap_types {
+  LWTUNNEL_ENCAP_NONE,
+  LWTUNNEL_ENCAP_MPLS,
+  LWTUNNEL_ENCAP_IP,
+  LWTUNNEL_ENCAP_ILA,
+  LWTUNNEL_ENCAP_IP6,
+  LWTUNNEL_ENCAP_SEG6,
+  LWTUNNEL_ENCAP_BPF,
+  LWTUNNEL_ENCAP_SEG6_LOCAL,
+  LWTUNNEL_ENCAP_RPL,
+  LWTUNNEL_ENCAP_IOAM6,
+  LWTUNNEL_ENCAP_XFRM,
+  __LWTUNNEL_ENCAP_MAX,
+};
+#define LWTUNNEL_ENCAP_MAX (__LWTUNNEL_ENCAP_MAX - 1)
+enum lwtunnel_ip_t {
+  LWTUNNEL_IP_UNSPEC,
+  LWTUNNEL_IP_ID,
+  LWTUNNEL_IP_DST,
+  LWTUNNEL_IP_SRC,
+  LWTUNNEL_IP_TTL,
+  LWTUNNEL_IP_TOS,
+  LWTUNNEL_IP_FLAGS,
+  LWTUNNEL_IP_PAD,
+  LWTUNNEL_IP_OPTS,
+  __LWTUNNEL_IP_MAX,
+};
+#define LWTUNNEL_IP_MAX (__LWTUNNEL_IP_MAX - 1)
+enum lwtunnel_ip6_t {
+  LWTUNNEL_IP6_UNSPEC,
+  LWTUNNEL_IP6_ID,
+  LWTUNNEL_IP6_DST,
+  LWTUNNEL_IP6_SRC,
+  LWTUNNEL_IP6_HOPLIMIT,
+  LWTUNNEL_IP6_TC,
+  LWTUNNEL_IP6_FLAGS,
+  LWTUNNEL_IP6_PAD,
+  LWTUNNEL_IP6_OPTS,
+  __LWTUNNEL_IP6_MAX,
+};
+#define LWTUNNEL_IP6_MAX (__LWTUNNEL_IP6_MAX - 1)
+enum {
+  LWTUNNEL_IP_OPTS_UNSPEC,
+  LWTUNNEL_IP_OPTS_GENEVE,
+  LWTUNNEL_IP_OPTS_VXLAN,
+  LWTUNNEL_IP_OPTS_ERSPAN,
+  __LWTUNNEL_IP_OPTS_MAX,
+};
+#define LWTUNNEL_IP_OPTS_MAX (__LWTUNNEL_IP_OPTS_MAX - 1)
+enum {
+  LWTUNNEL_IP_OPT_GENEVE_UNSPEC,
+  LWTUNNEL_IP_OPT_GENEVE_CLASS,
+  LWTUNNEL_IP_OPT_GENEVE_TYPE,
+  LWTUNNEL_IP_OPT_GENEVE_DATA,
+  __LWTUNNEL_IP_OPT_GENEVE_MAX,
+};
+#define LWTUNNEL_IP_OPT_GENEVE_MAX (__LWTUNNEL_IP_OPT_GENEVE_MAX - 1)
+enum {
+  LWTUNNEL_IP_OPT_VXLAN_UNSPEC,
+  LWTUNNEL_IP_OPT_VXLAN_GBP,
+  __LWTUNNEL_IP_OPT_VXLAN_MAX,
+};
+#define LWTUNNEL_IP_OPT_VXLAN_MAX (__LWTUNNEL_IP_OPT_VXLAN_MAX - 1)
+enum {
+  LWTUNNEL_IP_OPT_ERSPAN_UNSPEC,
+  LWTUNNEL_IP_OPT_ERSPAN_VER,
+  LWTUNNEL_IP_OPT_ERSPAN_INDEX,
+  LWTUNNEL_IP_OPT_ERSPAN_DIR,
+  LWTUNNEL_IP_OPT_ERSPAN_HWID,
+  __LWTUNNEL_IP_OPT_ERSPAN_MAX,
+};
+#define LWTUNNEL_IP_OPT_ERSPAN_MAX (__LWTUNNEL_IP_OPT_ERSPAN_MAX - 1)
+enum {
+  LWT_BPF_PROG_UNSPEC,
+  LWT_BPF_PROG_FD,
+  LWT_BPF_PROG_NAME,
+  __LWT_BPF_PROG_MAX,
+};
+#define LWT_BPF_PROG_MAX (__LWT_BPF_PROG_MAX - 1)
+enum {
+  LWT_BPF_UNSPEC,
+  LWT_BPF_IN,
+  LWT_BPF_OUT,
+  LWT_BPF_XMIT,
+  LWT_BPF_XMIT_HEADROOM,
+  __LWT_BPF_MAX,
+};
+#define LWT_BPF_MAX (__LWT_BPF_MAX - 1)
+#define LWT_BPF_MAX_HEADROOM 256
+enum {
+  LWT_XFRM_UNSPEC,
+  LWT_XFRM_IF_ID,
+  LWT_XFRM_LINK,
+  __LWT_XFRM_MAX,
+};
+#define LWT_XFRM_MAX (__LWT_XFRM_MAX - 1)
+#endif

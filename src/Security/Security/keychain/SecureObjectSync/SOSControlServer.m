@@ -1,0 +1,369 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, August 12, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#import <Foundation/Foundation.h>
+#import <Foundation/NSXPCConnection_Private.h>
+#import <Security/SecEntitlements.h>
+#import <ipc/securityd_client.h>
+#import "SOSAccount.h"
+#import "SOSControlHelper.h"
+#import "SOSControlServer.h"
+
+@interface SOSControlServer : NSObject <NSXPCListenerDelegate>
+@end
+
+@interface SOSClient ()
+@property (strong) SOSAccount * account;
+- (instancetype)initSOSClientWithAccount:(SOSAccount *)account;
+- (bool)checkEntitlement:(NSString *)entitlement;
+@end
+
+@interface SOSClientRemote : SOSClient
+@property (weak) NSXPCConnection * connection;
+- (instancetype)initSOSConnectionWithConnection:(NSXPCConnection *)connection account:(SOSAccount *)account;
+@end
+
+@implementation SOSControlServer
+
+- (BOOL)listener:(__unused NSXPCListener *)listener shouldAcceptNewConnection:(NSXPCConnection *)newConnection
+{
+    NSNumber *num = [newConnection valueForEntitlement:(__bridge NSString *)kSecEntitlementKeychainCloudCircle];
+    if (![num isKindOfClass:[NSNumber class]] || ![num boolValue]) {
+        secerror("sos: Client pid: %d doesn't have entitlement: %@",
+                [newConnection processIdentifier], kSecEntitlementKeychainCloudCircle);
+        return NO;
+    }
+
+    SOSAccount *account = (__bridge SOSAccount *)SOSKeychainAccountGetSharedAccount();
+    if (account == nil) {
+        secerror("sos: SOS have not launched yet, come later, pid: %d",
+                [newConnection processIdentifier]);
+        return NO;
+    }
+
+    SOSClientRemote *sosClient = [[SOSClientRemote alloc] initSOSConnectionWithConnection:newConnection account:account];
+
+    newConnection.exportedInterface = [NSXPCInterface interfaceWithProtocol:@protocol(SOSControlProtocol)];
+    _SOSControlSetupInterface(newConnection.exportedInterface);
+    newConnection.exportedObject = sosClient;
+
+    [newConnection resume];
+
+    return YES;
+}
+
+- (SOSClient *)internalSOSClient
+{
+    return [[SOSClient alloc] initSOSClientWithAccount:(__bridge SOSAccount *)SOSKeychainAccountGetSharedAccount()];
+}
+
+@end
+
+@implementation SOSClient
+
+@synthesize account = _account;
+
+- (instancetype)initSOSClientWithAccount:(SOSAccount *)account
+{
+    if ((self = [super init])) {
+        _account = account;
+    }
+    return self;
+}
+
+- (bool)checkEntitlement:(NSString *)entitlement
+{
+    return true;
+}
+
+- (void)userPublicKey:(void ((^))(BOOL trusted, NSData *spki, NSError *error))reply
+{
+    [self.account userPublicKey:reply];
+}
+
+- (void)kvsPerformanceCounters:(void(^)(NSDictionary <NSString *, NSNumber *> *))reply
+{
+    [self.account kvsPerformanceCounters:reply];
+}
+
+- (void)rateLimitingPerformanceCounters:(void(^)(NSDictionary <NSString *, NSString *> *))reply
+{
+    [self.account rateLimitingPerformanceCounters:reply];
+}
+
+- (void)stashedCredentialPublicKey:(void(^)(NSData *, NSError *error))reply
+{
+    [self.account stashedCredentialPublicKey:reply];
+}
+
+- (void)assertStashedAccountCredential:(void(^)(BOOL result, NSError *error))reply
+{
+    [self.account assertStashedAccountCredential:reply];
+}
+
+- (void)validatedStashedAccountCredential:(NSString *)altDSID  
+                                   flowID:(NSString* _Nullable)flowID
+                          deviceSessionID:(NSString* _Nullable)deviceSessionID 
+                           canSendMetrics:(BOOL)canSendMetrics
+                                 complete:(void (^)(NSData *, NSError *))complete
+{
+    [self.account validatedStashedAccountCredential:altDSID flowID:flowID deviceSessionID:deviceSessionID canSendMetrics:canSendMetrics complete:complete];
+}
+
+- (void)stashAccountCredential:(NSData *)credential 
+                       altDSID:(NSString*)altDSID
+                        flowID:(NSString* _Nullable)flowID
+               deviceSessionID:(NSString* _Nullable)deviceSessionID
+                canSendMetrics:(BOOL)canSendMetrics
+                      complete:(void(^)(bool success, NSError *error))complete
+{
+    [self.account stashAccountCredential:credential altDSID:altDSID flowID:flowID deviceSessionID:deviceSessionID canSendMetrics:canSendMetrics complete:complete];
+}
+
+- (void)myPeerInfo:(NSString*)altDSID  
+            flowID:(NSString* _Nullable)flowID
+   deviceSessionID:(NSString* _Nullable)deviceSessionID
+    canSendMetrics:(BOOL)canSendMetrics
+          complete:(void (^)(NSData *, NSError *))complete
+{
+    [self.account myPeerInfo:altDSID flowID:flowID deviceSessionID:deviceSessionID canSendMetrics:canSendMetrics complete:complete];
+}
+
+- (void)circleHash:(void (^)(NSString *, NSError *))complete
+{
+    [self.account circleHash:complete];
+}
+
+
+- (void)circleJoiningBlob:(NSString*)altDSID 
+                   flowID:(NSString* _Nullable)flowID
+          deviceSessionID:(NSString* _Nullable)deviceSessionID  
+           canSendMetrics:(BOOL)canSendMetrics
+                applicant:(NSData *)applicant
+                 complete:(void (^)(NSData *blob, NSError *))complete
+{
+    [self.account circleJoiningBlob:altDSID flowID:flowID deviceSessionID:deviceSessionID canSendMetrics:canSendMetrics applicant:applicant complete:complete];
+}
+
+- (void)joinCircleWithBlob:(NSData *)blob altDSID:(NSString*)altDSID 
+                    flowID:(NSString* _Nullable)flowID
+           deviceSessionID:(NSString* _Nullable)deviceSessionID
+            canSendMetrics:(BOOL)canSendMetrics
+                   version:(PiggyBackProtocolVersion)version
+                  complete:(void (^)(bool success, NSError *))complete
+{
+    [self.account joinCircleWithBlob:blob altDSID:altDSID flowID:flowID deviceSessionID:deviceSessionID canSendMetrics:canSendMetrics version:version complete:complete];
+}
+
+- (void)initialSyncCredentials:(uint32_t)flags 
+                       altDSID:(NSString*)altDSID
+                        flowID:(NSString* _Nullable)flowID
+               deviceSessionID:(NSString* _Nullable)deviceSessionID
+                canSendMetrics:(BOOL)canSendMetrics
+                      complete:(void (^)(NSArray *, NSError *))complete
+{
+    if (![self checkEntitlement:(__bridge NSString *)kSecEntitlementKeychainInitialSync]) {
+        complete(@[], [NSError errorWithDomain:(__bridge NSString *)kSOSErrorDomain code:kSOSEntitlementMissing userInfo:NULL]);
+        return;
+    }
+
+    [self.account initialSyncCredentials:flags altDSID:altDSID flowID:flowID deviceSessionID:deviceSessionID canSendMetrics:canSendMetrics complete:complete];
+}
+
+- (void)importInitialSyncCredentials:(NSArray *)items complete:(void (^)(bool success, NSError *))complete
+{
+    if (![self checkEntitlement:(__bridge NSString *)kSecEntitlementKeychainInitialSync]) {
+        complete(false, [NSError errorWithDomain:(__bridge NSString *)kSOSErrorDomain code:kSOSEntitlementMissing userInfo:NULL]);
+        return;
+    }
+
+    [self.account importInitialSyncCredentials:items complete:complete];
+}
+
+- (void)rpcTriggerSync:(NSArray <NSString *> *)peers complete:(void(^)(bool success, NSError *))complete
+{
+    if([self SOSMonitorModeSOSIsActive]) {
+        [self.account rpcTriggerSync:peers complete:complete];
+    } else {
+        complete(true, nil);
+    }
+}
+
+- (void)getWatchdogParameters:(void (^)(NSDictionary* parameters, NSError* error))complete
+{
+    [self.account getWatchdogParameters:complete];
+}
+
+- (void)setWatchdogParmeters:(NSDictionary*)parameters complete:(void (^)(NSError* error))complete
+{
+    [self.account setWatchdogParmeters:parameters complete:complete];
+}
+
+- (void) ghostBust:(SOSAccountGhostBustingOptions)options complete: (void(^)(bool ghostBusted, NSError *error))complete {
+    [self.account ghostBust:options complete:complete];
+}
+
+- (void)ghostBustTriggerTimed:(SOSAccountGhostBustingOptions)options complete: (void(^)(bool ghostBusted, NSError *error))complete {
+    [self.account ghostBustTriggerTimed:options complete:complete];
+}
+
+- (void) ghostBustPeriodic:(SOSAccountGhostBustingOptions)options complete: (void(^)(bool busted, NSError *error))complete {
+    [self.account ghostBustPeriodic:options complete:complete];
+}
+
+- (void) ghostBustInfo: (void(^)(NSData *json, NSError *error))complete {
+    [self.account ghostBustInfo:complete];
+}
+
+- (void)iCloudIdentityStatus: (void (^)(NSData *json, NSError *error))complete {
+    [self.account iCloudIdentityStatus: complete];
+}
+
+- (void)accountStatus: (void (^)(NSData *json, NSError *error))complete {
+    [self.account accountStatus: complete];
+}
+
+- (void)keyStatusFor: (int) keyType complete: (void(^)(SOSBackupPublicKeyStatus status, NSError *error))complete {
+    [self.account keyStatusFor: keyType complete: complete];
+}
+
+- (void)rpcTriggerBackup:(NSArray<NSString *>* _Nullable)backupPeers complete:(void (^)(NSError *error))complete
+{
+    if([self SOSMonitorModeSOSIsActive]) {
+        [self.account rpcTriggerBackup:backupPeers complete:complete];
+    } else {
+        complete([[NSError alloc] initWithDomain:(__bridge id) kSOSErrorDomain code:kSOSDisabled userInfo:@{}]);
+    }
+}
+
+- (void)rpcTriggerRingUpdate:(void (^)(NSError *))complete {
+    if([self SOSMonitorModeSOSIsActive]) {
+        [self.account rpcTriggerRingUpdate:complete];
+    } else {
+        complete([[NSError alloc] initWithDomain:(__bridge id) kSOSErrorDomain code:kSOSDisabled userInfo:@{}]);
+    }
+}
+
+- (void)iCloudIdentityStatus_internal:(void (^)(NSDictionary *, NSError *))complete {
+    [self.account iCloudIdentityStatus_internal:complete];
+}
+
+- (void)removeV0Peers:(void (^)(bool, NSError *))reply { 
+    [self.account removeV0Peers:reply];
+}
+
+
+- (void)SOSMonitorModeDisableSOS {
+    [self.account performTransaction:^(SOSAccountTransaction * _Nonnull txn) {
+        [self.account SOSMonitorModeDisableSOS];
+    }];
+}
+
+
+- (void)SOSMonitorModeEnableSOS {
+    [self.account performTransaction:^(SOSAccountTransaction * _Nonnull txn) {
+        [self.account SOSMonitorModeEnableSOS];
+    }];
+}
+
+- (void) SOSMonitorModeSOSIsActiveWithCallback: (void(^)(bool result)) complete {
+    [self.account performTransaction:^(SOSAccountTransaction * _Nonnull txn) {
+        [self.account SOSMonitorModeSOSIsActiveWithCallback:^(bool result) {
+            complete(result);
+        }];
+    }];
+}
+
+- (bool) SOSMonitorModeSOSIsActive {
+    __block bool retval = false;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    [self SOSMonitorModeSOSIsActiveWithCallback:^(bool result) {
+        retval = result;
+        dispatch_semaphore_signal(semaphore);
+    }];
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    return retval;
+}
+
+- (NSString *) SOSMonitorModeSOSIsActiveDescription {
+    return [self.account SOSMonitorModeSOSIsActiveDescription];
+}
+
+- (void)setBypass:(BOOL)bypass reply:(void(^)(BOOL result, NSError *error))reply
+{
+    [self.account setBypass:bypass reply:reply];
+}
+
+@end
+
+@implementation SOSClientRemote
+
+- (instancetype)initSOSConnectionWithConnection:(NSXPCConnection *)connection account:(SOSAccount *)account
+{
+    if ((self = [super initSOSClientWithAccount:account])) {
+        self.connection = connection;
+    }
+    return self;
+}
+
+- (bool)checkEntitlement:(NSString *)entitlement
+{
+    NSXPCConnection *strongConnection = _connection;
+
+    NSNumber *num = [strongConnection valueForEntitlement:entitlement];
+    if (![num isKindOfClass:[NSNumber class]] || ![num boolValue]) {
+        secerror("sos: Client pid: %d doesn't have entitlement: %@",
+                 [strongConnection processIdentifier], entitlement);
+        return false;
+    }
+    return true;
+}
+@end
+
+static SOSControlServer *sosServer;
+
+void
+SOSControlServerInitialize(void)
+{
+    static dispatch_once_t once;
+    static NSXPCListener *listener;
+
+    dispatch_once(&once, ^{
+        @autoreleasepool {
+            sosServer = [SOSControlServer new];
+
+            listener = [[NSXPCListener alloc] initWithMachServiceName:@(kSecuritydSOSServiceName)];
+            listener.delegate = sosServer;
+            [listener resume];
+        }
+    });
+}
+
+SOSClient *
+SOSControlServerInternalClient(void)
+{
+    SOSControlServerInitialize();
+    return [sosServer internalSOSClient];
+}

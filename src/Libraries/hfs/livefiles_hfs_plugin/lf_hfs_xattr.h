@@ -1,0 +1,42 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, July 3, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef lf_hfs_xattr_h
+#define lf_hfs_xattr_h
+
+#include "lf_hfs_vnode.h"
+#include "lf_hfs_format.h"
+#include <UserFS/UserVFS.h>
+
+int hfs_attrkeycompare(HFSPlusAttrKey *searchKey, HFSPlusAttrKey *trialKey);
+int init_attrdata_vnode(struct hfsmount *hfsmp);
+int file_attribute_exist(struct hfsmount *hfsmp, uint32_t fileID);
+int hfs_buildattrkey(u_int32_t fileID, const char *attrname, HFSPlusAttrKey *key);
+int hfs_removeallattr(struct hfsmount *hfsmp, u_int32_t fileid, bool *open_transaction);
+int hfs_vnop_getxattr(vnode_t vp, const char *attr_name, void *buf, size_t bufsize, size_t *actual_size);
+int hfs_vnop_setxattr(vnode_t vp, const char *attr_name, const void *buf, size_t bufsize, UVFSXattrHow How);
+int hfs_vnop_removexattr(vnode_t vp, const char *attr_name);
+int hfs_vnop_listxattr(vnode_t vp, void *buf, size_t bufsize, size_t *actual_size);
+
+#endif /* lf_hfs_xattr_h */

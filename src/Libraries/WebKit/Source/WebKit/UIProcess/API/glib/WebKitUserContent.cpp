@@ -1,0 +1,445 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, January 15, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "WebKitUserContent.h"
+
+#include "WebKitUserContentPrivate.h"
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/text/CString.h>
+
+using namespace WebCore;
+
+API::ContentWorld& webkitContentWorld(const char* worldName)
+{
+    static NeverDestroyed<HashMap<CString, RefPtr<API::ContentWorld>>> map;
+    return *map.get().ensure(worldName, [worldName = String::fromUTF8(worldName)] {
+        return API::ContentWorld::sharedWorldWithName(worldName);
+    }).iterator->value;
+}
+
+static inline UserContentInjectedFrames toUserContentInjectedFrames(WebKitUserContentInjectedFrames injectedFrames)
+{
+    switch (injectedFrames) {
+    case WEBKIT_USER_CONTENT_INJECT_TOP_FRAME:
+        return UserContentInjectedFrames::InjectInTopFrameOnly;
+    case WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES:
+        return UserContentInjectedFrames::InjectInAllFrames;
+    default:
+        ASSERT_NOT_REACHED();
+        return UserContentInjectedFrames::InjectInAllFrames;
+    }
+}
+
+static inline UserStyleLevel toUserStyleLevel(WebKitUserStyleLevel styleLevel)
+{
+    switch (styleLevel) {
+    case WEBKIT_USER_STYLE_LEVEL_USER:
+        return UserStyleLevel::User;
+    case WEBKIT_USER_STYLE_LEVEL_AUTHOR:
+        return UserStyleLevel::Author;
+    default:
+        ASSERT_NOT_REACHED();
+        return UserStyleLevel::Author;
+    }
+}
+
+static inline UserScriptInjectionTime toUserScriptInjectionTime(WebKitUserScriptInjectionTime injectionTime)
+{
+    switch (injectionTime) {
+    case WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START:
+        return UserScriptInjectionTime::DocumentStart;
+    case WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_END:
+        return UserScriptInjectionTime::DocumentEnd;
+    default:
+        ASSERT_NOT_REACHED();
+        return UserScriptInjectionTime::DocumentStart;
+    }
+}
+
+static inline Vector<String> toStringVector(const char* const* strv)
+{
+    if (!strv)
+        return Vector<String>();
+
+    Vector<String> result;
+
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GTK/WPE port
+    for (auto str = strv; *str; ++str)
+        result.append(String::fromUTF8(*str));
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+    return result;
+}
+
+/**
+ * WebKitUserStyleSheet: (ref-func webkit_user_style_sheet_ref) (unref-func webkit_user_style_sheet_unref)
+ *
+ * A CSS style sheet which can be injected in loaded pages.
+ *
+ * Since: 2.6
+ */
+
+struct _WebKitUserStyleSheet {
+    _WebKitUserStyleSheet(const gchar* source, WebKitUserContentInjectedFrames injectedFrames, WebKitUserStyleLevel level, const char* const* allowList, const char* const* blockList, API::ContentWorld& world)
+        : userStyleSheet(adoptRef(new API::UserStyleSheet(UserStyleSheet {
+            String::fromUTF8(source), URL { },
+            toStringVector(allowList), toStringVector(blockList),
+            toUserContentInjectedFrames(injectedFrames),
+            UserContentMatchParentFrame::Never,
+            toUserStyleLevel(level) }, world)))
+        , referenceCount(1)
+    {
+    }
+
+    RefPtr<API::UserStyleSheet> userStyleSheet;
+    int referenceCount;
+};
+
+G_DEFINE_BOXED_TYPE(WebKitUserStyleSheet, webkit_user_style_sheet, webkit_user_style_sheet_ref, webkit_user_style_sheet_unref)
+
+/**
+ * webkit_user_style_sheet_ref:
+ * @user_style_sheet: a #WebKitUserStyleSheet
+ *
+ * Atomically increments the reference count of @user_style_sheet by one.
+ *
+ * This function is MT-safe and may be called from any thread.
+ *
+ * Returns: The passed #WebKitUserStyleSheet
+ *
+ * Since: 2.6
+ */
+WebKitUserStyleSheet* webkit_user_style_sheet_ref(WebKitUserStyleSheet* userStyleSheet)
+{
+    g_atomic_int_inc(&userStyleSheet->referenceCount);
+    return userStyleSheet;
+}
+
+/**
+ * webkit_user_style_sheet_unref:
+ * @user_style_sheet: a #WebKitUserStyleSheet
+ *
+ * Atomically decrements the reference count of @user_style_sheet by one.
+ *
+ * If the reference count drops to 0, all memory allocated by
+ * #WebKitUserStyleSheet is released. This function is MT-safe and may be
+ * called from any thread.
+ *
+ * Since: 2.6
+ */
+void webkit_user_style_sheet_unref(WebKitUserStyleSheet* userStyleSheet)
+{
+    if (g_atomic_int_dec_and_test(&userStyleSheet->referenceCount)) {
+        userStyleSheet->~WebKitUserStyleSheet();
+        fastFree(userStyleSheet);
+    }
+}
+
+/**
+ * webkit_user_style_sheet_new: (constructor)
+ * @source: Source code of the user style sheet.
+ * @injected_frames: A #WebKitUserContentInjectedFrames value
+ * @level: A #WebKitUserStyleLevel
+ * @allow_list: (array zero-terminated=1) (allow-none): An allow_list of URI patterns or %NULL
+ * @block_list: (array zero-terminated=1) (allow-none): A block_list of URI patterns or %NULL
+ *
+ * Creates a new user style sheet.
+ *
+ * Style sheets can be applied to some URIs
+ * only by passing non-null values for @allow_list or @block_list. Passing a
+ * %NULL allow_list implies that all URIs are on the allow_list. The style
+ * sheet is applied if an URI matches the allow_list and not the block_list.
+ * URI patterns must be of the form `[protocol]://[host]/[path]`, where the
+ * *host* and *path* components can contain the wildcard character (`*`) to
+ * represent zero or more other characters.
+ *
+ * Returns: A new #WebKitUserStyleSheet
+ *
+ * Since: 2.6
+ */
+WebKitUserStyleSheet* webkit_user_style_sheet_new(const gchar* source, WebKitUserContentInjectedFrames injectedFrames, WebKitUserStyleLevel level, const char* const* allowList, const char* const* blockList)
+{
+    g_return_val_if_fail(source, nullptr);
+    WebKitUserStyleSheet* userStyleSheet = static_cast<WebKitUserStyleSheet*>(fastMalloc(sizeof(WebKitUserStyleSheet)));
+    new (userStyleSheet) WebKitUserStyleSheet(source, injectedFrames, level, allowList, blockList, API::ContentWorld::pageContentWorldSingleton());
+    return userStyleSheet;
+}
+
+/**
+ * webkit_user_style_sheet_new_for_world: (constructor)
+ * @source: Source code of the user style sheet.
+ * @injected_frames: A #WebKitUserContentInjectedFrames value
+ * @level: A #WebKitUserStyleLevel
+ * @world_name: the name of a #WebKitScriptWorld
+ * @allow_list: (array zero-terminated=1) (allow-none): An allow_list of URI patterns or %NULL
+ * @block_list: (array zero-terminated=1) (allow-none): A block_list of URI patterns or %NULL
+ *
+ * Creates a new user style sheet for script world.
+ *
+ * Creates a new user style sheet for script world with name @world_name.
+ * See webkit_user_style_sheet_new() for a full description.
+ *
+ * Returns: A new #WebKitUserStyleSheet
+ *
+ * Since: 2.22
+ */
+WebKitUserStyleSheet* webkit_user_style_sheet_new_for_world(const gchar* source, WebKitUserContentInjectedFrames injectedFrames, WebKitUserStyleLevel level, const char* worldName, const char* const* allowList, const char* const* blockList)
+{
+    g_return_val_if_fail(source, nullptr);
+    g_return_val_if_fail(worldName, nullptr);
+
+    WebKitUserStyleSheet* userStyleSheet = static_cast<WebKitUserStyleSheet*>(fastMalloc(sizeof(WebKitUserStyleSheet)));
+    new (userStyleSheet) WebKitUserStyleSheet(source, injectedFrames, level, allowList, blockList, webkitContentWorld(worldName));
+    return userStyleSheet;
+}
+
+API::UserStyleSheet& webkitUserStyleSheetGetUserStyleSheet(WebKitUserStyleSheet* userStyleSheet)
+{
+    return *userStyleSheet->userStyleSheet;
+}
+
+/**
+ * WebKitUserScript: (ref-func webkit_user_script_ref) (unref-func webkit_user_script_unref)
+ *
+ * A JavaScript snippet which can be injected in loaded pages.
+ *
+ * Since: 2.6
+ */
+
+struct _WebKitUserScript {
+    _WebKitUserScript(const gchar* source, WebKitUserContentInjectedFrames injectedFrames, WebKitUserScriptInjectionTime injectionTime, const gchar* const* allowList, const gchar* const* blockList, API::ContentWorld& world)
+        : userScript(adoptRef(new API::UserScript(UserScript {
+            String::fromUTF8(source), URL { },
+            toStringVector(allowList), toStringVector(blockList),
+            toUserScriptInjectionTime(injectionTime),
+            toUserContentInjectedFrames(injectedFrames), WebCore::WaitForNotificationBeforeInjecting::No }, world)))
+        , referenceCount(1)
+    {
+    }
+
+    RefPtr<API::UserScript> userScript;
+    int referenceCount;
+};
+
+G_DEFINE_BOXED_TYPE(WebKitUserScript, webkit_user_script, webkit_user_script_ref, webkit_user_script_unref)
+
+/**
+ * webkit_user_script_ref:
+ * @user_script: a #WebKitUserScript
+ *
+ * Atomically increments the reference count of @user_script by one.
+ *
+ * This function is MT-safe and may be called from any thread.
+ *
+ * Returns: The passed #WebKitUserScript
+ *
+ * Since: 2.6
+ */
+WebKitUserScript* webkit_user_script_ref(WebKitUserScript* userScript)
+{
+    g_atomic_int_inc(&userScript->referenceCount);
+    return userScript;
+}
+
+/**
+ * webkit_user_script_unref:
+ * @user_script: a #WebKitUserScript
+ *
+ * Atomically decrements the reference count of @user_script by one.
+ *
+ * If the reference count drops to 0, all memory allocated by
+ * #WebKitUserScript is released. This function is MT-safe and may be called
+ * from any thread.
+ *
+ * Since: 2.6
+ */
+void webkit_user_script_unref(WebKitUserScript* userScript)
+{
+    if (g_atomic_int_dec_and_test(&userScript->referenceCount)) {
+        userScript->~WebKitUserScript();
+        fastFree(userScript);
+    }
+}
+
+/**
+ * webkit_user_script_new: (constructor)
+ * @source: Source code of the user script.
+ * @injected_frames: A #WebKitUserContentInjectedFrames value
+ * @injection_time: A #WebKitUserScriptInjectionTime value
+ * @allow_list: (array zero-terminated=1) (allow-none): An allow_list of URI patterns or %NULL
+ * @block_list: (array zero-terminated=1) (allow-none): A block_list of URI patterns or %NULL
+ *
+ * Creates a new user script.
+ *
+ * Scripts can be applied to some URIs
+ * only by passing non-null values for @allow_list or @block_list. Passing a
+ * %NULL allow_list implies that all URIs are on the allow_list. The script
+ * is applied if an URI matches the allow_list and not the block_list.
+ * URI patterns must be of the form `[protocol]://[host]/[path]`, where the
+ * *host* and *path* components can contain the wildcard character (`*`) to
+ * represent zero or more other characters.
+ *
+ * Returns: A new #WebKitUserScript
+ *
+ * Since: 2.6
+ */
+WebKitUserScript* webkit_user_script_new(const gchar* source, WebKitUserContentInjectedFrames injectedFrames, WebKitUserScriptInjectionTime injectionTime, const gchar* const* allowList, const gchar* const* blockList)
+{
+    g_return_val_if_fail(source, nullptr);
+    WebKitUserScript* userScript = static_cast<WebKitUserScript*>(fastMalloc(sizeof(WebKitUserScript)));
+    new (userScript) WebKitUserScript(source, injectedFrames, injectionTime, allowList, blockList, API::ContentWorld::pageContentWorldSingleton());
+    return userScript;
+}
+
+/**
+ * webkit_user_script_new_for_world: (constructor)
+ * @source: Source code of the user script.
+ * @injected_frames: A #WebKitUserContentInjectedFrames value
+ * @injection_time: A #WebKitUserScriptInjectionTime value
+ * @world_name: the name of a #WebKitScriptWorld
+ * @allow_list: (array zero-terminated=1) (allow-none): An allow_list of URI patterns or %NULL
+ * @block_list: (array zero-terminated=1) (allow-none): A block_list of URI patterns or %NULL
+ *
+ * Creates a new user script for script world with name @world_name.
+ *
+ * See webkit_user_script_new() for a full description.
+ *
+ * Returns: A new #WebKitUserScript
+ *
+ * Since: 2.22
+ */
+WebKitUserScript* webkit_user_script_new_for_world(const gchar* source, WebKitUserContentInjectedFrames injectedFrames, WebKitUserScriptInjectionTime injectionTime, const char* worldName, const gchar* const* allowList, const gchar* const* blockList)
+{
+    g_return_val_if_fail(source, nullptr);
+    g_return_val_if_fail(worldName, nullptr);
+
+    WebKitUserScript* userScript = static_cast<WebKitUserScript*>(fastMalloc(sizeof(WebKitUserScript)));
+    new (userScript) WebKitUserScript(source, injectedFrames, injectionTime, allowList, blockList, webkitContentWorld(worldName));
+    return userScript;
+}
+
+API::UserScript& webkitUserScriptGetUserScript(WebKitUserScript* userScript)
+{
+    return *userScript->userScript;
+}
+
+
+/**
+ * WebKitUserContentFilter: (ref-func webkit_user_content_filter_ref) (unref-func webkit_user_content_filter_unref)
+ *
+ * A compiled set of rules which applied to resource loads.
+ *
+ * Since: 2.24
+ */
+
+struct _WebKitUserContentFilter {
+    _WebKitUserContentFilter(RefPtr<API::ContentRuleList>&& contentRuleList)
+        : contentRuleList(WTFMove(contentRuleList))
+#if ENABLE(CONTENT_EXTENSIONS)
+        , identifier(this->contentRuleList->name().utf8())
+#endif
+        , referenceCount(1)
+    {
+    }
+
+    RefPtr<API::ContentRuleList> contentRuleList;
+    CString identifier;
+    int referenceCount;
+};
+
+G_DEFINE_BOXED_TYPE(WebKitUserContentFilter, webkit_user_content_filter, webkit_user_content_filter_ref, webkit_user_content_filter_unref)
+
+/**
+ * webkit_user_content_filter_ref:
+ * @user_content_filter: A #WebKitUserContentFilter
+ *
+ * Atomically increments the reference count of @user_content_filter by one.
+ *
+ * This function is MT-safe and may be called from any thread.
+ *
+ * Returns: the @user_content_filter passed in.
+ *
+ * Since: 2.24
+ */
+WebKitUserContentFilter* webkit_user_content_filter_ref(WebKitUserContentFilter* userContentFilter)
+{
+    g_return_val_if_fail(userContentFilter, nullptr);
+    g_atomic_int_inc(&userContentFilter->referenceCount);
+    return userContentFilter;
+}
+
+/**
+ * webkit_user_content_filter_unref:
+ * @user_content_filter: A #WebKitUserContentFilter
+ *
+ * Atomically decrements the reference count of @user_content_filter by one.
+ *
+ * If the reference count drops to 0, all the memory allocated by the
+ * #WebKitUserContentFilter is released. This function is MT-safe and may
+ * be called from any thread.
+ *
+ * Since: 2.24
+ */
+void webkit_user_content_filter_unref(WebKitUserContentFilter* userContentFilter)
+{
+    g_return_if_fail(userContentFilter);
+    if (g_atomic_int_dec_and_test(&userContentFilter->referenceCount)) {
+        userContentFilter->~WebKitUserContentFilter();
+        fastFree(userContentFilter);
+    }
+}
+
+/**
+ * webkit_user_content_filter_get_identifier:
+ * @user_content_filter: A #WebKitUserContentFilter
+ *
+ * Obtain the identifier previously used to save the @user_content_filter.
+ *
+ * Obtain the identifier previously used to save the @user_content_filter in the
+ * #WebKitUserContentFilterStore.
+ *
+ * Returns: (transfer none): the identifier for the filter
+ *
+ * Since: 2.24
+ */
+const char* webkit_user_content_filter_get_identifier(WebKitUserContentFilter* userContentFilter)
+{
+    g_return_val_if_fail(userContentFilter, nullptr);
+    return userContentFilter->identifier.data();
+}
+
+WebKitUserContentFilter* webkitUserContentFilterCreate(RefPtr<API::ContentRuleList>&& contentRuleList)
+{
+    WebKitUserContentFilter* userContentFilter = static_cast<WebKitUserContentFilter*>(fastMalloc(sizeof(WebKitUserContentFilter)));
+    new (userContentFilter) WebKitUserContentFilter(WTFMove(contentRuleList));
+    return userContentFilter;
+}
+
+API::ContentRuleList& webkitUserContentFilterGetContentRuleList(WebKitUserContentFilter* userContentFilter)
+{
+    ASSERT(userContentFilter);
+    return *userContentFilter->contentRuleList;
+}

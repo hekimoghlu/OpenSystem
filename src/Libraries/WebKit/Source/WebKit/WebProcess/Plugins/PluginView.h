@@ -1,0 +1,261 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, September 7, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if ENABLE(PDF_PLUGIN)
+
+#include "CursorContext.h"
+#include "PDFPluginIdentifier.h"
+#include "WebFoundTextRange.h"
+#include <WebCore/FindOptions.h>
+#include <WebCore/PluginViewBase.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
+#include <WebCore/TextIndicator.h>
+#include <WebCore/Timer.h>
+#include <memory>
+#include <wtf/CompletionHandler.h>
+#include <wtf/RunLoop.h>
+
+OBJC_CLASS NSDictionary;
+OBJC_CLASS PDFDocument;
+OBJC_CLASS PDFSelection;
+
+namespace WebCore {
+class HTMLPlugInElement;
+class LocalFrame;
+class PlatformMouseEvent;
+class RenderEmbeddedObject;
+class ShareableBitmap;
+class VoidCallback;
+enum class TextGranularity : uint8_t;
+}
+
+namespace WebKit {
+
+class PDFPluginBase;
+class WebFrame;
+class WebPage;
+enum class SelectionEndpoint : bool;
+enum class SelectionWasFlipped : bool;
+struct DocumentEditingContextRequest;
+struct DocumentEditingContext;
+struct EditorState;
+struct FrameInfoData;
+struct WebHitTestResultData;
+
+class PluginView final : public WebCore::PluginViewBase {
+public:
+    static RefPtr<PluginView> create(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader);
+
+    WebCore::LocalFrame* frame() const;
+
+    bool isBeingDestroyed() const;
+
+    void manualLoadDidReceiveResponse(const WebCore::ResourceResponse&);
+    void manualLoadDidReceiveData(const WebCore::SharedBuffer&);
+    void manualLoadDidFinishLoading();
+    void manualLoadDidFail();
+
+    void setDeviceScaleFactor(float);
+    RetainPtr<PDFDocument> pdfDocumentForPrinting() const;
+    WebCore::FloatSize pdfDocumentSizeForPrinting() const;
+    id accessibilityHitTest(const WebCore::IntPoint&) const final;
+    id accessibilityObject() const final;
+    id accessibilityAssociatedPluginParentForElement(WebCore::Element*) const final;
+
+    void layerHostingStrategyDidChange() final;
+
+    WebCore::HTMLPlugInElement& pluginElement() const { return m_pluginElement; }
+    Ref<WebCore::HTMLPlugInElement> protectedPluginElement() const;
+    const URL& mainResourceURL() const { return m_mainResourceURL; }
+
+    void didBeginMagnificationGesture();
+    void didEndMagnificationGesture();
+    void setPageScaleFactor(double, std::optional<WebCore::IntPoint> origin);
+    double pageScaleFactor() const;
+    void pluginScaleFactorDidChange();
+#if PLATFORM(IOS_FAMILY)
+    void pluginDidInstallPDFDocument(double initialScaleFactor);
+    std::pair<URL, WebCore::FloatRect> linkURLAndBoundsAtPoint(WebCore::FloatPoint pointInRootView) const;
+    std::optional<WebCore::FloatRect> highlightRectForTapAtPoint(WebCore::FloatPoint pointInRootView) const;
+    void handleSyntheticClick(WebCore::PlatformMouseEvent&&);
+    void setSelectionRange(WebCore::FloatPoint pointInRootView, WebCore::TextGranularity);
+    void clearSelection();
+    SelectionWasFlipped moveSelectionEndpoint(WebCore::FloatPoint pointInRootView, SelectionEndpoint);
+    SelectionEndpoint extendInitialSelection(WebCore::FloatPoint pointInRootView, WebCore::TextGranularity);
+    CursorContext cursorContext(WebCore::FloatPoint pointInRootView) const;
+    DocumentEditingContext documentEditingContext(DocumentEditingContextRequest&&) const;
+#endif
+
+    bool populateEditorStateIfNeeded(EditorState&) const;
+
+    void topContentInsetDidChange();
+
+    void webPageDestroyed();
+
+    bool handleEditingCommand(const String& commandName, const String& argument);
+    bool isEditingCommandEnabled(const String& commandName);
+    
+    unsigned countFindMatches(const String& target, WebCore::FindOptions, unsigned maxMatchCount);
+    bool findString(const String& target, WebCore::FindOptions, unsigned maxMatchCount);
+    Vector<WebCore::FloatRect> rectsForTextMatchesInRect(const WebCore::IntRect&) const;
+    bool drawsFindOverlay() const;
+    RefPtr<WebCore::TextIndicator> textIndicatorForCurrentSelection(OptionSet<WebCore::TextIndicatorOption>, WebCore::TextIndicatorPresentationTransition);
+
+    Vector<WebFoundTextRange::PDFData> findTextMatches(const String& target, WebCore::FindOptions);
+    Vector<WebCore::FloatRect> rectsForTextMatch(const WebFoundTextRange::PDFData&);
+    RefPtr<WebCore::TextIndicator> textIndicatorForTextMatch(const WebFoundTextRange::PDFData&, WebCore::TextIndicatorPresentationTransition);
+    void scrollToRevealTextMatch(const WebFoundTextRange::PDFData&);
+
+    String fullDocumentString() const;
+    String selectionString() const;
+    std::pair<String, String> stringsBeforeAndAfterSelection(int characterCount) const;
+
+    RefPtr<WebCore::FragmentedSharedBuffer> liveResourceData() const;
+
+    bool performDictionaryLookupAtLocation(const WebCore::FloatPoint&);
+    bool performImmediateActionHitTestAtLocation(const WebCore::FloatPoint&, WebHitTestResultData&) const;
+
+    WebCore::FloatRect rectForSelectionInRootView(PDFSelection *) const;
+    
+    bool isUsingUISideCompositing() const;
+
+    void invalidateRect(const WebCore::IntRect&) final;
+
+    void didChangeSettings();
+
+    void windowActivityDidChange();
+
+    void didChangeIsInWindow();
+
+    void didSameDocumentNavigationForFrame(WebFrame&);
+
+    PDFPluginIdentifier pdfPluginIdentifier() const;
+
+    void openWithPreview(CompletionHandler<void(const String&, FrameInfoData&&, std::span<const uint8_t>, const String&)>&&);
+
+    void focusPluginElement();
+
+    bool shouldRespectPageScaleAdjustments() const;
+
+private:
+    PluginView(WebCore::HTMLPlugInElement&, const URL&, const String& contentType, bool shouldUseManualLoader, WebPage&);
+    virtual ~PluginView();
+
+    void initializePlugin();
+
+    Ref<PDFPluginBase> protectedPlugin() const;
+
+    void viewGeometryDidChange();
+    void viewVisibilityDidChange();
+
+    WebCore::IntRect clipRectInWindowCoordinates() const;
+    
+    void pendingResourceRequestTimerFired();
+
+    void loadMainResource();
+    void redeliverManualStream();
+
+    bool shouldCreateTransientPaintingSnapshot() const;
+
+    void updateDocumentForPluginSizingBehavior();
+
+    CheckedPtr<WebCore::RenderEmbeddedObject> checkedRenderer() const;
+
+    // WebCore::PluginViewBase
+    WebCore::PluginLayerHostingStrategy layerHostingStrategy() const final;
+
+    PlatformLayer* platformLayer() const final;
+    WebCore::GraphicsLayer* graphicsLayer() const final;
+
+    bool scroll(WebCore::ScrollDirection, WebCore::ScrollGranularity) final;
+    WebCore::ScrollPosition scrollPositionForTesting() const final;
+    WebCore::Scrollbar* horizontalScrollbar() final;
+    WebCore::Scrollbar* verticalScrollbar() final;
+    bool wantsWheelEvents() final;
+    bool shouldAllowNavigationFromDrags() const final;
+    void willDetachRenderer() final;
+
+    WebCore::ScrollableArea* scrollableArea() const final;
+    bool usesAsyncScrolling() const final;
+    std::optional<WebCore::ScrollingNodeID> scrollingNodeID() const final;
+    void willAttachScrollingNode() final;
+    void didAttachScrollingNode() final;
+
+    // WebCore::Widget
+    void setFrameRect(const WebCore::IntRect&) final;
+    void paint(WebCore::GraphicsContext&, const WebCore::IntRect&, WebCore::Widget::SecurityOriginPaintPolicy, WebCore::RegionContext*) final;
+    void frameRectsChanged() final;
+    void setParent(WebCore::ScrollView*) final;
+    void handleEvent(WebCore::Event&) final;
+    void notifyWidget(WebCore::WidgetNotification) final;
+    void show() final;
+    void hide() final;
+    void setParentVisible(bool) final;
+    bool transformsAffectFrameRect() final;
+    void clipRectChanged() final;
+
+    void releaseMemory() final;
+
+    RefPtr<WebPage> protectedWebPage() const;
+
+    Ref<WebCore::HTMLPlugInElement> m_pluginElement;
+    Ref<PDFPluginBase> m_plugin;
+    WeakPtr<WebPage> m_webPage;
+    URL m_mainResourceURL;
+    String m_mainResourceContentType;
+    bool m_shouldUseManualLoader { false };
+
+    bool m_isInitialized { false };
+
+    // Pending request that the plug-in has made.
+    std::unique_ptr<const WebCore::ResourceRequest> m_pendingResourceRequest;
+    RunLoop::Timer m_pendingResourceRequestTimer;
+
+    // Stream that the plug-in has requested to load.
+    class Stream;
+    RefPtr<Stream> m_stream;
+
+    // The manual stream state. We deliver a manual stream to a plug-in when it is initialized.
+    enum class ManualStreamState { Initial, HasReceivedResponse, Finished, Failed };
+    ManualStreamState m_manualStreamState { ManualStreamState::Initial };
+    WebCore::ResourceResponse m_manualStreamResponse;
+    WebCore::SharedBufferBuilder m_manualStreamData;
+
+    // This snapshot is used to avoid side effects should the plugin run JS during painting.
+    RefPtr<WebCore::ShareableBitmap> m_transientPaintingSnapshot;
+
+    bool sendEditingCommandToPDFForTesting(const String& commandName, const String& argument) final;
+    void setPDFDisplayModeForTesting(const String&) final;
+    Vector<WebCore::FloatRect> pdfAnnotationRectsForTesting() const override;
+    void unlockPDFDocumentForTesting(const String& password) final;
+    void setPDFTextAnnotationValueForTesting(unsigned pageIndex, unsigned annotationIndex, const String& value) final;
+    void registerPDFTestCallback(RefPtr<WebCore::VoidCallback>&&) final;
+};
+
+} // namespace WebKit
+
+#endif

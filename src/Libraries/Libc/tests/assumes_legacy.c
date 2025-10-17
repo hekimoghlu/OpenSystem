@@ -1,0 +1,49 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, July 19, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#include <os/assumes.h>
+
+#include <darwintest.h>
+
+static const char *expected_message = NULL;
+
+static void
+os_crash_function(const char *message)
+{
+	if (expected_message) {
+		T_ASSERT_EQ_STR(message, expected_message, NULL);
+		T_END;
+	} else {
+		T_PASS("Got crash message: %s", message);
+		T_END;
+	}
+}
+os_crash_redirect(os_crash_function);
+
+T_DECL(os_crash_sanity_legacy, "sanity check for os_crash")
+{
+	expected_message = "My AWESOME assertion message.";
+	os_crash(expected_message);
+}

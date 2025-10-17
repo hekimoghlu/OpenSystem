@@ -1,0 +1,75 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, April 15, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//
+// Copyright 2020 The ANGLE Project Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
+// TransformFeedbackMtl.h:
+//    Defines the class interface for TransformFeedbackMtl, implementing TransformFeedbackImpl.
+//
+
+#ifndef LIBANGLE_RENDERER_METAL_TRANSFORMFEEDBACKMTL_H_
+#define LIBANGLE_RENDERER_METAL_TRANSFORMFEEDBACKMTL_H_
+
+#include "libANGLE/renderer/TransformFeedbackImpl.h"
+
+namespace rx
+{
+
+class ContextMtl;
+
+class TransformFeedbackMtl : public TransformFeedbackImpl
+{
+  public:
+    TransformFeedbackMtl(const gl::TransformFeedbackState &state);
+    ~TransformFeedbackMtl() override;
+
+    angle::Result begin(const gl::Context *context, gl::PrimitiveMode primitiveMode) override;
+    angle::Result end(const gl::Context *context) override;
+    angle::Result pause(const gl::Context *context) override;
+    angle::Result resume(const gl::Context *context) override;
+
+    angle::Result bindIndexedBuffer(const gl::Context *context,
+                                    size_t index,
+                                    const gl::OffsetBindingPointer<gl::Buffer> &binding) override;
+
+    // Params:
+    // - drawCallFirstVertex is first vertex used by glDrawArrays*. This is important because
+    // gl_VertexIndex is starting from this.
+    // - skippedVertices is number of skipped vertices (useful for multiple metal draws per GL draw
+    // call).
+    angle::Result getBufferOffsets(ContextMtl *contextMtl,
+                                   GLint drawCallFirstVertex,
+                                   uint32_t skippedVertices,
+                                   int32_t *offsetsOut);
+
+  private:
+};
+
+}  // namespace rx
+
+#endif  // LIBANGLE_RENDERER_METAL_TRANSFORMFEEDBACKMTL_H_

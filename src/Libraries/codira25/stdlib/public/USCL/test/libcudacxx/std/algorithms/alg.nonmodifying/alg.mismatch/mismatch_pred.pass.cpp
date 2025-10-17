@@ -1,0 +1,103 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, January 12, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <algorithm>
+
+// template<InputIterator Iter1, InputIterator Iter2,
+//          Predicate<auto, Iter1::value_type, Iter2::value_type> Pred>
+//   requires CopyConstructible<Pred>
+//   constexpr pair<Iter1, Iter2>   // constexpr after c++17
+//   mismatch(Iter1 first1, Iter1 last1, Iter2 first2, Pred pred);
+//
+// template<InputIterator Iter1, InputIterator Iter2, Predicate Pred>
+//   constexpr pair<Iter1, Iter2>   // constexpr after c++17
+//   mismatch(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, Pred pred); // C++14
+
+#include <uscl/std/__algorithm_>
+#include <uscl/std/cassert>
+#include <uscl/std/functional>
+
+#include "counting_predicates.h"
+#include "test_iterators.h"
+#include "test_macros.h"
+
+TEST_DIAG_SUPPRESS_MSVC(4018) // signed/unsigned mismatch
+TEST_DIAG_SUPPRESS_GCC("-Wsign-compare")
+TEST_DIAG_SUPPRESS_CLANG("-Wsign-compare")
+
+__host__ __device__ constexpr bool test()
+{
+  int ia[]                           = {0, 1, 2, 2, 0, 1, 2, 3};
+  const unsigned sa                  = sizeof(ia) / sizeof(ia[0]);
+  int ib[]                           = {0, 1, 2, 3, 0, 1, 2, 3};
+  [[maybe_unused]] const unsigned sb = sizeof(ib) / sizeof(ib[0]);
+
+  typedef cpp17_input_iterator<const int*> II;
+  typedef random_access_iterator<const int*> RAI;
+  typedef cuda::std::equal_to<int> EQ;
+
+  assert(cuda::std::mismatch(II(ia), II(ia + sa), II(ib), EQ()) == (cuda::std::pair<II, II>(II(ia + 3), II(ib + 3))));
+  assert(cuda::std::mismatch(RAI(ia), RAI(ia + sa), RAI(ib), EQ())
+         == (cuda::std::pair<RAI, RAI>(RAI(ia + 3), RAI(ib + 3))));
+
+  int counter = 0;
+  counting_predicate<EQ> bcp(EQ(), counter);
+  assert(cuda::std::mismatch(RAI(ia), RAI(ia + sa), RAI(ib), bcp)
+         == (cuda::std::pair<RAI, RAI>(RAI(ia + 3), RAI(ib + 3))));
+  assert(counter > 0 && counter < sa);
+  counter = 0;
+
+  assert(cuda::std::mismatch(II(ia), II(ia + sa), II(ib), II(ib + sb), EQ())
+         == (cuda::std::pair<II, II>(II(ia + 3), II(ib + 3))));
+  assert(cuda::std::mismatch(RAI(ia), RAI(ia + sa), RAI(ib), RAI(ib + sb), EQ())
+         == (cuda::std::pair<RAI, RAI>(RAI(ia + 3), RAI(ib + 3))));
+
+  assert(cuda::std::mismatch(II(ia), II(ia + sa), II(ib), II(ib + sb), bcp)
+         == (cuda::std::pair<II, II>(II(ia + 3), II(ib + 3))));
+  assert(counter > 0 && counter < cuda::std::min(sa, sb));
+
+  assert(cuda::std::mismatch(ia, ia + sa, ib, EQ()) == (cuda::std::pair<int*, int*>(ia + 3, ib + 3)));
+
+  assert(cuda::std::mismatch(ia, ia + sa, ib, ib + sb, EQ()) == (cuda::std::pair<int*, int*>(ia + 3, ib + 3)));
+  assert(cuda::std::mismatch(ia, ia + sa, ib, ib + 2, EQ()) == (cuda::std::pair<int*, int*>(ia + 2, ib + 2)));
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+  static_assert(test(), "");
+
+  return 0;
+}

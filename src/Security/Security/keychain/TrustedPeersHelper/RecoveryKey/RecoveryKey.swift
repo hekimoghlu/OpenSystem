@@ -1,0 +1,185 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, March 24, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+import Foundation
+import SecurityFoundation
+
+class RecoveryKey: NSObject {
+    internal var peerKeys: OctagonSelfPeerKeys
+
+    internal init(recoveryKeySet: RecoveryKeySet) throws {
+        let peerID = RecoveryKey.PeerID(signingPublicKeyData: recoveryKeySet.signingKey.publicKey.keyData)
+
+        try self.peerKeys = OctagonSelfPeerKeys(peerID: peerID, signingKey: recoveryKeySet.signingKey, encryptionKey: recoveryKeySet.encryptionKey)
+    }
+
+    internal convenience init(recoveryKeyString: String, recoverySalt: String) throws {
+        let secret = Data(bytes: Array(recoveryKeyString.utf8), count: recoveryKeyString.utf8.count)
+        let recoveryKeys = try RecoveryKeySet(secret: secret, recoverySalt: recoverySalt)
+        try self.init(recoveryKeySet: recoveryKeys)
+    }
+
+    static func PeerID(signingPublicKeyData: Data) -> String {
+        let hash = RecoveryKeySet.hashRecoveryedSigningPublicKey(keyData: signingPublicKeyData)
+        let peerID = "RK-" + hash
+
+        return peerID
+    }
+
+    static func spki(publicKeyData: Data) throws -> Data {
+        let key = try _SFECPublicKey(data: publicKeyData, specifier: _SFECKeySpecifier(curve: SFEllipticCurve.nistp384))
+        return key.encodeSubjectPublicKeyInfo()
+    }
+
+    static func asPeer(recoveryKeys: TPRecoveryKeyPair, viewList: Set<String>) throws -> TrustedPeersHelperPeer {
+        return TrustedPeersHelperPeer(peerID: self.PeerID(signingPublicKeyData: recoveryKeys.signingKeyData),
+                                      signingSPKI: try self.spki(publicKeyData: recoveryKeys.signingKeyData),
+                                      encryptionSPKI: try self.spki(publicKeyData: recoveryKeys.encryptionKeyData),
+                                      secureElementIdentity: nil,
+                                      viewList: viewList)
+    }
+}
+
+class CustodianRecoveryKey {
+    internal var peerKeys: OctagonSelfPeerKeys
+    internal var tpCustodian: TPCustodianRecoveryKey
+
+    var peerID: String {
+        return self.tpCustodian.peerID
+    }
+
+    internal init(uuid: UUID, recoveryKeySet: RecoveryKeySet, kind: TPPBCustodianRecoveryKey_Kind = .UNKNOWN) throws {
+        self.tpCustodian = try TPCustodianRecoveryKey(uuid: uuid,
+                                                      signing: recoveryKeySet.signingKey.publicKey(),
+                                                      encryptionPublicKey: recoveryKeySet.encryptionKey.publicKey(),
+                                                      signing: recoveryKeySet.signingKey,
+                                                      kind: kind)
+
+        self.peerKeys = try OctagonSelfPeerKeys(peerID: self.tpCustodian.peerID, signingKey: recoveryKeySet.signingKey, encryptionKey: recoveryKeySet.encryptionKey)
+    }
+
+    internal convenience init(uuid: UUID, recoveryKeyString: String, recoverySalt: String, kind: TPPBCustodianRecoveryKey_Kind = .UNKNOWN) throws {
+        let secret = Data(bytes: Array(recoveryKeyString.utf8), count: recoveryKeyString.utf8.count)
+        let recoveryKeys = try RecoveryKeySet(secret: secret, recoverySalt: recoverySalt)
+        try self.init(uuid: uuid, recoveryKeySet: recoveryKeys, kind: kind)
+    }
+
+    internal init(tpCustodian: TPCustodianRecoveryKey, recoveryKeyString: String, recoverySalt: String) throws {
+        let secret = Data(bytes: Array(recoveryKeyString.utf8), count: recoveryKeyString.utf8.count)
+        let recoveryKeys = try RecoveryKeySet(secret: secret, recoverySalt: recoverySalt)
+
+        guard recoveryKeys.signingKey.publicKey().spki() == tpCustodian.signingPublicKey.spki() &&
+          recoveryKeys.encryptionKey.publicKey().spki() == tpCustodian.encryptionPublicKey.spki() else {
+            throw RecoveryKey.Error.entropyKeyMismatch
+        }
+
+        self.tpCustodian = tpCustodian
+        self.peerKeys = try OctagonSelfPeerKeys(peerID: self.tpCustodian.peerID, signingKey: recoveryKeys.signingKey, encryptionKey: recoveryKeys.encryptionKey)
+    }
+}
+
+class InheritanceKey {
+    internal var peerKeys: OctagonSelfPeerKeys
+    internal var tpInheritance: TPCustodianRecoveryKey
+
+    var peerID: String {
+        return self.tpInheritance.peerID
+    }
+
+    internal init(uuid: UUID, recoveryKeySet: RecoveryKeySet) throws {
+        self.tpInheritance = try TPCustodianRecoveryKey(uuid: uuid,
+                                                        signing: recoveryKeySet.signingKey.publicKey(),
+                                                        encryptionPublicKey: recoveryKeySet.encryptionKey.publicKey(),
+                                                        signing: recoveryKeySet.signingKey,
+                                                        kind: .INHERITANCE_KEY)
+
+        self.peerKeys = try OctagonSelfPeerKeys(peerID: self.tpInheritance.peerID, signingKey: recoveryKeySet.signingKey, encryptionKey: recoveryKeySet.encryptionKey)
+    }
+
+    internal convenience init(uuid: UUID, recoveryKeyData: Data, recoverySalt: String) throws {
+        let recoveryKeyString = recoveryKeyData.base64EncodedString()
+        let secret = Data(bytes: Array(recoveryKeyString.utf8), count: recoveryKeyString.utf8.count)
+        let recoveryKeys = try RecoveryKeySet(secret: secret, recoverySalt: recoverySalt)
+        try self.init(uuid: uuid, recoveryKeySet: recoveryKeys)
+    }
+
+    internal init(tpInheritance: TPCustodianRecoveryKey, recoveryKeyData: Data, recoverySalt: String) throws {
+        let recoveryKeyString = recoveryKeyData.base64EncodedString()
+        let secret = Data(bytes: Array(recoveryKeyString.utf8), count: recoveryKeyString.utf8.count)
+        let recoveryKeys = try RecoveryKeySet(secret: secret, recoverySalt: recoverySalt)
+
+        guard recoveryKeys.signingKey.publicKey().spki() == tpInheritance.signingPublicKey.spki() &&
+        recoveryKeys.encryptionKey.publicKey().spki() == tpInheritance.encryptionPublicKey.spki() else {
+            throw RecoveryKey.Error.entropyKeyMismatch
+        }
+
+        self.tpInheritance = tpInheritance
+        self.peerKeys = try OctagonSelfPeerKeys(peerID: self.tpInheritance.peerID, signingKey: recoveryKeys.signingKey, encryptionKey: recoveryKeys.encryptionKey)
+    }
+}
+
+extension TPCustodianRecoveryKey {
+    func asCustodianPeer(viewList: Set<String>) throws -> TrustedPeersHelperPeer {
+        return TrustedPeersHelperPeer(peerID: self.peerID,
+                                      signingSPKI: self.signingPublicKey.spki(),
+                                      encryptionSPKI: self.encryptionPublicKey.spki(),
+                                      secureElementIdentity: nil,
+                                      viewList: viewList)
+    }
+}
+
+extension RecoveryKey {
+    enum Error: Swift.Error {
+        case entropyKeyMismatch
+    }
+}
+
+extension RecoveryKey.Error: CustomNSError {
+    public static var errorDomain: String {
+        return "TrustedPeersHelper.RecoveryKey.Error"
+    }
+
+    public var errorCode: Int {
+        switch self {
+        // 1-8 reserved
+        case .entropyKeyMismatch:
+            return 9
+        }
+    }
+
+    public var errorDescription: String? {
+        switch self {
+        case .entropyKeyMismatch:
+            return "keys generated by the entropy+salt do not match the Recovery contents"
+        }
+    }
+
+    public var errorUserInfo: [String: Any] {
+        var ret = [String: Any]()
+        if let desc = self.errorDescription {
+            ret[NSLocalizedDescriptionKey] = desc
+        }
+        return ret
+    }
+}

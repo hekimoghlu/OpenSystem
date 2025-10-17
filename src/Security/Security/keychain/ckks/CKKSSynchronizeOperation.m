@@ -1,0 +1,177 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, December 20, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "CKKSKeychainView.h"
+#import "CKKSGroupOperation.h"
+#import "CKKSSynchronizeOperation.h"
+#import "CKKSFetchAllRecordZoneChangesOperation.h"
+#import "CKKSScanLocalItemsOperation.h"
+#import "keychain/ckks/CloudKitCategories.h"
+#import "keychain/categories/NSError+UsefulConstructors.h"
+#import "keychain/ot/ObjCImprovements.h"
+
+#if OCTAGON
+
+@interface CKKSSynchronizeOperation ()
+@property int32_t restartCount;
+@end
+
+@implementation CKKSSynchronizeOperation
+
+- (instancetype)init {
+    return nil;
+}
+- (instancetype)initWithCKKSKeychainView:(CKKSKeychainView*)ckks
+                            dependencies:(CKKSOperationDependencies*)dependencies {
+    if(self = [super init]) {
+        _ckks = ckks;
+        _restartCount = 0;
+        _deps = dependencies;
+    }
+    return self;
+}
+
+- (void)groupStart {
+    WEAKIFY(self);
+#if TARGET_OS_TV
+    [self.deps.personaAdapter prepareThreadForKeychainAPIUseForPersonaIdentifier: nil];
+#endif
+    /*
+     * Synchronizations (or resynchronizations) are complicated beasts. We will:
+     *
+     *  1. Finish processing the outgoing queue. You can't be in-sync with cloudkit if you have an update that hasn't propagated.
+     *  2. Kick off a normal CloudKit fetch.
+     *  3. Process the incoming queue as normal.
+     *          (Note that this requires the keybag to be unlocked.)
+     *
+     * So far, this is normal operation. Now:
+     *
+     *  4. Start another CloudKit fetch, giving it the nil change tag. This fetches all objects in CloudKit.
+     *    4a. Compare those objects against our local mirror. If any discrepancies, this is a bug.
+     *    4b. All conflicts: CloudKit data wins.
+     *    4c. All items we have that CloudKit doesn't: delete locally.
+     *
+     *  5. Process the incoming queue again. This should be empty.
+     *  6. Scan the local keychain for items which exist locally but are not in CloudKit. Upload them.
+     *  7. If there are any such items in 6, restart the sync.
+     */
+
+    // Promote to strong reference
+    CKKSKeychainView* ckks = self.ckks;
+
+    if(self.cancelled) {
+        ckksnotice("ckksresync", ckks, "CKKSSynchronizeOperation cancelled, quitting");
+        return;
+    }
+
+    ckks.lastSynchronizeOperation = self;
+
+    uint32_t steps = 5;
+
+    ckksnotice("ckksresync", ckks, "Beginning resynchronize (attempt %u)", self.restartCount);
+
+    CKOperationGroup* operationGroup = [CKOperationGroup CKKSGroupWithName:@"ckks-resync"];
+
+    // Step 1
+
+    NSMutableDictionary<CKRecordZoneID*, id<CKKSChangeFetcherClient>>* clientMap = [NSMutableDictionary dictionary];
+    for(CKKSKeychainViewState* viewState in ckks.operationDependencies.allCKKSManagedViews) {
+        clientMap[viewState.zoneID] = ckks;
+    }
+
+    CKKSFetchAllRecordZoneChangesOperation* fetchOp = [[CKKSFetchAllRecordZoneChangesOperation alloc] initWithContainer:ckks.container
+                                                                                                             fetchClass:ckks.cloudKitClassDependencies.fetchRecordZoneChangesOperationClass
+                                                                                                              clientMap:clientMap
+                                                                                                           fetchReasons:[NSSet setWithObject:CKKSFetchBecauseResync]
+                                                                                                             apnsPushes:nil
+                                                                                                            forceResync:true
+                                                                                                       ckoperationGroup:operationGroup
+                                                                                                                altDSID:self.deps.activeAccount.altDSID
+                                                                                                             sendMetric:self.deps.sendMetric];
+    fetchOp.name = [NSString stringWithFormat: @"resync-step%u-fetch", self.restartCount * steps + 1];
+    [self runBeforeGroupFinished: fetchOp];
+
+    // Step 2
+    CKKSResultOperation* incomingOp = [CKKSGroupOperation named:@"run-incoming" withBlockTakingSelf:^(CKKSResultOperation * _Nonnull strongOp) {
+        // When this operation starts, ask CKKS to process the incoming queue. This will allow the CKKS state machine to process anything we refetched, and get the key states ready.
+        CKKSGroupOperation *gop = (CKKSGroupOperation*)strongOp;
+        [gop dependOnBeforeGroupFinished:[ckks rpcProcessIncomingQueue:nil errorOnClassAFailure:false]];
+    }];
+
+    incomingOp.name = [NSString stringWithFormat: @"resync-step%u-incoming", self.restartCount * steps + 2];
+    [incomingOp addSuccessDependency:fetchOp];
+    [self runBeforeGroupFinished:incomingOp];
+
+    // Step 3
+    CKKSScanLocalItemsOperation* scan = [[CKKSScanLocalItemsOperation alloc] initWithDependencies:ckks.operationDependencies
+                                                                                        intending:CKKSStateReady
+                                                                                       errorState:CKKSStateError
+                                                                                 ckoperationGroup:operationGroup];
+    scan.name = [NSString stringWithFormat: @"resync-step%u-scan", self.restartCount * steps + 3];
+    [scan addSuccessDependency: incomingOp];
+    [self runBeforeGroupFinished: scan];
+
+    // Step 4
+    CKKSOutgoingQueueOperation* outgoingOp = [[CKKSOutgoingQueueOperation alloc] initWithDependencies:ckks.operationDependencies
+                                                                                            intending:CKKSStateReady
+                                                                                         ckErrorState:CKKSStateOutgoingQueueOperationFailed
+                                                                                           errorState:CKKSStateError];
+    outgoingOp.name = [NSString stringWithFormat: @"resync-step%u-outgoing", self.restartCount * steps + 4];
+    [self dependOnBeforeGroupFinished:outgoingOp];
+    [self runBeforeGroupFinished:outgoingOp];
+    [outgoingOp addDependency:scan];
+
+    // Step 5:
+    CKKSResultOperation* restart = [[CKKSResultOperation alloc] init];
+    restart.name = [NSString stringWithFormat: @"resync-step%u-consider-restart", self.restartCount * steps + 5];
+    [restart addExecutionBlock:^{
+        STRONGIFY(self);
+        if(!self) {
+            ckkserror("ckksresync", ckks, "received callback for released object");
+            return;
+        }
+
+        if(scan.recordsFound > 0) {
+            if(self.restartCount >= 3) {
+                // we've restarted too many times. Fail and stop.
+                ckkserror("ckksresync", ckks, "restarted synchronization too often; Failing");
+                self.error = [NSError errorWithDomain:@"securityd"
+                                                 code:2
+                                             userInfo:@{NSLocalizedDescriptionKey: @"resynchronization restarted too many times; churn in database?"}];
+            } else {
+                // restart the sync operation.
+                self.restartCount += 1;
+                ckkserror("ckksresync", ckks, "restarting synchronization operation due to new local items");
+                [self groupStart];
+            }
+        }
+    }];
+
+    [restart addSuccessDependency: outgoingOp];
+    [self runBeforeGroupFinished: restart];
+}
+
+@end;
+
+#endif

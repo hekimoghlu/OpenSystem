@@ -1,0 +1,351 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, January 19, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * EAPOLControlPrefs.c
+ * - definitions for accessing EAPOL preferences
+ */
+
+/* 
+ * Modification History
+ *
+ * January 9, 2013	Dieter Siegmund (dieter@apple)
+ * - created
+ */
+
+#include <SystemConfiguration/SCPreferences.h>
+#include <SystemConfiguration/SCPrivate.h>
+#include <SystemConfiguration/scprefs_observer.h>
+#include <TargetConditionals.h>
+#include "EAPOLControlPrefs.h"
+#include "symbol_scope.h"
+#include "myCFUtil.h"
+
+/*
+ * kEAPOLClientPrefsID
+ * - identifies the eapolclient preferences file that contains
+ *   LogFlags and other control variables
+ */
+#define kEAPOLClientPrefsID		CFSTR("com.apple.eapolclient.plist")
+
+
+/*
+ * kEAPOLControlPrefsID, kEAPOLControlPrefsIDStr
+ * - identifies the managed preferences ID used to apply control
+ *   settings on iOS via configuration profile
+ */
+
+#define kEAPOLControlPrefsIDStr		"com.apple.eapol.control.plist"
+#define kEAPOLControlPrefsID		CFSTR(kEAPOLControlPrefsIDStr)
+
+/*
+ * kLogFlags
+ * - indicates how verbose the eapolclient logging will be
+ */
+#define kLogFlags			CFSTR("LogFlags")
+
+/*
+ * kUseBoringSSL
+ * - indicates to use boringssl library instead of SecureTransport
+ */
+#define kUseBoringSSL			CFSTR("UseBoringSSL")
+
+/*
+ * kEnableRevocationCheck
+ * - indicates whether revocation status check is enabled or disabled
+ *   for EAP-TLS 1.3
+ */
+#define kEnableRevocationCheck		CFSTR("EnableRevocationCheck")
+
+
+STATIC SCPreferencesRef			S_prefs;
+STATIC EAPOLControlPrefsCallBack	S_callback;
+
+STATIC SCPreferencesRef
+EAPOLControlPrefsGet(void)
+{
+    if (S_prefs == NULL) {
+	EAPOLControlPrefsInit(NULL, NULL);
+    }
+    return (S_prefs);
+}
+
+STATIC void
+prefs_changed(__unused void * arg)
+{
+    if (S_callback != NULL) {
+	(*S_callback)(S_prefs);
+    }
+    return;
+}
+
+#if TARGET_OS_IPHONE
+/*
+ * kEAPOLControlManangedPrefsID
+ * - identifies the location of the managed preferences file
+ */
+#define kManagedPrefsDirStr		"/Library/Managed Preferences/mobile/"
+#define kEAPOLControlManagedPrefsID	CFSTR(kManagedPrefsDirStr	\
+					      kEAPOLControlPrefsIDStr)
+STATIC SCPreferencesRef		S_managed_prefs;
+
+STATIC SCPreferencesRef
+EAPOLControlManagedPrefsGet(void)
+{
+    if (S_managed_prefs == NULL) {
+	S_managed_prefs
+	    = SCPreferencesCreate(NULL, CFSTR("EAPOLControlPrefs"),
+				  kEAPOLControlManagedPrefsID);
+    }
+    return (S_managed_prefs);
+}
+
+STATIC void
+enable_prefs_observer(CFRunLoopRef runloop)
+{
+    CFRunLoopSourceContext 	context;
+    dispatch_block_t		handler;
+    CFRunLoopSourceRef		source;
+    dispatch_queue_t		queue;
+
+    bzero(&context, sizeof(context));
+    context.perform = prefs_changed;
+    source = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
+    CFRunLoopAddSource(runloop, source, kCFRunLoopCommonModes);
+    queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+    handler = ^{
+	if (source != NULL) {
+	    CFRunLoopSourceSignal(source);
+	    if (runloop != NULL) {
+		CFRunLoopWakeUp(runloop);
+	    }
+	};
+    };
+    (void)_scprefs_observer_watch(scprefs_observer_type_global,
+				  kEAPOLControlPrefsIDStr,
+				  queue, handler);
+    return;
+}
+
+#else /* TARGET_OS_IPHONE */
+
+STATIC void
+enable_prefs_observer(CFRunLoopRef runloop)
+{
+    return;
+}
+
+#endif /* TARGET_OS_IPHONE */
+
+EXTERN void
+EAPOLControlPrefsSynchronize(void)
+{
+    if (S_prefs != NULL) {
+	SCPreferencesSynchronize(S_prefs);
+    }
+#if TARGET_OS_IPHONE
+    if (S_managed_prefs != NULL) {
+	SCPreferencesSynchronize(S_managed_prefs);
+    }
+#endif /* TARGET_OS_IPHONE */
+    return;
+}
+
+STATIC void
+EAPOLControlPrefsChanged(SCPreferencesRef prefs, SCPreferencesNotification type,
+			 void * info)
+{
+    prefs_changed(NULL);
+    return;
+}
+
+EXTERN SCPreferencesRef
+EAPOLControlPrefsInit(CFRunLoopRef runloop, EAPOLControlPrefsCallBack callback)
+{
+    S_prefs = SCPreferencesCreate(NULL, CFSTR("EAPOLControlPrefs"),
+				  kEAPOLClientPrefsID);
+    if (runloop != NULL && callback != NULL) {
+	S_callback = callback;
+	SCPreferencesSetCallback(S_prefs, EAPOLControlPrefsChanged, NULL);
+	SCPreferencesScheduleWithRunLoop(S_prefs, runloop,
+					 kCFRunLoopCommonModes);
+	enable_prefs_observer(runloop);
+    }
+    return (S_prefs);
+}
+
+STATIC Boolean
+EAPOLControlPrefsSave(void)
+{
+    Boolean		saved = FALSE;
+
+    if (S_prefs != NULL) {
+	saved = SCPreferencesCommitChanges(S_prefs);
+	SCPreferencesSynchronize(S_prefs);
+    }
+    return (saved);
+}
+
+STATIC CFNumberRef
+prefs_get_number(CFStringRef key)
+{
+    CFNumberRef		num = NULL;
+
+#if TARGET_OS_IPHONE
+    num = SCPreferencesGetValue(EAPOLControlManagedPrefsGet(), key);
+    num = isA_CFNumber(num);
+#endif /* TARGET_OS_IPHONE */
+    if (num == NULL) {
+	num = SCPreferencesGetValue(EAPOLControlPrefsGet(), key);
+	num = isA_CFNumber(num);
+    }
+    return (num);
+}
+
+STATIC void
+prefs_set_number(CFStringRef key, CFNumberRef num)
+{
+    SCPreferencesRef	prefs = EAPOLControlPrefsGet();
+
+    if (prefs != NULL) {
+	if (isA_CFNumber(num) == NULL) {
+	    SCPreferencesRemoveValue(prefs, key);
+	}
+	else {
+	    SCPreferencesSetValue(prefs, key, num);
+	}
+    }
+    return;
+}
+
+STATIC void
+prefs_set_boolean(CFStringRef key, CFBooleanRef val)
+{
+    SCPreferencesRef	prefs = EAPOLControlPrefsGet();
+
+    if (prefs != NULL) {
+	if (isA_CFBoolean(val) == NULL) {
+	    SCPreferencesRemoveValue(prefs, key);
+	}
+	else {
+	    SCPreferencesSetValue(prefs, key, val);
+	}
+    }
+    return;
+}
+
+STATIC Boolean
+prefs_get_boolean(CFStringRef key, Boolean default_val)
+{
+    CFBooleanRef 	val = NULL;
+    Boolean		ret = default_val;
+
+#if TARGET_OS_IPHONE
+    val = SCPreferencesGetValue(EAPOLControlManagedPrefsGet(), key);
+    val = isA_CFBoolean(val);
+#endif /* TARGET_OS_IPHONE */
+    if (val == NULL) {
+	val = SCPreferencesGetValue(EAPOLControlPrefsGet(), key);
+	val = isA_CFBoolean(val);
+    }
+    if (val != NULL) {
+	ret = CFBooleanGetValue(val);
+    }
+    return (ret);
+}
+
+/**
+ ** Get
+ **/
+EXTERN uint32_t
+EAPOLControlPrefsGetLogFlags(void)
+{
+    CFNumberRef	num;
+    uint32_t	ret_value = 0;
+
+    num = prefs_get_number(kLogFlags);
+    if (num != NULL) {
+	CFNumberGetValue(num, kCFNumberSInt32Type, &ret_value);
+    }
+    return (ret_value);
+}
+
+/**
+ ** Get UseBoringSSL Flags
+ **/
+EXTERN Boolean
+EAPOLControlPrefsGetUseBoringSSL(void)
+{
+    return (prefs_get_boolean(kUseBoringSSL, TRUE));
+}
+
+/**
+ ** Set
+ **/
+EXTERN Boolean
+EAPOLControlPrefsSetLogFlags(uint32_t flags)
+{
+    if (flags == 0) {
+	prefs_set_number(kLogFlags, NULL);
+    }
+    else {
+	CFNumberRef	num;
+
+	num = CFNumberCreate(NULL, kCFNumberSInt32Type, &flags);
+	prefs_set_number(kLogFlags, num);
+	my_CFRelease(&num);
+    }
+    return (EAPOLControlPrefsSave());
+}
+
+/**
+ ** Set UseBoringSSL
+ **/
+EXTERN Boolean
+EAPOLControlPrefsSetUseBoringSSL(bool use_boringssl)
+{
+    CFBooleanRef val = use_boringssl ? kCFBooleanTrue : kCFBooleanFalse;
+    prefs_set_boolean(kUseBoringSSL, val);
+    return (EAPOLControlPrefsSave());
+}
+
+/**
+ ** enable/disable revocation check for EAP-TLS 1.3 (default = enabled)
+ **/
+Boolean
+EAPOLControlPrefsSetRevocationCheck(bool enable)
+{
+    CFBooleanRef val = enable ? kCFBooleanTrue : kCFBooleanFalse;
+    prefs_set_boolean(kEnableRevocationCheck, val);
+    return (EAPOLControlPrefsSave());
+}
+
+/**
+ ** return TRUE if revocation check is enabled
+ **/
+Boolean
+EAPOLControlPrefsGetRevocationCheck(void)
+{
+    return (prefs_get_boolean(kEnableRevocationCheck, TRUE));
+}

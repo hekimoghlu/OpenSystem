@@ -1,0 +1,269 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, February 25, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "secd_regressions.h"
+
+#include "keychain/securityd/SecDbItem.h"
+#include <utilities/array_size.h>
+#include <utilities/SecCFWrappers.h>
+#include <utilities/SecFileLocations.h>
+#include <utilities/fileIo.h>
+
+#include "keychain/securityd/SecItemServer.h"
+
+#include <Security/SecBasePriv.h>
+#include <Security/SecItemBackup.h>
+
+#include <TargetConditionals.h>
+#include <AssertMacros.h>
+
+#import "SecBackupKeybagEntry.h"
+
+#if 0
+
+<rdar://problem/30685971> Add test for keybag table add SPI
+<rdar://problem/30412884> Create an SPI to add a keybag to the keychain database (Keybag Table)
+
+// original secd_35_keychain_migrate_inet
+
+sudo defaults write /Library/Preferences/com.apple.security V10SchemaUpgradeTest -bool true
+sudo defaults read /Library/Preferences/com.apple.security V10SchemaUpgradeTest
+
+#endif
+
+#if USE_KEYSTORE
+#include "OSX/utilities/SecAKSWrappers.h"
+
+#include "SecdTestKeychainUtilities.h"
+
+static const bool kTestCustomKeybag = false;
+static const bool kTestLocalKeybag = false;
+
+void SecAccessGroupsSetCurrent(CFArrayRef accessGroups);
+CFArrayRef SecAccessGroupsGetCurrent(void);
+
+#define kSecdTestCreateCustomKeybagTestCount 9
+#define kSecdTestLocalKeybagTestCount 1
+#define kSecdTestKeybagtableTestCount 5
+#define kSecdTestAddItemTestCount 2
+
+#define DATA_ARG(x) (x) ? CFDataGetBytePtr((x)) : NULL, (x) ? (int)CFDataGetLength((x)) : 0
+
+// copied from si-33-keychain-backup.c
+static CFDataRef create_keybag(keybag_handle_t bag_type, CFDataRef password)
+{
+    keybag_handle_t handle = bad_keybag_handle;
+
+    if (aks_create_bag(DATA_ARG(password), bag_type, &handle) == 0) {
+        void * keybag = NULL;
+        int keybag_size = 0;
+        if (aks_save_bag(handle, &keybag, &keybag_size) == 0) {
+            return CFDataCreate(kCFAllocatorDefault, keybag, keybag_size);
+        }
+    }
+
+    return CFDataCreate(kCFAllocatorDefault, NULL, 0);
+}
+
+static bool createCustomKeybag(keybag_handle_t* keybag_out) {
+    /* custom keybag */
+    keybag_handle_t keybag;
+    keybag_state_t state;
+    char *passcode="password";
+    int passcode_len=(int)strlen(passcode);
+    const bool kTestLockedKeybag = false;
+
+    ok(kAKSReturnSuccess==aks_create_bag(passcode, passcode_len, kAppleKeyStoreDeviceBag, &keybag), "create keybag");
+    ok(kAKSReturnSuccess==aks_get_lock_state(keybag, &state), "get keybag state");
+    ok(!(state&keybag_state_locked), "keybag unlocked");
+    SecItemServerSetKeychainKeybag(keybag);
+
+    if (kTestLockedKeybag) {
+        /* lock */
+        ok(kAKSReturnSuccess==aks_lock_bag(keybag), "lock keybag");
+        ok(kAKSReturnSuccess==aks_get_lock_state(keybag, &state), "get keybag state");
+        ok(state&keybag_state_locked, "keybag locked");
+    }
+
+    *keybag_out = keybag;
+    return true;
+}
+
+static void invalidateCustomKeybag(keybag_handle_t keybag) {
+    void* buf = NULL;
+    int bufLen = 0;
+    ok(kAKSReturnSuccess == aks_save_bag(keybag, &buf, &bufLen), "failed to save keybag for invalidation");
+    ok(kAKSReturnSuccess == aks_unload_bag(keybag), "failed to unload keybag for invalidation");
+    ok(kAKSReturnSuccess == aks_invalidate_bag(buf, bufLen), "failed to invalidate keybag");
+    free(buf);
+}
+
+static int keychainTestEnvironment(const char *environmentName, dispatch_block_t do_in_reset, dispatch_block_t do_in_environment) {
+    //
+    // Setup phase
+    //
+    CFArrayRef old_ag = SecAccessGroupsGetCurrent();
+    CFMutableArrayRef test_ag = CFArrayCreateMutableCopy(NULL, 0, old_ag);
+    CFArrayAppendValue(test_ag, CFSTR("test"));
+    SecAccessGroupsSetCurrent(test_ag);
+
+    secd_test_setup_temp_keychain(environmentName, do_in_reset);
+    keybag_handle_t keybag = bad_keybag_handle;
+    bool haveCustomKeybag = kTestCustomKeybag && createCustomKeybag(&keybag);
+
+    // Perform tasks in the test keychain environment
+    if (do_in_environment)
+        do_in_environment();
+
+    //
+    // Cleanup phase
+    //
+
+    // Reset keybag
+    if (haveCustomKeybag)
+        SecItemServerSetKeychainKeybagToDefault();
+
+    // Reset server accessgroups
+    SecAccessGroupsSetCurrent(old_ag);
+    CFReleaseSafe(test_ag);
+    // Reset custom $HOME
+    secd_test_teardown_delete_temp_keychain(environmentName);
+    SetCustomHomePath(NULL);
+    SecKeychainDbReset(NULL);
+
+    if (haveCustomKeybag) {
+        invalidateCustomKeybag(keybag);
+    }
+    return 0;
+}
+
+static int addOneItemTest(NSString *account) {
+    /* Creating a password */
+    const char *v_data = "test";
+    CFDataRef pwdata = CFDataCreate(NULL, (UInt8 *)v_data, strlen(v_data));
+
+    NSDictionary *item = @{
+        (__bridge NSString *)kSecClass : (__bridge NSString *)kSecClassInternetPassword,
+        (__bridge NSString *)kSecAttrServer : @"members.spamcop.net",
+        (__bridge NSString *)kSecAttrAccount : account, // e.g. @"smith",
+        (__bridge NSString *)kSecAttrPort : @80,
+        (__bridge NSString *)kSecAttrProtocol : @"http",
+        (__bridge NSString *)kSecAttrAuthenticationType : @"dflt",
+        (__bridge NSString *)kSecValueData : (__bridge NSData *)pwdata
+    };
+
+    ok_status(SecItemAdd((CFDictionaryRef)item, NULL), "add internet password, while unlocked");
+    CFReleaseSafe(pwdata);
+    return 0;
+}
+
+static int localKeybagTest(void) {
+    const char *pass = "sup3rsekretpassc0de";
+    CFDataRef password = CFDataCreate(NULL, (UInt8 *)pass, strlen(pass));
+    CFDataRef keybag = create_keybag(kAppleKeyStoreAsymmetricBackupBag, password);
+    ok(keybag != NULL);
+    CFReleaseNull(keybag);
+    CFReleaseNull(password);
+    return 0;
+}
+
+static int test_keybagtable(void) {
+    CFErrorRef error = NULL;
+    const char *pass = "sup3rsekretpassc0de";
+    CFDataRef password = CFDataCreate(NULL, (UInt8 *)pass, strlen(pass));
+    CFDataRef identifier = NULL;
+    CFURLRef pathinfo = NULL;
+
+    ok(SecBackupKeybagAdd(password, &identifier, &pathinfo, &error));
+    CFReleaseNull(error);
+
+    NSDictionary *deleteQuery = @{(__bridge NSString *)kSecAttrPublicKeyHash:(__bridge NSData *)identifier};
+    ok(SecBackupKeybagDelete((__bridge CFDictionaryRef)deleteQuery, &error));
+
+    ok(SecBackupKeybagAdd(password, &identifier, &pathinfo, &error));
+    CFReleaseNull(error);
+
+    ok(SecBackupKeybagAdd(password, &identifier, &pathinfo, &error));
+    CFReleaseNull(error);
+
+    NSDictionary *deleteAllQuery = @{(id)kSecMatchLimit: (id)kSecMatchLimitAll};
+    ok(SecBackupKeybagDelete((__bridge CFDictionaryRef)deleteAllQuery, &error));
+
+    CFReleaseNull(identifier);
+    CFReleaseNull(pathinfo);
+    CFReleaseNull(password);
+    CFReleaseNull(error);
+    return 0;
+}
+
+static void showHomeURL(void) {
+#if DEBUG
+    CFURLRef homeURL = SecCopyHomeURL();
+    NSLog(@"Home URL for test : %@", homeURL);
+    CFReleaseSafe(homeURL);
+#endif
+}
+
+int secd_230_keybagtable(int argc, char *const *argv)
+{
+    int testcount = kSecdTestSetupTestCount + kSecdTestKeybagtableTestCount + kSecdTestAddItemTestCount;
+    if (kTestLocalKeybag)
+        testcount += kSecdTestLocalKeybagTestCount;
+    if (kTestCustomKeybag)
+        testcount += kSecdTestCreateCustomKeybagTestCount;
+    plan_tests(testcount);
+
+    dispatch_block_t run_tests = ^{
+        showHomeURL();
+        if (kTestLocalKeybag)
+            localKeybagTest();
+        addOneItemTest(@"smith");
+        test_keybagtable();
+        addOneItemTest(@"jones");
+    };
+
+    dispatch_block_t do_in_reset = NULL;
+    dispatch_block_t do_in_environment = run_tests;
+
+    keychainTestEnvironment("secd_230_keybagtable", do_in_reset, do_in_environment);
+
+    return 0;
+}
+
+#else
+
+int secd_230_keybagtable(int argc, char *const *argv)
+{
+    plan_tests(1);
+    secLogDisable();
+
+    todo("Not yet working in simulator");
+
+    TODO: {
+        ok(false);
+    }
+    /* not implemented in simulator (no keybag) */
+    return 0;
+}
+#endif

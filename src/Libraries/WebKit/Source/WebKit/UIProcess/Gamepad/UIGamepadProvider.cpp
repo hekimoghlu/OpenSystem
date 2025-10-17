@@ -1,0 +1,251 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, December 28, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "UIGamepadProvider.h"
+
+#if ENABLE(GAMEPAD)
+
+#include "APIPageConfiguration.h"
+#include "GamepadData.h"
+#include "UIGamepad.h"
+#include "WebPageProxy.h"
+#include "WebProcessPool.h"
+#include <WebCore/MockGamepadProvider.h>
+#include <WebCore/PlatformGamepad.h>
+#include <wtf/NeverDestroyed.h>
+
+namespace WebKit {
+using namespace WebCore;
+
+static const Seconds maximumGamepadUpdateInterval { 1_s / 120. };
+
+UIGamepadProvider& UIGamepadProvider::singleton()
+{
+    static NeverDestroyed<UIGamepadProvider> sharedProvider;
+    return sharedProvider;
+}
+
+UIGamepadProvider::UIGamepadProvider()
+    : m_gamepadSyncTimer(RunLoop::main(), this, &UIGamepadProvider::gamepadSyncTimerFired)
+{
+    platformSetDefaultGamepadProvider();
+}
+
+UIGamepadProvider::~UIGamepadProvider()
+{
+    if (!m_processPoolsUsingGamepads.isEmptyIgnoringNullReferences())
+        GamepadProvider::singleton().stopMonitoringGamepads(*this);
+}
+
+void UIGamepadProvider::gamepadSyncTimerFired()
+{
+    RefPtr webPageProxy = platformWebPageProxyForGamepadInput();
+    if (!webPageProxy || !m_processPoolsUsingGamepads.contains(webPageProxy->configuration().processPool()))
+        return;
+
+    webPageProxy->gamepadActivity(snapshotGamepads(), m_shouldMakeGamepadsVisibleOnSync ? EventMakesGamepadsVisible::Yes : EventMakesGamepadsVisible::No);
+
+#if PLATFORM(VISION)
+    webPageProxy->setGamepadsConnected(isAnyGamepadConnected());
+#endif
+
+    m_shouldMakeGamepadsVisibleOnSync = false;
+}
+
+#if PLATFORM(VISION)
+bool UIGamepadProvider::isAnyGamepadConnected() const
+{
+    bool anyGamepadConnected = false;
+    for (auto& gamepad : m_gamepads) {
+        if (gamepad) {
+            anyGamepadConnected = true;
+            break;
+        }
+    }
+    return anyGamepadConnected;
+}
+#endif
+
+void UIGamepadProvider::scheduleGamepadStateSync()
+{
+    if (!m_isMonitoringGamepads || m_gamepadSyncTimer.isActive())
+        return;
+
+    if (m_gamepads.isEmpty() || m_processPoolsUsingGamepads.isEmptyIgnoringNullReferences()) {
+        m_gamepadSyncTimer.stop();
+        return;
+    }
+
+    m_gamepadSyncTimer.startOneShot(maximumGamepadUpdateInterval);
+}
+
+void UIGamepadProvider::platformGamepadConnected(PlatformGamepad& gamepad, EventMakesGamepadsVisible eventVisibility)
+{
+    LOG(Gamepad, "UIGamepadProvider::platformGamepadConnected - Index %i attached (visibility: %i)\n", gamepad.index(), (int)eventVisibility);
+
+    if (m_gamepads.size() <= gamepad.index())
+        m_gamepads.grow(gamepad.index() + 1);
+
+    ASSERT(!m_gamepads[gamepad.index()]);
+    m_gamepads[gamepad.index()] = makeUnique<UIGamepad>(gamepad);
+
+    scheduleGamepadStateSync();
+
+    for (auto& pool : m_processPoolsUsingGamepads)
+        pool.gamepadConnected(*m_gamepads[gamepad.index()], eventVisibility);
+}
+
+void UIGamepadProvider::platformGamepadDisconnected(PlatformGamepad& gamepad)
+{
+    ASSERT(gamepad.index() < m_gamepads.size());
+    ASSERT(m_gamepads[gamepad.index()]);
+
+    std::unique_ptr<UIGamepad> disconnectedGamepad = WTFMove(m_gamepads[gamepad.index()]);
+
+    scheduleGamepadStateSync();
+
+    for (auto& pool : m_processPoolsUsingGamepads)
+        pool.gamepadDisconnected(*disconnectedGamepad);
+}
+
+void UIGamepadProvider::platformGamepadInputActivity(EventMakesGamepadsVisible eventVisibility)
+{
+    auto platformGamepads = GamepadProvider::singleton().platformGamepads();
+
+    auto end = std::min(m_gamepads.size(), platformGamepads.size());
+    for (size_t i = 0; i < end; ++i) {
+        if (!m_gamepads[i] || !platformGamepads[i])
+            continue;
+
+        m_gamepads[i]->updateFromPlatformGamepad(*platformGamepads[i]);
+    }
+
+    if (eventVisibility == EventMakesGamepadsVisible::Yes)
+        m_shouldMakeGamepadsVisibleOnSync = true;
+
+    scheduleGamepadStateSync();
+}
+
+void UIGamepadProvider::processPoolStartedUsingGamepads(WebProcessPool& pool)
+{
+    ASSERT(!m_processPoolsUsingGamepads.contains(pool));
+    m_processPoolsUsingGamepads.add(pool);
+
+    if (!m_isMonitoringGamepads && platformWebPageProxyForGamepadInput())
+        startMonitoringGamepads();
+}
+
+void UIGamepadProvider::processPoolStoppedUsingGamepads(WebProcessPool& pool)
+{
+    ASSERT(m_processPoolsUsingGamepads.contains(pool));
+    m_processPoolsUsingGamepads.remove(pool);
+
+    if (m_isMonitoringGamepads && !platformWebPageProxyForGamepadInput())
+        platformStopMonitoringInput();
+}
+
+void UIGamepadProvider::viewBecameActive(WebPageProxy& page)
+{
+    if (!m_processPoolsUsingGamepads.contains(page.configuration().processPool()))
+        return;
+
+    if (!m_isMonitoringGamepads)
+        startMonitoringGamepads();
+
+#if PLATFORM(VISION)
+    page.setGamepadsConnected(isAnyGamepadConnected());
+#endif
+
+    if (platformWebPageProxyForGamepadInput())
+        platformStartMonitoringInput();
+}
+
+void UIGamepadProvider::viewBecameInactive(WebPageProxy& page)
+{
+#if PLATFORM(VISION)
+    page.setGamepadsConnected(false);
+#endif
+
+    RefPtr pageForGamepadInput = platformWebPageProxyForGamepadInput();
+    if (pageForGamepadInput == &page)
+        platformStopMonitoringInput();
+}
+
+void UIGamepadProvider::startMonitoringGamepads()
+{
+    if (m_isMonitoringGamepads)
+        return;
+
+    m_isMonitoringGamepads = true;
+    ASSERT(!m_processPoolsUsingGamepads.isEmptyIgnoringNullReferences());
+    GamepadProvider::singleton().startMonitoringGamepads(*this);
+}
+
+void UIGamepadProvider::stopMonitoringGamepads()
+{
+    if (!m_isMonitoringGamepads)
+        return;
+
+    m_isMonitoringGamepads = false;
+
+    ASSERT(m_processPoolsUsingGamepads.isEmptyIgnoringNullReferences());
+    GamepadProvider::singleton().stopMonitoringGamepads(*this);
+
+    m_gamepads.clear();
+}
+
+Vector<std::optional<GamepadData>> UIGamepadProvider::snapshotGamepads()
+{
+    return m_gamepads.map([](auto& gamepad) {
+        return gamepad ? std::optional<GamepadData>(gamepad->gamepadData()) : std::nullopt;
+    });
+}
+
+#if !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX)) && !USE(LIBWPE)
+
+void UIGamepadProvider::platformSetDefaultGamepadProvider()
+{
+    // FIXME: Implement for other platforms
+}
+
+WebPageProxy* UIGamepadProvider::platformWebPageProxyForGamepadInput()
+{
+    // FIXME: Implement for other platforms
+    return nullptr;
+}
+
+void UIGamepadProvider::platformStopMonitoringInput()
+{
+}
+
+void UIGamepadProvider::platformStartMonitoringInput()
+{
+}
+
+#endif // !PLATFORM(COCOA) && !(USE(MANETTE) && OS(LINUX))
+
+}
+
+#endif // ENABLE(GAMEPAD)

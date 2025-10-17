@@ -1,0 +1,99 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, October 22, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include <wtf/Noncopyable.h>
+#include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/glib/GRefPtr.h>
+#include <wtf/text/CString.h>
+
+typedef struct _GDBusProxy GDBusProxy;
+
+namespace WebCore {
+class GeolocationPositionData;
+}
+
+namespace WebKit {
+
+class GeoclueGeolocationProvider {
+    WTF_MAKE_TZONE_ALLOCATED(GeoclueGeolocationProvider);
+    WTF_MAKE_NONCOPYABLE(GeoclueGeolocationProvider);
+public:
+    GeoclueGeolocationProvider();
+    ~GeoclueGeolocationProvider();
+
+    using UpdateNotifyFunction = Function<void(WebCore::GeolocationPositionData&&, std::optional<CString> error)>;
+    void start(UpdateNotifyFunction&&);
+    void stop();
+    void setEnableHighAccuracy(bool);
+
+private:
+    enum class LocationProviderSource : uint8_t { Unknown, Portal, Geoclue };
+
+    void destroyState();
+    void destroyStateLater();
+
+    void acquirePortalProxy();
+    void setupPortalProxy(GRefPtr<GDBusProxy>&&);
+    void createPortalSession();
+    void startPortalSession();
+    void portalLocationUpdated(GVariant*);
+    void stopPortalSession();
+
+    void createGeoclueManager();
+    void setupGeoclueManager(GRefPtr<GDBusProxy>&&);
+    void createGeoclueClient(const char*);
+    void setupGeoclueClient(GRefPtr<GDBusProxy>&&);
+    void requestAccuracyLevel();
+    void createLocation(const char*);
+    void locationUpdated(GRefPtr<GDBusProxy>&&);
+    void didFail(CString);
+
+    void startGeoclueClient();
+    void stopGeoclueClient();
+
+    static void clientLocationUpdatedCallback(GDBusProxy*, gchar*, gchar*, GVariant*, gpointer);
+
+    bool m_isRunning { false };
+    bool m_isHighAccuracyEnabled { false };
+    struct {
+        GRefPtr<GDBusProxy> manager;
+        GRefPtr<GDBusProxy> client;
+    } m_geoclue;
+    struct {
+        GRefPtr<GDBusProxy> locationPortal;
+        std::optional<String> senderName;
+        std::optional<String> sessionId;
+        unsigned locationUpdatedSignalId;
+        unsigned responseSignalId;
+    } m_portal;
+    GRefPtr<GCancellable> m_cancellable;
+    UpdateNotifyFunction m_updateNotifyFunction;
+    LocationProviderSource m_sourceType { LocationProviderSource::Unknown };
+    RunLoop::Timer m_destroyLaterTimer;
+};
+
+} // namespace WebKit

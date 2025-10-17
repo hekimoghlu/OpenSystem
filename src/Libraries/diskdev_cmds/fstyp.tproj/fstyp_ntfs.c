@@ -1,0 +1,208 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, July 5, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/disk.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/stat.h>
+
+/* copied from diskdev_cmds/fsck_msdos/dosfs.h */
+#define DOSBOOTBLOCKSIZE 512
+#define MAX_SECTOR_SIZE 4096
+
+#define E_OPENDEV -1
+#define E_READ -5
+
+void usage(void);
+char *rawname(char *name);
+char *unrawname(char *name);
+int checkVolHdr(const unsigned char *volhdr);
+char *blockcheck(char *origname);
+
+char *progname;
+
+/*
+ * prefer to use raw device. TODO: suppose block device is valid but
+ * the corresponding raw device is not valid, then we fail. this is
+ * probably no the desired behavior.
+ */
+
+int
+main(int argc, char **argv)
+{
+	unsigned char volhdr[MAX_SECTOR_SIZE] = {0};
+	int fd, retval;
+	char *devname;
+
+	fd = -1;
+	retval = 0;
+
+	if ((progname = strrchr(*argv, '/')))
+		++progname;
+	else
+		progname = *argv;
+
+	if (argc != 2) {
+		usage();
+	} else {
+		devname = blockcheck(argv[1]);
+
+		if (devname != NULL) {
+			if ((fd = open(devname, O_RDONLY, 0)) < 0) {
+				retval = E_OPENDEV;
+			} else if (read(fd, volhdr, MAX_SECTOR_SIZE) != MAX_SECTOR_SIZE) {
+				retval = E_READ;
+			} else {
+				retval = checkVolHdr(volhdr);
+			}
+
+			if (-1 != fd) {
+				close(fd);
+				fd = -1;
+			}
+		}
+	}
+
+	return retval;
+}
+
+void
+usage(void)
+{
+	fprintf(stdout, "usage: %s device\n", progname);
+	return;
+}
+
+/* copied from diskdev_cmds/fsck_hfs/utilities.c */
+char *
+rawname(char *name)
+{
+	static char     rawbuf[32];
+	char           *dp;
+
+	if ((dp = strrchr(name, '/')) == 0)
+		return (0);
+	*dp = 0;
+	(void) strlcpy(rawbuf, name, sizeof(rawbuf));
+	*dp = '/';
+	(void) strlcat(rawbuf, "/r", sizeof(rawbuf));
+	(void) strlcat(rawbuf, &dp[1], sizeof(rawbuf));
+
+	return (rawbuf);
+}
+
+/* copied from diskdev_cmds/fsck_hfs/utilities.c */
+char *
+unrawname(char *name)
+{
+	char           *dp;
+	struct stat     stb;
+	size_t          dp_len;
+
+	if ((dp = strrchr(name, '/')) == 0)
+		return (name);
+	if (stat(name, &stb) < 0)
+		return (name);
+	if ((stb.st_mode & S_IFMT) != S_IFCHR)
+		return (name);
+	if (dp[1] != 'r')
+		return (name);
+	dp_len = strlen(&dp[2]) + 1;
+	(void)memmove(&dp[1], &dp[2], dp_len);
+
+	return (name);
+}
+
+/*
+ * copied from diskdev_cmds/fsck_hfs/utilities.c, and modified:
+ * 1) remove "hotroot"
+ * 2) if error, return NULL
+ * 3) if not a char device, return NULL (effectively, this is treated
+ *    as error even if accessing the block device might have been OK)
+ */
+char *
+blockcheck(char *origname)
+{
+	struct stat stblock, stchar;
+	char *newname, *raw;
+	int retried;
+
+	retried = 0;
+	newname = origname;
+retry:
+	if (stat(newname, &stblock) < 0) {
+		perror(newname);
+		fprintf(stderr, "Can't stat %s\n", newname);
+		return NULL;
+	}
+	if ((stblock.st_mode & S_IFMT) == S_IFBLK) {
+		raw = rawname(newname);
+		if (stat(raw, &stchar) < 0) {
+			perror(raw);
+			fprintf(stderr, "Can't stat %s\n", raw);
+			return NULL;
+		}
+		if ((stchar.st_mode & S_IFMT) == S_IFCHR) {
+			return (raw);
+		} else {
+			fprintf(stderr, "%s is not a character device\n", raw);
+			return NULL;
+		}
+	} else if ((stblock.st_mode & S_IFMT) == S_IFCHR && !retried) {
+		newname = unrawname(newname);
+		retried++;
+		goto retry;
+	}
+	/* not a block or character device */
+	return NULL;
+}
+
+/*
+ * (sanity) check the volume header in volhdr
+ *
+ * return 1 if volhdr is a NTFS volhdr, 0 otherwise
+ */
+int
+checkVolHdr(const unsigned char *volhdr)
+{
+	/* NTFS volumes have an OEMid of NTFS followed by four spaces. */
+	const char *ntfs_oemid = "NTFS    ";
+	int retval;
+
+	retval = 1;
+
+	/*
+	 * Only check the OEMid.  This should be sufficiently specific so it
+	 * does not match anything else.  If it ever does it would be easy to
+	 * check more bootsector fields for validity...
+	 */
+	if (memcmp(ntfs_oemid, volhdr + 3, 8))
+		retval = 0;
+	return retval;
+}
+

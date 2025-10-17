@@ -1,0 +1,281 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, February 27, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "SocketConnection.h"
+
+#include <cstring>
+#include <gio/gio.h>
+#include <wtf/ByteOrder.h>
+#include <wtf/CheckedArithmetic.h>
+#include <wtf/FastMalloc.h>
+#include <wtf/RunLoop.h>
+
+namespace WTF {
+
+static const unsigned defaultBufferSize = 4096;
+
+SocketConnection::SocketConnection(GRefPtr<GSocketConnection>&& connection, const MessageHandlers& messageHandlers, gpointer userData)
+    : m_connection(WTFMove(connection))
+    , m_messageHandlers(messageHandlers)
+    , m_userData(userData)
+{
+    relaxAdoptionRequirement();
+
+    m_readBuffer.reserveInitialCapacity(defaultBufferSize);
+    m_writeBuffer.reserveInitialCapacity(defaultBufferSize);
+
+    auto* socket = g_socket_connection_get_socket(m_connection.get());
+    g_socket_set_blocking(socket, FALSE);
+    m_readMonitor.start(socket, G_IO_IN, RunLoop::current(), [this, protectedThis = Ref { *this }](GIOCondition condition) -> gboolean {
+        if (isClosed())
+            return G_SOURCE_REMOVE;
+
+        if (condition & G_IO_HUP || condition & G_IO_ERR || condition & G_IO_NVAL) {
+            didClose();
+            return G_SOURCE_REMOVE;
+        }
+
+        ASSERT(condition & G_IO_IN);
+        return read();
+    });
+}
+
+SocketConnection::~SocketConnection() = default;
+
+bool SocketConnection::read()
+{
+    while (true) {
+        size_t previousBufferSize = m_readBuffer.size();
+        if (m_readBuffer.capacity() - previousBufferSize <= 0)
+            m_readBuffer.reserveCapacity(m_readBuffer.capacity() + defaultBufferSize);
+        m_readBuffer.grow(m_readBuffer.capacity());
+        GUniqueOutPtr<GError> error;
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Glib port.
+        auto bytesRead = g_socket_receive(g_socket_connection_get_socket(m_connection.get()), m_readBuffer.data() + previousBufferSize, m_readBuffer.size() - previousBufferSize, nullptr, &error.outPtr());
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        if (bytesRead == -1) {
+            if (g_error_matches(error.get(), G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK)) {
+                m_readBuffer.shrink(previousBufferSize);
+                break;
+            }
+
+            g_warning("Error reading from socket connection: %s\n", error->message);
+            didClose();
+            return G_SOURCE_REMOVE;
+        }
+
+        if (!bytesRead) {
+            didClose();
+            return G_SOURCE_REMOVE;
+        }
+
+        m_readBuffer.shrink(previousBufferSize + bytesRead);
+
+        while (readMessage()) { }
+        if (isClosed())
+            return G_SOURCE_REMOVE;
+    }
+    return G_SOURCE_CONTINUE;
+}
+
+enum {
+    ByteOrderLittleEndian = 1 << 0
+};
+typedef uint8_t MessageFlags;
+
+static inline bool messageIsByteSwapped(MessageFlags flags)
+{
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+    return !(flags & ByteOrderLittleEndian);
+#else
+    return (flags & ByteOrderLittleEndian);
+#endif
+}
+
+bool SocketConnection::readMessage()
+{
+    if (m_readBuffer.size() < sizeof(uint32_t))
+        return false;
+
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port.
+    auto* messageData = m_readBuffer.data();
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    uint32_t bodySizeHeader;
+    memcpy(&bodySizeHeader, messageData, sizeof(uint32_t));
+    messageData += sizeof(uint32_t);
+    bodySizeHeader = ntohl(bodySizeHeader);
+    Checked<size_t> bodySize = bodySizeHeader;
+    MessageFlags flags;
+    memcpy(&flags, messageData, sizeof(MessageFlags));
+    messageData += sizeof(MessageFlags);
+    auto messageSize = sizeof(uint32_t) + sizeof(MessageFlags) + bodySize;
+    if (m_readBuffer.size() < messageSize) {
+        m_readBuffer.reserveCapacity(messageSize);
+        return false;
+    }
+
+    Checked<size_t> messageNameLength = strlen(messageData);
+    messageNameLength++;
+    if (m_readBuffer.size() < messageNameLength) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    const auto it = m_messageHandlers.find(messageData);
+    if (it != m_messageHandlers.end()) {
+        messageData += messageNameLength.value();
+        GRefPtr<GVariant> parameters;
+        if (!it->value.first.isNull()) {
+            GUniquePtr<GVariantType> variantType(g_variant_type_new(it->value.first.data()));
+            size_t parametersSize = bodySize.value() - messageNameLength.value();
+            parameters = g_variant_new_from_data(variantType.get(), messageData, parametersSize, FALSE, nullptr, nullptr);
+            if (messageIsByteSwapped(flags))
+                parameters = adoptGRef(g_variant_byteswap(parameters.get()));
+        }
+        it->value.second(*this, parameters.get(), m_userData);
+        if (isClosed())
+            return false;
+    }
+
+    if (m_readBuffer.size() > messageSize) {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port.
+        std::memmove(m_readBuffer.data(), m_readBuffer.data() + messageSize.value(), m_readBuffer.size() - messageSize.value());
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        m_readBuffer.shrink(m_readBuffer.size() - messageSize.value());
+    } else
+        m_readBuffer.shrink(0);
+
+    if (m_readBuffer.size() < defaultBufferSize)
+        m_readBuffer.shrinkCapacity(defaultBufferSize);
+
+    return true;
+}
+
+void SocketConnection::sendMessage(const char* messageName, GVariant* parameters)
+{
+    GRefPtr<GVariant> adoptedParameters = parameters;
+    size_t parametersSize = parameters ? g_variant_get_size(parameters) : 0;
+    CheckedSize messageNameLength = strlen(messageName);
+    messageNameLength++;
+    if (UNLIKELY(messageNameLength.hasOverflowed())) {
+        g_warning("Trying to send message with invalid too long name");
+        return;
+    }
+    CheckedUint32 bodySize = messageNameLength + parametersSize;
+    if (UNLIKELY(bodySize.hasOverflowed())) {
+        g_warning("Trying to send message '%s' with invalid too long body", messageName);
+        return;
+    }
+    size_t previousBufferSize = m_writeBuffer.size();
+    m_writeBuffer.grow(previousBufferSize + sizeof(uint32_t) + sizeof(MessageFlags) + bodySize.value());
+
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port.
+    auto* messageData = m_writeBuffer.data() + previousBufferSize;
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    uint32_t bodySizeHeader = htonl(bodySize.value());
+    memcpy(messageData, &bodySizeHeader, sizeof(uint32_t));
+    messageData += sizeof(uint32_t);
+    MessageFlags flags = 0;
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+    flags |= ByteOrderLittleEndian;
+#endif
+    memcpy(messageData, &flags, sizeof(MessageFlags));
+    messageData += sizeof(MessageFlags);
+    memcpy(messageData, messageName, messageNameLength);
+    messageData += messageNameLength.value();
+    if (parameters)
+        memcpy(messageData, g_variant_get_data(parameters), parametersSize);
+
+    write();
+}
+
+void SocketConnection::write()
+{
+    if (isClosed())
+        return;
+
+    GUniqueOutPtr<GError> error;
+    auto bytesWritten = g_socket_send(g_socket_connection_get_socket(m_connection.get()), m_writeBuffer.data(), m_writeBuffer.size(), nullptr, &error.outPtr());
+    if (bytesWritten == -1) {
+        if (g_error_matches(error.get(), G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK)) {
+            waitForSocketWritability();
+            return;
+        }
+
+        g_warning("Error sending message on socket connection: %s\n", error->message);
+        didClose();
+        return;
+    }
+
+    if (m_writeBuffer.size() > static_cast<size_t>(bytesWritten)) {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port.
+        std::memmove(m_writeBuffer.data(), m_writeBuffer.data() + bytesWritten, m_writeBuffer.size() - bytesWritten);
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        m_writeBuffer.shrink(m_writeBuffer.size() - bytesWritten);
+    } else
+        m_writeBuffer.shrink(0);
+
+    if (m_writeBuffer.size() < defaultBufferSize)
+        m_writeBuffer.shrinkCapacity(defaultBufferSize);
+
+    if (!m_writeBuffer.isEmpty())
+        waitForSocketWritability();
+}
+
+void SocketConnection::waitForSocketWritability()
+{
+    if (m_writeMonitor.isActive())
+        return;
+
+    m_writeMonitor.start(g_socket_connection_get_socket(m_connection.get()), G_IO_OUT, RunLoop::current(), [this, protectedThis = Ref { *this }] (GIOCondition condition) -> gboolean {
+        if (condition & G_IO_OUT) {
+            // We can't stop the monitor from this lambda, because stop destroys the lambda.
+            RunLoop::current().dispatch([this, protectedThis] {
+                m_writeMonitor.stop();
+                write();
+            });
+        }
+        return G_SOURCE_REMOVE;
+    });
+}
+
+void SocketConnection::close()
+{
+    m_readMonitor.stop();
+    m_writeMonitor.stop();
+    m_connection = nullptr;
+}
+
+void SocketConnection::didClose()
+{
+    if (isClosed())
+        return;
+
+    close();
+    ASSERT(m_messageHandlers.contains("DidClose"));
+    m_messageHandlers.get("DidClose").second(*this, nullptr, m_userData);
+}
+
+} // namespace WTF

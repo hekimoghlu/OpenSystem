@@ -1,0 +1,82 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, April 7, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: pre-sm-70
+
+// <cuda/std/latch>
+
+#include <uscl/latch>
+#include <uscl/std/latch>
+
+#include "concurrent_agents.h"
+#include "cuda_space_selector.h"
+#include "test_macros.h"
+
+template <typename Latch, template <typename, typename> class Selector, typename Initializer = constructor_initializer>
+__host__ __device__ void test()
+{
+  Selector<Latch, Initializer> sel;
+  SHARED Latch* l;
+  l = sel.construct(2);
+
+  auto worker = LAMBDA()
+  {
+    l->arrive_and_wait();
+  };
+
+  concurrent_agents_launch(worker, worker);
+}
+
+int main(int, char**)
+{
+  NV_IF_ELSE_TARGET(
+    NV_IS_HOST,
+    (cuda_thread_count = 2;
+
+     test<cuda::std::latch, local_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_block>, local_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_device>, local_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_system>, local_memory_selector>();),
+    (test<cuda::std::latch, shared_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_block>, shared_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_device>, shared_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_system>, shared_memory_selector>();
+
+     test<cuda::std::latch, global_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_block>, global_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_device>, global_memory_selector>();
+     test<cuda::latch<cuda::thread_scope_system>, global_memory_selector>();))
+
+  return 0;
+}

@@ -1,0 +1,83 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, February 21, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _UAPI_NFNETLINK_H
+#define _UAPI_NFNETLINK_H
+#include <linux/types.h>
+#include <linux/netfilter/nfnetlink_compat.h>
+enum nfnetlink_groups {
+  NFNLGRP_NONE,
+#define NFNLGRP_NONE NFNLGRP_NONE
+  NFNLGRP_CONNTRACK_NEW,
+#define NFNLGRP_CONNTRACK_NEW NFNLGRP_CONNTRACK_NEW
+  NFNLGRP_CONNTRACK_UPDATE,
+#define NFNLGRP_CONNTRACK_UPDATE NFNLGRP_CONNTRACK_UPDATE
+  NFNLGRP_CONNTRACK_DESTROY,
+#define NFNLGRP_CONNTRACK_DESTROY NFNLGRP_CONNTRACK_DESTROY
+  NFNLGRP_CONNTRACK_EXP_NEW,
+#define NFNLGRP_CONNTRACK_EXP_NEW NFNLGRP_CONNTRACK_EXP_NEW
+  NFNLGRP_CONNTRACK_EXP_UPDATE,
+#define NFNLGRP_CONNTRACK_EXP_UPDATE NFNLGRP_CONNTRACK_EXP_UPDATE
+  NFNLGRP_CONNTRACK_EXP_DESTROY,
+#define NFNLGRP_CONNTRACK_EXP_DESTROY NFNLGRP_CONNTRACK_EXP_DESTROY
+  NFNLGRP_NFTABLES,
+#define NFNLGRP_NFTABLES NFNLGRP_NFTABLES
+  NFNLGRP_ACCT_QUOTA,
+#define NFNLGRP_ACCT_QUOTA NFNLGRP_ACCT_QUOTA
+  NFNLGRP_NFTRACE,
+#define NFNLGRP_NFTRACE NFNLGRP_NFTRACE
+  __NFNLGRP_MAX,
+};
+#define NFNLGRP_MAX (__NFNLGRP_MAX - 1)
+struct nfgenmsg {
+  __u8 nfgen_family;
+  __u8 version;
+  __be16 res_id;
+};
+#define NFNETLINK_V0 0
+#define NFNL_SUBSYS_ID(x) ((x & 0xff00) >> 8)
+#define NFNL_MSG_TYPE(x) (x & 0x00ff)
+#define NFNL_SUBSYS_NONE 0
+#define NFNL_SUBSYS_CTNETLINK 1
+#define NFNL_SUBSYS_CTNETLINK_EXP 2
+#define NFNL_SUBSYS_QUEUE 3
+#define NFNL_SUBSYS_ULOG 4
+#define NFNL_SUBSYS_OSF 5
+#define NFNL_SUBSYS_IPSET 6
+#define NFNL_SUBSYS_ACCT 7
+#define NFNL_SUBSYS_CTNETLINK_TIMEOUT 8
+#define NFNL_SUBSYS_CTHELPER 9
+#define NFNL_SUBSYS_NFTABLES 10
+#define NFNL_SUBSYS_NFT_COMPAT 11
+#define NFNL_SUBSYS_HOOK 12
+#define NFNL_SUBSYS_COUNT 13
+#define NFNL_MSG_BATCH_BEGIN NLMSG_MIN_TYPE
+#define NFNL_MSG_BATCH_END NLMSG_MIN_TYPE + 1
+enum nfnl_batch_attributes {
+  NFNL_BATCH_UNSPEC,
+  NFNL_BATCH_GENID,
+  __NFNL_BATCH_MAX
+};
+#define NFNL_BATCH_MAX (__NFNL_BATCH_MAX - 1)
+#endif

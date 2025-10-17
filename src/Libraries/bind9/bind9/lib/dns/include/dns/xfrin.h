@@ -1,0 +1,126 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, January 27, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id: xfrin.h,v 1.30 2009/01/17 23:47:43 tbox Exp $ */
+
+#ifndef DNS_XFRIN_H
+#define DNS_XFRIN_H 1
+
+/*****
+ ***** Module Info
+ *****/
+
+/*! \file dns/xfrin.h
+ * \brief
+ * Incoming zone transfers (AXFR + IXFR).
+ */
+
+/***
+ *** Imports
+ ***/
+
+#include <isc/lang.h>
+
+#include <dns/types.h>
+
+/***
+ *** Types
+ ***/
+
+/*%
+ * A transfer in progress.  This is an opaque type.
+ */
+typedef struct dns_xfrin_ctx dns_xfrin_ctx_t;
+
+/***
+ *** Functions
+ ***/
+
+ISC_LANG_BEGINDECLS
+
+/*% see dns_xfrin_create2() */
+isc_result_t
+dns_xfrin_create(dns_zone_t *zone, dns_rdatatype_t xfrtype,
+		 isc_sockaddr_t *masteraddr, dns_tsigkey_t *tsigkey,
+		 isc_mem_t *mctx, isc_timermgr_t *timermgr,
+		 isc_socketmgr_t *socketmgr, isc_task_t *task,
+		 dns_xfrindone_t done, dns_xfrin_ctx_t **xfrp);
+
+isc_result_t
+dns_xfrin_create2(dns_zone_t *zone, dns_rdatatype_t xfrtype,
+		  isc_sockaddr_t *masteraddr, isc_sockaddr_t *sourceaddr,
+		  dns_tsigkey_t *tsigkey, isc_mem_t *mctx,
+		  isc_timermgr_t *timermgr, isc_socketmgr_t *socketmgr,
+		  isc_task_t *task, dns_xfrindone_t done,
+		  dns_xfrin_ctx_t **xfrp);
+
+isc_result_t
+dns_xfrin_create3(dns_zone_t *zone, dns_rdatatype_t xfrtype,
+		  isc_sockaddr_t *masteraddr, isc_sockaddr_t *sourceaddr,
+		  isc_dscp_t dscp, dns_tsigkey_t *tsigkey, isc_mem_t *mctx,
+		  isc_timermgr_t *timermgr, isc_socketmgr_t *socketmgr,
+		  isc_task_t *task, dns_xfrindone_t done,
+		  dns_xfrin_ctx_t **xfrp);
+/*%<
+ * Attempt to start an incoming zone transfer of 'zone'
+ * from 'masteraddr', creating a dns_xfrin_ctx_t object to
+ * manage it.  Attach '*xfrp' to the newly created object.
+ *
+ * Iff ISC_R_SUCCESS is returned, '*done' is guaranteed to be
+ * called in the context of 'task', with 'zone' and a result
+ * code as arguments when the transfer finishes.
+ *
+ * Requires:
+ *\li	'xfrtype' is dns_rdatatype_axfr, dns_rdatatype_ixfr
+ *	or dns_rdatatype_soa (soa query followed by axfr if
+ *	serial is greater than current serial).
+ *
+ *\li	If 'xfrtype' is dns_rdatatype_ixfr or dns_rdatatype_soa,
+ *	the zone has a database.
+ */
+
+void
+dns_xfrin_shutdown(dns_xfrin_ctx_t *xfr);
+/*%<
+ * If the zone transfer 'xfr' has already finished,
+ * do nothing.  Otherwise, abort it and cause it to call
+ * its done callback with a status of ISC_R_CANCELED.
+ */
+
+void
+dns_xfrin_detach(dns_xfrin_ctx_t **xfrp);
+/*%<
+ * Detach a reference to a zone transfer object.
+ * Caller to maintain external locking if required.
+ */
+
+void
+dns_xfrin_attach(dns_xfrin_ctx_t *source, dns_xfrin_ctx_t **target);
+/*%<
+ * Caller to maintain external locking if required.
+ */
+
+ISC_LANG_ENDDECLS
+
+#endif /* DNS_XFRIN_H */

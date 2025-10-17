@@ -1,0 +1,277 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, March 14, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _IOHIDRESOURCE_USERCLIENT_H
+#define _IOHIDRESOURCE_USERCLIENT_H
+
+#include <IOKit/hid/IOHIDKeys.h>
+/*!
+    @enum IOHIDResourceUserClientType
+    @abstract List of support user client types
+    @description Current the only support type is kIOHIDResourceUserClientTypeDevice.  The hope is to expand this out to support other HID resources/
+    @constant kIOHIDResourceUserClientTypeDevice Type for creating an in kernel representation of a HID driver that resides in user space
+*/
+typedef enum {
+    kIOHIDResourceUserClientTypeDevice = 0
+} IOHIDResourceUserClientType;
+
+/*!
+    @enum IOHIDResourceDeviceUserClientExternalMethods
+    @abstract List of external methods to be called from user land
+    @constant kIOHIDResourceDeviceUserClientMethodCreate Creates a device using a passed serialized property dictionary.
+    @constant kIOHIDResourceDeviceUserClientMethodTerminate Closes the device and releases memory.
+    @constant kIOHIDResourceDeviceUserClientMethodHandleReport Sends a report.
+    @constant kIOHIDResourceDeviceUserClientMethodPostReportResult Posts a report requested via GetReport and SetReport
+    @constant kIOHIDResourceDeviceUserClientMethodRegisterService calls registerService on the IOHIDUserDevice.
+    @constant kIOHIDResourceDeviceUserClientMethodReleaseToken calls releaseToken on the IOHIDUserDevice's ReportQueue.
+    @constant kIOHIDResourceDeviceUserClientMethodCount
+*/
+typedef enum {
+    kIOHIDResourceDeviceUserClientMethodCreate,
+    kIOHIDResourceDeviceUserClientMethodTerminate,
+    kIOHIDResourceDeviceUserClientMethodHandleReport,
+    kIOHIDResourceDeviceUserClientMethodPostReportResponse,
+    kIOHIDResourceDeviceUserClientMethodRegisterService,
+    kIOHIDResourceDeviceUserClientMethodReleaseToken,
+    kIOHIDResourceDeviceUserClientMethodCount
+} IOHIDResourceDeviceUserClientExternalMethods;
+
+/*!
+    @enum IOHIDResourceUserClientResponseIndex
+    @abstract response indexes for report response
+*/
+typedef enum {
+    kIOHIDResourceUserClientResponseIndexResult = 0,
+    kIOHIDResourceUserClientResponseIndexToken,
+    kIOHIDResourceUserClientResponseIndexCount
+} IOHIDResourceUserClientResponseIndex;
+
+typedef enum { 
+    kIOHIDResourceReportDirectionIn,
+    kIOHIDResourceReportDirectionOut
+} IOHIDResourceReportDirection;
+
+typedef enum {
+    kIOHIDResourceOOBReport = 1 << 0
+} IOHIDResourceFlags;
+
+/*!
+    @enum IOHIDResourceDataQueueHeader
+    @abstract Header used for sending requests to user process
+*/
+typedef struct {
+    IOHIDResourceReportDirection    direction;    
+    IOHIDReportType                 type;
+    uint32_t                        reportFlags:8;
+    uint32_t                        reportID:24;
+    uint32_t                        length;
+    uint64_t                        token;
+} IOHIDResourceDataQueueHeader;
+
+typedef struct __attribute__((packed)) {
+    user_addr_t token;
+    uint32_t length;
+} IOHIDResourceOOBReportInfo;
+
+/*
+ * Kernel
+ */
+#if KERNEL
+
+#include <IOKit/IOUserClient.h>
+#include <IOKit/IOSharedDataQueue.h>
+#include <IOKit/IOCommandGate.h>
+#include <IOKit/IOTimerEventSource.h>
+#include "IOHIDResource.h"
+#include "IOHIDUserDevice.h"
+
+/*! @class IOHIDResourceDeviceUserClient : public IOUserClient
+    @abstract 
+*/
+/*! @class IOHIDResourceQueue : public IOSharedDataQueue
+    @abstract 
+*/
+class IOHIDResourceQueue: public IOSharedDataQueue
+{
+    OSDeclareDefaultStructors( IOHIDResourceQueue )
+    friend class IOHIDResourceDeviceUserClient;
+    
+protected:
+    IOMemoryDescriptor *    _descriptor;
+    IOService               *_owner;
+    uint64_t                _enqueueTS;
+
+public:
+    static IOHIDResourceQueue *withCapacity(UInt32 capacity);
+    static IOHIDResourceQueue *withCapacity(IOService *owner, UInt32 size);
+    virtual Boolean initWithCapacity(UInt32 size) APPLE_KEXT_OVERRIDE;
+    virtual void free(void) APPLE_KEXT_OVERRIDE;
+    
+    virtual Boolean enqueueReport(IOHIDResourceDataQueueHeader * header, IOMemoryDescriptor * report = NULL);
+
+    virtual IOMemoryDescriptor *getMemoryDescriptor(void) APPLE_KEXT_OVERRIDE;
+    virtual void setNotificationPort(mach_port_t port) APPLE_KEXT_OVERRIDE;
+    
+    virtual bool serialize(OSSerialize * serializer) const APPLE_KEXT_OVERRIDE;
+};
+
+class IOHIDResourceDeviceUserClient : public IOUserClient2022
+{
+    OSDeclareDefaultStructors(IOHIDResourceDeviceUserClient);
+    
+private:
+
+    IOHIDResource *         _owner;
+    OSDictionary *          _properties;
+    IOHIDUserDevice *       _device;
+    IOTimerEventSource *    _asyncReportTimer;
+    IOCommandGate *         _commandGate;
+    mach_port_t             _port;
+    task_t                  _owningTask;
+    IOHIDResourceQueue *    _queue;
+    OSSet *                 _pending;
+    uint32_t                _maxClientTimeoutUS;
+    u_int64_t               _tokenIndex;
+    bool                    _suspended;
+    OSArray *               _overSizedReports;
+    
+    UInt32                  _setReportCount;
+    UInt32                  _setReportDroppedCount;
+    UInt32                  _setReportCompletedCount;
+    UInt32                  _setReportTimeoutCount;
+    UInt32                  _getReportCount;
+    UInt32                  _getReportDroppedCount;
+    UInt32                  _getReportCompletedCount;
+    UInt32                  _getReportTimeoutCount;
+    UInt32                  _enqueueFailCount;
+    UInt32                  _handleReportCount;
+    UInt32                  _outstandingAsyncCount;
+    bool                    _asyncSupport;
+    bool                    _privileged;
+
+    static const IOExternalMethodDispatch2022 _methods[kIOHIDResourceDeviceUserClientMethodCount];
+
+    static IOReturn _createDevice(IOHIDResourceDeviceUserClient *target, void *reference, IOExternalMethodArguments *arguments);
+    static IOReturn _terminateDevice(IOHIDResourceDeviceUserClient *target, void *reference, IOExternalMethodArguments *arguments);
+    static IOReturn _handleReport(IOHIDResourceDeviceUserClient *target,  void *reference, IOExternalMethodArguments *arguments);
+    static IOReturn _postReportResult(IOHIDResourceDeviceUserClient *target,  void *reference, IOExternalMethodArguments *arguments);
+    static IOReturn _registerService(IOHIDResourceDeviceUserClient *target,  void *reference, IOExternalMethodArguments *arguments);
+    static IOReturn _releaseToken(IOHIDResourceDeviceUserClient *target, void *reference, IOExternalMethodArguments *arguments);
+
+    typedef struct {
+        uint32_t                          selector;
+        IOExternalMethodArgumentsOpaque * arguments;
+    } ExternalMethodGatedArguments;
+
+    IOReturn externalMethodGated(ExternalMethodGatedArguments * arguments);
+    IOReturn registerNotificationPortGated(mach_port_t port);
+    IOReturn clientMemoryForTypeGated(IOOptionBits * options, IOMemoryDescriptor ** memory);
+    
+    typedef struct {
+        IOMemoryDescriptor * report;
+        IOHIDReportType      reportType;
+        IOOptionBits         options;
+        UInt32               completionTimeout;
+        IOHIDCompletion    * completion;
+    } ReportGatedArguments;
+    
+    IOReturn getReportGated(ReportGatedArguments * arguments);
+    IOReturn setReportGated(ReportGatedArguments * arguments);
+    
+    IOReturn createAndStartDevice();
+    IOReturn createDevice(IOExternalMethodArguments *arguments);
+    IOReturn handleReport(IOExternalMethodArguments *arguments);
+    IOReturn postReportResult(IOExternalMethodArguments *arguments);
+    IOReturn terminateDevice();
+    void setNextAsyncTimeout();
+    void cleanupPendingReports();
+
+    IOMemoryDescriptor * createMemoryDescriptorFromInputArguments(IOExternalMethodArguments * arguments);
+
+    void ReportComplete(void *param, IOReturn res, UInt32 remaining);
+    
+    IOReturn setPropertiesGated(OSObject *properties);
+    bool serializeDebugState(void *ref, OSSerialize *serializer);
+    IOReturn releaseToken(mach_vm_address_t token);
+    IOReturn releaseTokenGated(mach_vm_address_t token);
+
+public:
+    /*! @function initWithTask
+        @abstract 
+        @discussion 
+    */
+    virtual bool initWithTask(task_t owningTask, void * security_id, UInt32 type) APPLE_KEXT_OVERRIDE;
+
+
+    /*! @function clientClose
+        @abstract 
+        @discussion 
+    */
+    virtual IOReturn clientClose(void) APPLE_KEXT_OVERRIDE;
+
+
+    /*! @function getService
+        @abstract 
+        @discussion 
+    */
+    virtual IOService * getService(void) APPLE_KEXT_OVERRIDE;
+
+
+    /*! @function externalMethod
+        @abstract 
+        @discussion 
+    */
+    virtual IOReturn externalMethod(uint32_t selector, IOExternalMethodArgumentsOpaque * args) APPLE_KEXT_OVERRIDE;
+
+    virtual IOReturn clientMemoryForType(UInt32 type, IOOptionBits * options, IOMemoryDescriptor ** memory ) APPLE_KEXT_OVERRIDE;
+
+
+    /*! @function start
+        @abstract 
+        @discussion 
+    */
+    virtual bool start(IOService * provider) APPLE_KEXT_OVERRIDE;
+    
+    virtual void stop(IOService * provider) APPLE_KEXT_OVERRIDE;
+
+    virtual void free(void) APPLE_KEXT_OVERRIDE;
+
+    virtual IOReturn registerNotificationPort(mach_port_t port, UInt32 type, io_user_reference_t refCon) APPLE_KEXT_OVERRIDE;
+
+    virtual IOReturn getReport(IOMemoryDescriptor *report, IOHIDReportType reportType, IOOptionBits options);
+
+    virtual IOReturn setReport(IOMemoryDescriptor *report, IOHIDReportType reportType, IOOptionBits options);
+
+    virtual IOReturn getReport(IOMemoryDescriptor * report, IOHIDReportType reportType, IOOptionBits options, UInt32 completionTimeout, IOHIDCompletion * completion = 0);
+
+    virtual IOReturn setReport(IOMemoryDescriptor * report, IOHIDReportType reportType, IOOptionBits options, UInt32 completionTimeout, IOHIDCompletion * completion = 0);
+    
+    virtual IOReturn setProperties(OSObject *properties) APPLE_KEXT_OVERRIDE;
+};
+
+
+#endif /* KERNEL */
+
+#endif /* _IOHIDRESOURCE_USERCLIENT_H */
+

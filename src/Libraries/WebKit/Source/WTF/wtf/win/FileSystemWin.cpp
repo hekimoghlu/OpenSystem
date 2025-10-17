@@ -1,0 +1,390 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, July 30, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include <wtf/FileSystem.h>
+
+#include <io.h>
+#include <shlobj.h>
+#include <shlwapi.h>
+#include <sys/stat.h>
+#include <windows.h>
+#include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/StringBuilder.h>
+#include <wtf/text/win/WCharStringExtras.h>
+#include <wtf/win/PathWalker.h>
+
+namespace WTF {
+
+namespace FileSystemImpl {
+
+static const ULONGLONG kSecondsFromFileTimeToTimet = 11644473600;
+
+static bool getFindData(String path, WIN32_FIND_DATAW& findData)
+{
+    HANDLE handle = FindFirstFileW(path.wideCharacters().data(), &findData);
+    if (handle == INVALID_HANDLE_VALUE)
+        return false;
+    FindClose(handle);
+    return true;
+}
+
+static std::optional<uint64_t> getFileSizeFromByHandleFileInformationStructure(const BY_HANDLE_FILE_INFORMATION& fileInformation)
+{
+    ULARGE_INTEGER fileSize;
+    fileSize.HighPart = fileInformation.nFileSizeHigh;
+    fileSize.LowPart = fileInformation.nFileSizeLow;
+
+    if (fileSize.QuadPart > static_cast<ULONGLONG>(std::numeric_limits<long long>::max()))
+        return std::nullopt;
+
+    return fileSize.QuadPart;
+}
+
+static void fileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_t& time)
+{
+    ULARGE_INTEGER fileTime;
+    fileTime.HighPart = findData.ftCreationTime.dwHighDateTime;
+    fileTime.LowPart = findData.ftCreationTime.dwLowDateTime;
+
+    // Information about converting time_t to FileTime is available at http://msdn.microsoft.com/en-us/library/ms724228%28v=vs.85%29.aspx
+    time = fileTime.QuadPart / 10000000 - kSecondsFromFileTimeToTimet;
+}
+
+
+std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
+{
+    BY_HANDLE_FILE_INFORMATION fileInformation;
+    if (!::GetFileInformationByHandle(fileHandle, &fileInformation))
+        return std::nullopt;
+
+    return getFileSizeFromByHandleFileInformationStructure(fileInformation);
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle)
+{
+    // FIXME (246118): Implement this function properly.
+    return std::nullopt;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>)
+{
+    // FIXME (246118): Implement this function properly.
+    return true;
+}
+
+std::optional<WallTime> fileCreationTime(const String& path)
+{
+    WIN32_FIND_DATAW findData;
+    if (!getFindData(path, findData))
+        return std::nullopt;
+
+    time_t time = 0;
+    fileCreationTimeFromFindData(findData, time);
+    return WallTime::fromRawSeconds(time);
+}
+
+CString fileSystemRepresentation(const String& path)
+{
+    auto characters = StringView(path).upconvertedCharacters();
+    int size = WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), 0, 0, 0, 0);
+
+    std::span<char> buffer;
+    CString string = CString::newUninitialized(size, buffer);
+
+    WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), buffer.data(), buffer.size(), 0, 0);
+
+    return string;
+}
+
+static String storageDirectory(DWORD pathIdentifier)
+{
+    Vector<UChar> buffer(MAX_PATH);
+    if (FAILED(SHGetFolderPathW(nullptr, pathIdentifier | CSIDL_FLAG_CREATE, nullptr, 0, wcharFrom(buffer.data()))))
+        return String();
+
+    buffer.shrink(wcslen(wcharFrom(buffer.data())));
+    String directory = String::adopt(WTFMove(buffer));
+
+    directory = pathByAppendingComponent(directory, "Apple Computer\\WebKit"_s);
+    if (!makeAllDirectories(directory))
+        return String();
+
+    return directory;
+}
+
+static String cachedStorageDirectory(DWORD pathIdentifier)
+{
+    static HashMap<DWORD, String> directories;
+
+    HashMap<DWORD, String>::iterator it = directories.find(pathIdentifier);
+    if (it != directories.end())
+        return it->value;
+
+    String directory = storageDirectory(pathIdentifier);
+    directories.add(pathIdentifier, directory);
+
+    return directory;
+}
+
+static String generateTemporaryPath(const Function<bool(const String&)>& action)
+{
+    wchar_t tempPath[MAX_PATH];
+    int tempPathLength = ::GetTempPathW(std::size(tempPath), tempPath);
+    if (tempPathLength <= 0 || static_cast<size_t>(tempPathLength) >= std::size(tempPath))
+        return String();
+
+    String proposedPath;
+    do {
+        wchar_t tempFile[] = L"XXXXXXXX.tmp"; // Use 8.3 style name (more characters aren't helpful due to 8.3 short file names)
+        const int randomPartLength = 8;
+        cryptographicallyRandomValues({ reinterpret_cast<uint8_t*>(tempFile), randomPartLength * sizeof(wchar_t) });
+
+        // Limit to valid filesystem characters, also excluding others that could be problematic, like punctuation.
+        // don't include both upper and lowercase since Windows file systems are typically not case sensitive.
+        const char validChars[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+        for (int i = 0; i < randomPartLength; ++i)
+            tempFile[i] = validChars[tempFile[i] % (sizeof(validChars) - 1)];
+
+        ASSERT(wcslen(tempFile) == std::size(tempFile) - 1);
+
+        proposedPath = pathByAppendingComponent(String(tempPath), String(tempFile));
+        if (proposedPath.isEmpty())
+            break;
+    } while (!action(proposedPath));
+
+    return proposedPath;
+}
+
+std::pair<String, PlatformFileHandle> openTemporaryFile(StringView, StringView suffix)
+{
+    // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
+    ASSERT_UNUSED(suffix, suffix.isEmpty());
+
+    PlatformFileHandle handle = INVALID_HANDLE_VALUE;
+
+    String proposedPath = generateTemporaryPath([&handle](const String& proposedPath) {
+        // use CREATE_NEW to avoid overwriting an existing file with the same name
+        handle = ::CreateFileW(proposedPath.wideCharacters().data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+        return isHandleValid(handle) || GetLastError() == ERROR_ALREADY_EXISTS;
+    });
+
+    if (!isHandleValid(handle))
+        return { String(), handle };
+
+    return { proposedPath, handle };
+}
+
+PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
+{
+    DWORD desiredAccess = 0;
+    DWORD creationDisposition = 0;
+    DWORD shareMode = 0;
+    switch (mode) {
+    case FileOpenMode::Read:
+        desiredAccess = GENERIC_READ;
+        creationDisposition = OPEN_EXISTING;
+        shareMode = FILE_SHARE_READ;
+        break;
+    case FileOpenMode::Truncate:
+        desiredAccess = GENERIC_WRITE;
+        creationDisposition = CREATE_ALWAYS;
+        break;
+    case FileOpenMode::ReadWrite:
+        desiredAccess = GENERIC_READ | GENERIC_WRITE;
+        creationDisposition = OPEN_ALWAYS;
+        break;
+    }
+
+    if (failIfFileExists)
+        creationDisposition = CREATE_NEW;
+
+    String destination = path;
+    return CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr);
+}
+
+void closeFile(PlatformFileHandle& handle)
+{
+    if (isHandleValid(handle)) {
+        ::CloseHandle(handle);
+        handle = invalidPlatformFileHandle;
+    }
+}
+
+long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
+{
+    DWORD moveMethod = FILE_BEGIN;
+
+    if (origin == FileSeekOrigin::Current)
+        moveMethod = FILE_CURRENT;
+    else if (origin == FileSeekOrigin::End)
+        moveMethod = FILE_END;
+
+    LARGE_INTEGER largeOffset;
+    largeOffset.QuadPart = offset;
+
+    largeOffset.LowPart = SetFilePointer(handle, largeOffset.LowPart, &largeOffset.HighPart, moveMethod);
+
+    if (largeOffset.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
+        return -1;
+
+    return largeOffset.QuadPart;
+}
+
+bool truncateFile(PlatformFileHandle handle, long long offset)
+{
+    FILE_END_OF_FILE_INFO eofInfo;
+    eofInfo.EndOfFile.QuadPart = offset;
+
+    return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
+}
+
+bool flushFile(PlatformFileHandle)
+{
+    // Not implemented.
+    return false;
+}
+
+int64_t writeToFile(PlatformFileHandle handle, std::span<const uint8_t> data)
+{
+    if (!isHandleValid(handle))
+        return -1;
+
+    DWORD bytesWritten;
+    bool success = WriteFile(handle, data.data(), data.size(), &bytesWritten, nullptr);
+
+    if (!success)
+        return -1;
+    return static_cast<int64_t>(bytesWritten);
+}
+
+int64_t readFromFile(PlatformFileHandle handle, std::span<uint8_t> data)
+{
+    if (!isHandleValid(handle))
+        return -1;
+
+    DWORD bytesRead;
+    bool success = ::ReadFile(handle, data.data(), data.size(), &bytesRead, nullptr);
+
+    if (!success)
+        return -1;
+    return static_cast<int64_t>(bytesRead);
+}
+
+String localUserSpecificStorageDirectory()
+{
+    return cachedStorageDirectory(CSIDL_LOCAL_APPDATA);
+}
+
+String roamingUserSpecificStorageDirectory()
+{
+    return cachedStorageDirectory(CSIDL_APPDATA);
+}
+
+std::optional<int32_t> getFileDeviceId(const String& fsFile)
+{
+    auto handle = openFile(fsFile, FileOpenMode::Read);
+    if (!isHandleValid(handle))
+        return std::nullopt;
+
+    BY_HANDLE_FILE_INFORMATION fileInformation = { };
+    if (!::GetFileInformationByHandle(handle, &fileInformation)) {
+        closeFile(handle);
+        return std::nullopt;
+    }
+
+    closeFile(handle);
+
+    return fileInformation.dwVolumeSerialNumber;
+}
+
+String createTemporaryDirectory()
+{
+    return generateTemporaryPath([](const String& proposedPath) {
+        return makeAllDirectories(proposedPath);
+    });
+}
+
+std::optional<uint32_t> volumeFileBlockSize(const String& path)
+{
+    DWORD sectorsPerCluster, bytesPerSector, freeClusters, totalClusters;
+    if (!GetDiskFreeSpaceW(path.wideCharacters().data(), &sectorsPerCluster, &bytesPerSector, &freeClusters, &totalClusters))
+        return std::nullopt;
+
+    return sectorsPerCluster * bytesPerSector;
+}
+
+MappedFileData::~MappedFileData()
+{
+    if (m_fileData.data())
+        UnmapViewOfFile(m_fileData.data());
+}
+
+bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode)
+{
+    if (!isHandleValid(handle))
+        return false;
+
+    auto size = fileSize(handle);
+    if (!size || *size > std::numeric_limits<size_t>::max())
+        return false;
+
+    if (!*size)
+        return true;
+
+    DWORD pageProtection = PAGE_READONLY;
+    DWORD desiredAccess = FILE_MAP_READ;
+    switch (openMode) {
+    case FileOpenMode::Read:
+        pageProtection = PAGE_READONLY;
+        desiredAccess = FILE_MAP_READ;
+        break;
+    case FileOpenMode::Truncate:
+        pageProtection = PAGE_READWRITE;
+        desiredAccess = FILE_MAP_WRITE;
+        break;
+    case FileOpenMode::ReadWrite:
+        pageProtection = PAGE_READWRITE;
+        desiredAccess = FILE_MAP_WRITE | FILE_MAP_READ;
+        break;
+    }
+
+    m_fileMapping = Win32Handle::adopt(CreateFileMapping(handle, nullptr, pageProtection, 0, 0, nullptr));
+    if (!m_fileMapping)
+        return false;
+
+    auto* data = MapViewOfFile(m_fileMapping.get(), desiredAccess, 0, 0, *size);
+    if (!data)
+        return false;
+
+    m_fileData = { static_cast<uint8_t*>(data), static_cast<size_t>(*size) };
+    return true;
+}
+
+} // namespace FileSystemImpl
+} // namespace WTF

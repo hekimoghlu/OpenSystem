@@ -1,0 +1,534 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, March 15, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "ConfigFile.h"
+
+#include "Options.h"
+#include <mutex>
+#include <stdio.h>
+#include <string.h>
+#include <wtf/ASCIICType.h>
+#include <wtf/DataLog.h>
+#include <wtf/text/StringBuilder.h>
+
+#if HAVE(REGEX_H)
+#include <regex.h>
+#endif
+
+#if OS(UNIX)
+#include <unistd.h>
+#endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+namespace JSC {
+
+static const size_t s_processNameMax = 128;
+char ConfigFile::s_processName[s_processNameMax + 1] = { 0 };
+char ConfigFile::s_parentProcessName[s_processNameMax + 1] = { 0 };
+
+class ConfigFileScanner {
+public:
+    ConfigFileScanner(const char* filename)
+        : m_filename(filename)
+        , m_lineNumber(0)
+    {
+        m_srcPtr = &m_buffer[0];
+        m_bufferEnd = &m_buffer[0];
+    }
+
+    bool start()
+    {
+        m_file = fopen(m_filename, "r");
+        if (!m_file) {
+            dataLogF("Failed to open file JSC Config file '%s'.\n", m_filename);
+            return false;
+        }
+
+        return true;
+    }
+
+    unsigned lineNumber()
+    {
+        return m_lineNumber;
+    }
+
+    const char* currentBuffer()
+    {
+        if (!m_srcPtr || m_srcPtr == m_bufferEnd)
+            return "";
+
+        return m_srcPtr;
+    }
+
+    bool atFileEnd()
+    {
+        if (!fillBufferIfNeeded())
+            return true;
+
+        return false;
+    }
+
+    bool tryConsume(char c)
+    {
+        if (!fillBufferIfNeeded())
+            return false;
+
+        if (c == *m_srcPtr) {
+            m_srcPtr++;
+            return true;
+        }
+
+        return false;
+    }
+
+    template <size_t length>
+    bool tryConsume(const char (&token) [length])
+    {
+        if (!fillBufferIfNeeded())
+            return false;
+
+        size_t tokenLength = length - 1;
+        if (!strncmp(m_srcPtr, token, tokenLength)) {
+            m_srcPtr += tokenLength;
+            return true;
+        }
+
+        return false;
+    }
+
+    char* tryConsumeString()
+    {
+        if (!fillBufferIfNeeded())
+            return nullptr;
+
+        if (*m_srcPtr != '"')
+            return nullptr;
+
+        char* stringStart = ++m_srcPtr;
+
+        char* stringEnd = strchr(m_srcPtr, '"');
+        if (stringEnd) {
+            *stringEnd = '\0';
+            m_srcPtr = stringEnd + 1;
+            return stringStart;
+        }
+
+        return nullptr;
+    }
+
+    char* tryConsumeRegExPattern(bool& ignoreCase)
+    {
+        if (!fillBufferIfNeeded())
+            return nullptr;
+
+        if (*m_srcPtr != '/')
+            return nullptr;
+
+        char* stringStart = m_srcPtr + 1;
+
+        char* stringEnd = strchr(stringStart, '/');
+        if (stringEnd) {
+            *stringEnd = '\0';
+            m_srcPtr = stringEnd + 1;
+            if (*m_srcPtr == 'i') {
+                ignoreCase = true;
+                m_srcPtr++;
+            } else
+                ignoreCase = false;
+
+            return stringStart;
+        }
+
+        return nullptr;
+    }
+    
+    char* tryConsumeUpto(bool& foundChar, char c)
+    {
+        if (!fillBufferIfNeeded())
+            return nullptr;
+
+        char* start = m_srcPtr;
+        foundChar = false;
+
+        char* cPosition = strchr(m_srcPtr, c);
+        if (cPosition) {
+            *cPosition = '\0';
+            m_srcPtr = cPosition + 1;
+            foundChar = true;
+        } else
+            m_srcPtr = m_bufferEnd;
+
+        return start;
+    }
+
+private:
+    bool fillBufferIfNeeded()
+    {
+        if (!m_srcPtr)
+            return false;
+
+        while (true) {
+            while (m_srcPtr != m_bufferEnd && isUnicodeCompatibleASCIIWhitespace(*m_srcPtr))
+                m_srcPtr++;
+
+            if (m_srcPtr != m_bufferEnd)
+                break;
+
+            if (!fillBuffer())
+                return false;
+        }
+
+        return true;
+    }
+
+    bool fillBuffer()
+    {
+        do {
+            m_srcPtr = fgets(m_buffer, sizeof(m_buffer), m_file);
+            if (!m_srcPtr) {
+                fclose(m_file);
+                return false;
+            }
+
+            m_lineNumber++;
+
+            m_bufferEnd = strchr(m_srcPtr, '#');
+
+            if (m_bufferEnd)
+                *m_bufferEnd = '\0';
+            else {
+                m_bufferEnd = m_srcPtr + strlen(m_srcPtr);
+                if (m_bufferEnd > m_srcPtr && m_bufferEnd[-1] == '\n') {
+                    m_bufferEnd--;
+                    *m_bufferEnd = '\0';
+                }
+            }
+        } while (m_bufferEnd == m_srcPtr);
+
+        return true;
+    }
+
+    const char* m_filename;
+    unsigned m_lineNumber;
+    FILE* m_file;
+    char m_buffer[BUFSIZ];
+    char* m_srcPtr;
+    char* m_bufferEnd;
+};
+
+ConfigFile::ConfigFile(const char* filename)
+{
+    if (!filename)
+        m_filename[0] = '\0';
+    else {
+        IGNORE_WARNINGS_BEGIN("stringop-truncation")
+        strncpy(m_filename, filename, s_maxPathLength);
+        IGNORE_WARNINGS_END
+        m_filename[s_maxPathLength] = '\0';
+    }
+
+    m_configDirectory[0] = '\0';
+}
+
+void ConfigFile::setProcessName(const char* processName)
+{
+    strncpy(s_processName, processName, s_processNameMax);
+}
+
+void ConfigFile::setParentProcessName(const char* parentProcessName)
+{
+    strncpy(s_parentProcessName, parentProcessName, s_processNameMax);
+}
+
+void ConfigFile::parse()
+{
+    enum StatementNesting { TopLevelStatment, NestedStatement, NestedStatementFailedCriteria };
+    enum ParseResult { ParseOK, ParseError, NestedStatementDone };
+
+    canonicalizePaths();
+
+    ConfigFileScanner scanner(m_filename);
+
+    if (!scanner.start())
+        return;
+
+    char logPathname[s_maxPathLength + 1] = { 0 };
+
+    StringBuilder jscOptionsBuilder;
+
+    auto parseLogFile = [&](StatementNesting statementNesting) {
+        char* filename = nullptr;
+        if (scanner.tryConsume('=') && (filename = scanner.tryConsumeString())) {
+            if (statementNesting != NestedStatementFailedCriteria) {
+                if (filename[0] != '/') {
+                    int spaceRequired = snprintf(logPathname, s_maxPathLength + 1, "%s/%s", m_configDirectory, filename);
+                    if (static_cast<unsigned>(spaceRequired) > s_maxPathLength)
+                        return ParseError;
+                } else
+                    strncpy(logPathname, filename, s_maxPathLength);
+            }
+
+            return ParseOK;
+        }
+
+        return ParseError;
+    };
+
+    auto parseJSCOptions = [&](StatementNesting statementNesting) {
+        if (scanner.tryConsume('{')) {
+            StringBuilder builder;
+
+            bool foundClosingBrace = false;
+            char* currentLine = nullptr;
+
+            while ((currentLine = scanner.tryConsumeUpto(foundClosingBrace, '}'))) {
+                char* p = currentLine;
+
+                do {
+                    if (foundClosingBrace && !*p)
+                        break;
+
+                    char* optionNameStart = p;
+
+                    while (*p && !isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
+                        p++;
+
+                    builder.append(std::span { optionNameStart, p });
+
+                    while (*p && isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
+                        p++;
+
+                    if (!*p)
+                        return ParseError;
+                    p++; // Advance past the '='
+
+                    builder.append('=');
+
+                    while (*p && isUnicodeCompatibleASCIIWhitespace(*p))
+                        p++;
+
+                    if (!*p)
+                        return ParseError;
+
+                    char* optionValueStart = p;
+
+                    while (*p && !isUnicodeCompatibleASCIIWhitespace(*p))
+                        p++;
+
+                    builder.append(std::span { optionValueStart, p }, '\n');
+
+                    while (*p && isUnicodeCompatibleASCIIWhitespace(*p))
+                        p++;
+                } while (*p);
+
+                if (foundClosingBrace)
+                    break;
+            }
+
+            if (statementNesting != NestedStatementFailedCriteria)
+                jscOptionsBuilder.append(builder);
+
+            return ParseOK;
+        }
+
+        return ParseError;
+    };
+
+    auto parseNestedStatement = [&](StatementNesting statementNesting) {
+        if (scanner.tryConsume("jscOptions"))
+            return parseJSCOptions(statementNesting);
+
+        if (scanner.tryConsume("logFile"))
+            return parseLogFile(statementNesting);
+
+        if (scanner.tryConsume('}'))
+            return NestedStatementDone;
+
+        return ParseError;
+    };
+
+    auto parsePredicate = [&](bool& predicateMatches, const char* matchValue) {
+        if (scanner.tryConsume("==")) {
+            char* predicateValue = nullptr;
+            if ((predicateValue = scanner.tryConsumeString()) && matchValue) {
+                predicateMatches = !strcmp(predicateValue, matchValue);
+                return true;
+            }
+        }
+#if HAVE(REGEX_H)
+        else if (scanner.tryConsume("=~")) {
+            char* predicateRegExString = nullptr;
+            bool ignoreCase { false };
+            if ((predicateRegExString = scanner.tryConsumeRegExPattern(ignoreCase)) && matchValue) {
+                regex_t predicateRegEx;
+                int regexFlags = REG_EXTENDED;
+                if (ignoreCase)
+                    regexFlags |= REG_ICASE;
+                if (regcomp(&predicateRegEx, predicateRegExString, regexFlags))
+                    return false;
+
+                predicateMatches = !regexec(&predicateRegEx, matchValue, 0, nullptr, 0);
+                return true;
+            }
+        }
+#endif
+
+        return false;
+    };
+
+    auto parseConditionalBlock = [&](StatementNesting statementNesting) {
+        if (statementNesting == NestedStatement) {
+            StatementNesting subNesting = NestedStatement;
+
+            while (true) {
+                bool predicateMatches;
+                const char* actualValue = nullptr;
+
+                if (scanner.tryConsume("processName"))
+                    actualValue = s_processName;
+                else if (scanner.tryConsume("parentProcessName"))
+                    actualValue = s_parentProcessName;
+                else if (scanner.tryConsume("build"))
+#ifndef NDEBUG
+                    actualValue = "Debug";
+#else
+                    actualValue = "Release";
+#endif
+                else
+                    return ParseError;
+
+                if (parsePredicate(predicateMatches, actualValue)) {
+                    if (!predicateMatches)
+                        subNesting = NestedStatementFailedCriteria;
+
+                    if (!scanner.tryConsume("&&"))
+                        break;
+                }
+            }
+
+            if (!scanner.tryConsume('{'))
+                return ParseError;
+
+            ParseResult parseResult = ParseOK;
+            while (parseResult == ParseOK && !scanner.atFileEnd())
+                parseResult = parseNestedStatement(subNesting);
+
+            if (parseResult == NestedStatementDone)
+                return ParseOK;
+        }
+
+        return ParseError;
+    };
+
+    auto parseStatement = [&](StatementNesting statementNesting) {
+        if (scanner.tryConsume("jscOptions"))
+            return parseJSCOptions(statementNesting);
+
+        if (scanner.tryConsume("logFile"))
+            return parseLogFile(statementNesting);
+
+        if (statementNesting == TopLevelStatment)
+            return parseConditionalBlock(NestedStatement);
+
+        return ParseError;
+    };
+
+    ParseResult parseResult = ParseOK;
+
+    while (parseResult == ParseOK && !scanner.atFileEnd())
+        parseResult = parseStatement(TopLevelStatment);
+
+    if (parseResult == ParseOK) {
+        if (strlen(logPathname))
+            WTF::setDataFile(logPathname);
+
+        if (!jscOptionsBuilder.isEmpty()) {
+            JSC::Config::enableRestrictedOptions();
+            Options::setOptions(jscOptionsBuilder.toString().utf8().data());
+        }
+    } else
+        WTF::dataLogF("Error in JSC Config file on or near line %u, parsing '%s'\n", scanner.lineNumber(), scanner.currentBuffer());
+}
+
+void ConfigFile::canonicalizePaths()
+{
+    if (!m_filename[0])
+        return;
+
+#if OS(UNIX) || OS(DARWIN)
+    if (m_filename[0] != '/') {
+        // Relative path
+        char filenameBuffer[s_maxPathLength + 1];
+
+        if (getcwd(filenameBuffer, sizeof(filenameBuffer))) {
+            size_t pathnameLength = strlen(filenameBuffer);
+            bool shouldAddPathSeparator = filenameBuffer[pathnameLength - 1] != '/';
+            if (sizeof(filenameBuffer) - 1  >= pathnameLength + shouldAddPathSeparator) {
+                if (shouldAddPathSeparator)
+                    strncat(filenameBuffer, "/", 2); // Room for '/' plus NUL
+                IGNORE_WARNINGS_BEGIN("stringop-truncation")
+                strncat(filenameBuffer, m_filename, sizeof(filenameBuffer) - strlen(filenameBuffer) - 1);
+                strncpy(m_filename, filenameBuffer, s_maxPathLength);
+                IGNORE_WARNINGS_END
+                m_filename[s_maxPathLength] = '\0';
+            }
+        }
+    }
+#endif
+
+    char* lastPathSeparator = strrchr(m_filename, '/');
+
+    if (lastPathSeparator) {
+        unsigned dirnameLength = lastPathSeparator - &m_filename[0];
+        strncpy(m_configDirectory, m_filename, dirnameLength);
+        m_configDirectory[dirnameLength] = '\0';
+    } else {
+        m_configDirectory[0] = '/';
+        m_configDirectory[1] = '\0';
+    }
+}
+
+void processConfigFile(const char* configFilename, const char* processName, const char* parentProcessName)
+{
+    static std::once_flag processConfigFileOnceFlag;
+    
+    if (!configFilename || !strlen(configFilename))
+        return;
+
+    std::call_once(processConfigFileOnceFlag, [&]{
+        if (configFilename) {
+            ConfigFile configFile(configFilename);
+            configFile.setProcessName(processName);
+            if (parentProcessName)
+                configFile.setParentProcessName(parentProcessName);
+            configFile.parse();
+        }
+    });
+}
+
+} // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

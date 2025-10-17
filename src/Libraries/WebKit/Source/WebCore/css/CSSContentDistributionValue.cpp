@@ -1,0 +1,80 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, August 26, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "CSSContentDistributionValue.h"
+
+#include "CSSValueKeywords.h"
+#include <wtf/text/MakeString.h>
+#include <wtf/text/WTFString.h>
+
+namespace WebCore {
+
+CSSContentDistributionValue::CSSContentDistributionValue(CSSValueID distribution, CSSValueID position, CSSValueID overflow)
+    : CSSValue(ClassType::ContentDistribution)
+    , m_distribution(distribution)
+    , m_position(position)
+    , m_overflow(overflow)
+{
+}
+
+Ref<CSSContentDistributionValue> CSSContentDistributionValue::create(CSSValueID distribution, CSSValueID position, CSSValueID overflow)
+{
+    return adoptRef(*new CSSContentDistributionValue(distribution, position, overflow));
+}
+
+String CSSContentDistributionValue::customCSSText() const
+{
+    auto word1 = m_distribution;
+    CSSValueID word2;
+    CSSValueID word3;
+    switch (m_position) {
+    case CSSValueFirstBaseline:
+        word2 = CSSValueFirst;
+        word3 = CSSValueBaseline;
+        break;
+    case CSSValueLastBaseline:
+        word2 = CSSValueLast;
+        word3 = CSSValueBaseline;
+        break;
+    default:
+        word2 = m_overflow;
+        word3 = m_position;
+        break;
+    }
+    return makeString(
+        word1 == CSSValueInvalid ? ""_s : nameLiteral(word1),
+        word1 != CSSValueInvalid && word2 != CSSValueInvalid ? " "_s : ""_s,
+        word2 == CSSValueInvalid ? ""_s : nameLiteral(word2),
+        word2 != CSSValueInvalid && word3 != CSSValueInvalid ? " "_s : ""_s,
+        word3 == CSSValueInvalid ? ""_s : nameLiteral(word3)
+    );
+}
+
+bool CSSContentDistributionValue::equals(const CSSContentDistributionValue& other) const
+{
+    return m_distribution == other.m_distribution && m_position == other.m_position && m_overflow == other.m_overflow;
+}
+
+}

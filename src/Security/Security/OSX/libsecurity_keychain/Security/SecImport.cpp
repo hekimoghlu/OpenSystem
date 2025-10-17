@@ -1,0 +1,411 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, April 25, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <Security/SecImportExport.h>
+#include "SecExternalRep.h"
+#include "SecImportExportPem.h"
+#include "SecImportExportUtils.h"
+#include <security_cdsa_utils/cuCdsaUtils.h>
+#include <security_utilities/globalizer.h>
+#include <Security/SecBase.h>
+
+#define SecImpInferDbg(args...)	secinfo("SecImpInfer", ## args)
+
+using namespace Security;
+using namespace KeychainCore;
+
+/*
+ * Do our best to ensure that a SecImportRep's type and format are known.
+ * A return of true means that both format and type (and, if the item
+ * is a raw public or private key, the algorithm) are known.
+ */
+static bool impExpInferTypeAndFormat(
+	SecImportRep		*rep,
+	CFStringRef			fileStr,
+	SecExternalFormat   inputFormat,
+	SecExternalItemType	itemType)
+{
+	/* fill in blanks if caller knows them */
+	if((rep->mExternType == kSecItemTypeUnknown) && (itemType != kSecItemTypeUnknown)) {
+		rep->mExternType = itemType;
+	}
+	if((rep->mExternFormat == kSecFormatUnknown) && (inputFormat != kSecFormatUnknown)) {
+		rep->mExternFormat = inputFormat;
+	}
+
+	/* some types can be inferred from format */
+	if(rep->mExternType == kSecItemTypeUnknown) {
+		SecExternalFormat format;
+		if(rep->mExternFormat == kSecFormatUnknown) {
+			/* caller specified */
+			format = inputFormat;
+		}
+		else {
+			/* maybe this is already set */
+			format = rep->mExternFormat;
+		}
+		switch(format) {
+			case kSecFormatUnknown:
+				break;
+			case kSecFormatPKCS7:
+			case kSecFormatPKCS12:
+			case kSecFormatPEMSequence:
+			case kSecFormatNetscapeCertSequence:
+				rep->mExternType = kSecItemTypeAggregate;
+				break;
+			case kSecFormatRawKey:
+				rep->mExternType = kSecItemTypeSessionKey;
+				break;
+			case kSecFormatX509Cert:
+				rep->mExternType = kSecItemTypeCertificate;
+				break;
+			case kSecFormatWrappedPKCS8:
+			case kSecFormatWrappedOpenSSL:
+			case kSecFormatWrappedSSH:
+				rep->mExternType = kSecItemTypePrivateKey;
+				break;
+			case kSecFormatSSHv2:
+				rep->mExternType = kSecItemTypePublicKey;
+				break;
+			case kSecFormatOpenSSL:
+			case kSecFormatBSAFE:
+			case kSecFormatWrappedLSH:
+			default:
+				/* can be private or session (right? */
+				break;
+		}
+	}
+
+	/* some formats can be inferred from type */
+	if(rep->mExternFormat == kSecFormatUnknown) {
+		SecExternalItemType thisType;
+		if(rep->mExternType == kSecItemTypeUnknown) {
+			/* caller specified */
+			thisType = itemType;
+		}
+		else {
+			/* maybe this is already set */
+			thisType = rep->mExternType;
+		}
+		switch(thisType) {
+			case kSecItemTypeCertificate:
+				rep->mExternFormat = kSecFormatX509Cert;
+				break;
+			/* any others? */
+			default:
+				break;
+		}
+	}
+
+	/*
+	 * Wrapped private keys don't need algorithm
+	 * Some formats implies algorithm
+	 */
+	bool isWrapped = false;
+	switch(rep->mExternFormat) {
+		case kSecFormatWrappedPKCS8:
+		case kSecFormatWrappedOpenSSL:
+		case kSecFormatWrappedLSH:
+			isWrapped = true;
+			break;
+		case kSecFormatWrappedSSH:
+			isWrapped = true;
+			rep->mKeyAlg = CSSM_ALGID_RSA;
+			break;
+		case kSecFormatSSH:
+			rep->mKeyAlg = CSSM_ALGID_RSA;
+			break;
+		default:
+			break;
+	}
+
+	/* Are we there yet? */
+	bool done = true;
+	if((rep->mExternType   == kSecItemTypeUnknown) ||
+	   (rep->mExternFormat == kSecFormatUnknown)) {
+		done = false;
+	}
+	if(done) {
+		switch(rep->mExternType) {
+			case kSecItemTypePrivateKey:
+			case kSecItemTypePublicKey:
+				if(!isWrapped && (rep->mKeyAlg == CSSM_ALGID_NONE)) {
+					/* gotta know this too */
+					done = false;
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	if(!done) {
+		/* infer from filename if possible */
+		done = impExpImportParseFileExten(fileStr, &rep->mExternFormat,
+			&rep->mExternType);
+	}
+	if(done) {
+	   return true;
+	}
+
+	/* invoke black magic: try decoding various forms */
+	return impExpImportGuessByExamination(rep->mExternal, &rep->mExternFormat,
+		&rep->mExternType, &rep->mKeyAlg);
+}
+
+class CSPDLMaker
+{
+protected:
+	CSSM_CSP_HANDLE mHandle;
+    RecursiveMutex mMutex;
+
+public:
+	CSPDLMaker() : mHandle(cuCspStartup(CSSM_FALSE)) {}
+	operator CSSM_CSP_HANDLE() {return mHandle;}
+};
+
+static ModuleNexus<CSPDLMaker> gCSPHandle;
+
+OSStatus SecKeychainItemImport(
+	CFDataRef							importedData,
+	CFStringRef							fileNameOrExtension,	// optional
+	SecExternalFormat					*inputFormat,			// optional, IN/OUT
+	SecExternalItemType					*itemType,				// optional, IN/OUT
+	SecItemImportExportFlags			flags,
+	const SecKeyImportExportParameters  *keyParams,				// optional
+	SecKeychainRef						importKeychain,			// optional
+	CFArrayRef							*outItems)				/* optional */
+{
+	BEGIN_IMP_EXP_SECAPI
+
+	bool				isPem;
+	OSStatus			ortn = errSecSuccess;
+	OSStatus			pem_ortn = errSecSuccess;
+	SecImportRep		*rep = NULL;
+	SecExternalFormat   callerInputFormat;
+	SecExternalItemType callerItemType;
+	CSSM_CSP_HANDLE		cspHand = 0;
+	CFIndex				dex;
+	CFStringRef			ourFileStr = NULL;
+
+	if((importedData == NULL) || (CFDataGetLength(importedData) == 0)) {
+		return errSecParam;
+	}
+	/* all other args are optional */
+
+	if(inputFormat) {
+		callerInputFormat = *inputFormat;
+	}
+	else {
+		callerInputFormat = kSecFormatUnknown;
+	}
+	if(itemType) {
+		callerItemType = *itemType;
+	}
+	else {
+		callerItemType = kSecItemTypeUnknown;
+	}
+
+	CFIndex numReps = 0;
+	SecExternalFormat tempFormat = callerInputFormat;
+	SecExternalItemType tempType = callerItemType;
+	ImpPrivKeyImportState keyImportState = PIS_NoLimit;
+
+	CFMutableArrayRef importReps = CFArrayCreateMutable(NULL, 0, NULL);
+	CFMutableArrayRef createdKcItems = CFArrayCreateMutable(NULL, 0,
+		&kCFTypeArrayCallBacks);
+	/* subsequent errors to errOut: */
+
+	/*
+	 * importedData --> one or more SecImportReps.
+	 * Note successful PEM decode can override caller's inputFormat and/or itemType.
+	 */
+	pem_ortn = impExpParsePemToImportRefs(importedData, importReps, &isPem);
+	/* remember how PEM decode failed, but continue to examine other possibilities */
+	if(!isPem) {
+		/* incoming blob is one binary item, type possibly unknown */
+		rep = new SecImportRep(importedData, callerItemType, callerInputFormat,
+			CSSM_ALGID_NONE);
+		CFArrayAppendValue(importReps, rep);
+		if(fileNameOrExtension) {
+			ourFileStr = fileNameOrExtension;
+			CFRetain(ourFileStr);
+		}
+	}
+	else {
+		/*
+		 * Strip off possible .pem extension in case there's another one in
+		 * front of it
+		 */
+		assert(CFArrayGetCount(importReps) >= 1);
+		if(fileNameOrExtension) {
+			if(CFStringHasSuffix(fileNameOrExtension, CFSTR(".pem"))) {
+				ourFileStr = impExpImportDeleteExtension(fileNameOrExtension);
+			}
+			else {
+				ourFileStr = fileNameOrExtension;
+				CFRetain(ourFileStr);
+			}
+		}
+	}
+
+	/*
+	 * Ensure we know type and format (and, for raw keys, algorithm) of each item.
+	 */
+	numReps = CFArrayGetCount(importReps);
+	if(numReps > 1) {
+		/*
+		 * Incoming kSecFormatPEMSequence, caller specs are useless now.
+		 * Hopefully the PEM parsing disclosed the info we'll need.
+		 */
+		if(ourFileStr) {
+			CFRelease(ourFileStr);
+			ourFileStr = NULL;
+		}
+		tempFormat = kSecFormatUnknown;
+		tempType = kSecItemTypeUnknown;
+	}
+	for(dex=0; dex<numReps; dex++) {
+		rep = (SecImportRep *)CFArrayGetValueAtIndex(importReps, dex);
+		bool ok = impExpInferTypeAndFormat(rep, ourFileStr, tempFormat, tempType);
+		if(!ok) {
+			ortn = errSecUnknownFormat;
+			goto errOut;
+		}
+	}
+
+	/* Get a CSPDL handle, somehow, as convenience for lower level code */
+	if(importKeychain != NULL) {
+		ortn = SecKeychainGetCSPHandle(importKeychain, &cspHand);
+		if(ortn) {
+			goto errOut;
+		}
+	}
+	else {
+		cspHand = gCSPHandle();
+	}
+
+	if(keyParams && (keyParams->flags & kSecKeyImportOnlyOne)) {
+		keyImportState = PIS_AllowOne;
+	}
+
+	/* Everything looks good: Go */
+	for(CFIndex dex=0; dex<numReps; dex++) {
+		rep = (SecImportRep *)CFArrayGetValueAtIndex(importReps, dex);
+		ortn = rep->importRep(importKeychain, cspHand, flags, keyParams,
+			keyImportState, createdKcItems);
+		if(ortn) {
+			goto errOut;
+		}
+	}
+
+	/* Give as much info to caller as we can even if we got an error on import */
+	if(inputFormat != NULL) {
+		if(numReps > 1) {
+			assert(isPem);
+			*inputFormat = kSecFormatPEMSequence;
+		}
+		else {
+			/* format from sole item in importReps */
+			assert(numReps != 0);
+			rep = (SecImportRep *)CFArrayGetValueAtIndex(importReps, 0);
+			*inputFormat = rep->mExternFormat;
+		}
+	}
+	if(itemType != NULL) {
+		if(numReps > 1) {
+			assert(isPem);
+			*itemType = kSecItemTypeAggregate;
+		}
+		else {
+			/* itemType from sole item in importReps */
+			assert(numReps != 0);
+			rep = (SecImportRep *)CFArrayGetValueAtIndex(importReps, 0);
+			*itemType = rep->mExternType;
+		}
+	}
+	if((ortn == errSecSuccess) && (outItems != NULL)) {
+		/* return the array */
+		*outItems = createdKcItems;
+		createdKcItems = NULL;
+	}
+	/* else caller doesn't want SecKeychainItemsRefs; we'll release below */
+
+errOut:
+	if(createdKcItems) {
+		CFRelease(createdKcItems);
+	}
+	if(importReps != NULL) {
+		/* CFArray of our own classes, no auto release */
+		CFIndex num = CFArrayGetCount(importReps);
+		for(dex=0; dex<num; dex++) {
+			rep = (SecImportRep *)CFArrayGetValueAtIndex(importReps, dex);
+			delete rep;
+		}
+		CFRelease(importReps);
+	}
+	if(ourFileStr) {
+		CFRelease(ourFileStr);
+	}
+	if(ortn) {
+		/* error occurred importing non-PEM representation */
+		return SecKeychainErrFromOSStatus(ortn);
+	}
+	if(pem_ortn == errSecUnsupportedFormat && numReps == 0) {
+		/* error occurred importing as PEM, and no other rep was imported */
+		return SecKeychainErrFromOSStatus(pem_ortn);
+	}
+	return errSecSuccess;
+
+	END_IMP_EXP_SECAPI
+}
+
+OSStatus SecItemImport(
+	CFDataRef							importedData,
+	CFStringRef							fileNameOrExtension,	/* optional */
+	SecExternalFormat					*inputFormat,			/* optional, IN/OUT */
+	SecExternalItemType					*itemType,				/* optional, IN/OUT */
+	SecItemImportExportFlags			flags,
+	const SecItemImportExportKeyParameters  *keyParams,				/* optional */
+	SecKeychainRef						importKeychain,			/* optional */
+	CFArrayRef							*outItems)
+{
+
+	SecKeyImportExportParameters* oldStructPtr = NULL;
+	SecKeyImportExportParameters oldStruct;
+	memset(&oldStruct, 0, sizeof(oldStruct));
+
+
+	if (NULL != keyParams)
+	{
+		if (ConvertSecKeyImportExportParametersToSecImportExportKeyParameters(NULL,
+			keyParams, &oldStruct))
+		{
+			oldStructPtr = &oldStruct;
+		}
+	}
+
+	return SecKeychainItemImport(importedData, fileNameOrExtension, inputFormat,
+		itemType, flags, oldStructPtr, importKeychain, outItems);
+}
+

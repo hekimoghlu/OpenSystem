@@ -1,0 +1,73 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, October 28, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++17
+
+// <functional>
+//
+// reference_wrapper
+//
+// template <class... ArgTypes>
+//  cuda::std::invoke_result_t<T&, ArgTypes...>
+//      operator()(ArgTypes&&... args) const;
+//
+// Requires T to be a complete type (since C++20).
+
+// #include <uscl/std/functional>
+#include <uscl/std/utility>
+
+struct Foo;
+__host__ __device__ Foo& get_foo();
+
+__host__ __device__ void test()
+{
+  cuda::std::reference_wrapper<Foo> ref = get_foo();
+  ref(0); // incomplete at the point of call
+}
+
+struct Foo
+{
+  __host__ __device__ void operator()(int) const {}
+};
+__host__ __device__ Foo& get_foo()
+{
+  static Foo foo;
+  return foo;
+}
+
+int main(int, char**)
+{
+  test();
+  return 0;
+}

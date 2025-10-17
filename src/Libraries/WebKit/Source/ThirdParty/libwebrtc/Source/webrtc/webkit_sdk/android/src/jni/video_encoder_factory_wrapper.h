@@ -1,0 +1,66 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, February 9, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef SDK_ANDROID_SRC_JNI_VIDEO_ENCODER_FACTORY_WRAPPER_H_
+#define SDK_ANDROID_SRC_JNI_VIDEO_ENCODER_FACTORY_WRAPPER_H_
+
+#include <jni.h>
+
+#include <vector>
+
+#include "api/video_codecs/sdp_video_format.h"
+#include "api/video_codecs/video_encoder_factory.h"
+#include "sdk/android/src/jni/jni_helpers.h"
+
+namespace webrtc {
+namespace jni {
+
+// Wrapper for Java VideoEncoderFactory class. Delegates method calls through
+// JNI and wraps the encoder inside VideoEncoderWrapper.
+class VideoEncoderFactoryWrapper : public VideoEncoderFactory {
+ public:
+  VideoEncoderFactoryWrapper(JNIEnv* jni,
+                             const JavaRef<jobject>& encoder_factory);
+  ~VideoEncoderFactoryWrapper() override;
+
+  std::unique_ptr<VideoEncoder> CreateVideoEncoder(
+      const SdpVideoFormat& format) override;
+
+  // Returns a list of supported codecs in order of preference.
+  std::vector<SdpVideoFormat> GetSupportedFormats() const override;
+
+  std::vector<SdpVideoFormat> GetImplementations() const override;
+
+  std::unique_ptr<EncoderSelectorInterface> GetEncoderSelector() const override;
+
+ private:
+  const ScopedJavaGlobalRef<jobject> encoder_factory_;
+  std::vector<SdpVideoFormat> supported_formats_;
+  std::vector<SdpVideoFormat> implementations_;
+};
+
+}  // namespace jni
+}  // namespace webrtc
+
+#endif  // SDK_ANDROID_SRC_JNI_VIDEO_ENCODER_FACTORY_WRAPPER_H_

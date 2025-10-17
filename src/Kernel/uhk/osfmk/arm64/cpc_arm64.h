@@ -1,0 +1,76 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, January 19, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+// Copyright (c) 2023 Apple Inc. All rights reserved.
+//
+// @APPLE_OSREFERENCE_LICENSE_HEADER_START@
+//
+// This file contains Original Code and/or Modifications of Original Code
+// as defined in and that are subject to the Apple Public Source License
+// Version 2.0 (the 'License'). You may not use this file except in
+// compliance with the License. The rights granted to you under the License
+// may not be used to create, or enable the creation or redistribution of,
+// unlawful or unlicensed copies of an Apple operating system, or to
+// circumvent, violate, or enable the circumvention or violation of, any
+// terms of an Apple operating system software license agreement.
+//
+// Please obtain a copy of the License at
+// http://www.opensource.apple.com/apsl/ and read it before using this file.
+//
+// The Original Code and all software distributed under the License are
+// distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
+// EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
+// INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
+// Please see the License for the specific language governing rights and
+// limitations under the License.
+//
+// @APPLE_OSREFERENCE_LICENSE_HEADER_END@
+
+#pragma once
+
+#include <os/base.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <kern/cpc.h>
+
+__enum_closed_decl(cpc_event_policy_t, unsigned int, {
+	CPC_EVPOL_DENY_ALL = 0,
+	CPC_EVPOL_ALLOW_ALL,
+	CPC_EVPOL_RESTRICT_TO_KNOWN,
+#if CPC_INSECURE
+	CPC_EVPOL_DEFAULT = CPC_EVPOL_ALLOW_ALL,
+#else // CPC_INSECURE
+	CPC_EVPOL_DEFAULT = CPC_EVPOL_RESTRICT_TO_KNOWN,
+#endif // !CPC_INSECURE
+});
+
+cpc_event_policy_t cpc_get_event_policy(void);
+
+/// Change how event restrictions are applied.
+///
+/// - Parameters:
+///   - new_policy: The event policy to start applying indefinitely.
+void cpc_set_event_policy(cpc_event_policy_t new_policy);

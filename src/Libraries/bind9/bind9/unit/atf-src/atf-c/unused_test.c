@@ -1,0 +1,51 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, May 5, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <atf-c/macros.h>
+
+ATF_TC(this_is_used);
+ATF_TC_HEAD(this_is_used, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "A test case that is not referenced");
+}
+ATF_TC_BODY(this_is_used, tc)
+{
+}
+
+ATF_TC(this_is_unused);
+ATF_TC_HEAD(this_is_unused, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "A test case that is referenced");
+}
+ATF_TC_BODY(this_is_unused, tc)
+{
+}
+
+ATF_TP_ADD_TCS(tp)
+{
+    ATF_TP_ADD_TC(tp, this_is_used);
+    /* ATF_TP_ADD_TC(tp, this_is_unused); */
+
+    return atf_no_error();
+}

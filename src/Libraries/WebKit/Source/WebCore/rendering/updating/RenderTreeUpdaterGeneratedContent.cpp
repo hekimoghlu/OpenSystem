@@ -1,0 +1,389 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, November 26, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "RenderTreeUpdaterGeneratedContent.h"
+
+#include "ContentData.h"
+#include "Editor.h"
+#include "ElementInlines.h"
+#include "InspectorInstrumentation.h"
+#include "KeyframeEffectStack.h"
+#include "PseudoElement.h"
+#include "RenderCounter.h"
+#include "RenderDescendantIterator.h"
+#include "RenderElement.h"
+#include "RenderImage.h"
+#include "RenderQuote.h"
+#include "RenderStyleInlines.h"
+#include "RenderTreeUpdater.h"
+#include "RenderView.h"
+#include "StyleTreeResolver.h"
+#include "WritingSuggestionData.h"
+#include <wtf/TZoneMallocInlines.h>
+
+namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeUpdater::GeneratedContent);
+
+RenderTreeUpdater::GeneratedContent::GeneratedContent(RenderTreeUpdater& updater)
+    : m_updater(updater)
+{
+}
+
+void RenderTreeUpdater::GeneratedContent::updateRemainingQuotes()
+{
+    if (!m_updater.renderView().hasQuotesNeedingUpdate())
+        return;
+    updateQuotesUpTo(nullptr);
+    m_previousUpdatedQuote = nullptr;
+    m_updater.renderView().setHasQuotesNeedingUpdate(false);
+}
+
+void RenderTreeUpdater::GeneratedContent::updateQuotesUpTo(RenderQuote* lastQuote)
+{
+    auto quoteRenderers = descendantsOfType<RenderQuote>(m_updater.renderView());
+    auto it = m_previousUpdatedQuote ? ++quoteRenderers.at(*m_previousUpdatedQuote) : quoteRenderers.begin();
+    auto end = quoteRenderers.end();
+    for (; it != end; ++it) {
+        auto& quote = *it;
+        // Quote character depends on quote depth so we chain the updates.
+        quote.updateRenderer(m_updater.m_builder, m_previousUpdatedQuote.get());
+        m_previousUpdatedQuote = quote;
+        if (&quote == lastQuote)
+            return;
+    }
+    ASSERT(!lastQuote || m_updater.m_builder.hasBrokenContinuation());
+}
+
+void RenderTreeUpdater::GeneratedContent::updateCounters()
+{
+    auto update = [&] {
+        auto counters = m_updater.renderView().takeCountersNeedingUpdate();
+        for (auto& counter : counters)
+            counter.updateCounter();
+    };
+    // Update twice and hope it stabilizes.
+    update();
+    update();
+}
+
+static KeyframeEffectStack* keyframeEffectStackForElementAndPseudoId(const Element& element, PseudoId pseudoId)
+{
+    return element.keyframeEffectStack(pseudoId == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { pseudoId }));
+}
+
+static bool elementIsTargetedByKeyframeEffectRequiringPseudoElement(const Element* element, PseudoId pseudoId)
+{
+    if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
+        return elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoElement->hostElement(), pseudoId);
+
+    if (element) {
+        if (auto* stack = keyframeEffectStackForElementAndPseudoId(*element, pseudoId))
+            return stack->requiresPseudoElement();
+    }
+
+    return false;
+}
+
+static bool elementHasDisplayAnimationForPseudoId(const Element& element, PseudoId pseudoId)
+{
+    if (auto* stack = keyframeEffectStackForElementAndPseudoId(element, pseudoId))
+        return stack->containsProperty(CSSPropertyDisplay);
+    return false;
+}
+
+static void createContentRenderers(RenderTreeBuilder& builder, RenderElement& pseudoRenderer, const RenderStyle& style, PseudoId pseudoId)
+{
+    if (auto* contentData = style.contentData()) {
+        for (const ContentData* content = contentData; content; content = content->next()) {
+            auto child = content->createContentRenderer(pseudoRenderer.document(), style);
+            if (pseudoRenderer.isChildAllowed(*child, style))
+                builder.attach(pseudoRenderer, WTFMove(child));
+        }
+    } else {
+        // The only valid scenario where this method is called without the "content" property being set
+        // is the case where a pseudo-element has animations set on it via the Web Animations API.
+        ASSERT_UNUSED(pseudoId, elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoRenderer.element(), pseudoId));
+    }
+}
+
+static void updateStyleForContentRenderers(RenderElement& pseudoRenderer, const RenderStyle& style)
+{
+    for (auto& contentRenderer : descendantsOfType<RenderElement>(pseudoRenderer)) {
+        // We only manage the style for the generated content which must be images or text.
+        if (!is<RenderImage>(contentRenderer) && !is<RenderQuote>(contentRenderer))
+            continue;
+        contentRenderer.setStyle(RenderStyle::createStyleInheritingFromPseudoStyle(style));
+    }
+}
+
+void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, const Style::ElementUpdate& elementUpdate, PseudoId pseudoId)
+{
+    PseudoElement* pseudoElement = pseudoId == PseudoId::Before ? current.beforePseudoElement() : current.afterPseudoElement();
+
+    if (auto* renderer = pseudoElement ? pseudoElement->renderer() : nullptr)
+        m_updater.renderTreePosition().invalidateNextSibling(*renderer);
+
+    auto* updateStyle = elementUpdate.style ? elementUpdate.style->getCachedPseudoStyle({ pseudoId }) : nullptr;
+
+    if (!needsPseudoElement(updateStyle) && !elementIsTargetedByKeyframeEffectRequiringPseudoElement(&current, pseudoId) && !elementHasDisplayAnimationForPseudoId(current, pseudoId)) {
+        if (pseudoElement) {
+            if (pseudoId == PseudoId::Before)
+                removeBeforePseudoElement(current, m_updater.m_builder);
+            else
+                removeAfterPseudoElement(current, m_updater.m_builder);
+        }
+        return;
+    }
+
+    if (!updateStyle)
+        return;
+
+    auto* existingStyle = pseudoElement ? pseudoElement->renderOrDisplayContentsStyle() : nullptr;
+
+    auto styleChange = existingStyle ? Style::determineChange(*updateStyle, *existingStyle) : Style::Change::Renderer;
+    if (styleChange == Style::Change::None)
+        return;
+
+    pseudoElement = &current.ensurePseudoElement(pseudoId);
+
+    if (updateStyle->display() == DisplayType::Contents) {
+        // For display:contents we create an inline wrapper that inherits its
+        // style from the display:contents style.
+        auto contentsStyle = RenderStyle::createPtr();
+        contentsStyle->setPseudoElementType(pseudoId);
+        contentsStyle->inheritFrom(*updateStyle);
+        contentsStyle->copyContentFrom(*updateStyle);
+        contentsStyle->copyPseudoElementsFrom(*updateStyle);
+
+        Style::ElementUpdate contentsUpdate { WTFMove(contentsStyle), styleChange, elementUpdate.recompositeLayer };
+        m_updater.updateElementRenderer(*pseudoElement, WTFMove(contentsUpdate));
+        auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
+        pseudoElement->storeDisplayContentsOrNoneStyle(makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)));
+    } else {
+        auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
+        Style::ElementUpdate pseudoElementUpdate { makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)), styleChange, elementUpdate.recompositeLayer };
+        m_updater.updateElementRenderer(*pseudoElement, WTFMove(pseudoElementUpdate));
+        if (updateStyle->display() == DisplayType::None) {
+            auto pseudoElementUpdateStyle = RenderStyle::cloneIncludingPseudoElements(*updateStyle);
+            pseudoElement->storeDisplayContentsOrNoneStyle(makeUnique<RenderStyle>(WTFMove(pseudoElementUpdateStyle)));
+        } else
+            pseudoElement->clearDisplayContentsOrNoneStyle();
+    }
+
+    auto* pseudoElementRenderer = pseudoElement->renderer();
+    if (!pseudoElementRenderer)
+        return;
+
+    if (styleChange == Style::Change::Renderer)
+        createContentRenderers(m_updater.m_builder, *pseudoElementRenderer, *updateStyle, pseudoId);
+    else
+        updateStyleForContentRenderers(*pseudoElementRenderer, *updateStyle);
+
+    if (m_updater.renderView().hasQuotesNeedingUpdate()) {
+        for (auto& child : descendantsOfType<RenderQuote>(*pseudoElementRenderer))
+            updateQuotesUpTo(&child);
+    }
+    m_updater.m_builder.updateAfterDescendants(*pseudoElementRenderer);
+}
+
+void RenderTreeUpdater::GeneratedContent::updateBackdropRenderer(RenderElement& renderer, StyleDifference minimalStyleDifference)
+{
+    auto destroyBackdropIfNeeded = [&renderer, this]() {
+        if (WeakPtr backdropRenderer = renderer.backdropRenderer())
+            m_updater.m_builder.destroy(*backdropRenderer);
+    };
+
+    // Intentionally bail out early here to avoid computing the style.
+    if (!renderer.element() || !renderer.element()->isInTopLayer()) {
+        destroyBackdropIfNeeded();
+        return;
+    }
+
+    auto style = renderer.getCachedPseudoStyle({ PseudoId::Backdrop }, &renderer.style());
+    if (!style || style->display() == DisplayType::None) {
+        destroyBackdropIfNeeded();
+        return;
+    }
+
+    auto newStyle = RenderStyle::clone(*style);
+    if (auto backdropRenderer = renderer.backdropRenderer())
+        backdropRenderer->setStyle(WTFMove(newStyle), minimalStyleDifference);
+    else {
+        auto newBackdropRenderer = WebCore::createRenderer<RenderBlockFlow>(RenderObject::Type::BlockFlow, renderer.document(), WTFMove(newStyle));
+        newBackdropRenderer->initializeStyle();
+        renderer.setBackdropRenderer(*newBackdropRenderer.get());
+        m_updater.m_builder.attach(renderer.view(), WTFMove(newBackdropRenderer));
+    }
+}
+
+bool RenderTreeUpdater::GeneratedContent::needsPseudoElement(const RenderStyle* style)
+{
+    if (!style)
+        return false;
+    if (!m_updater.renderTreePosition().parent().canHaveGeneratedChildren())
+        return false;
+    if (!pseudoElementRendererIsNeeded(style))
+        return false;
+    return true;
+}
+
+void RenderTreeUpdater::GeneratedContent::removeBeforePseudoElement(Element& element, RenderTreeBuilder& builder)
+{
+    auto* pseudoElement = element.beforePseudoElement();
+    if (!pseudoElement)
+        return;
+    tearDownRenderers(*pseudoElement, TeardownType::Full, builder);
+    element.clearBeforePseudoElement();
+}
+
+void RenderTreeUpdater::GeneratedContent::removeAfterPseudoElement(Element& element, RenderTreeBuilder& builder)
+{
+    auto* pseudoElement = element.afterPseudoElement();
+    if (!pseudoElement)
+        return;
+    tearDownRenderers(*pseudoElement, TeardownType::Full, builder);
+    element.clearAfterPseudoElement();
+}
+
+void RenderTreeUpdater::GeneratedContent::updateWritingSuggestionsRenderer(RenderElement& renderer, StyleDifference minimalStyleDifference)
+{
+    auto destroyWritingSuggestionsIfNeeded = [&renderer, this]() {
+        if (!renderer.element())
+            return;
+
+        auto& editor = renderer.element()->document().editor();
+
+        if (WeakPtr writingSuggestionsRenderer = editor.writingSuggestionRenderer())
+            m_updater.m_builder.destroy(*writingSuggestionsRenderer);
+    };
+
+    if (!renderer.canHaveChildren())
+        return;
+
+    if (!renderer.element())
+        return;
+
+    auto& editor = renderer.element()->document().editor();
+    RefPtr nodeBeforeWritingSuggestions = editor.nodeBeforeWritingSuggestions();
+    if (!nodeBeforeWritingSuggestions)
+        return;
+
+    if (renderer.element() != nodeBeforeWritingSuggestions->parentElement())
+        return;
+
+    auto* writingSuggestionData = editor.writingSuggestionData();
+    if (!writingSuggestionData) {
+        destroyWritingSuggestionsIfNeeded();
+        return;
+    }
+
+    auto style = renderer.getCachedPseudoStyle({ PseudoId::InternalWritingSuggestions }, &renderer.style());
+    if (!style || style->display() == DisplayType::None) {
+        destroyWritingSuggestionsIfNeeded();
+        return;
+    }
+
+    WeakPtr nodeBeforeWritingSuggestionsTextRenderer = dynamicDowncast<RenderText>(nodeBeforeWritingSuggestions->renderer());
+    if (!nodeBeforeWritingSuggestionsTextRenderer) {
+        destroyWritingSuggestionsIfNeeded();
+        return;
+    }
+
+    WeakPtr parentForWritingSuggestions = nodeBeforeWritingSuggestionsTextRenderer->parent();
+    if (!parentForWritingSuggestions) {
+        destroyWritingSuggestionsIfNeeded();
+        return;
+    }
+
+    auto textWithoutSuggestion = nodeBeforeWritingSuggestionsTextRenderer->text();
+
+    auto [prefix, suffix] = [&] -> std::pair<String, String> {
+        if (!writingSuggestionData->supportsSuffix())
+            return { textWithoutSuggestion, emptyString() };
+
+        auto offset = writingSuggestionData->offset();
+        return { textWithoutSuggestion.substring(0, offset), textWithoutSuggestion.substring(offset) };
+    }();
+
+    nodeBeforeWritingSuggestionsTextRenderer->setText(prefix);
+
+    auto newStyle = RenderStyle::clone(*style);
+    newStyle.setDisplay(DisplayType::Inline);
+
+    if (auto writingSuggestionsRenderer = editor.writingSuggestionRenderer()) {
+        writingSuggestionsRenderer->setStyle(WTFMove(newStyle), minimalStyleDifference);
+
+        auto* writingSuggestionsText = dynamicDowncast<RenderText>(writingSuggestionsRenderer->firstChild());
+        if (!writingSuggestionsText) {
+            ASSERT_NOT_REACHED();
+            destroyWritingSuggestionsIfNeeded();
+            return;
+        }
+
+        writingSuggestionsText->setText(writingSuggestionData->content());
+
+        if (!suffix.isEmpty()) {
+            auto* suffixText = dynamicDowncast<RenderText>(writingSuggestionsRenderer->nextSibling());
+            if (!suffixText) {
+                ASSERT_NOT_REACHED();
+                destroyWritingSuggestionsIfNeeded();
+                return;
+            }
+
+            suffixText->setText(suffix);
+        }
+    } else {
+        auto newWritingSuggestionsRenderer = WebCore::createRenderer<RenderInline>(RenderObject::Type::Inline, renderer.document(), WTFMove(newStyle));
+        newWritingSuggestionsRenderer->initializeStyle();
+
+        WeakPtr rendererAfterWritingSuggestions = nodeBeforeWritingSuggestionsTextRenderer->nextSibling();
+
+        auto writingSuggestionsText = WebCore::createRenderer<RenderText>(RenderObject::Type::Text, renderer.document(), writingSuggestionData->content());
+        m_updater.m_builder.attach(*newWritingSuggestionsRenderer, WTFMove(writingSuggestionsText));
+
+        editor.setWritingSuggestionRenderer(*newWritingSuggestionsRenderer.get());
+        m_updater.m_builder.attach(*parentForWritingSuggestions, WTFMove(newWritingSuggestionsRenderer), rendererAfterWritingSuggestions.get());
+
+        if (!parentForWritingSuggestions) {
+            destroyWritingSuggestionsIfNeeded();
+            return;
+        }
+
+        auto* prefixNode = nodeBeforeWritingSuggestionsTextRenderer->textNode();
+        if (!prefixNode) {
+            ASSERT_NOT_REACHED();
+            destroyWritingSuggestionsIfNeeded();
+            return;
+        }
+
+        if (!suffix.isEmpty()) {
+            auto suffixRenderer = WebCore::createRenderer<RenderText>(RenderObject::Type::Text, *prefixNode, suffix);
+            m_updater.m_builder.attach(*parentForWritingSuggestions, WTFMove(suffixRenderer), rendererAfterWritingSuggestions.get());
+        }
+    }
+}
+
+}

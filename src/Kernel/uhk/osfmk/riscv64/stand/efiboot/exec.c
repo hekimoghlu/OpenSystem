@@ -1,0 +1,112 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, February 3, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Copyright (c) 2006, 2016 Mark Kettenis
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#include <sys/param.h>
+#include <sys/reboot.h>
+#include <dev/cons.h>
+
+#include <lib/libkern/libkern.h>
+#include <lib/libsa/loadfile.h>
+#include <sys/exec_elf.h>
+
+#include <efi.h>
+#include <stand/boot/cmd.h>
+
+#include "efiboot.h"
+#include "libsa.h"
+#include "fdt.h"
+
+typedef void (*startfuncp)(void *, void *, void *) __attribute__ ((noreturn));
+
+unsigned int cpu_get_dcache_line_size(void);
+void cpu_flush_dcache(vaddr_t, vsize_t);
+void cpu_inval_icache(void);
+
+void
+cpu_flush_dcache(vaddr_t addr, vsize_t len)
+{
+	__asm volatile("fence" ::: "memory");
+}
+
+void
+cpu_inval_icache(void)
+{
+	__asm volatile("fence.i" ::: "memory");
+}
+
+void
+run_loadfile(uint64_t *marks, int howto)
+{
+	char args[256];
+	char *cp;
+	void *fdt;
+
+	strlcpy(args, cmd.path, sizeof(args));
+	cp = args + strlen(args);
+
+	*cp++ = ' ';
+	*cp = '-';
+	if (howto & RB_ASKNAME)
+		*++cp = 'a';
+	if (howto & RB_CONFIG)
+		*++cp = 'c';
+	if (howto & RB_SINGLE)
+		*++cp = 's';
+	if (howto & RB_KDB)
+		*++cp = 'd';
+	if (*cp == '-')
+		*--cp = 0;
+	else
+		*++cp = 0;
+
+	fdt = efi_makebootargs(args, howto);
+
+	efi_cleanup();
+
+	cpu_flush_dcache(marks[MARK_ENTRY], marks[MARK_END] - marks[MARK_ENTRY]);
+	cpu_inval_icache();
+
+	cpu_flush_dcache((vaddr_t)fdt, fdt_get_size(fdt));
+
+	(*(startfuncp)(marks[MARK_ENTRY]))((void *)marks[MARK_END], 0, fdt);
+
+	/* NOTREACHED */
+}
+

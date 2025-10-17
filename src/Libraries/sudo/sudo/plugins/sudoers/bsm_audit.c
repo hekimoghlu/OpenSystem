@@ -1,0 +1,288 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, May 30, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * This is an open source non-commercial project. Dear PVS-Studio, please check it.
+ * PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+ */
+
+#include <config.h>
+
+#ifdef HAVE_BSM_AUDIT
+
+#include <sys/types.h>		/* for pid_t */
+
+#include <bsm/audit.h>
+#include <bsm/libbsm.h>
+#include <bsm/audit_uevents.h>
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include "sudoers.h"
+#include "bsm_audit.h"
+
+/*
+ * Solaris auditon() returns EINVAL if BSM audit not configured.
+ * OpenBSM returns ENOSYS for unimplemented options.
+ */
+#ifdef __sun
+# define AUDIT_NOT_CONFIGURED	EINVAL
+#else
+# define AUDIT_NOT_CONFIGURED	ENOSYS
+#endif
+
+#ifdef __FreeBSD__
+# define BSM_AUDIT_COMPAT
+#endif
+
+static au_event_t sudo_audit_event = AUE_sudo;
+
+static int
+audit_sudo_selected(int sorf)
+{
+	auditinfo_addr_t ainfo_addr;
+	struct au_mask *mask;
+	int rc;
+	debug_decl(audit_sudo_selected, SUDOERS_DEBUG_AUDIT);
+
+	if (getaudit_addr(&ainfo_addr, sizeof(ainfo_addr)) < 0) {
+#ifdef BSM_AUDIT_COMPAT
+		if (errno == ENOSYS) {
+			auditinfo_t ainfo;
+
+			/* Fall back to older BSM API. */
+			if (getaudit(&ainfo) < 0) {
+				sudo_warn("getaudit");
+				debug_return_int(-1);
+			}
+			mask = &ainfo.ai_mask;
+		} else
+#endif /* BSM_AUDIT_COMPAT */
+		{
+			sudo_warn("getaudit_addr");
+			debug_return_int(-1);
+		}
+        } else {
+		mask = &ainfo_addr.ai_mask;
+	}
+	rc = au_preselect(sudo_audit_event, mask, sorf, AU_PRS_REREAD);
+	if (rc == -1) {
+#if defined(__APPLE__) && defined(AUE_DARWIN_sudo)
+	    /*
+	     * Mac OS X 10.10 au_preselect() only accepts AUE_DARWIN_sudo.
+	     */
+	    sudo_audit_event = AUE_DARWIN_sudo;
+	    rc = au_preselect(sudo_audit_event, mask, sorf, AU_PRS_REREAD);
+	    if (rc == -1)
+#endif
+
+		sudo_warn("au_preselect");
+	}
+        debug_return_int(rc);
+}
+
+/*
+ * Returns 0 on success or -1 on error.
+ */
+int
+bsm_audit_success(char *const exec_args[])
+{
+	auditinfo_addr_t ainfo_addr;
+	token_t *tok;
+	au_id_t auid;
+	long au_cond;
+	int aufd, selected;
+	pid_t pid;
+	debug_decl(bsm_audit_success, SUDOERS_DEBUG_AUDIT);
+
+	/*
+	 * If we are not auditing, don't cut an audit record; just return.
+	 */
+	if (auditon(A_GETCOND, (caddr_t)&au_cond, sizeof(long)) < 0) {
+		if (errno == AUDIT_NOT_CONFIGURED)
+			debug_return_int(0);
+		sudo_warn("%s", U_("Could not determine audit condition"));
+		debug_return_int(-1);
+	}
+	if (au_cond == AUC_NOAUDIT)
+		debug_return_int(0);
+	/*
+	 * Check to see if the preselection masks are interested in seeing
+	 * this event.
+	 */
+	selected = audit_sudo_selected(AU_PRS_SUCCESS);
+	if (selected != 1)
+		debug_return_int(!selected ? 0 : -1);
+	if (getauid(&auid) < 0) {
+		sudo_warn("getauid");
+		debug_return_int(-1);
+	}
+	if ((aufd = au_open()) == -1) {
+		sudo_warn("au_open");
+		debug_return_int(-1);
+	}
+	pid = getpid();
+	if (getaudit_addr(&ainfo_addr, sizeof(ainfo_addr)) == 0) {
+		tok = au_to_subject_ex(auid, geteuid(), getegid(), getuid(),
+		    getuid(), pid, pid, &ainfo_addr.ai_termid);
+#ifdef BSM_AUDIT_COMPAT
+	} else if (errno == ENOSYS) {
+		auditinfo_t ainfo;
+
+		/*
+		 * NB: We should probably watch out for ERANGE here.
+		 */
+		if (getaudit(&ainfo) < 0) {
+			sudo_warn("getaudit");
+			debug_return_int(-1);
+		}
+		tok = au_to_subject(auid, geteuid(), getegid(), getuid(),
+		    getuid(), pid, pid, &ainfo.ai_termid);
+#endif /* BSM_AUDIT_COMPAT */
+	} else {
+		sudo_warn("getaudit_addr");
+		debug_return_int(-1);
+	}
+	if (tok == NULL) {
+		sudo_warn("au_to_subject");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+	tok = au_to_exec_args((char **)exec_args);
+	if (tok == NULL) {
+		sudo_warn("au_to_exec_args");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+	tok = au_to_return32(0, 0);
+	if (tok == NULL) {
+		sudo_warn("au_to_return32");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+#ifdef HAVE_AU_CLOSE_SOLARIS11
+	if (au_close(aufd, 1, sudo_audit_event, 0) == -1)
+#else
+	if (au_close(aufd, 1, sudo_audit_event) == -1)
+#endif
+	{
+		sudo_warn("%s", U_("unable to commit audit record"));
+		debug_return_int(-1);
+	}
+	debug_return_int(0);
+}
+
+/*
+ * Returns 0 on success or -1 on error.
+ */
+int
+bsm_audit_failure(char *const exec_args[], const char *errmsg)
+{
+	auditinfo_addr_t ainfo_addr;
+	token_t *tok;
+	long au_cond;
+	au_id_t auid;
+	pid_t pid;
+	int aufd;
+	debug_decl(bsm_audit_failure, SUDOERS_DEBUG_AUDIT);
+
+	/*
+	 * If we are not auditing, don't cut an audit record; just return.
+	 */
+	if (auditon(A_GETCOND, (caddr_t)&au_cond, sizeof(long)) < 0) {
+		if (errno == AUDIT_NOT_CONFIGURED)
+			debug_return_int(0);
+		sudo_warn("%s", U_("Could not determine audit condition"));
+		debug_return_int(-1);
+	}
+	if (au_cond == AUC_NOAUDIT)
+		debug_return_int(0);
+	if (!audit_sudo_selected(AU_PRS_FAILURE))
+		debug_return_int(0);
+	if (getauid(&auid) < 0) {
+		sudo_warn("getauid");
+		debug_return_int(-1);
+	}
+	if ((aufd = au_open()) == -1) {
+		sudo_warn("au_open");
+		debug_return_int(-1);
+	}
+	pid = getpid();
+	if (getaudit_addr(&ainfo_addr, sizeof(ainfo_addr)) == 0) { 
+		tok = au_to_subject_ex(auid, geteuid(), getegid(), getuid(),
+		    getuid(), pid, pid, &ainfo_addr.ai_termid);
+#ifdef BSM_AUDIT_COMPAT
+	} else if (errno == ENOSYS) {
+		auditinfo_t ainfo;
+
+		if (getaudit(&ainfo) < 0) {
+			sudo_warn("getaudit");
+			debug_return_int(-1);
+		}
+		tok = au_to_subject(auid, geteuid(), getegid(), getuid(),
+		    getuid(), pid, pid, &ainfo.ai_termid);
+#endif /* BSM_AUDIT_COMPAT */
+	} else {
+		sudo_warn("getaudit_addr");
+		debug_return_int(-1);
+	}
+	if (tok == NULL) {
+		sudo_warn("au_to_subject");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+	tok = au_to_exec_args((char **)exec_args);
+	if (tok == NULL) {
+		sudo_warn("au_to_exec_args");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+	tok = au_to_text((char *)errmsg);
+	if (tok == NULL) {
+		sudo_warn("au_to_text");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+	tok = au_to_return32(EPERM, 1);
+	if (tok == NULL) {
+		sudo_warn("au_to_return32");
+		debug_return_int(-1);
+	}
+	au_write(aufd, tok);
+#ifdef HAVE_AU_CLOSE_SOLARIS11
+	if (au_close(aufd, 1, sudo_audit_event, PAD_FAILURE) == -1)
+#else
+	if (au_close(aufd, 1, sudo_audit_event) == -1)
+#endif
+	{
+		sudo_warn("%s", U_("unable to commit audit record"));
+		debug_return_int(-1);
+	}
+	debug_return_int(0);
+}
+
+#endif /* HAVE_BSM_AUDIT */

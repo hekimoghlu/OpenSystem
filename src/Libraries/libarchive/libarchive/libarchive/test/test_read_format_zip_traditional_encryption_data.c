@@ -1,0 +1,166 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, December 26, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "test.h"
+
+DEFINE_TEST(test_read_format_zip_traditional_encryption_data)
+{
+	/* This file is password protected (Traditional PKWARE Encrypted).
+	   The headers are NOT encrypted. Password is "12345678". */
+	const char *refname =
+		"test_read_format_zip_traditional_encryption_data.zip";
+	struct archive_entry *ae;
+	struct archive *a;
+	char buff[512];
+
+	/* Check if running system has cryptographic functionality. */
+	assert((a = archive_write_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_set_format_zip(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_write_add_filter_none(a));
+	if (ARCHIVE_OK != archive_write_set_options(a,
+				"zip:encryption=traditional")) {
+		skipping("This system does not have cryptographic liberary");
+		archive_write_free(a);
+		return;
+	}
+	archive_write_free(a);
+
+
+	extract_reference_file(refname);
+
+	/*
+	 * Extract a zip file without password.
+	 */
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, 
+               archive_read_open_filename(a, refname, 10240));
+
+	assertEqualIntA(a, ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW,
+		archive_read_has_encrypted_entries(a));
+
+	/* Verify encrypted file "bar.txt" */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
+	assertEqualString("bar.txt", archive_entry_pathname(ae));
+	assertEqualInt(495, archive_entry_size(ae));
+	assertEqualInt(1, archive_entry_is_data_encrypted(ae));
+	assertEqualInt(0, archive_entry_is_metadata_encrypted(ae));
+	assertEqualIntA(a, 1, archive_read_has_encrypted_entries(a));
+	assertEqualInt(ARCHIVE_FAILED, archive_read_data(a, buff, sizeof(buff)));
+	
+	/* Verify encrypted file "foo.txt" */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
+	assertEqualString("foo.txt", archive_entry_pathname(ae));
+	assertEqualInt(495, archive_entry_size(ae));
+	assertEqualInt(1, archive_entry_is_data_encrypted(ae));
+	assertEqualInt(0, archive_entry_is_metadata_encrypted(ae));
+	assertEqualIntA(a, 1, archive_read_has_encrypted_entries(a));
+	assertEqualInt(ARCHIVE_FAILED, archive_read_data(a, buff, sizeof(buff)));
+	
+	assertEqualInt(2, archive_file_count(a));
+
+	/* End of archive. */
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+
+	/* Verify archive format. */
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
+	assertEqualIntA(a, ARCHIVE_FORMAT_ZIP, archive_format(a));
+
+	/* Close the archive. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+
+
+	/*
+	 * Extract a zip file with password.
+	 */
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+	/* Pass three passphrases to decrypt a file content. */
+	assertEqualIntA(a, ARCHIVE_OK,
+		archive_read_add_passphrase(a, "invalid_pass"));
+	assertEqualIntA(a, ARCHIVE_OK,
+		archive_read_add_passphrase(a, "invalid_phrase"));
+	assertEqualIntA(a, ARCHIVE_OK,
+		archive_read_add_passphrase(a, "12345678"));
+	assertEqualIntA(a, ARCHIVE_OK, 
+		archive_read_open_filename(a, refname, 10240));
+
+	assertEqualIntA(a, ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW,
+		archive_read_has_encrypted_entries(a));
+
+	/* Verify encrypted file "bar.txt" */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
+	assertEqualString("bar.txt", archive_entry_pathname(ae));
+	assertEqualInt(495, archive_entry_size(ae));
+	assertEqualInt(1, archive_entry_is_data_encrypted(ae));
+	assertEqualInt(0, archive_entry_is_metadata_encrypted(ae));
+	assertEqualIntA(a, 1, archive_read_has_encrypted_entries(a));
+	if (archive_zlib_version() != NULL) {
+		assertEqualInt(495, archive_read_data(a, buff, sizeof(buff)));
+	} else {
+		assertEqualInt(ARCHIVE_FAILED,
+		    archive_read_data(a, buff, sizeof(buff)));
+		assertEqualString(archive_error_string(a),
+		    "Unsupported ZIP compression method (8: deflation)");
+		assert(archive_errno(a) != 0);
+	}
+	
+	/* Verify encrypted file "foo.txt" */
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
+	assertEqualInt((AE_IFREG | 0644), archive_entry_mode(ae));
+	assertEqualString("foo.txt", archive_entry_pathname(ae));
+	assertEqualInt(495, archive_entry_size(ae));
+	assertEqualInt(1, archive_entry_is_data_encrypted(ae));
+	assertEqualInt(0, archive_entry_is_metadata_encrypted(ae));
+	assertEqualIntA(a, 1, archive_read_has_encrypted_entries(a));
+	if (archive_zlib_version() != NULL) {
+		assertEqualInt(495, archive_read_data(a, buff, sizeof(buff)));
+	} else {
+		assertEqualInt(ARCHIVE_FAILED,
+		    archive_read_data(a, buff, sizeof(buff)));
+		assertEqualString(archive_error_string(a),
+		    "Unsupported ZIP compression method (8: deflation)");
+		assert(archive_errno(a) != 0);
+	}
+	
+	assertEqualInt(2, archive_file_count(a));
+
+	/* End of archive. */
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
+
+	/* Verify archive format. */
+	assertEqualIntA(a, ARCHIVE_FILTER_NONE, archive_filter_code(a, 0));
+	assertEqualIntA(a, ARCHIVE_FORMAT_ZIP, archive_format(a));
+
+	/* Close the archive. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}
+

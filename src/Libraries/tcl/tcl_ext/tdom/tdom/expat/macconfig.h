@@ -1,0 +1,67 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, January 11, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef MACCONFIG_H
+#define MACCONFIG_H
+
+
+/* 1234 = LIL_ENDIAN, 4321 = BIGENDIAN */
+#define BYTEORDER  4321
+
+/* Define to 1 if you have the `bcopy' function. */
+#undef HAVE_BCOPY
+
+/* Define to 1 if you have the `memmove' function. */
+#define HAVE_MEMMOVE
+
+/* Define to 1 if you have a working `mmap' system call. */
+#undef HAVE_MMAP
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* whether byteorder is bigendian */
+#define WORDS_BIGENDIAN
+
+/* Define to specify how much context to retain around the current parse
+   point. */
+#undef XML_CONTEXT_BYTES
+
+/* Define to make parameter entity parsing functionality available. */
+#define XML_DTD
+
+/* Define to make XML Namespaces functionality available. */
+#define XML_NS
+
+/* Define to empty if `const' does not conform to ANSI C. */
+#undef const
+
+/* Define to `long' if <sys/types.h> does not define. */
+#define off_t  long
+
+/* Define to `unsigned' if <sys/types.h> does not define. */
+#undef size_t
+
+
+#endif /* ifndef MACCONFIG_H */

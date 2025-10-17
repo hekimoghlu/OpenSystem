@@ -1,0 +1,109 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, December 25, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#ifndef TEST_INTEROP_CXX_STDLIB_INPUTS_STD_UNIQUE_PTR_H
+#define TEST_INTEROP_CXX_STDLIB_INPUTS_STD_UNIQUE_PTR_H
+
+#include <memory>
+#include <string>
+
+struct NonCopyable {
+    NonCopyable(int x) : x(x) {}
+    NonCopyable(const NonCopyable &) = delete;
+    NonCopyable(NonCopyable &&other) : x(other.x) { other.x = -123; }
+
+    int method(int y) const { return x * y; }
+    int mutMethod(int y) {
+      x = y;
+      return y;
+    }
+
+    int x;
+};
+
+struct NonCopyableDerived: public NonCopyable {
+    NonCopyableDerived(int x) : NonCopyable(x) {}
+};
+
+
+inline std::shared_ptr<NonCopyable> getNonCopyableSharedPtr() { return std::make_shared<NonCopyableDerived>(42); }
+inline std::unique_ptr<NonCopyable> getNonCopyableUniquePtr() { return std::make_unique<NonCopyableDerived>(42); }
+
+std::unique_ptr<int> makeInt() {
+  return std::make_unique<int>(42);
+}
+
+std::unique_ptr<std::string> makeString() {
+  return std::make_unique<std::string>("Unique string");
+}
+
+std::unique_ptr<int[]> makeArray() {
+  int *array = new int[3];
+  array[0] = 1;
+  array[1] = 2;
+  array[2] = 3;
+  return std::unique_ptr<int[]>(array);
+}
+
+static bool dtorCalled = false;
+struct HasDtor {
+  HasDtor() = default;
+#if __is_target_os(windows)
+  // On windows, force this type to be address-only.
+  HasDtor(const HasDtor &other);
+#endif
+  ~HasDtor() {
+    dtorCalled = true;
+  }
+private:
+  int x;
+};
+
+std::unique_ptr<HasDtor> makeDtor() {
+  return std::make_unique<HasDtor>();
+}
+
+std::shared_ptr<int> makeIntShared() { return std::make_unique<int>(42); }
+
+std::shared_ptr<std::string> makeStringShared() {
+  return std::make_unique<std::string>("Shared string");
+}
+
+static int copies = 0;
+
+struct CountCopies {
+  CountCopies() = default;
+  CountCopies(const CountCopies& other) { ++copies; }
+  ~CountCopies() {}
+
+  int getCopies() const { return copies; }
+  void method() {}
+  void constMethod() const {}
+  int field = 42;
+};
+
+inline std::unique_ptr<CountCopies> getCopyCountedUniquePtr() { return std::make_unique<CountCopies>(); }
+
+#endif // TEST_INTEROP_CXX_STDLIB_INPUTS_STD_UNIQUE_PTR_H

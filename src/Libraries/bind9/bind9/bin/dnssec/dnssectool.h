@@ -1,0 +1,114 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, April 8, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id: dnssectool.h,v 1.33 2011/10/20 23:46:51 tbox Exp $ */
+
+#ifndef DNSSECTOOL_H
+#define DNSSECTOOL_H 1
+
+#include <isc/log.h>
+#include <isc/stdtime.h>
+#include <dns/rdatastruct.h>
+#include <dst/dst.h>
+
+#define check_dns_dbiterator_current(result) \
+	check_result((result == DNS_R_NEWORIGIN) ? ISC_R_SUCCESS : result, \
+		     "dns_dbiterator_current()")
+
+
+typedef void (fatalcallback_t)(void);
+
+ISC_PLATFORM_NORETURN_PRE void
+fatal(const char *format, ...)
+ISC_FORMAT_PRINTF(1, 2) ISC_PLATFORM_NORETURN_POST;
+
+void
+setfatalcallback(fatalcallback_t *callback);
+
+void
+check_result(isc_result_t result, const char *message);
+
+void
+vbprintf(int level, const char *fmt, ...) ISC_FORMAT_PRINTF(2, 3);
+
+void
+version(const char *program);
+
+void
+type_format(const dns_rdatatype_t type, char *cp, unsigned int size);
+#define TYPE_FORMATSIZE 20
+
+void
+sig_format(dns_rdata_rrsig_t *sig, char *cp, unsigned int size);
+#define SIG_FORMATSIZE (DNS_NAME_FORMATSIZE + DNS_SECALG_FORMATSIZE + sizeof("65535"))
+
+void
+setup_logging(isc_mem_t *mctx, isc_log_t **logp);
+
+void
+cleanup_logging(isc_log_t **logp);
+
+void
+setup_entropy(isc_mem_t *mctx, const char *randomfile, isc_entropy_t **ectx);
+
+void
+cleanup_entropy(isc_entropy_t **ectx);
+
+dns_ttl_t strtottl(const char *str);
+
+isc_stdtime_t
+strtotime(const char *str, isc_int64_t now, isc_int64_t base,
+	  isc_boolean_t *setp);
+
+dns_rdataclass_t
+strtoclass(const char *str);
+
+isc_result_t
+try_dir(const char *dirname);
+
+void
+check_keyversion(dst_key_t *key, char *keystr);
+
+void
+set_keyversion(dst_key_t *key);
+
+isc_boolean_t
+key_collision(dst_key_t *key, dns_name_t *name, const char *dir,
+	      isc_mem_t *mctx, isc_boolean_t *exact);
+
+isc_boolean_t
+is_delegation(dns_db_t *db, dns_dbversion_t *ver, dns_name_t *origin,
+		      dns_name_t *name, dns_dbnode_t *node, isc_uint32_t *ttlp);
+
+void
+verifyzone(dns_db_t *db, dns_dbversion_t *ver,
+		   dns_name_t *origin, isc_mem_t *mctx,
+		   isc_boolean_t ignore_kskflag, isc_boolean_t keyset_kskonly);
+
+#ifdef _WIN32
+void InitSockets(void);
+void DestroySockets(void);
+#endif
+
+#endif /* DNSSEC_DNSSECTOOL_H */

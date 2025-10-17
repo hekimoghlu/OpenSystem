@@ -1,0 +1,137 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, February 19, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_SUPPORT_COUNTING_PREDICATES_H
+#define TEST_SUPPORT_COUNTING_PREDICATES_H
+
+#include <uscl/std/cstddef>
+#include <uscl/std/utility>
+
+#include "test_macros.h"
+
+template <typename Predicate, typename Arg>
+struct unary_counting_predicate
+{
+public:
+  typedef Arg argument_type;
+  typedef bool result_type;
+
+  __host__ __device__ constexpr unary_counting_predicate(Predicate p)
+      : p_(p)
+      , count_(0)
+  {}
+
+  __host__ __device__ constexpr bool operator()(const Arg& a)
+  {
+    ++count_;
+    return p_(a);
+  }
+  __host__ __device__ constexpr size_t count() const
+  {
+    return count_;
+  }
+  __host__ __device__ constexpr void reset()
+  {
+    count_ = 0;
+  }
+
+private:
+  Predicate p_;
+  size_t count_;
+};
+
+template <typename Predicate, typename Arg1, typename Arg2 = Arg1>
+struct binary_counting_predicate
+{
+public:
+  typedef Arg1 first_argument_type;
+  typedef Arg2 second_argument_type;
+  typedef bool result_type;
+
+  __host__ __device__ constexpr binary_counting_predicate(Predicate p)
+      : p_(p)
+      , count_(0)
+  {}
+
+  __host__ __device__ constexpr bool operator()(const Arg1& a1, const Arg2& a2)
+  {
+    ++count_;
+    return p_(a1, a2);
+  }
+  __host__ __device__ constexpr size_t count() const
+  {
+    return count_;
+  }
+  __host__ __device__ constexpr void reset()
+  {
+    count_ = 0;
+  }
+
+private:
+  Predicate p_;
+  size_t count_;
+};
+
+template <class Predicate>
+class counting_predicate
+{
+  Predicate pred_;
+  int* count_ = nullptr;
+
+public:
+  constexpr counting_predicate() = default;
+  __host__ __device__ constexpr counting_predicate(Predicate pred, int& count)
+      : pred_(cuda::std::move(pred))
+      , count_(&count)
+  {}
+
+  template <class... Args>
+  __host__ __device__ constexpr auto operator()(Args&&... args) -> decltype(pred_(cuda::std::forward<Args>(args)...))
+  {
+    ++(*count_);
+    return pred_(cuda::std::forward<Args>(args)...);
+  }
+
+  template <class... Args>
+  __host__ __device__ constexpr auto operator()(Args&&... args) const
+    -> decltype(pred_(cuda::std::forward<Args>(args)...))
+  {
+    ++(*count_);
+    return pred_(cuda::std::forward<Args>(args)...);
+  }
+};
+
+template <class Predicate>
+counting_predicate(Predicate pred, int& count) -> counting_predicate<Predicate>;
+
+#endif // TEST_SUPPORT_COUNTING_PREDICATES_H

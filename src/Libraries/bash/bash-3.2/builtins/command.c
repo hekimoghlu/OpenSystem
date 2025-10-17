@@ -1,0 +1,204 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, March 23, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <config.h>
+
+#if defined (HAVE_UNISTD_H)
+#  ifdef _MINIX
+#    include <sys/types.h>
+#  endif
+#  include <unistd.h>
+#endif
+
+#include "../bashansi.h"
+
+#include "../shell.h"
+#include "../execute_cmd.h"
+#include "../flags.h"
+#include "bashgetopt.h"
+#include "common.h"
+
+#if defined (_CS_PATH) && defined (HAVE_CONFSTR) && !HAVE_DECL_CONFSTR
+extern size_t confstr __P((int, char *, size_t));
+#endif
+
+extern int subshell_environment;
+
+static void restore_path __P((char *));
+static char *get_standard_path __P((void));
+
+/* Run the commands mentioned in LIST without paying attention to shell
+   functions. */
+int
+command_builtin (list)
+     WORD_LIST *list;
+{
+  int result, verbose, use_standard_path, opt;
+  char *old_path, *standard_path;
+  COMMAND *command;
+
+  verbose = use_standard_path = 0;
+  reset_internal_getopt ();
+  while ((opt = internal_getopt (list, "pvV")) != -1)
+    {
+      switch (opt)
+	{
+	case 'p':
+	  use_standard_path = 1;
+	  break;
+	case 'V':
+	  verbose = CDESC_SHORTDESC|CDESC_ABSPATH;	/* look in common.h for constants */
+	  break;
+	case 'v':
+	  verbose = CDESC_REUSABLE;	/* ditto */
+	  break;
+	default:
+	  builtin_usage ();
+	  return (EX_USAGE);
+	}
+    }
+  list = loptend;
+
+  if (list == 0)
+    return (EXECUTION_SUCCESS);
+
+  if (verbose)
+    {
+      int found, any_found;
+
+      for (any_found = 0; list; list = list->next)
+	{
+	  found = describe_command (list->word->word, verbose);
+
+	  if (found == 0 && verbose != CDESC_REUSABLE)
+	    sh_notfound (list->word->word);
+
+	  any_found += found;
+	}
+#ifdef __APPLE__
+      if (any_found && (ferror (stdout) != 0 || fflush (stdout) != 0)) {
+          builtin_error ("failed to flush stdout");
+          return (EXECUTION_FAILURE);
+      }
+#endif
+      return (any_found ? EXECUTION_SUCCESS : EXECUTION_FAILURE);
+    }
+
+#if defined (RESTRICTED_SHELL)
+  if (use_standard_path && restricted)
+    {
+      sh_restricted ("-p");
+      return (EXECUTION_FAILURE);
+    }
+#endif
+
+  begin_unwind_frame ("command_builtin");
+
+  /* We don't want this to be reparsed (consider command echo 'foo &'), so
+     just make a simple_command structure and call execute_command with it. */
+  if (use_standard_path)
+    {      
+      old_path = get_string_value ("PATH");
+      /* If old_path is NULL, $PATH is unset.  If so, we want to make sure
+	 it's unset after this command completes. */
+      if (old_path)
+	old_path = savestring (old_path);
+      add_unwind_protect ((Function *)restore_path, old_path);
+
+      standard_path = get_standard_path ();
+      bind_variable ("PATH", standard_path ? standard_path : "", 0);
+      FREE (standard_path);
+    }
+
+#define COMMAND_BUILTIN_FLAGS (CMD_NO_FUNCTIONS | CMD_INHIBIT_EXPANSION | CMD_COMMAND_BUILTIN)
+
+  command = make_bare_simple_command ();
+  command->value.Simple->words = (WORD_LIST *)copy_word_list (list);
+  command->value.Simple->redirects = (REDIRECT *)NULL;
+  command->flags |= COMMAND_BUILTIN_FLAGS;
+  command->value.Simple->flags |= COMMAND_BUILTIN_FLAGS;
+  /* This breaks for things like ( cd /tmp ; command z ababa ; echo next )
+     or $(command echo a ; command echo b;) or even
+     { command echo a; command echo b; } & if we aren't careful.  Just avoid it
+     for backgrounded jobs and continue forking if we're a part of a pipe or any
+     of the other above-mentioned sub-shell scenarios. */
+  /* If we're in a subshell, see if we can get away without forking
+     again, since we've already forked to run this builtin. */
+  if ((subshell_environment & (SUBSHELL_ASYNC | SUBSHELL_PIPE)) == SUBSHELL_ASYNC)
+    {
+      command->flags |= CMD_NO_FORK;
+      command->value.Simple->flags |= CMD_NO_FORK;
+    }
+  add_unwind_protect ((char *)dispose_command, command);
+  result = execute_command (command);
+
+  run_unwind_frame ("command_builtin");
+
+  return (result);
+}
+
+/* Restore the value of the $PATH variable after replacing it when
+   executing `command -p'. */
+static void
+restore_path (var)
+     char *var;
+{
+  if (var)
+    {
+      bind_variable ("PATH", var, 0);
+      free (var);
+    }
+  else
+    unbind_variable ("PATH");
+}
+
+/* Return a value for PATH that is guaranteed to find all of the standard
+   utilities.  This uses Posix.2 configuration variables, if present.  It
+   uses a value defined in config.h as a last resort. */
+static char *
+get_standard_path ()
+{
+#if defined (_CS_PATH) && defined (HAVE_CONFSTR)
+  char *p;
+  size_t len;
+
+  len = (size_t)confstr (_CS_PATH, (char *)NULL, (size_t)0);
+  if (len > 0)
+    {
+      p = (char *)xmalloc (len + 2);
+      *p = '\0';
+      confstr (_CS_PATH, p, len);
+      return (p);
+    }
+  else
+    return (savestring (STANDARD_UTILS_PATH));
+#else /* !_CS_PATH || !HAVE_CONFSTR  */
+#  if defined (CS_PATH)
+  return (savestring (CS_PATH));
+#  else
+  return (savestring (STANDARD_UTILS_PATH));
+#  endif /* !CS_PATH */
+#endif /* !_CS_PATH || !HAVE_CONFSTR */
+}
+

@@ -1,0 +1,110 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, December 19, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#include <krb5.h>
+#include <hdb.h>
+#include <kdc.h>
+#include <windc_plugin.h>
+
+static krb5_error_code
+windc_init(krb5_context context, void **ctx)
+{
+    krb5_warnx(context, "windc init");
+    *ctx = NULL;
+    return 0;
+}
+
+static void
+windc_fini(void *ctx)
+{
+}
+
+static krb5_error_code
+pac_generate(void *ctx, krb5_context context,
+	     struct hdb_entry_ex *client, krb5_pac *pac)
+{
+    krb5_error_code ret;
+    krb5_data data;
+
+    krb5_warnx(context, "pac generate");
+
+    data.data = "\x00\x01";
+    data.length = 2;
+
+    ret = krb5_pac_init(context, pac);
+    if (ret)
+	return ret;
+
+    ret = krb5_pac_add_buffer(context, *pac, 1, &data);
+    if (ret)
+	return ret;
+
+    return 0;
+}
+
+static krb5_error_code
+pac_verify(void *ctx, krb5_context context,
+	   const krb5_principal new_ticket_client,
+	   const krb5_principal delegation_proxy,
+	   struct hdb_entry_ex * client,
+	   struct hdb_entry_ex * server,
+	   struct hdb_entry_ex * krbtgt,
+	   krb5_pac *pac)
+{
+    krb5_error_code ret;
+    krb5_data data;
+
+    krb5_warnx(context, "pac_verify");
+
+    ret = krb5_pac_get_buffer(context, *pac, 1, &data);
+    if (ret)
+	return ret;
+
+    krb5_data_free(&data);
+
+    return 0;
+}
+
+static krb5_error_code
+client_access(void *ctx,
+	      krb5_context context,
+	      krb5_kdc_configuration *config,
+	      hdb_entry_ex *client, const char *client_name,
+	      hdb_entry_ex *server, const char *server_name,
+	      KDC_REQ *req,
+	      METHOD_DATA *data)
+{
+    krb5_warnx(context, "client_access");
+    return 0;
+}
+
+krb5plugin_windc_ftable windc = {
+    KRB5_WINDC_PLUGING_MINOR,
+    windc_init,
+    windc_fini,
+    pac_generate,
+    pac_verify,
+    client_access
+};

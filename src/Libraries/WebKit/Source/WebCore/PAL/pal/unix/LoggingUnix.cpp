@@ -1,0 +1,53 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, November 13, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "Logging.h"
+
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+
+#include <span>
+#include <wtf/text/MakeString.h>
+
+namespace PAL {
+
+String logLevelString()
+{
+#if !LOG_DISABLED
+    if (char* logEnv = getenv("WEBKIT_DEBUG")) {
+
+#if defined(NDEBUG)
+        WTFLogAlways("WEBKIT_DEBUG is not empty, but this is a release build. Notice that many log messages will only appear in a debug build.");
+#endif
+
+        // To disable logging notImplemented set the DISABLE_NI_WARNING environment variable to 1.
+        return makeString("NotYetImplemented,"_s, unsafeSpan(logEnv));
+    }
+#endif
+    return String();
+}
+
+} // namespace PAL
+
+#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED

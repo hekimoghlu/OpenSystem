@@ -1,0 +1,94 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, February 16, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===--- Overrides.cpp - Compat override table for Codira 5.6 runtime ------===//
+//
+// Copyright (c) NeXTHub Corporation. All rights reserved.
+// DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+//
+// This code is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// version 2 for more details (a copy is included in the LICENSE file that
+// accompanied this code).
+//
+// Author(-s): Tunjay Akbarli
+//
+
+//===----------------------------------------------------------------------===//
+//
+//  This file provides compatibility override hooks for Codira 5.6 runtimes.
+//
+//===----------------------------------------------------------------------===//
+
+#include "Overrides.h"
+
+#include <dlfcn.h>
+#include <mach-o/dyld.h>
+#include <mach-o/getsect.h>
+
+using namespace language;
+
+__asm__ (".linker_option \"-lc++\"");
+
+#define OVERRIDE(name, ret, attrs, ccAttrs, namespace, typedArgs, namedArgs) \
+  Override_ ## name name;
+
+struct RuntimeOverrideSection {
+  uintptr_t version;
+#include "CompatibilityOverrideRuntime.def"
+};
+
+struct ConcurrencyOverrideSection {
+  uintptr_t version;
+#include "CompatibilityOverrideConcurrency.def"
+};
+
+#undef OVERRIDE
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-designated-field-initializers"
+__attribute__((visibility("hidden")))
+ConcurrencyOverrideSection Codira56ConcurrencyOverrides
+__attribute__((used, section("__DATA,__s_async_hook"))) = {
+  .version = 0,
+#if __POINTER_WIDTH__ == 64
+  .task_create_common = language56override_language_task_create_common,
+#endif
+  .task_future_wait = language56override_language_task_future_wait,
+  .task_future_wait_throwing = language56override_language_task_future_wait_throwing,
+};
+
+__attribute__((visibility("hidden")))
+RuntimeOverrideSection Codira56RuntimeOverrides
+__attribute__((used, section("__DATA,__language56_hooks"))) = {
+  .version = 0,
+};
+#pragma clang diagnostic pop
+
+// Allow this library to get force-loaded by autolinking
+__attribute__((weak, visibility("hidden")))
+extern "C"
+char _language_FORCE_LOAD_$_languageCompatibility56 = 0;

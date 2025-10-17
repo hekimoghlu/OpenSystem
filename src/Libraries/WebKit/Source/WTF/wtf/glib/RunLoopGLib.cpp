@@ -1,0 +1,238 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, January 4, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include <wtf/RunLoop.h>
+
+#include <glib.h>
+#include <wtf/MainThread.h>
+#include <wtf/glib/RunLoopSourcePriority.h>
+
+namespace WTF {
+
+typedef struct {
+    GSource source;
+    RunLoop* runLoop;
+} RunLoopSource;
+
+GSourceFuncs RunLoop::s_runLoopSourceFunctions = {
+    nullptr, // prepare
+    nullptr, // check
+    // dispatch
+    [](GSource* source, GSourceFunc callback, gpointer userData) -> gboolean
+    {
+        if (g_source_get_ready_time(source) == -1)
+            return G_SOURCE_CONTINUE;
+        g_source_set_ready_time(source, -1);
+        const char* name = g_source_get_name(source);
+        auto& runLoopSource = *reinterpret_cast<RunLoopSource*>(source);
+        runLoopSource.runLoop->notify(RunLoop::Event::WillDispatch, name);
+        auto returnValue = callback(userData);
+        runLoopSource.runLoop->notify(RunLoop::Event::DidDispatch, name);
+        return returnValue;
+    },
+    nullptr, // finalize
+    nullptr, // closure_callback
+    nullptr, // closure_marshall
+};
+
+RunLoop::RunLoop()
+{
+    m_mainContext = g_main_context_get_thread_default();
+    if (!m_mainContext)
+        m_mainContext = isMainThread() ? g_main_context_default() : adoptGRef(g_main_context_new());
+    ASSERT(m_mainContext);
+
+    GRefPtr<GMainLoop> innermostLoop = adoptGRef(g_main_loop_new(m_mainContext.get(), FALSE));
+    ASSERT(innermostLoop);
+    m_mainLoops.append(innermostLoop);
+
+    m_source = adoptGRef(g_source_new(&RunLoop::s_runLoopSourceFunctions, sizeof(RunLoopSource)));
+    auto& runLoopSource = *reinterpret_cast<RunLoopSource*>(m_source.get());
+    runLoopSource.runLoop = this;
+    g_source_set_priority(m_source.get(), RunLoopSourcePriority::RunLoopDispatcher);
+    g_source_set_name(m_source.get(), "[WebKit] RunLoop work");
+    g_source_set_can_recurse(m_source.get(), TRUE);
+    g_source_set_callback(m_source.get(), [](gpointer userData) -> gboolean {
+        static_cast<RunLoop*>(userData)->performWork();
+        return G_SOURCE_CONTINUE;
+    }, this, nullptr);
+    g_source_attach(m_source.get(), m_mainContext.get());
+}
+
+RunLoop::~RunLoop()
+{
+    g_source_destroy(m_source.get());
+
+    for (int i = m_mainLoops.size() - 1; i >= 0; --i) {
+        if (!g_main_loop_is_running(m_mainLoops[i].get()))
+            continue;
+        g_main_loop_quit(m_mainLoops[i].get());
+    }
+}
+
+void RunLoop::run()
+{
+    Ref runLoop = RunLoop::current();
+    GMainContext* mainContext = runLoop->m_mainContext.get();
+
+    // The innermost main loop should always be there.
+    ASSERT(!runLoop->m_mainLoops.isEmpty());
+
+    GMainLoop* innermostLoop = runLoop->m_mainLoops[0].get();
+    if (!g_main_loop_is_running(innermostLoop)) {
+        g_main_context_push_thread_default(mainContext);
+        g_main_loop_run(innermostLoop);
+        g_main_context_pop_thread_default(mainContext);
+        return;
+    }
+
+    // Create and run a nested loop if the innermost one was already running.
+    GMainLoop* nestedMainLoop = g_main_loop_new(mainContext, FALSE);
+    runLoop->m_mainLoops.append(adoptGRef(nestedMainLoop));
+
+    g_main_context_push_thread_default(mainContext);
+    g_main_loop_run(nestedMainLoop);
+    g_main_context_pop_thread_default(mainContext);
+
+    runLoop->m_mainLoops.removeLast();
+}
+
+void RunLoop::stop()
+{
+    // The innermost main loop should always be there.
+    ASSERT(!m_mainLoops.isEmpty());
+    GRefPtr<GMainLoop> lastMainLoop = m_mainLoops.last();
+    if (g_main_loop_is_running(lastMainLoop.get()))
+        g_main_loop_quit(lastMainLoop.get());
+}
+
+void RunLoop::wakeUp()
+{
+    g_source_set_ready_time(m_source.get(), 0);
+}
+
+RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
+{
+    g_main_context_iteration(NULL, FALSE);
+    return CycleResult::Continue;
+}
+
+void RunLoop::observe(const RunLoop::Observer& observer)
+{
+    ASSERT(!m_observers.contains(observer));
+    m_observers.add(observer);
+}
+
+void RunLoop::notify(RunLoop::Event event, const char* name)
+{
+    if (m_observers.isEmptyIgnoringNullReferences())
+        return;
+
+    m_observers.forEach([event, name = String::fromUTF8(name)](auto& observer) {
+        observer(event, name);
+    });
+}
+
+RunLoop::TimerBase::TimerBase(Ref<RunLoop>&& runLoop)
+    : m_runLoop(WTFMove(runLoop))
+    , m_source(adoptGRef(g_source_new(&RunLoop::s_runLoopSourceFunctions, sizeof(RunLoopSource))))
+{
+    auto& runLoopSource = *reinterpret_cast<RunLoopSource*>(m_source.get());
+    runLoopSource.runLoop = m_runLoop.ptr();
+
+    g_source_set_priority(m_source.get(), RunLoopSourcePriority::RunLoopTimer);
+    g_source_set_name(m_source.get(), "[WebKit] RunLoop::Timer work");
+    g_source_set_callback(m_source.get(), [](gpointer userData) -> gboolean {
+        // fired() executes the user's callback. It may destroy timer,
+        // so we must check if the source is still active afterwards
+        // before it is safe to dereference timer again.
+        RunLoop::TimerBase* timer = static_cast<RunLoop::TimerBase*>(userData);
+        GSource* source = timer->m_source.get();
+        if (timer->m_isRepeating)
+            timer->updateReadyTime();
+        timer->fired();
+        if (g_source_is_destroyed(source))
+            return G_SOURCE_REMOVE;
+        return G_SOURCE_CONTINUE;
+    }, this, nullptr);
+    g_source_attach(m_source.get(), m_runLoop->m_mainContext.get());
+}
+
+RunLoop::TimerBase::~TimerBase()
+{
+    g_source_destroy(m_source.get());
+}
+
+void RunLoop::TimerBase::setName(ASCIILiteral name)
+{
+    g_source_set_name(m_source.get(), name);
+}
+
+void RunLoop::TimerBase::setPriority(int priority)
+{
+    g_source_set_priority(m_source.get(), priority);
+}
+
+void RunLoop::TimerBase::updateReadyTime()
+{
+    if (!m_interval) {
+        g_source_set_ready_time(m_source.get(), 0);
+        return;
+    }
+
+    gint64 currentTime = g_get_monotonic_time();
+    gint64 targetTime = currentTime + std::min<gint64>(G_MAXINT64 - currentTime, m_interval.microsecondsAs<gint64>());
+    ASSERT(targetTime >= currentTime);
+    g_source_set_ready_time(m_source.get(), targetTime);
+}
+
+void RunLoop::TimerBase::start(Seconds interval, bool repeat)
+{
+    m_interval = interval;
+    m_isRepeating = repeat;
+    updateReadyTime();
+}
+
+void RunLoop::TimerBase::stop()
+{
+    g_source_set_ready_time(m_source.get(), -1);
+    m_interval = { };
+    m_isRepeating = false;
+}
+
+bool RunLoop::TimerBase::isActive() const
+{
+    return g_source_get_ready_time(m_source.get()) != -1;
+}
+
+Seconds RunLoop::TimerBase::secondsUntilFire() const
+{
+    gint64 time = g_source_get_ready_time(m_source.get());
+    if (time != -1)
+        return std::max<Seconds>(Seconds::fromMicroseconds(time - g_get_monotonic_time()), 0_s);
+    return 0_s;
+}
+
+} // namespace WTF

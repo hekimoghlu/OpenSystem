@@ -1,0 +1,140 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, June 30, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <sys/cdefs.h>
+#include <CoreFoundation/CoreFoundation.h>
+#if COREFOUNDATION_CFPLUGINCOM_SEPARATE
+#include <CoreFoundation/CFPlugInCOM.h>
+#endif
+
+#include <memory>
+
+
+class IOHIDEventSystemStatistics
+{
+public:
+    IOHIDEventSystemStatistics(CFUUIDRef factoryID);
+    ~IOHIDEventSystemStatistics();
+    HRESULT QueryInterface( REFIID iid, LPVOID *ppv );
+    ULONG AddRef();
+    ULONG Release();
+    
+    IOHIDEventRef filter(IOHIDServiceRef sender, IOHIDEventRef event);
+    boolean_t open(IOHIDSessionRef session, IOOptionBits options);
+    void close(IOHIDSessionRef session, IOOptionBits options);
+    void registerService(IOHIDServiceRef service);
+    void unregisterService(IOHIDServiceRef service);
+    void handlePendingStats();
+    void scheduleWithDispatchQueue(dispatch_queue_t queue);
+    void unscheduleFromDispatchQueue(dispatch_queue_t queue);
+    CFTypeRef getPropertyForClient (CFStringRef key, CFTypeRef client);
+
+private:
+    IOHIDSessionFilterPlugInInterface *_sessionInterface;
+    CFUUIDRef                   _factoryID;
+    UInt32                      _refCount;
+    
+    uint64_t                    _displayState;
+    
+    int                         _displayToken;
+    
+    dispatch_queue_t            _dispatch_queue;
+    dispatch_source_t           _pending_source;
+
+    mach_timebase_info_data_t   _timeInfo;
+    
+    typedef struct {
+        uint32_t                    home_wake;
+        uint32_t                    home_action;
+        uint32_t                    power_wake;
+        uint32_t                    power_sleep;
+    } Buttons;
+    
+    typedef struct {
+        uint32_t                    enumeration_count;
+        uint32_t                    character_count;
+        uint32_t                    symbol_count;
+        uint32_t                    spacebar_count;
+        uint32_t                    arrow_count;
+        uint32_t                    cursor_count;
+        uint32_t                    modifier_count;
+    } KeyStats;
+    
+    typedef struct {
+        uint32_t                    press_count;
+        uint32_t                    rotation_clockwise;
+        int32_t                     rotation_counterclockwise;
+        bool                        updated;
+    } CrownStats;
+
+    Buttons _pending_buttons;
+    KeyStats _pending_keystats;
+    CrownStats _pending_crownstats;
+    
+    CFMutableSetRef             _keyServices;
+    CFMutableDictionaryRef      _multiPressServices;
+    IOHIDServiceRef             _crownService;
+    IOHIDServiceRef             _buttonService;
+
+    IOHIDEventRef               _attachEvent;
+        
+private:
+    static IOHIDSessionFilterPlugInInterface sIOHIDEventSystemStatisticsFtbl;
+    static HRESULT QueryInterface( void *self, REFIID iid, LPVOID *ppv );
+    static ULONG AddRef( void *self );
+    static ULONG Release( void *self );
+    
+    static IOHIDEventRef filter(void * self, IOHIDServiceRef sender, IOHIDEventRef event);
+
+    static boolean_t open(void * self, IOHIDSessionRef inSession, IOOptionBits options);
+    static void close(void * self, IOHIDSessionRef inSession, IOOptionBits options);
+    static void registerService(void * self, IOHIDServiceRef service);
+    static void unregisterService(void * self, IOHIDServiceRef service);
+
+    void registerKeyboardService(IOHIDServiceRef service);
+    void registerMultiPressService(IOHIDServiceRef service);
+    void registerCrownService(IOHIDServiceRef service);
+    void registerButtonService(IOHIDServiceRef service);
+    
+    static void scheduleWithDispatchQueue(void * self, dispatch_queue_t queue);
+    static void unscheduleFromDispatchQueue(void * self, dispatch_queue_t queue);
+
+    static CFTypeRef getPropertyForClient (void * self, CFStringRef key, CFTypeRef client);
+
+    static void handlePendingStats(void * self);
+    
+    bool collectKeyStats(IOHIDServiceRef sender, IOHIDEventRef event);
+    
+    static bool isCharacterKey(uint16_t usagePage, uint16_t usage);
+    static bool isSymbolKey(uint16_t usagePage, uint16_t usage);
+    static bool isSpacebarKey(uint16_t usagePage, uint16_t usage);
+    static bool isArrowKey(uint16_t usagePage, uint16_t usage);
+    static bool isCursorKey(uint16_t usagePage, uint16_t usage);
+    static bool isModifierKey(uint16_t usagePage, uint16_t usage);
+    
+private:
+    IOHIDEventSystemStatistics();
+    IOHIDEventSystemStatistics(const IOHIDEventSystemStatistics &);
+    IOHIDEventSystemStatistics &operator=(const IOHIDEventSystemStatistics &);
+};

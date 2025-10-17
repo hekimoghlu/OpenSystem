@@ -1,0 +1,216 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, July 1, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include "FontSelectionAlgorithm.h"
+#include "FontTaggedSettings.h"
+#include "RenderStyleConstants.h"
+#include "Settings.h"
+#include "TextFlags.h"
+#include <memory>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/Forward.h>
+#include <wtf/HashSet.h>
+#include <wtf/WeakHashSet.h>
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class CSSFontFaceClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::CSSFontFaceClient> : std::true_type { };
+}
+
+namespace WebCore {
+
+class CSSFontFaceClient;
+class CSSFontFaceSource;
+class CSSFontSelector;
+class CSSPrimitiveValue;
+class CSSValue;
+class CSSValueList;
+class Document;
+class Font;
+class FontDescription;
+class FontFace;
+class FontFeatureValues;
+class FontPaletteValues;
+class MutableStyleProperties;
+class ScriptExecutionContext;
+class StyleProperties;
+class StyleRuleFontFace;
+
+enum class ExternalResourceDownloadPolicy : bool;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSFontFace);
+class CSSFontFace final : public RefCounted<CSSFontFace> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSFontFace);
+public:
+    static Ref<CSSFontFace> create(CSSFontSelector&, StyleRuleFontFace* cssConnection = nullptr, FontFace* wrapper = nullptr, bool isLocalFallback = false);
+    virtual ~CSSFontFace();
+
+    void setFamilies(CSSValueList&);
+    void setStyle(CSSValue&);
+    void setWeight(CSSValue&);
+    void setWidth(CSSValue&);
+    void setSizeAdjust(CSSValue&);
+    void setUnicodeRange(CSSValueList&);
+    void setFeatureSettings(CSSValue&);
+    void setDisplay(CSSValue&);
+
+    String family() const;
+    String style() const;
+    String weight() const;
+    String width() const;
+    String unicodeRange() const;
+    String featureSettings() const;
+    String display() const;
+    String sizeAdjust() const;
+
+    // Pending => Loading  => TimedOut
+    //              ||  \\    //  ||
+    //              ||   \\  //   ||
+    //              ||    \\//    ||
+    //              ||     //     ||
+    //              ||    //\\    ||
+    //              ||   //  \\   ||
+    //              \/  \/    \/  \/
+    //             Success    Failure
+    enum class Status : uint8_t { Pending, Loading, TimedOut, Success, Failure };
+
+    struct UnicodeRange;
+
+    RefPtr<CSSValueList> families() const;
+    std::span<const UnicodeRange> ranges() const { ASSERT(m_status != Status::Failure); return m_ranges.span(); }
+
+    void setFontSelectionCapabilities(FontSelectionCapabilities capabilities) { m_fontSelectionCapabilities = capabilities; }
+    FontSelectionCapabilities fontSelectionCapabilities() const { ASSERT(m_status != Status::Failure); return m_fontSelectionCapabilities.computeFontSelectionCapabilities(); }
+
+    bool isLocalFallback() const { return m_isLocalFallback; }
+    Status status() const { return m_status; }
+    StyleRuleFontFace* cssConnection() const;
+
+    void addClient(CSSFontFaceClient&);
+    void removeClient(CSSFontFaceClient&);
+
+    bool computeFailureState() const;
+
+    void opportunisticallyStartFontDataURLLoading();
+
+    void adoptSource(std::unique_ptr<CSSFontFaceSource>&&);
+    void sourcesPopulated() { m_sourcesPopulated = true; }
+    size_t sourceCount() const { return m_sources.size(); }
+
+    void fontLoaded(CSSFontFaceSource&);
+
+    void load();
+
+    RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic, ExternalResourceDownloadPolicy, const FontPaletteValues&, RefPtr<FontFeatureValues>);
+
+    static void appendSources(CSSFontFace&, CSSValueList&, ScriptExecutionContext*, bool isInitiatingElementInUserAgentShadowTree);
+
+    struct UnicodeRange {
+        char32_t from;
+        char32_t to;
+        friend bool operator==(const UnicodeRange&, const UnicodeRange&) = default;
+    };
+
+    bool rangesMatchCodePoint(char32_t) const;
+
+    // We don't guarantee that the FontFace wrapper will be the same every time you ask for it.
+    Ref<FontFace> wrapper(ScriptExecutionContext*);
+    void setWrapper(FontFace&);
+    FontFace* existingWrapper();
+
+    struct FontLoadTiming {
+        Seconds blockPeriod;
+        Seconds swapPeriod;
+    };
+    FontLoadTiming fontLoadTiming() const;
+    bool shouldIgnoreFontLoadCompletions() const { return m_shouldIgnoreFontLoadCompletions; }
+
+    bool purgeable() const;
+
+    AllowUserInstalledFonts allowUserInstalledFonts() const { return m_allowUserInstalledFonts; }
+
+    void updateStyleIfNeeded();
+
+    bool hasSVGFontFaceSource() const;
+    void setErrorState();
+
+private:
+    CSSFontFace(const Settings::Values*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
+
+    size_t pump(ExternalResourceDownloadPolicy);
+    void setStatus(Status);
+    void notifyClientsOfFontPropertyChange();
+
+    void initializeWrapper();
+
+    void fontLoadEventOccurred();
+    void timeoutFired();
+
+    const StyleProperties& properties() const;
+    MutableStyleProperties& mutableProperties();
+
+    Document* document();
+
+    const std::variant<Ref<MutableStyleProperties>, Ref<StyleRuleFontFace>> m_propertiesOrCSSConnection;
+    RefPtr<CSSValueList> m_families;
+    Vector<UnicodeRange> m_ranges;
+
+    FontFeatureSettings m_featureSettings;
+    FontLoadingBehavior m_loadingBehavior { FontLoadingBehavior::Auto };
+
+    float m_sizeAdjust { 1.0 };
+
+    Vector<std::unique_ptr<CSSFontFaceSource>, 0, CrashOnOverflow, 0> m_sources;
+    WeakHashSet<CSSFontFaceClient> m_clients;
+    WeakPtr<FontFace> m_wrapper;
+    FontSelectionSpecifiedCapabilities m_fontSelectionCapabilities;
+    
+    Status m_status { Status::Pending };
+    bool m_isLocalFallback : 1 { false };
+    bool m_sourcesPopulated : 1 { false };
+    bool m_mayBePurged : 1 { true };
+    bool m_shouldIgnoreFontLoadCompletions : 1 { false };
+    FontLoadTimingOverride m_fontLoadTimingOverride { FontLoadTimingOverride::None };
+    AllowUserInstalledFonts m_allowUserInstalledFonts { AllowUserInstalledFonts::Yes };
+
+    Timer m_timeoutTimer;
+};
+
+class CSSFontFaceClient : public AbstractRefCountedAndCanMakeWeakPtr<CSSFontFaceClient> {
+public:
+    virtual ~CSSFontFaceClient() = default;
+    virtual void fontLoaded(CSSFontFace&) { }
+    virtual void fontStateChanged(CSSFontFace&, CSSFontFace::Status /*oldState*/, CSSFontFace::Status /*newState*/) { }
+    virtual void fontPropertyChanged(CSSFontFace&, CSSValueList* /*oldFamilies*/ = nullptr) { }
+    virtual void updateStyleIfNeeded(CSSFontFace&) { }
+};
+
+}

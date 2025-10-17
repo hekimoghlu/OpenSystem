@@ -1,0 +1,291 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, June 13, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "BufferMemoryHandle.h"
+
+#include "Options.h"
+#include "WasmFaultSignalHandler.h"
+#include <cstring>
+#include <limits>
+#include <mutex>
+#include <wtf/CheckedArithmetic.h>
+#include <wtf/DataLog.h>
+#include <wtf/Gigacage.h>
+#include <wtf/Lock.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/OSAllocator.h>
+#include <wtf/Platform.h>
+#include <wtf/PrintStream.h>
+#include <wtf/SafeStrerror.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Vector.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+namespace JSC {
+
+// FIXME: We could be smarter about memset / mmap / madvise. https://bugs.webkit.org/show_bug.cgi?id=170343
+// FIXME: Give up some of the cached fast memories if the GC determines it's easy to get them back, and they haven't been used in a while. https://bugs.webkit.org/show_bug.cgi?id=170773
+// FIXME: Limit slow memory size. https://bugs.webkit.org/show_bug.cgi?id=170825
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BufferMemoryHandle);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BufferMemoryManager);
+
+size_t BufferMemoryHandle::fastMappedRedzoneBytes()
+{
+    return static_cast<size_t>(PageCount::pageSize) * Options::wasmFastMemoryRedzonePages();
+}
+
+size_t BufferMemoryHandle::fastMappedBytes()
+{
+    // MAX_ARRAY_BUFFER_SIZE is 4GB on 64bit and 2GB on 32bit platforms.
+    // This code should never be called in 32bit platforms they don't
+    // support fast memory.
+    return MAX_ARRAY_BUFFER_SIZE + fastMappedRedzoneBytes();
+}
+
+void BufferMemoryResult::dump(PrintStream& out) const
+{
+    out.print("{basePtr = ", RawPointer(basePtr), ", kind = ", kind, "}");
+}
+
+BufferMemoryResult BufferMemoryManager::tryAllocateFastMemory()
+{
+    BufferMemoryResult result = [&] {
+        Locker locker { m_lock };
+        if (m_fastMemories.size() >= m_maxFastMemoryCount)
+            return BufferMemoryResult(nullptr, BufferMemoryResult::SyncTryToReclaimMemory);
+
+        void* result = Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, BufferMemoryHandle::fastMappedBytes());
+        if (!result)
+            return BufferMemoryResult(nullptr, BufferMemoryResult::SyncTryToReclaimMemory);
+
+        m_fastMemories.append(result);
+
+        return BufferMemoryResult(
+            result,
+            m_fastMemories.size() >= m_maxFastMemoryCount / 2 ? BufferMemoryResult::SuccessAndNotifyMemoryPressure : BufferMemoryResult::Success);
+    }();
+
+    dataLogLnIf(Options::logWasmMemory(), "Allocated virtual: ", result, "; state: ", *this);
+
+    return result;
+}
+
+void BufferMemoryManager::freeFastMemory(void* basePtr)
+{
+    {
+        Locker locker { m_lock };
+        Gigacage::freeVirtualPages(Gigacage::Primitive, basePtr, BufferMemoryHandle::fastMappedBytes());
+        m_fastMemories.removeFirst(basePtr);
+    }
+
+    dataLogLnIf(Options::logWasmMemory(), "Freed virtual; state: ", *this);
+}
+
+BufferMemoryResult BufferMemoryManager::tryAllocateGrowableBoundsCheckingMemory(size_t mappedCapacity)
+{
+    BufferMemoryResult result = [&] {
+        Locker locker { m_lock };
+        void* result = Gigacage::tryAllocateZeroedVirtualPages(Gigacage::Primitive, mappedCapacity);
+        if (!result)
+            return BufferMemoryResult(nullptr, BufferMemoryResult::SyncTryToReclaimMemory);
+
+        m_growableBoundsCheckingMemories.insert(std::make_pair(std::bit_cast<uintptr_t>(result), mappedCapacity));
+
+        return BufferMemoryResult(result, BufferMemoryResult::Success);
+    }();
+
+    dataLogLnIf(Options::logWasmMemory(), "Allocated virtual: ", result, "; state: ", *this);
+
+    return result;
+}
+
+void BufferMemoryManager::freeGrowableBoundsCheckingMemory(void* basePtr, size_t mappedCapacity)
+{
+    {
+        Locker locker { m_lock };
+        Gigacage::freeVirtualPages(Gigacage::Primitive, basePtr, mappedCapacity);
+        m_growableBoundsCheckingMemories.erase(std::make_pair(std::bit_cast<uintptr_t>(basePtr), mappedCapacity));
+    }
+
+    dataLogLnIf(Options::logWasmMemory(), "Freed virtual; state: ", *this);
+}
+
+bool BufferMemoryManager::isInGrowableOrFastMemory(void* address)
+{
+    // NOTE: This can be called from a signal handler, but only after we proved that we're in JIT code or WasmLLInt code.
+    Locker locker { m_lock };
+    for (void* memory : m_fastMemories) {
+        char* start = static_cast<char*>(memory);
+        if (start <= address && address <= start + BufferMemoryHandle::fastMappedBytes())
+            return true;
+    }
+    uintptr_t addressValue = std::bit_cast<uintptr_t>(address);
+    auto iterator = std::upper_bound(m_growableBoundsCheckingMemories.begin(), m_growableBoundsCheckingMemories.end(), std::make_pair(addressValue, 0),
+        [](std::pair<uintptr_t, size_t> a, std::pair<uintptr_t, size_t> b) {
+            return (a.first + a.second) < (b.first + b.second);
+        });
+    if (iterator != m_growableBoundsCheckingMemories.end()) {
+        // Since we never have overlapped range in m_growableBoundsCheckingMemories, just checking one lower-bound range is enough.
+        if (iterator->first <= addressValue && addressValue < (iterator->first + iterator->second))
+            return true;
+    }
+    return false;
+}
+
+// FIXME: Ideally, bmalloc would have this kind of mechanism. Then, we would just forward to that
+// mechanism here.
+BufferMemoryResult::Kind BufferMemoryManager::tryAllocatePhysicalBytes(size_t bytes)
+{
+    BufferMemoryResult::Kind result = [&] {
+        Locker locker { m_lock };
+        if (m_physicalBytes + bytes > memoryLimit())
+            return BufferMemoryResult::SyncTryToReclaimMemory;
+
+        m_physicalBytes += bytes;
+
+        if (m_physicalBytes >= memoryLimit() / 2)
+            return BufferMemoryResult::SuccessAndNotifyMemoryPressure;
+
+        return BufferMemoryResult::Success;
+    }();
+
+    dataLogLnIf(Options::logWasmMemory(), "Allocated physical: ", bytes, ", ", result, "; state: ", *this);
+
+    return result;
+}
+
+void BufferMemoryManager::freePhysicalBytes(size_t bytes)
+{
+    {
+        Locker locker { m_lock };
+        m_physicalBytes -= bytes;
+    }
+
+    dataLogLnIf(Options::logWasmMemory(), "Freed physical: ", bytes, "; state: ", *this);
+}
+
+void BufferMemoryManager::dump(PrintStream& out) const
+{
+    out.print("fast memories =  ", m_fastMemories.size(), "/", m_maxFastMemoryCount, ", bytes = ", m_physicalBytes, "/", memoryLimit());
+}
+
+BufferMemoryManager& BufferMemoryManager::singleton()
+{
+    static std::once_flag onceFlag;
+    static LazyNeverDestroyed<BufferMemoryManager> manager;
+    std::call_once(onceFlag, []{
+        manager.construct();
+    });
+    return manager.get();
+}
+
+BufferMemoryHandle::BufferMemoryHandle(void* memory, size_t size, size_t mappedCapacity, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, MemoryMode mode)
+    : m_sharingMode(sharingMode)
+    , m_mode(mode)
+    , m_memory(memory)
+    , m_size(size)
+    , m_mappedCapacity(mappedCapacity)
+    , m_initial(initial)
+    , m_maximum(maximum)
+{
+    if (sharingMode == MemorySharingMode::Default && mode == MemoryMode::BoundsChecking)
+        ASSERT(mappedCapacity == size);
+    else {
+#if ENABLE(WEBASSEMBLY)
+        Wasm::activateSignalingMemory();
+#endif
+    }
+}
+
+void* BufferMemoryHandle::nullBasePointer()
+{
+    static void* result = nullptr;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&]() {
+#if GIGACAGE_ENABLED
+        if (Gigacage::isEnabled(Gigacage::Primitive)) {
+            result = Gigacage::basePtr(Gigacage::Primitive);
+            return;
+        }
+#endif
+        result = fastAlignedMalloc(PageCount::pageSize, PageCount::pageSize);
+        WTF::fastDecommitAlignedMemory(result, PageCount::pageSize);
+    });
+    return result;
+}
+
+BufferMemoryHandle::~BufferMemoryHandle()
+{
+    if (m_memory) {
+        void* memory = this->memory();
+        BufferMemoryManager::singleton().freePhysicalBytes(m_size);
+        switch (m_mode) {
+        case MemoryMode::Signaling: {
+            // nullBasePointer's zero-sized memory is not used for MemoryMode::Signaling.
+            constexpr bool readable = true;
+            constexpr bool writable = true;
+            OSAllocator::protect(memory, BufferMemoryHandle::fastMappedBytes(), readable, writable);
+            BufferMemoryManager::singleton().freeFastMemory(memory);
+            break;
+        }
+        case MemoryMode::BoundsChecking: {
+            switch (m_sharingMode) {
+            case MemorySharingMode::Default: {
+                if (memory == nullBasePointer() && !m_size)
+                    return;
+                Gigacage::freeVirtualPages(Gigacage::Primitive, memory, m_size);
+                break;
+            }
+            case MemorySharingMode::Shared: {
+                if (memory == nullBasePointer() && !m_mappedCapacity) {
+                    ASSERT(!m_size);
+                    return;
+                }
+                constexpr bool readable = true;
+                constexpr bool writable = true;
+                OSAllocator::protect(memory, m_mappedCapacity, readable, writable);
+                BufferMemoryManager::singleton().freeGrowableBoundsCheckingMemory(memory, m_mappedCapacity);
+                break;
+            }
+            }
+            break;
+        }
+        }
+    }
+}
+
+// FIXME: ARM64E clang has a bug and inlining this function makes optimizer run forever.
+// For now, putting NEVER_INLINE to suppress inlining of this.
+NEVER_INLINE void* BufferMemoryHandle::memory() const
+{
+    ASSERT(m_memory.getMayBeNull() == m_memory.getUnsafe());
+    return m_memory.getMayBeNull();
+}
+
+} // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

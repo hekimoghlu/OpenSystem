@@ -1,0 +1,160 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, December 6, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * This is an open source non-commercial project. Dear PVS-Studio, please check it.
+ * PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+ */
+
+#include <config.h>
+
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "sudo_compat.h"
+#include "sudo_util.h"
+#include "sudo_debug.h"
+
+#ifdef __APPLE_MDM_SUPPORT__
+bool isManaged(const char *fullPath);
+#endif // __APPLE_MDM_SUPPORT__
+
+/*
+ * Verify that path is the right type and not writable by other users.
+ */
+static int
+sudo_check_secure(struct stat *sb, unsigned int type, uid_t uid, gid_t gid)
+{
+    int ret = SUDO_PATH_SECURE;
+    debug_decl(sudo_check_secure, SUDO_DEBUG_UTIL);
+
+    if ((sb->st_mode & S_IFMT) != type) {
+	ret = SUDO_PATH_BAD_TYPE;
+    } else if (uid != (uid_t)-1 && sb->st_uid != uid) {
+	ret = SUDO_PATH_WRONG_OWNER;
+    } else if (sb->st_mode & S_IWOTH) {
+	ret = SUDO_PATH_WORLD_WRITABLE;
+    } else if (ISSET(sb->st_mode, S_IWGRP) &&
+	(gid == (gid_t)-1 || sb->st_gid != gid)) {
+	ret = SUDO_PATH_GROUP_WRITABLE;
+    }
+
+    debug_return_int(ret);
+}
+
+/*
+ * Verify that path is the right type and not writable by other users.
+ */
+static int
+sudo_secure_path(const char *path, unsigned int type, uid_t uid, gid_t gid,
+     struct stat *sb)
+{
+    int ret = SUDO_PATH_MISSING;
+    struct stat stat_buf;
+    debug_decl(sudo_secure_path, SUDO_DEBUG_UTIL);
+
+    if (sb == NULL)
+	sb = &stat_buf;
+
+    if (path != NULL && stat(path, sb) == 0)
+	ret = sudo_check_secure(sb, type, uid, gid);
+
+    debug_return_int(ret);
+}
+
+/*
+ * Verify that path is a regular file and not writable by other users.
+ * Not currently used.
+ */
+int
+sudo_secure_file_v1(const char *path, uid_t uid, gid_t gid, struct stat *sb)
+{
+    return sudo_secure_path(path, S_IFREG, uid, gid, sb);
+}
+
+/*
+ * Verify that path is a directory and not writable by other users.
+ */
+int
+sudo_secure_dir_v1(const char *path, uid_t uid, gid_t gid, struct stat *sb)
+{
+    return sudo_secure_path(path, S_IFDIR, uid, gid, sb);
+}
+
+/*
+ * Open path read-only as long as it is not writable by other users.
+ * Returns an open file descriptor on success, else -1.
+ * Sets error to SUDO_PATH_SECURE on success, and a value < 0 on failure.
+ */
+static int
+sudo_secure_open(const char *path, int type, uid_t uid, gid_t gid,
+    struct stat *sb, int *error)
+{
+    struct stat stat_buf;
+    int fd;
+    debug_decl(sudo_secure_open, SUDO_DEBUG_UTIL);
+
+    if (sb == NULL)
+	sb = &stat_buf;
+
+    fd = open(path, O_RDONLY|O_NONBLOCK);
+    if (fd == -1 || fstat(fd, sb) != 0) {
+	if (fd != -1)
+	    close(fd);
+	*error = SUDO_PATH_MISSING;
+	debug_return_int(-1);
+    }
+
+#ifdef __APPLE_MDM_SUPPORT__
+    if (isManaged(path)) {
+	*error = SUDO_PATH_SECURE;
+    } else
+#endif
+    *error = sudo_check_secure(sb, type, uid, gid);
+    if (*error == SUDO_PATH_SECURE) {
+	(void)fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) & ~O_NONBLOCK);
+    } else {
+	/* Not secure, caller can check error flag. */
+	close(fd);
+	fd = -1;
+    }
+
+    debug_return_int(fd);
+}
+
+int
+sudo_secure_open_file_v1(const char *path, uid_t uid, gid_t gid,
+    struct stat *sb, int *error)
+{
+    return sudo_secure_open(path, S_IFREG, uid, gid, sb, error);
+}
+
+int
+sudo_secure_open_dir_v1(const char *path, uid_t uid, gid_t gid,
+    struct stat *sb, int *error)
+{
+    return sudo_secure_open(path, S_IFDIR, uid, gid, sb, error);
+}

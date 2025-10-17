@@ -1,0 +1,233 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, July 31, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "config.h"
+#import "WebPopupMenuProxyMac.h"
+
+#if USE(APPKIT)
+
+#import "CoreTextHelpers.h"
+#import "NativeWebMouseEvent.h"
+#import "PageClientImplMac.h"
+#import "PlatformPopupMenuData.h"
+#import "WebPopupItem.h"
+#import <pal/spi/mac/NSCellSPI.h>
+#import <pal/system/mac/PopupMenu.h>
+#import <wtf/BlockObjCExceptions.h>
+#import <wtf/ProcessPrivilege.h>
+
+namespace WebKit {
+using namespace WebCore;
+
+WebPopupMenuProxyMac::WebPopupMenuProxyMac(NSView *webView, WebPopupMenuProxy::Client& client)
+    : WebPopupMenuProxy(client)
+    , m_webView(webView)
+    , m_wasCanceled(false)
+{
+}
+
+WebPopupMenuProxyMac::~WebPopupMenuProxyMac()
+{
+    if (m_popup)
+        [m_popup setControlView:nil];
+}
+
+void WebPopupMenuProxyMac::populate(const Vector<WebPopupItem>& items, NSFont *font, TextDirection menuTextDirection)
+{
+    if (m_popup)
+        [m_popup removeAllItems];
+    else {
+        m_popup = adoptNS([[NSPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO]);
+        [m_popup setUsesItemFromMenu:NO];
+        [m_popup setAutoenablesItems:NO];
+    }
+
+    int size = items.size();
+
+    for (int i = 0; i < size; i++) {
+        if (items[i].m_type == WebPopupItem::Type::Separator)
+            [[m_popup menu] addItem:[NSMenuItem separatorItem]];
+        else {
+            [m_popup addItemWithTitle:@""];
+            NSMenuItem *menuItem = [m_popup lastItem];
+
+            RetainPtr<NSMutableParagraphStyle> paragraphStyle = adoptNS([[NSParagraphStyle defaultParagraphStyle] mutableCopy]);
+            NSWritingDirection writingDirection = items[i].m_textDirection == TextDirection::LTR ? NSWritingDirectionLeftToRight : NSWritingDirectionRightToLeft;
+            [paragraphStyle setBaseWritingDirection:writingDirection];
+            [paragraphStyle setAlignment:menuTextDirection == TextDirection::LTR ? NSTextAlignmentLeft : NSTextAlignmentRight];
+            RetainPtr<NSMutableDictionary> attributes = adoptNS([[NSMutableDictionary alloc] initWithObjectsAndKeys:
+                paragraphStyle.get(), NSParagraphStyleAttributeName,
+                font, NSFontAttributeName,
+            nil]);
+            if (items[i].m_hasTextDirectionOverride) {
+                auto writingDirectionValue = static_cast<NSInteger>(writingDirection) + static_cast<NSInteger>(NSWritingDirectionOverride);
+                RetainPtr<NSNumber> writingDirectionNumber = adoptNS([[NSNumber alloc] initWithInteger:writingDirectionValue]);
+                RetainPtr<NSArray> writingDirectionArray = adoptNS([[NSArray alloc] initWithObjects:writingDirectionNumber.get(), nil]);
+                [attributes setObject:writingDirectionArray.get() forKey:NSWritingDirectionAttributeName];
+            }
+            RetainPtr<NSAttributedString> string = adoptNS([[NSAttributedString alloc] initWithString:items[i].m_text attributes:attributes.get()]);
+
+            [menuItem setAttributedTitle:string.get()];
+            // We set the title as well as the attributed title here. The attributed title will be displayed in the menu,
+            // but typeahead will use the non-attributed string that doesn't contain any leading or trailing whitespace.
+            [menuItem setTitle:[[string string] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
+            [menuItem setEnabled:items[i].m_isEnabled];
+            [menuItem setToolTip:items[i].m_toolTip];
+        }
+    }
+}
+
+void WebPopupMenuProxyMac::showPopupMenu(const IntRect& rect, TextDirection textDirection, double pageScaleFactor, const Vector<WebPopupItem>& items, const PlatformPopupMenuData& data, int32_t selectedIndex)
+{
+    ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
+    NSFont *font;
+
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+
+    if (NSDictionary *fontAttributes = static_cast<NSDictionary *>(data.fontInfo.fontAttributeDictionary.get())) {
+        auto scaledFontSize = [fontAttributes[NSFontSizeAttribute] floatValue] * pageScaleFactor;
+
+        font = fontWithAttributes(fontAttributes, ((pageScaleFactor != 1) ? scaledFontSize : 0));
+        // font will be nil when using a custom font. However, we should still
+        // honor the font size, matching other browsers.
+        if (!font)
+            font = [NSFont menuFontOfSize:scaledFontSize];
+    } else
+        font = [NSFont menuFontOfSize:0];
+    
+    END_BLOCK_OBJC_EXCEPTIONS
+
+    populate(items, font, textDirection);
+
+    [m_popup attachPopUpWithFrame:rect inView:m_webView];
+    [m_popup selectItemAtIndex:selectedIndex];
+    [m_popup setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
+
+    NSMenu *menu = [m_popup menu];
+    [menu setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
+
+    // These values were borrowed from AppKit to match their placement of the menu.
+    const int popOverHorizontalAdjust = -13;
+    const int popUnderHorizontalAdjust = 6;
+    const int popUnderVerticalAdjust = 6;
+    
+    // Menus that pop-over directly obscure the node that generated the popup menu.
+    // Menus that pop-under are offset underneath it.
+    NSPoint location;
+    if (data.shouldPopOver) {
+        NSRect titleFrame = [m_popup  titleRectForBounds:rect];
+        if (titleFrame.size.width <= 0 || titleFrame.size.height <= 0)
+            titleFrame = rect;
+        float verticalOffset = roundf((NSMaxY(rect) - NSMaxY(titleFrame)) + NSHeight(titleFrame)) + 1;
+        if (textDirection == TextDirection::LTR)
+            location = NSMakePoint(NSMinX(rect) + popOverHorizontalAdjust, NSMaxY(rect) - verticalOffset);
+        else
+            location = NSMakePoint(NSMaxX(rect) - popOverHorizontalAdjust, NSMaxY(rect) - verticalOffset);
+    } else {
+        if (textDirection == TextDirection::LTR)
+            location = NSMakePoint(NSMinX(rect) + popUnderHorizontalAdjust, NSMaxY(rect) + popUnderVerticalAdjust);
+        else
+            location = NSMakePoint(NSMaxX(rect) - popUnderHorizontalAdjust, NSMaxY(rect) + popUnderVerticalAdjust);
+    }
+    RetainPtr<NSView> dummyView = adoptNS([[NSView alloc] initWithFrame:rect]);
+    [dummyView.get() setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
+    [m_webView addSubview:dummyView.get()];
+    location = [dummyView convertPoint:location fromView:m_webView];
+
+    NSControlSize controlSize;
+    switch (data.menuSize) {
+    case WebCore::PopupMenuStyle::Size::Normal:
+        controlSize = NSControlSizeRegular;
+        break;
+    case WebCore::PopupMenuStyle::Size::Small:
+        controlSize = NSControlSizeSmall;
+        break;
+    case WebCore::PopupMenuStyle::Size::Mini:
+        controlSize = NSControlSizeMini;
+        break;
+    case WebCore::PopupMenuStyle::Size::Large:
+        controlSize = NSControlSizeLarge;
+        break;
+    }
+
+    Ref<WebPopupMenuProxyMac> protect(*this);
+    PAL::popUpMenu(menu, location, roundf(NSWidth(rect)), dummyView.get(), selectedIndex, font, controlSize, data.hideArrows);
+
+    [m_popup dismissPopUp];
+    [dummyView removeFromSuperview];
+    
+    CheckedPtr client = this->client();
+    if (!client || m_wasCanceled)
+        return;
+    
+    client->valueChangedForPopupMenu(this, [m_popup indexOfSelectedItem]);
+    
+    // <https://bugs.webkit.org/show_bug.cgi?id=57904> This code is adopted from EventHandler::sendFakeEventsAfterWidgetTracking().
+    if (!client->currentlyProcessedMouseDownEvent())
+        return;
+    
+    NSEvent* initiatingNSEvent = client->currentlyProcessedMouseDownEvent()->nativeEvent();
+    if ([initiatingNSEvent type] != NSEventTypeLeftMouseDown)
+        return;
+
+    NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeLeftMouseUp
+                                            location:[initiatingNSEvent locationInWindow]
+                                       modifierFlags:[initiatingNSEvent modifierFlags]
+                                           timestamp:[initiatingNSEvent timestamp]
+                                        windowNumber:[initiatingNSEvent windowNumber]
+                                             context:nullptr
+                                         eventNumber:[initiatingNSEvent eventNumber]
+                                          clickCount:[initiatingNSEvent clickCount]
+                                            pressure:[initiatingNSEvent pressure]];
+
+    [NSApp postEvent:fakeEvent atStart:YES];
+    fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
+                                   location:[[m_webView window]
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+                        convertScreenToBase:[NSEvent mouseLocation]]
+ALLOW_DEPRECATED_DECLARATIONS_END
+                              modifierFlags:[initiatingNSEvent modifierFlags]
+                                  timestamp:[initiatingNSEvent timestamp]
+                               windowNumber:[initiatingNSEvent windowNumber]
+                                    context:nullptr
+                                eventNumber:0
+                                 clickCount:0
+                                   pressure:0];
+    [NSApp postEvent:fakeEvent atStart:YES];
+}
+
+void WebPopupMenuProxyMac::hidePopupMenu()
+{
+    [[m_popup menu] cancelTracking];
+}
+
+void WebPopupMenuProxyMac::cancelTracking()
+{
+    [[m_popup menu] cancelTracking];
+    m_wasCanceled = true;
+}
+
+} // namespace WebKit
+
+#endif // USE(APPKIT)

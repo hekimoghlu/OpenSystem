@@ -1,0 +1,246 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, September 22, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#line 34 "alias.def"
+
+#include <config.h>
+
+#if defined (ALIAS)
+
+#if defined (HAVE_UNISTD_H)
+#  ifdef _MINIX
+#    include <sys/types.h>
+#  endif
+#  include <unistd.h>
+#endif
+
+#  include "../bashansi.h"
+#  include "../bashintl.h"
+
+#  include <stdio.h>
+#  include "../shell.h"
+#  include "../alias.h"
+#  include "common.h"
+#  include "bashgetopt.h"
+
+/* Flags for print_alias */
+#define AL_REUSABLE	0x01
+
+#ifdef __APPLE__
+static int print_alias __P((alias_t *, int));
+#else
+static void print_alias __P((alias_t *, int));
+#endif
+
+extern int posixly_correct;
+
+/* Hack the alias command in a Korn shell way. */
+int
+alias_builtin (list)
+     WORD_LIST *list;
+{
+  int any_failed, offset, pflag, dflags;
+  alias_t **alias_list, *t;
+  char *name, *value;
+
+  dflags = posixly_correct ? 0 : AL_REUSABLE;
+  pflag = 0;
+  reset_internal_getopt ();
+  while ((offset = internal_getopt (list, "p")) != -1)
+    {
+      switch (offset)
+	{
+	case 'p':
+	  pflag = 1;
+	  dflags |= AL_REUSABLE;
+	  break;
+	default:
+	  builtin_usage ();
+	  return (EX_USAGE);
+	}
+    }
+
+  list = loptend;
+
+  if (list == 0 || pflag)
+    {
+      if (aliases == 0)
+	return (EXECUTION_SUCCESS);
+
+      alias_list = all_aliases ();
+
+      if (alias_list == 0)
+	return (EXECUTION_SUCCESS);
+
+#ifdef __APPLE__
+      for (offset = 0; alias_list[offset]; offset++) {
+	if (print_alias (alias_list[offset], dflags) != EXECUTION_SUCCESS)
+		return (EXECUTION_FAILURE);
+      }
+#else
+      for (offset = 0; alias_list[offset]; offset++)
+	print_alias (alias_list[offset], dflags);
+#endif
+
+      free (alias_list);	/* XXX - Do not free the strings. */
+
+      if (list == 0)
+	return (EXECUTION_SUCCESS);
+    }
+
+  any_failed = 0;
+  while (list)
+    {
+      name = list->word->word;
+
+      for (offset = 0; name[offset] && name[offset] != '='; offset++)
+	;
+
+      if (offset && name[offset] == '=')
+	{
+	  name[offset] = '\0';
+	  value = name + offset + 1;
+
+	  if (legal_alias_name (name, 0) == 0)
+	    {
+	      builtin_error (_("`%s': invalid alias name"), name);
+	      any_failed++;
+	    }
+	  else
+	    add_alias (name, value);
+	}
+      else
+	{
+	  t = find_alias (name);
+	  if (t)
+#ifdef __APPLE__
+	    {
+	     if (print_alias (t, dflags) != EXECUTION_SUCCESS)
+	       any_failed++;
+	    }
+#else
+	    print_alias (t, dflags);
+#endif
+	  else
+	    {
+	      sh_notfound (name);
+	      any_failed++;
+	    }
+	}
+      list = list->next;
+    }
+
+  return (any_failed ? EXECUTION_FAILURE : EXECUTION_SUCCESS);
+}
+#endif /* ALIAS */
+
+#line 155 "alias.def"
+
+#if defined (ALIAS)
+/* Remove aliases named in LIST from the aliases database. */
+int
+unalias_builtin (list)
+     register WORD_LIST *list;
+{
+  register alias_t *alias;
+  int opt, aflag;
+
+  aflag = 0;
+  reset_internal_getopt ();
+  while ((opt = internal_getopt (list, "a")) != -1)
+    {
+      switch (opt)
+	{
+	case 'a':
+	  aflag = 1;
+	  break;
+	default:
+	  builtin_usage ();
+	  return (EX_USAGE);
+	}
+    }
+
+  list = loptend;
+
+  if (aflag)
+    {
+      delete_all_aliases ();
+      return (EXECUTION_SUCCESS);
+    }
+
+  if (list == 0)
+    {
+      builtin_usage ();
+      return (EX_USAGE);
+    }
+
+  aflag = 0;
+  while (list)
+    {
+      alias = find_alias (list->word->word);
+
+      if (alias)
+	remove_alias (alias->name);
+      else
+	{
+	  sh_notfound (list->word->word);
+	  aflag++;
+	}
+
+      list = list->next;
+    }
+
+  return (aflag ? EXECUTION_FAILURE : EXECUTION_SUCCESS);
+}
+
+/* Output ALIAS in such a way as to allow it to be read back in. */
+#ifdef __APPLE__
+static int
+#else
+static void
+#endif
+print_alias (alias, flags)
+     alias_t *alias;
+     int flags;
+{
+  char *value;
+
+  value = sh_single_quote (alias->value);
+  if (flags & AL_REUSABLE)
+    printf ("alias ");
+  printf ("%s=%s\n", alias->name, value);
+  free (value);
+
+#ifdef __APPLE__
+  if (ferror (stdout) != 0 || fflush (stdout) != 0) {
+    builtin_error("failed to flush output");
+    return (EXECUTION_FAILURE);
+  }
+
+  return (EXECUTION_SUCCESS);
+#else
+  fflush (stdout);
+#endif
+}
+#endif /* ALIAS */

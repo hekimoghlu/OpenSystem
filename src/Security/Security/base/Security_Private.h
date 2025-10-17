@@ -1,0 +1,210 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, August 7, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _SECURITY_PRIVATE_H_
+#define _SECURITY_PRIVATE_H_
+
+// This header is here solely to build the private module. Clients should
+// include the individual headers they need.
+#if __building_module(Security_Private)
+#include <Security/certExtensionTemplates.h>
+#include <Security/CKKSControl.h>
+#include <Security/CKKSControlProtocol.h>
+#include <Security/CMSPrivate.h>
+#include <Security/CSCommonPriv.h>
+#include <Security/der_plist.h>
+#include <Security/EscrowRequestXPCProtocol.h>
+#include <Security/LocalKeychainAnalytics.h>
+#include <Security/nameTemplates.h>
+#include <Security/NtlmGenerator.h>
+#include <Security/ocspTemplates.h>
+#include <Security/OctagonSignPosts.h>
+#include <Security/OTClique.h>
+#include <Security/OTClique+Private.h>
+#include <Security/OTConstants.h>
+#include <Security/Affordance_OTConstants.h>
+#include <Security/OTControl.h>
+#include <Security/OTControlProtocol.h>
+#include <Security/OTJoiningConfiguration.h>
+#include <Security/SecAccessControlPriv.h>
+#include <Security/SecAppleCorporateAnchors.h>
+#include <Security/secasn1t.h>
+#include <Security/SecBase64.h>
+#include <Security/SecBasePriv.h>
+#include <Security/SecCertificatePriv.h>
+#include <Security/SecCertificateRequest.h>
+#include <Security/SecCFAllocator.h>
+#include <Security/SecCMS.h>
+#include <Security/SecCMSInternal.h>
+#include <Security/SecCmsBase.h>
+#include <Security/SecCmsContentInfo.h>
+#include <Security/SecCmsDecoder.h>
+#include <Security/SecCmsDigestContext.h>
+#include <Security/SecCmsDigestedData.h>
+#include <Security/SecCmsEncoder.h>
+#include <Security/SecCmsEncryptedData.h>
+#include <Security/SecCmsEnvelopedData.h>
+#include <Security/SecCmsMessage.h>
+#include <Security/SecCmsRecipientInfo.h>
+#include <Security/SecCmsSignedData.h>
+#include <Security/SecCmsSignerInfo.h>
+#include <Security/SecCodePriv.h>
+#include <Security/SecCodeSigner.h>
+#include <Security/SecCodeSignerRemote.h>
+#include <Security/SecCoreAnalytics.h>
+#include <Security/SecLaunchSequence.h>
+#include <Security/SecDH.h>
+#include <Security/SecECKey.h>
+#include <Security/SecEntitlements.h>
+#include <Security/SecEscrowRequest.h>
+#include <Security/SecExperimentPriv.h>
+#include <Security/SecFramework.h>
+#include <Security/SecIdentityPriv.h>
+#include <Security/SecImportExportPriv.h>
+#include <Security/SecInternalReleasePriv.h>
+#include <Security/SecItemBackup.h>
+#include <Security/SecItemPriv.h>
+#include <Security/SecItemFetchOutOfBandPriv.h>
+#include <Security/SecKeyPriv.h>
+#include <Security/SecKeyProxy.h>
+#include <Security/SecKnownFilePaths.h>
+#include <Security/SecLogging.h>
+#include <Security/SecOTR.h>
+#include <Security/SecOTRSession.h>
+#include <Security/SecPaddingConfigurationsPriv.h>
+#include <Security/SecPasswordGenerate.h>
+#include <Security/SecPolicyPriv.h>
+#include <Security/SecProtocolConfiguration.h>
+#include <Security/SecProtocolPriv.h>
+#include <Security/SecProtocolTypesPriv.h>
+#include <Security/SecRecoveryKey.h>
+#include <Security/SecSCEP.h>
+#include <Security/SecServerEncryptionSupport.h>
+#include <Security/SecSignpost.h>
+#include <Security/SecSMIME.h>
+#include <Security/SecStaticCodePriv.h>
+#include <Security/SecTaskPriv.h>
+#include <Security/SecTrustPriv.h>
+#include <Security/SecTrustSettingsPriv.h>
+#include <Security/SecTrustStore.h>
+#include <Security/SecureObjectSync/SOSBackupSliceKeyBag.h>
+#include <Security/SecureObjectSync/SOSCloudCircle.h>
+#include <Security/SecureObjectSync/SOSCloudCircleInternal.h>
+#include <Security/SecureObjectSync/SOSPeerInfo.h>
+#include <Security/SecureObjectSync/SOSTypes.h>
+#include <Security/SecureObjectSync/SOSViews.h>
+#include <Security/SecureTransportPriv.h>
+#include <Security/SecTapToRadar.h>
+#include <Security/SecABC.h>
+#include <Security/SecXPCError.h>
+#include <Security/SecXPCHelper.h>
+#include <Security/SFAnalytics.h>
+#include <Security/SFAnalyticsActivityTracker.h>
+#include <Security/SFAnalyticsDefines.h>
+#include <Security/SFAnalyticsMultiSampler.h>
+#include <Security/SFAnalyticsSampler.h>
+#include <Security/SFAnalyticsSQLiteStore.h>
+#include <Security/SFSQLite.h>
+#include <Security/SOSAnalytics.h>
+#include <Security/SOSControlHelper.h>
+#include <Security/X509Templates.h>
+
+#include <Security/KCSharingGroupManager.h>
+#include <Security/KCSharingDaemonConnection.h>
+#include <Security/KCSharingMessagingdConnection.h>
+#include <Security/KCSharingLogging.h>
+#include <Security/KCSharingGroupManager.h>
+#include <Security/KCSharingGroup.h>
+#include <Security/KCSharingGroupInvite.h>
+#include <Security/KCSharingParticipant.h>
+#include <Security/KCSharingGroupRequests.h>
+#include <Security/KCSharingGroupUpdateInfo.h>
+#include <Security/KCSharingGroupNotificationProtocol.h>
+#include <Security/SecRequirementPrivLWCR.h>
+
+#if SEC_OS_OSX_INCLUDES
+#include <Security/AuthorizationPriv.h>
+#include <Security/AuthorizationTagsPriv.h>
+#include <Security/AuthorizationTrampolinePriv.h>
+#include <Security/checkpw.h>
+#include <Security/csrTemplates.h>
+#include <Security/cssmapplePriv.h>
+#include <Security/keyTemplates.h>
+#include <Security/mdspriv.h>
+#include <Security/osKeyTemplates.h>
+#include <Security/SecAccessPriv.h>
+#include <Security/SecAssessment.h>
+#include <Security/SecExternalSourceTransform.h>
+#include <Security/SecFDERecoveryAsymmetricCrypto.h>
+#include <Security/SecIdentitySearchPriv.h>
+#include <Security/SecKeychainItemExtendedAttributes.h>
+#include <Security/SecKeychainItemPriv.h>
+#include <Security/SecKeychainPriv.h>
+#include <Security/SecKeychainSearchPriv.h>
+#include <Security/SecNullTransform.h>
+#include <Security/SecPassword.h>
+#include <Security/SecRandomP.h>
+#include <Security/SecRecoveryPassword.h>
+#include <Security/SecRequirementPriv.h>
+#include <Security/SecTransformInternal.h>
+#include <Security/SecTranslocate.h>
+#include <Security/SecTrustedApplicationPriv.h>
+#include <Security/sslTypes.h>
+#include <Security/TrustSettingsSchema.h>
+#include <Security/tsaSupport.h>
+#else   // SEC_OS_OSX_INCLUDES
+#include <Security/certextensions.h>
+#include <Security/CMSDecoder.h>
+#include <Security/CMSEncoder.h>
+#include <Security/CodeSigning.h>
+#include <Security/CSCommon.h>
+#include <Security/oids.h>
+#include <Security/oidsalg.h>
+#include <Security/oidsocsp.h>
+#include <Security/pbkdf2.h>
+#include <Security/SecAsn1Coder.h>
+#include <Security/SecAsn1Templates.h>
+#include <Security/SecAsn1Types.h>
+#include <Security/SecCertificateInternal.h>
+#include <Security/SecCode.h>
+#include <Security/SecECKeyPriv.h>
+#include <Security/SecEMCSPriv.h>
+#include <Security/SecOTRDHKey.h>
+#include <Security/SecOTRErrors.h>
+#include <Security/SecOTRMath.h>
+#include <Security/SecOTRPackets.h>
+#include <Security/SecOTRSessionPriv.h>
+#include <Security/SecPBKDF.h>
+#include <Security/SecRequirement.h>
+#include <Security/SecRSAKey.h>
+#include <Security/SecStaticCode.h>
+#include <Security/SecTask.h>
+#include <Security/SecTrustSettings.h>
+#include <Security/SecureObjectSync/SOSPeerInfoV2.h>
+
+
+#endif  // SEC_OS_OSX_INCLUDES
+#endif  // __building_module(Security_Private)
+
+#endif // _SECURITY_PRIVATE_H_

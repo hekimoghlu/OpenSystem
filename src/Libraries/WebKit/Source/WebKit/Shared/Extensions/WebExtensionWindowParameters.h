@@ -1,0 +1,54 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, April 9, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if ENABLE(WK_WEB_EXTENSIONS)
+
+#include "WebExtensionTabParameters.h"
+#include "WebExtensionWindow.h"
+#include "WebExtensionWindowIdentifier.h"
+#include <wtf/Forward.h>
+
+namespace WebKit {
+
+struct WebExtensionWindowParameters {
+    std::optional<WebExtensionWindowIdentifier> identifier;
+
+    std::optional<WebExtensionWindow::State> state;
+    std::optional<WebExtensionWindow::Type> type;
+
+    std::optional<Vector<WebExtensionTabParameters>> tabs;
+
+#if PLATFORM(COCOA)
+    std::optional<CGRect> frame;
+#endif
+
+    std::optional<bool> focused;
+    std::optional<bool> privateBrowsing;
+};
+
+} // namespace WebKit
+
+#endif // ENABLE(WK_WEB_EXTENSIONS)

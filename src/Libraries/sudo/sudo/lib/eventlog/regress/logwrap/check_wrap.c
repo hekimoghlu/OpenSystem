@@ -1,0 +1,129 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, December 11, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <config.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <unistd.h>
+
+#define SUDO_ERROR_WRAP 0
+
+#include "sudo_compat.h"
+#include "sudo_eventlog.h"
+#include "sudo_fatal.h"
+#include "sudo_plugin.h"
+#include "sudo_util.h"
+
+sudo_dso_public int main(int argc, char *argv[]);
+
+static void
+usage(void)
+{
+    fprintf(stderr, "usage: %s [-v] inputfile\n", getprogname());
+    exit(EXIT_FAILURE);
+}
+
+int
+main(int argc, char *argv[])
+{
+    int ch, lineno = 0, which = 0;
+    char *line, lines[2][2048];
+    const char *infile;
+    size_t len;
+    FILE *fp;
+
+    initprogname(argc > 0 ? argv[0] : "check_wrap");
+
+    while ((ch = getopt(argc, argv, "v")) != -1) {
+	switch (ch) {
+	case 'v':
+	    /* ignored */
+	    break;
+	default:
+	    usage();
+	}
+    }
+    argc -= optind;
+    argv += optind;
+
+    if (argc != 1)
+	usage();
+    infile = argv[0];
+
+    fp = fopen(infile, "r");
+    if (fp == NULL)
+	sudo_fatalx("unable to open %s", infile);
+
+    /*
+     * Each test record consists of a log entry on one line and a list of
+     * line lengths to test it with on the next.  E.g.
+     *
+     * Jun 30 14:49:51 : millert : TTY=ttypn ; PWD=/usr/src/local/millert/hg/sudo/trunk/plugins/sudoers ; USER=root ; TSID=0004LD ; COMMAND=/usr/local/sbin/visudo
+     * 60-80,40
+     */
+    while ((line = fgets(lines[which], sizeof(lines[which]), fp)) != NULL) {
+	char *cp, *last;
+
+	len = strcspn(line, "\n");
+	line[len] = '\0';
+
+	/* If we read the 2nd line, parse list of line lengths and check. */
+	if (which) {
+	    lineno++;
+	    for (cp = strtok_r(lines[1], ",", &last); cp != NULL; cp = strtok_r(NULL, ",", &last)) {
+		const char *errstr;
+		char *dash;
+		size_t maxlen;
+
+		/* May be either a number or a range. */
+		dash = strchr(cp, '-');
+		if (dash != NULL) {
+		    *dash = '\0';
+		    len = sudo_strtonum(cp, 0, INT_MAX, &errstr);
+		    if (errstr == NULL)
+			maxlen = sudo_strtonum(dash + 1, 0, INT_MAX, &errstr);
+		} else {
+		    len = maxlen = sudo_strtonum(cp, 0, INT_MAX, &errstr);
+		}
+		if (errstr != NULL) {
+		    sudo_fatalx("%s: invalid length on line %d", infile, lineno);
+		}
+		while (len <= maxlen) {
+		    if (len == 0)
+			printf("# word wrap disabled\n");
+		    else
+			printf("# word wrap at %d characters\n", (int)len);
+		    eventlog_writeln(stdout, lines[0], strlen(lines[0]), len);
+		    len++;
+		}
+	    }
+	}
+	which = !which;
+    }
+
+    return EXIT_SUCCESS;
+}

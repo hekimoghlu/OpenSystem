@@ -1,0 +1,82 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, October 30, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include "CryptoAlgorithm.h"
+
+namespace WebCore {
+
+class CryptoAlgorithmAesCtrParams;
+class CryptoKeyAES;
+
+class CryptoAlgorithmAESCTR final : public CryptoAlgorithm {
+public:
+    class CounterBlockHelper {
+    public:
+        CounterBlockHelper(const Vector<uint8_t>& counterVector, size_t counterLength);
+
+        size_t countToOverflowSaturating() const;
+        Vector<uint8_t> counterVectorAfterOverflow() const;
+
+    private:
+        // 128 bits integer with miminum required operators.
+        struct CounterBlockBits {
+            void set();
+            bool all() const;
+            bool any() const;
+
+            CounterBlockBits operator&(const CounterBlockBits&) const;
+            CounterBlockBits operator~() const;
+            CounterBlockBits& operator <<=(unsigned);
+            CounterBlockBits& operator &=(const CounterBlockBits&);
+
+            uint64_t m_hi { 0 };
+            uint64_t m_lo { 0 };
+        };
+
+        CounterBlockBits m_bits;
+        const size_t m_counterLength;
+    };
+
+    static constexpr ASCIILiteral s_name = "AES-CTR"_s;
+    static constexpr CryptoAlgorithmIdentifier s_identifier = CryptoAlgorithmIdentifier::AES_CTR;
+    static Ref<CryptoAlgorithm> create();
+
+private:
+    CryptoAlgorithmAESCTR() = default;
+    CryptoAlgorithmIdentifier identifier() const final;
+
+    void encrypt(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&) final;
+    void decrypt(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&) final;
+    void generateKey(const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyOrKeyPairCallback&&, ExceptionCallback&&, ScriptExecutionContext&) final;
+    void importKey(CryptoKeyFormat, KeyData&&, const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyCallback&&, ExceptionCallback&&) final;
+    void exportKey(CryptoKeyFormat, Ref<CryptoKey>&&, KeyDataCallback&&, ExceptionCallback&&) final;
+    ExceptionOr<std::optional<size_t>> getKeyLength(const CryptoAlgorithmParameters&) final;
+
+    static ExceptionOr<Vector<uint8_t>> platformEncrypt(const CryptoAlgorithmAesCtrParams&, const CryptoKeyAES&, const Vector<uint8_t>&);
+    static ExceptionOr<Vector<uint8_t>> platformDecrypt(const CryptoAlgorithmAesCtrParams&, const CryptoKeyAES&, const Vector<uint8_t>&);
+};
+
+} // namespace WebCore

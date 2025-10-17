@@ -1,0 +1,136 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, November 20, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//
+//  Use this file to import your target's public headers that you would like to expose to Swift.
+//
+
+#import "KeychainCircle/KCJoiningRequestSession+Internal.h"
+#import "KeychainCircle/KCJoiningAcceptSession+Internal.h"
+#import <KeychainCircle/KCJoiningMessages.h>
+
+#import <TrustedPeers/TPHash.h>
+#import <TrustedPeers/TPLog.h>
+#import <TrustedPeers/TPPBPeerStableInfoSetting.h>
+#import <TrustedPeers/TPPBPolicyCategoriesByView.h>
+#import <TrustedPeers/TPPBPolicyDocument.h>
+#import <TrustedPeers/TPPBPolicyIntroducersByCategory.h>
+#import <TrustedPeers/TPPBPolicyModelToCategory.h>
+#import <TrustedPeers/TrustedPeers.h>
+
+#import "utilities/SecFileLocations.h"
+#import "utilities/SecCFError.h"
+
+
+#import "keychain/securityd/SecItemServer.h"
+#import "keychain/securityd/spi.h"
+
+#import "keychain/ckks/CKKS.h"
+#import "keychain/ckks/CKKSKeychainView.h"
+#import "keychain/ckks/CKKSResultOperation.h"
+
+#import <SecurityFoundation/SFKeychain.h>
+#import <SecurityFoundation/SFIdentity.h>
+#import <SecurityFoundation/SFAccessPolicy.h>
+#import <SecurityFoundation/SFDigestOperation.h>
+#import <SecurityFoundation/SFKey.h>
+#import <SecurityFoundation/SFKey_Private.h>
+
+#import "keychain/ot/ErrorUtils.h"
+#import "keychain/ot/OT.h"
+#import "keychain/ot/OTControl.h"
+#import "keychain/ot/OTManager.h"
+
+#import "keychain/ot/OTSOSAdapter.h"
+#import "keychain/ot/OTDefines.h"
+#import "keychain/ot/OTStates.h"
+#import "keychain/ot/OTCuttlefishContext.h"
+#import "keychain/ot/OctagonStateMachine.h"
+#import "keychain/ot/OctagonStateMachineHelpers.h"
+
+#import "keychain/ot/OTDeviceInformationAdapter.h"
+
+#import "keychain/OctagonTrust/OTCustodianRecoveryKey.h"
+#import "keychain/OctagonTrust/OTInheritanceKey.h"
+#import "keychain/OctagonTrust/OTNotifications.h"
+#import "keychain/OctagonTrust/categories/OTInheritanceKey+Test.h"
+
+#import "keychain/ckks/tests/CloudKitKeychainSyncingTestsBase.h"
+#import "keychain/TrustedPeersHelper/TrustedPeersHelperProtocol.h"
+
+#import "keychain/ckks/CKKSKeychainBackedKey.h"
+#import "keychain/ckks/CKKSPeer.h"
+#import "keychain/ckks/CKKSTLKShare.h"
+#import "keychain/ckks/CKKSAnalytics.h"
+#import "keychain/ckks/CloudKitCategories.h"
+#import "keychain/ckks/CKKSCurrentKeyPointer.h"
+#import "keychain/ckks/CKKSReachabilityTracker.h"
+#import "keychain/ckks/CKKSAccountStateTracker.h"
+
+#import "keychain/ot/OctagonControlServer.h"
+
+#import "keychain/ot/proto/generated_source/OTAccountMetadataClassC.h"
+
+#import "keychain/ot/proto/generated_source/OTWalrus.h"
+#import "keychain/ot/proto/generated_source/OTWebAccess.h"
+#import "keychain/ot/proto/generated_source/OTAccountSettings.h"
+
+#import "keychain/ot/categories/OTAccountMetadataClassC+KeychainSupport.h"
+#import "keychain/ot/categories/OctagonEscrowRecoverer.h"
+#import "keychain/ot/OTAuthKitAdapter.h"
+#import "keychain/ot/OTPersonaAdapter.h"
+
+#import "KeychainCircle/generated_source/KCInitialMessageData.h"
+#import "keychain/ot/proto/generated_source/OTPairingMessage.h"
+#import "keychain/ot/proto/generated_source/OTSponsorToApplicantRound1M2.h"
+#import "keychain/ot/proto/generated_source/OTApplicantToSponsorRound2M1.h"
+#import "keychain/ot/proto/generated_source/OTSponsorToApplicantRound2M2.h"
+
+#import "keychain/otctl/OTControlCLI.h"
+
+// Also, we're going to need whatever TPH needs.
+#import "keychain/TrustedPeersHelper/TrustedPeersHelper-Bridging-Header.h"
+#import "keychain/trust/TrustedPeersTests/TPModelInMemoryDb.h"
+
+#import "keychain/SecureObjectSync/SOSControlServer.h"
+#import "KeychainCircle/Tests/FakeSOSControl.h"
+#import "OSX/sec/ipc/server_security_helpers.h"
+
+#import "tests/secdmockaks/mockaks.h"
+
+#import "TestsObjcTranslation.h"
+
+#import "keychain/ot/OctagonCKKSPeerAdapter.h"
+#import "keychain/ot/proto/generated_source/OTEscrowRecord.h"
+#import "keychain/ot/proto/generated_source/OTEscrowRecordMetadata.h"
+#import "keychain/ot/proto/generated_source/OTEscrowRecordMetadataClientMetadata.h"
+
+#import "keychain/keychainupgrader/KeychainItemUpgradeRequestServer.h"
+#import "keychain/keychainupgrader/KeychainItemUpgradeRequestController.h"
+#import "keychain/keychainupgrader/KeychainItemUpgradeRequestServerHelpers.h"
+
+#import <CloudKit/CKError.h>
+#import <AuthKit/AKError.h>
+#import <CloudServices/SecureBackup.h>

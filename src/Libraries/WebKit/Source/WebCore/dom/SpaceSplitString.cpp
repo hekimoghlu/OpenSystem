@@ -1,0 +1,253 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, June 21, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "SpaceSplitString.h"
+
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/AtomStringHash.h>
+#include <wtf/text/ParsingUtilities.h>
+
+namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpaceSplitStringData);
+
+static_assert(!(sizeof(SpaceSplitStringData) % sizeof(uintptr_t)), "SpaceSplitStringDataTail is aligned to WordSize");
+
+template <typename CharacterType, typename TokenProcessor>
+static inline void tokenizeSpaceSplitString(TokenProcessor& tokenProcessor, std::span<const CharacterType> characters)
+{
+    for (unsigned start = 0; ; ) {
+        while (start < characters.size() && isASCIIWhitespace(characters[start]))
+            ++start;
+        if (start >= characters.size())
+            break;
+        unsigned end = start + 1;
+        while (end < characters.size() && !isASCIIWhitespace(characters[end]))
+            ++end;
+
+        if (!tokenProcessor.processToken(characters.subspan(start, end - start)))
+            return;
+
+        start = end + 1;
+    }
+}
+
+template<typename TokenProcessor>
+static inline void tokenizeSpaceSplitString(TokenProcessor& tokenProcessor, StringView string)
+{
+    ASSERT(!string.isNull());
+
+    if (string.is8Bit())
+        tokenizeSpaceSplitString(tokenProcessor, string.span8());
+    else
+        tokenizeSpaceSplitString(tokenProcessor, string.span16());
+}
+
+bool SpaceSplitStringData::containsAll(SpaceSplitStringData& other)
+{
+    if (this == &other)
+        return true;
+
+    unsigned otherSize = other.m_size;
+    unsigned i = 0;
+    do {
+        if (!contains(other[i]))
+            return false;
+        ++i;
+    } while (i < otherSize);
+    return true;
+}
+
+struct SpaceSplitStringTableKeyTraits : public HashTraits<AtomString>
+{
+    // The number 200 for typicalNumberOfSpaceSplitString was based on the typical number of unique class names
+    // on typical websites on August 2013.
+    static const unsigned typicalNumberOfSpaceSplitString = 200;
+    static const int minimumTableSize = WTF::HashTableCapacityForSize<typicalNumberOfSpaceSplitString>::value;
+};
+
+typedef UncheckedKeyHashMap<AtomString, SpaceSplitStringData*, AtomStringHash, SpaceSplitStringTableKeyTraits> SpaceSplitStringTable;
+
+static SpaceSplitStringTable& spaceSplitStringTable()
+{
+    static NeverDestroyed<SpaceSplitStringTable> table;
+    return table;
+}
+
+void SpaceSplitString::set(const AtomString& inputString, ShouldFoldCase shouldFoldCase)
+{
+    if (inputString.isNull()) {
+        clear();
+        return;
+    }
+    m_data = SpaceSplitStringData::create(shouldFoldCase == ShouldFoldCase::Yes ? inputString.convertToASCIILowercase() : inputString);
+}
+
+template<typename ReferenceCharacterType>
+class TokenIsEqualToCharactersTokenProcessor {
+public:
+    explicit TokenIsEqualToCharactersTokenProcessor(const ReferenceCharacterType* referenceCharacters, unsigned length)
+        : m_referenceCharacters(referenceCharacters)
+        , m_referenceLength(length)
+    {
+    }
+
+    template <typename TokenCharacterType>
+    bool processToken(std::span<const TokenCharacterType> characters)
+    {
+        if (characters.size() == m_referenceLength && equal(m_referenceCharacters, characters)) {
+            m_referenceStringWasFound = true;
+            return false;
+        }
+        return true;
+    }
+
+    bool referenceStringWasFound() const { return m_referenceStringWasFound; }
+
+private:
+    const ReferenceCharacterType* m_referenceCharacters;
+    unsigned m_referenceLength;
+    bool m_referenceStringWasFound { false };
+};
+
+template <typename ValueCharacterType>
+static bool spaceSplitStringContainsValueInternal(StringView spaceSplitString, StringView value)
+{
+    TokenIsEqualToCharactersTokenProcessor<ValueCharacterType> tokenProcessor(value.span<ValueCharacterType>().data(), value.length());
+    tokenizeSpaceSplitString(tokenProcessor, spaceSplitString);
+    return tokenProcessor.referenceStringWasFound();
+}
+
+bool SpaceSplitString::spaceSplitStringContainsValue(StringView spaceSplitString, StringView value, ShouldFoldCase shouldFoldCase)
+{
+    if (spaceSplitString.isNull())
+        return false;
+
+    if (value.is8Bit())
+        return spaceSplitStringContainsValueInternal<LChar>(shouldFoldCase == ShouldFoldCase::Yes ? StringView { spaceSplitString.convertToASCIILowercase() } : spaceSplitString, value);
+    return spaceSplitStringContainsValueInternal<UChar>(shouldFoldCase == ShouldFoldCase::Yes ? StringView { spaceSplitString.convertToASCIILowercase() } : spaceSplitString, value);
+}
+
+class TokenCounter {
+    WTF_MAKE_NONCOPYABLE(TokenCounter);
+public:
+    TokenCounter() : m_tokenCount(0) { }
+
+    template<typename CharacterType> bool processToken(std::span<const CharacterType>)
+    {
+        ++m_tokenCount;
+        return true;
+    }
+
+    unsigned tokenCount() const { return m_tokenCount; }
+
+private:
+    unsigned m_tokenCount;
+};
+
+class TokenAtomStringInitializer {
+    WTF_MAKE_NONCOPYABLE(TokenAtomStringInitializer);
+public:
+    TokenAtomStringInitializer(const AtomString& keyString, std::span<AtomString> memory)
+        : m_keyString(keyString)
+        , m_memoryBucket(memory)
+    { }
+
+    template<typename CharacterType> bool processToken(std::span<const CharacterType> characters)
+    {
+        if (characters.size() == m_keyString.length())
+            new (NotNull, m_memoryBucket.data()) AtomString(m_keyString);
+        else
+            new (NotNull, m_memoryBucket.data()) AtomString(characters);
+        skip(m_memoryBucket, 1);
+        return true;
+    }
+
+    const AtomString* nextMemoryBucket() const { return m_memoryBucket.data(); }
+
+private:
+    const AtomString& m_keyString;
+    std::span<AtomString> m_memoryBucket;
+};
+
+inline Ref<SpaceSplitStringData> SpaceSplitStringData::create(const AtomString& keyString, unsigned tokenCount)
+{
+    ASSERT(tokenCount);
+
+    RELEASE_ASSERT(tokenCount < (std::numeric_limits<unsigned>::max() - sizeof(SpaceSplitStringData)) / sizeof(AtomString));
+    unsigned sizeToAllocate = sizeof(SpaceSplitStringData) + tokenCount * sizeof(AtomString);
+    SpaceSplitStringData* spaceSplitStringData = static_cast<SpaceSplitStringData*>(fastMalloc(sizeToAllocate));
+
+    new (NotNull, spaceSplitStringData) SpaceSplitStringData(keyString, tokenCount);
+    auto tokenArray = spaceSplitStringData->tokenArray();
+    TokenAtomStringInitializer tokenInitializer(keyString, tokenArray);
+    tokenizeSpaceSplitString(tokenInitializer, keyString);
+    ASSERT(static_cast<unsigned>(tokenInitializer.nextMemoryBucket() - tokenArray.data()) == tokenCount);
+    ASSERT(reinterpret_cast<const char*>(tokenInitializer.nextMemoryBucket()) - reinterpret_cast<const char*>(spaceSplitStringData) == sizeToAllocate);
+
+    return adoptRef(*spaceSplitStringData);
+}
+
+RefPtr<SpaceSplitStringData> SpaceSplitStringData::create(const AtomString& keyString)
+{
+    ASSERT(isMainThread());
+    ASSERT(!keyString.isNull());
+
+    auto addResult = spaceSplitStringTable().add(keyString, nullptr);
+    if (!addResult.isNewEntry)
+        return addResult.iterator->value;
+
+    // Nothing in the cache? Let's create a new SpaceSplitStringData if the input has something useful.
+    // 1) We find the number of strings in the input to know how much size we need to allocate.
+    TokenCounter tokenCounter;
+    tokenizeSpaceSplitString(tokenCounter, keyString);
+    unsigned tokenCount = tokenCounter.tokenCount();
+
+    if (!tokenCount)
+        return nullptr;
+
+    RefPtr<SpaceSplitStringData> spaceSplitStringData = create(keyString, tokenCount);
+    addResult.iterator->value = spaceSplitStringData.get();
+    return spaceSplitStringData;
+}
+
+
+void SpaceSplitStringData::destroy(SpaceSplitStringData* spaceSplitString)
+{
+    ASSERT(isMainThread());
+
+    spaceSplitStringTable().remove(spaceSplitString->m_keyString);
+
+    for (auto& data : spaceSplitString->tokenArray())
+        data.~AtomString();
+
+    spaceSplitString->~SpaceSplitStringData();
+
+    fastFree(spaceSplitString);
+}
+
+} // namespace WebCore

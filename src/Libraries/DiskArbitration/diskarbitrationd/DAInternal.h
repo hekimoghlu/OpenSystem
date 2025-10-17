@@ -1,0 +1,160 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, November 4, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef __DISKARBITRATIOND_DAINTERNAL__
+#define __DISKARBITRATIOND_DAINTERNAL__
+
+#include <mach/mach.h>
+#include <sys/mount.h>
+#include <CoreFoundation/CoreFoundation.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#define ___GID_WHEEL 0
+#define ___UID_ROOT  0
+
+#define ___GID_UNKNOWN 99
+#define ___UID_UNKNOWN 99
+
+#define _kDADaemonName "com.apple.DiskArbitration.diskarbitrationd"
+
+enum
+{
+    _kDAAuthorizeOptionDefault                   = 0x00000000,
+    _kDAAuthorizeOptionAuthenticateAdministrator = 0x00000001,
+    _kDAAuthorizeOptionIsOwner                   = 0x00080000
+};
+
+typedef UInt32 _DAAuthorizeOptions;
+
+enum
+{
+    _kDADiskAppearedCallback,
+    _kDADiskClaimCallback,
+    _kDADiskClaimReleaseCallback,
+    _kDADiskDescriptionChangedCallback,
+    _kDADiskDisappearedCallback,
+    _kDADiskEjectCallback,
+    _kDADiskEjectApprovalCallback,
+    _kDADiskMountCallback,
+    _kDADiskMountApprovalCallback,
+    _kDADiskPeekCallback,
+    _kDADiskProbeCallback,
+    _kDADiskRefreshCallback,
+    _kDADiskRenameCallback,
+    _kDADiskUnmountCallback,
+    _kDADiskUnmountApprovalCallback,
+    _kDAIdleCallback,
+    _kDADiskListCompleteCallback,
+    _kDADiskSetFSKitAdditionsCallback,
+    _kDADiskLastKind = _kDADiskSetFSKitAdditionsCallback
+};
+
+typedef UInt32 _DACallbackKind;
+
+enum
+{
+    _kDADiskClaim               = _kDADiskClaimCallback,
+    _kDADiskEject               = _kDADiskEjectCallback,
+    _kDADiskMount               = _kDADiskMountCallback,
+    _kDADiskProbe               = _kDADiskProbeCallback,
+    _kDADiskRefresh             = _kDADiskRefreshCallback,
+    _kDADiskRename              = _kDADiskRenameCallback,
+    _kDADiskUnmount             = _kDADiskUnmountCallback,
+    _kDADiskSetFSKitAdditions   = _kDADiskSetFSKitAdditionsCallback,
+};
+
+typedef UInt32 _DARequestKind;
+
+const char * _kDAAuthorizeRightAdopt;
+const char * _kDAAuthorizeRightEncode;
+const char * _kDAAuthorizeRightMount;
+const char * _kDAAuthorizeRightRename;
+const char * _kDAAuthorizeRightUnmount;
+
+const CFStringRef _kDACallbackAddressKey;       /* ( CFNumber     ) */
+const CFStringRef _kDACallbackArgument0Key;     /* ( CFType       ) */
+const CFStringRef _kDACallbackArgument1Key;     /* ( CFType       ) */
+const CFStringRef _kDACallbackContextKey;       /* ( CFNumber     ) */
+const CFStringRef _kDACallbackDiskKey;          /* ( DADisk       ) */
+const CFStringRef _kDACallbackKindKey;          /* ( CFNumber     ) */
+const CFStringRef _kDACallbackMatchKey;         /* ( CFDictionary ) */
+const CFStringRef _kDACallbackOrderKey;         /* ( CFNumber     ) */
+const CFStringRef _kDACallbackBlockKey;         /* ( CFNumber     ) */
+const CFStringRef _kDACallbackSessionKey;       /* ( DASession    ) */
+const CFStringRef _kDACallbackTimeKey;          /* ( CFDate       ) */
+const CFStringRef _kDACallbackWatchKey;         /* ( CFArray      ) */
+
+const CFStringRef _kDADiskIDKey;                /* ( CFData       ) */
+
+const CFStringRef _kDADissenterProcessIDKey;    /* ( CFNumber     ) */
+const CFStringRef _kDADissenterStatusKey;       /* ( CFNumber     ) */
+const CFStringRef _kDADissenterStatusStringKey; /* ( CFString     ) */
+
+const CFStringRef _kDARequestArgument1Key;      /* ( CFType       ) */
+const CFStringRef _kDARequestArgument2Key;      /* ( CFType       ) */
+const CFStringRef _kDARequestArgument3Key;      /* ( CFType       ) */
+const CFStringRef _kDARequestCallbackKey;       /* ( DACallback   ) */
+const CFStringRef _kDARequestDiskKey;           /* ( DADisk       ) */
+const CFStringRef _kDARequestDissenterKey;      /* ( DADissenter  ) */
+const CFStringRef _kDARequestKindKey;           /* ( CFNumber     ) */
+const CFStringRef _kDARequestLinkKey;           /* ( CFArray      ) */
+const CFStringRef _kDARequestStateKey;          /* ( CFNumber     ) */
+const CFStringRef _kDARequestUserGIDKey;        /* ( CFNumber     ) */
+const CFStringRef _kDARequestUserUIDKey;        /* ( CFNumber     ) */
+
+__private_extern__ int          ___statfs( const char * path, struct statfs * buf, int flags );
+__private_extern__ Boolean      ___CFArrayContainsValue( CFArrayRef array, const void * value );
+__private_extern__ Boolean      ___CFArrayContainsString( CFArrayRef array, const void * value );
+__private_extern__ void         ___CFArrayRemoveValue( CFMutableArrayRef array, const void * value );
+__private_extern__ vm_address_t ___CFDataCopyBytes( CFDataRef data, mach_msg_type_number_t * length );
+__private_extern__ SInt64       ___CFDictionaryGetIntegerValue( CFDictionaryRef dictionary, const void * key );
+__private_extern__ void         ___CFDictionarySetIntegerValue( CFMutableDictionaryRef dictionary, const void * key, SInt64 value );
+__private_extern__ CFNumberRef  ___CFNumberCreateWithIntegerValue( CFAllocatorRef allocator, SInt64 value );
+__private_extern__ SInt64       ___CFNumberGetIntegerValue( CFNumberRef number );
+__private_extern__ char *       ___CFStringCopyCString( CFStringRef string );
+__private_extern__ char *       ___CFURLCopyFileSystemRepresentation( CFURLRef url );
+
+__private_extern__ const char * _DACallbackKindGetName( _DACallbackKind kind );
+__private_extern__ const char * _DARequestKindGetName( _DARequestKind kind );
+
+__private_extern__ CFDataRef              _DASerialize( CFAllocatorRef allocator, CFTypeRef object );
+__private_extern__ CFDataRef              _DASerializeDiskDescription( CFAllocatorRef allocator, CFDictionaryRef description );
+__private_extern__ CFTypeRef              _DAUnserialize( CFAllocatorRef allocator, CFDataRef data );
+__private_extern__ CFMutableDictionaryRef _DAUnserializeDiskDescription( CFAllocatorRef allocator, CFDataRef data );
+__private_extern__ CFMutableDictionaryRef _DAUnserializeDiskDescriptionWithBytes( CFAllocatorRef allocator, vm_address_t bytes, vm_size_t length );
+__private_extern__ CFTypeRef              _DAUnserializeWithBytes( CFAllocatorRef allocator, vm_address_t bytes, vm_size_t length );
+
+__private_extern__ char * _DAVolumeCopyID( const struct statfs * fs );
+__private_extern__ char * _DAVolumeGetID( const struct statfs * fs );
+__private_extern__ int __DAVolumeGetDeviceIDForLifsMount( char *mntpoint, char *devname, int len );
+__private_extern__ int _DAVolumeGetDevicePathForLifsMount( const struct statfs * fs, char *devicePath, int size );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* !__DISKARBITRATIOND_DAINTERNAL__ */

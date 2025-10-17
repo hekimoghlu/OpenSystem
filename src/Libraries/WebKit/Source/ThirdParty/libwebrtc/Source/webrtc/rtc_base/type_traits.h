@@ -1,0 +1,155 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, August 19, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef RTC_BASE_TYPE_TRAITS_H_
+#define RTC_BASE_TYPE_TRAITS_H_
+
+#include <cstddef>
+#include <string>
+#include <type_traits>
+
+namespace rtc {
+
+// Determines if the given class has zero-argument .data() and .size() methods
+// whose return values are convertible to T* and size_t, respectively.
+template <typename DS, typename T>
+class HasDataAndSize {
+ private:
+  template <
+      typename C,
+      typename std::enable_if<
+          std::is_convertible<decltype(std::declval<C>().data()), T*>::value &&
+          std::is_convertible<decltype(std::declval<C>().size()),
+                              std::size_t>::value>::type* = nullptr>
+  static int Test(int);
+
+  template <typename>
+  static char Test(...);
+
+ public:
+  static constexpr bool value = std::is_same<decltype(Test<DS>(0)), int>::value;
+};
+
+namespace test_has_data_and_size {
+
+template <typename DR, typename SR>
+struct Test1 {
+  DR data();
+  SR size();
+};
+static_assert(HasDataAndSize<Test1<int*, int>, int>::value, "");
+static_assert(HasDataAndSize<Test1<int*, int>, const int>::value, "");
+static_assert(HasDataAndSize<Test1<const int*, int>, const int>::value, "");
+static_assert(!HasDataAndSize<Test1<const int*, int>, int>::value,
+              "implicit cast of const int* to int*");
+static_assert(!HasDataAndSize<Test1<char*, size_t>, int>::value,
+              "implicit cast of char* to int*");
+
+struct Test2 {
+  int* data;
+  size_t size;
+};
+static_assert(!HasDataAndSize<Test2, int>::value,
+              ".data and .size aren't functions");
+
+struct Test3 {
+  int* data();
+};
+static_assert(!HasDataAndSize<Test3, int>::value, ".size() is missing");
+
+class Test4 {
+  int* data();
+  size_t size();
+};
+static_assert(!HasDataAndSize<Test4, int>::value,
+              ".data() and .size() are private");
+
+}  // namespace test_has_data_and_size
+
+namespace type_traits_impl {
+
+// Determines if the given type is an enum that converts implicitly to
+// an integral type.
+template <typename T>
+struct IsIntEnum {
+ private:
+  // This overload is used if the type is an enum, and unary plus
+  // compiles and turns it into an integral type.
+  template <typename X,
+            typename std::enable_if<
+                std::is_enum<X>::value &&
+                std::is_integral<decltype(+std::declval<X>())>::value>::type* =
+                nullptr>
+  static int Test(int);
+
+  // Otherwise, this overload is used.
+  template <typename>
+  static char Test(...);
+
+ public:
+  static constexpr bool value =
+      std::is_same<decltype(Test<typename std::remove_reference<T>::type>(0)),
+                   int>::value;
+};
+
+}  // namespace type_traits_impl
+
+// Determines if the given type is integral, or an enum that
+// converts implicitly to an integral type.
+template <typename T>
+struct IsIntlike {
+ private:
+  using X = typename std::remove_reference<T>::type;
+
+ public:
+  static constexpr bool value =
+      std::is_integral<X>::value || type_traits_impl::IsIntEnum<X>::value;
+};
+
+namespace test_enum_intlike {
+
+enum E1 { e1 };
+enum { e2 };
+enum class E3 { e3 };
+struct S {};
+
+static_assert(type_traits_impl::IsIntEnum<E1>::value, "");
+static_assert(type_traits_impl::IsIntEnum<decltype(e2)>::value, "");
+static_assert(!type_traits_impl::IsIntEnum<E3>::value, "");
+static_assert(!type_traits_impl::IsIntEnum<int>::value, "");
+static_assert(!type_traits_impl::IsIntEnum<float>::value, "");
+static_assert(!type_traits_impl::IsIntEnum<S>::value, "");
+
+static_assert(IsIntlike<E1>::value, "");
+static_assert(IsIntlike<decltype(e2)>::value, "");
+static_assert(!IsIntlike<E3>::value, "");
+static_assert(IsIntlike<int>::value, "");
+static_assert(!IsIntlike<float>::value, "");
+static_assert(!IsIntlike<S>::value, "");
+
+}  // namespace test_enum_intlike
+
+}  // namespace rtc
+
+#endif  // RTC_BASE_TYPE_TRAITS_H_

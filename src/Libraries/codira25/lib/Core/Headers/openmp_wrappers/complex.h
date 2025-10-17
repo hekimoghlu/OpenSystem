@@ -1,0 +1,50 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, May 19, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef __CLANG_OPENMP_COMPLEX_H__
+#define __CLANG_OPENMP_COMPLEX_H__
+
+#ifndef _OPENMP
+#error "This file is for OpenMP compilation only."
+#endif
+
+// We require math functions in the complex builtins below.
+#include <math.h>
+
+#ifdef __NVPTX__
+#define __OPENMP_NVPTX__
+#include <__clang_cuda_complex_builtins.h>
+#undef __OPENMP_NVPTX__
+#endif
+
+#ifdef __AMDGCN__
+#define __OPENMP_AMDGCN__
+#include <__clang_cuda_complex_builtins.h>
+#undef __OPENMP_AMDGCN__
+#endif
+
+#endif
+
+// Grab the host header too.
+#include_next <complex.h>

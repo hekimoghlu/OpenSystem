@@ -1,0 +1,71 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, March 20, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <darwintest.h>
+#include <mach/thread_policy_private.h>
+#include <mach/mach.h>
+#include <dispatch/dispatch.h>
+#include <sys/qos_private.h>
+
+static qos_class_t
+thread_qos_to_qos_class(uint32_t thread_qos)
+{
+	switch (thread_qos) {
+	case THREAD_QOS_MAINTENANCE:
+		return QOS_CLASS_MAINTENANCE;
+	case THREAD_QOS_BACKGROUND:
+		return QOS_CLASS_BACKGROUND;
+	case THREAD_QOS_UTILITY:
+		return QOS_CLASS_UTILITY;
+	case THREAD_QOS_LEGACY:
+		return QOS_CLASS_DEFAULT;
+	case THREAD_QOS_USER_INITIATED:
+		return QOS_CLASS_USER_INITIATED;
+	case THREAD_QOS_USER_INTERACTIVE:
+		return QOS_CLASS_USER_INTERACTIVE;
+	default:
+		return QOS_CLASS_UNSPECIFIED;
+	}
+}
+
+static qos_class_t
+get_thread_requested_qos(void)
+{
+	mach_msg_type_number_t count = THREAD_REQUESTED_STATE_POLICY_COUNT;
+	struct thread_requested_qos_policy requested_policy;
+	boolean_t get_default = FALSE;
+	mach_port_t thread_port = pthread_mach_thread_np(pthread_self());
+
+	kern_return_t kr = thread_policy_get(thread_port, THREAD_REQUESTED_STATE_POLICY,
+	    (thread_policy_t)&requested_policy, &count, &get_default);
+	T_QUIET; T_ASSERT_MACH_SUCCESS(kr, "thread_policy_get");
+
+	return thread_qos_to_qos_class(requested_policy.thrq_base_qos);
+}
+
+T_DECL(thread_policy_requested_state, "THREAD_REQUESTED_STATE_POLICY", T_META_ASROOT(NO))
+{
+	qos_class_t main_thread_qos = get_thread_requested_qos();
+	T_ASSERT_EQ(main_thread_qos, qos_class_main(), "main thead requested qos matches");
+}

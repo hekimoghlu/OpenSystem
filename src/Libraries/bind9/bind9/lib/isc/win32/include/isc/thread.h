@@ -1,0 +1,112 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, September 20, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id: thread.h,v 1.25 2009/09/29 04:37:08 marka Exp $ */
+
+#ifndef ISC_THREAD_H
+#define ISC_THREAD_H 1
+
+#include <windows.h>
+
+#include <isc/lang.h>
+#include <isc/result.h>
+
+/*
+ * Inlines to help with wait return checking
+ */
+
+/* check handle for NULL and INVALID_HANDLE */
+inline BOOL IsValidHandle( HANDLE hHandle) {
+    return ((hHandle != NULL) && (hHandle != INVALID_HANDLE_VALUE));
+}
+
+/* validate wait return codes... */
+inline BOOL WaitSucceeded( DWORD dwWaitResult, DWORD dwHandleCount) {
+    return ((dwWaitResult >= WAIT_OBJECT_0) &&
+	    (dwWaitResult < WAIT_OBJECT_0 + dwHandleCount));
+}
+
+inline BOOL WaitAbandoned( DWORD dwWaitResult, DWORD dwHandleCount) {
+    return ((dwWaitResult >= WAIT_ABANDONED_0) &&
+	    (dwWaitResult < WAIT_ABANDONED_0 + dwHandleCount));
+}
+
+inline BOOL WaitTimeout( DWORD dwWaitResult) {
+    return (dwWaitResult == WAIT_TIMEOUT);
+}
+
+inline BOOL WaitFailed( DWORD dwWaitResult) {
+    return (dwWaitResult == WAIT_FAILED);
+}
+
+/* compute object indices for waits... */
+inline DWORD WaitSucceededIndex( DWORD dwWaitResult) {
+    return (dwWaitResult - WAIT_OBJECT_0);
+}
+
+inline DWORD WaitAbandonedIndex( DWORD dwWaitResult) {
+    return (dwWaitResult - WAIT_ABANDONED_0);
+}
+
+
+
+typedef HANDLE isc_thread_t;
+typedef DWORD isc_threadresult_t;
+typedef void * isc_threadarg_t;
+typedef isc_threadresult_t (WINAPI *isc_threadfunc_t)(isc_threadarg_t);
+typedef DWORD isc_thread_key_t;
+
+#define isc_thread_self (unsigned long)GetCurrentThreadId
+
+ISC_LANG_BEGINDECLS
+
+isc_result_t
+isc_thread_create(isc_threadfunc_t, isc_threadarg_t, isc_thread_t *);
+
+isc_result_t
+isc_thread_join(isc_thread_t, isc_threadresult_t *);
+
+void
+isc_thread_setconcurrency(unsigned int level);
+
+void
+isc_thread_setname(isc_thread_t, const char *);
+
+int
+isc_thread_key_create(isc_thread_key_t *key, void (*func)(void *));
+
+int
+isc_thread_key_delete(isc_thread_key_t key);
+
+void *
+isc_thread_key_getspecific(isc_thread_key_t);
+
+int
+isc_thread_key_setspecific(isc_thread_key_t key, void *value);
+
+#define isc_thread_yield() Sleep(0)
+
+ISC_LANG_ENDDECLS
+
+#endif /* ISC_THREAD_H */

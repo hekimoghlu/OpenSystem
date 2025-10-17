@@ -1,0 +1,66 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, August 28, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include "SandboxExtension.h"
+#include <WebCore/NetworkStorageSession.h>
+#include <pal/SessionID.h>
+#include <wtf/FileSystem.h>
+#include <wtf/HashMap.h>
+
+namespace WebKit {
+
+struct WebProcessDataStoreParameters {
+    using TopFrameDomain = WebCore::RegistrableDomain;
+    using SubResourceDomain = WebCore::RegistrableDomain;
+
+    PAL::SessionID sessionID;
+    String mediaCacheDirectory;
+#if !ENABLE(GPU_PROCESS)
+    SandboxExtension::Handle mediaCacheDirectoryExtensionHandle;
+#endif
+    String mediaKeyStorageDirectory;
+    SandboxExtension::Handle mediaKeyStorageDirectoryExtensionHandle;
+    FileSystem::Salt mediaKeysStorageSalt;
+    String javaScriptConfigurationDirectory;
+    SandboxExtension::Handle javaScriptConfigurationDirectoryExtensionHandle;
+    WebCore::ThirdPartyCookieBlockingMode thirdPartyCookieBlockingMode { WebCore::ThirdPartyCookieBlockingMode::All };
+    HashSet<WebCore::RegistrableDomain> domainsWithUserInteraction;
+    HashMap<TopFrameDomain, Vector<SubResourceDomain>> domainsWithStorageAccessQuirk;
+#if ENABLE(ARKIT_INLINE_PREVIEW)
+    String modelElementCacheDirectory;
+    SandboxExtension::Handle modelElementCacheDirectoryExtensionHandle;
+#endif
+#if PLATFORM(IOS_FAMILY)
+    std::optional<SandboxExtension::Handle> containerCachesDirectoryExtensionHandle;
+    std::optional<SandboxExtension::Handle> containerTemporaryDirectoryExtensionHandle;
+#endif
+    bool trackingPreventionEnabled { false };
+#if HAVE(ALLOW_ONLY_PARTITIONED_COOKIES)
+    bool isOptInCookiePartitioningEnabled { false };
+#endif
+};
+
+} // namespace WebKit

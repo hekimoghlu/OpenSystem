@@ -1,0 +1,242 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, March 26, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "FormatDescriptionUtilities.h"
+
+#import "AV1Utilities.h"
+#import "FloatSize.h"
+#import "FourCC.h"
+#import "HEVCUtilities.h"
+#import "PlatformVideoColorSpace.h"
+#import "SharedBuffer.h"
+#import <wtf/cf/TypeCastsCF.h>
+
+#import <pal/cf/CoreMediaSoftLink.h>
+#import <pal/cf/VideoToolboxSoftLink.h>
+
+namespace WebCore {
+FloatSize presentationSizeFromFormatDescription(CMFormatDescriptionRef formatDescription)
+{
+    if (!formatDescription)
+        return { };
+
+    return FloatSize(PAL::CMVideoFormatDescriptionGetPresentationDimensions(formatDescription, true, true));
+}
+
+std::optional<PlatformVideoColorSpace> colorSpaceFromFormatDescription(CMFormatDescriptionRef formatDescription)
+{
+    if (!formatDescription)
+        return std::nullopt;
+
+    PlatformVideoColorSpace colorSpace;
+    auto primaries = dynamic_cf_cast<CFStringRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_ColorPrimaries()));
+    auto transfer = dynamic_cf_cast<CFStringRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_TransferFunction()));
+    auto matrix = dynamic_cf_cast<CFStringRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_YCbCrMatrix()));
+
+    if (!primaries || !transfer || !matrix) {
+        auto size = presentationSizeFromFormatDescription(formatDescription);
+        auto codecType = PAL::CMFormatDescriptionGetMediaSubType(formatDescription);
+
+        CFStringRef defaultPrimaries = nullptr;
+        CFStringRef defaultTransfer = nullptr;
+        CFStringRef defaultMatrix = nullptr;
+
+        PAL::VTGetDefaultColorAttributesWithHints(codecType, nullptr, size.width(), size.height(), &defaultPrimaries, &defaultTransfer, &defaultMatrix);
+        if (!primaries && defaultPrimaries)
+            primaries = defaultPrimaries;
+        if (!transfer && defaultTransfer)
+            transfer = defaultTransfer;
+        if (!matrix && defaultMatrix)
+            matrix = defaultMatrix;
+    }
+
+    if (primaries) {
+        if (safeCFEqual(primaries, PAL::get_CoreMedia_kCMFormatDescriptionColorPrimaries_ITU_R_709_2()))
+            colorSpace.primaries = PlatformVideoColorPrimaries::Bt709;
+        else if (safeCFEqual(primaries, PAL::get_CoreMedia_kCMFormatDescriptionColorPrimaries_EBU_3213()))
+            colorSpace.primaries = PlatformVideoColorPrimaries::Bt470bg;
+        else if (safeCFEqual(primaries, PAL::get_CoreMedia_kCMFormatDescriptionColorPrimaries_SMPTE_C()))
+            colorSpace.primaries = PlatformVideoColorPrimaries::Smpte170m;
+    }
+
+    if (transfer) {
+        if (safeCFEqual(transfer, PAL::get_CoreMedia_kCMFormatDescriptionTransferFunction_ITU_R_709_2()))
+            colorSpace.transfer = PlatformVideoTransferCharacteristics::Bt709;
+        else if (safeCFEqual(transfer, PAL::get_CoreMedia_kCMFormatDescriptionTransferFunction_sRGB()))
+            colorSpace.transfer = PlatformVideoTransferCharacteristics::Iec6196621;
+    }
+
+    if (matrix) {
+        if (safeCFEqual(matrix, PAL::get_CoreMedia_kCVImageBufferYCbCrMatrix_ITU_R_709_2()))
+            colorSpace.matrix = PlatformVideoMatrixCoefficients::Bt709;
+        else if (safeCFEqual(matrix, PAL::get_CoreMedia_kCVImageBufferYCbCrMatrix_ITU_R_601_4()))
+            colorSpace.matrix = PlatformVideoMatrixCoefficients::Bt470bg;
+        else if (safeCFEqual(matrix, PAL::get_CoreMedia_kCMFormatDescriptionYCbCrMatrix_SMPTE_240M_1995()))
+            colorSpace.matrix = PlatformVideoMatrixCoefficients::Smpte170m;
+    }
+
+    if (auto fullRange = static_cast<CFBooleanRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_FullRangeVideo())))
+        colorSpace.fullRange = CFBooleanGetValue(fullRange);
+
+    return colorSpace;
+}
+
+String codecFromFormatDescription(CMFormatDescriptionRef formatDescription)
+{
+    if (!formatDescription)
+        return emptyString();
+
+    auto subType = PAL::softLink_CoreMedia_CMFormatDescriptionGetMediaSubType(formatDescription);
+    switch (subType) {
+    case kCMVideoCodecType_H264:
+    case 'cavc':
+        {
+            auto sampleExtensionsDict = dynamic_cf_cast<CFDictionaryRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms()));
+            if (!sampleExtensionsDict)
+                return "avc1"_s;
+            auto sampleExtensions = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(sampleExtensionsDict, CFSTR("avcC")));
+            if (!sampleExtensions)
+                return "avc1"_s;
+            auto configurationRecordBuffer = SharedBuffer::create(sampleExtensions);
+            auto parameters = parseAVCDecoderConfigurationRecord(configurationRecordBuffer);
+            if (!parameters)
+                return "avc1"_s;
+            return createAVCCodecParametersString(*parameters);
+        }
+    case kCMVideoCodecType_HEVC:
+    case kCMVideoCodecType_HEVCWithAlpha:
+    case 'chvc':
+        {
+            auto sampleExtensionsDict = dynamic_cf_cast<CFDictionaryRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms()));
+            if (!sampleExtensionsDict)
+                return "hvc1"_s;
+            auto sampleExtensions = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(sampleExtensionsDict, CFSTR("hvcC")));
+            if (!sampleExtensions)
+                return "hvc1"_s;
+            auto configurationRecordBuffer = SharedBuffer::create(sampleExtensions);
+            auto parameters = parseHEVCDecoderConfigurationRecord(kCMVideoCodecType_HEVC, configurationRecordBuffer);
+            if (!parameters)
+                return "hvc1"_s;
+            return createHEVCCodecParametersString(*parameters);
+        }
+    case kCMVideoCodecType_DolbyVisionHEVC:
+    case 'cdh1':
+        {
+            auto sampleExtensionsDict = dynamic_cf_cast<CFDictionaryRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms()));
+            if (!sampleExtensionsDict)
+                return "dvh1"_s;
+            auto sampleExtensions = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(sampleExtensionsDict, CFSTR("dvcC")));
+            if (!sampleExtensions)
+                return "dvh1"_s;
+            auto configurationRecordBuffer = SharedBuffer::create(sampleExtensions);
+            auto parameters = parseDoViDecoderConfigurationRecord(configurationRecordBuffer);
+            if (!parameters)
+                return "dvh1"_s;
+            return createDoViCodecParametersString(*parameters);
+        }
+    case kCMVideoCodecType_MPEG4Video:
+        return "mp4v"_s;
+    case kCMVideoCodecType_VP9:
+        return "vp09"_s;
+    case kAudioFormatAC3:
+        return "ac-3"_s;
+    case kAudioFormatMPEG4AAC:
+        return "mp4a.40.2"_s;
+    case kAudioFormatMPEG4AAC_HE:
+        return "mp4a.40.5"_s;
+    case kAudioFormatMPEG4AAC_HE_V2:
+        return "mp4a.40.29"_s;
+    case kAudioFormatMPEG4AAC_LD:
+        return "mp4a.40.23"_s;
+    case kAudioFormatMPEG4AAC_ELD:
+        return "mp4a.40.39"_s;
+    case kAudioFormatFLAC:
+        return "flac"_s;
+    case kAudioFormatOpus:
+        return "opus"_s;
+    case kAudioFormatEnhancedAC3:
+    case 'ec+3':
+    case 'qec3':
+    case 'ce-3':
+        return "ec-3"_s;
+    case 'dts ':
+        return "dts"_s;
+#if ENABLE(AV1)
+    case kCMVideoCodecType_AV1:
+        {
+            auto sampleExtensionsDict = dynamic_cf_cast<CFDictionaryRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::get_CoreMedia_kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms()));
+            if (!sampleExtensionsDict)
+                return "av01"_s;
+            auto sampleExtensions = dynamic_cf_cast<CFDataRef>(CFDictionaryGetValue(sampleExtensionsDict, CFSTR("av1C")));
+            if (!sampleExtensions)
+                return "av01"_s;
+            auto configurationRecordBuffer = SharedBuffer::create(sampleExtensions);
+            auto parameters = parseAV1DecoderConfigurationRecord(configurationRecordBuffer);
+            if (!parameters)
+                return "av01"_s;
+            return createAV1CodecParametersString(*parameters);
+        }
+#endif
+    }
+
+    return emptyString();
+}
+
+std::optional<SpatialVideoMetadata> videoMetadataFromFormatDescription(CMFormatDescriptionRef formatDescription)
+{
+    if (!formatDescription || !PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_StereoCameraBaseline() || !PAL::canLoad_CoreMedia_kCMFormatDescriptionExtension_HorizontalDisparityAdjustment())
+        return { };
+
+    // Note: this assumes that the spatial metadata is in the first section of the format description.
+    if (PAL::CMFormatDescriptionGetMediaType(formatDescription) != kCMMediaType_Video)
+        return { };
+
+    SInt32 value;
+    SpatialVideoMetadata metadata;
+    auto horizontalFieldOfView = dynamic_cf_cast<CFNumberRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::kCMFormatDescriptionExtension_HorizontalFieldOfView));
+    if (!horizontalFieldOfView)
+        return { };
+    CFNumberGetValue(horizontalFieldOfView, kCFNumberSInt32Type, &value);
+    metadata.horizontalFOVDegrees = value / 1000.0;
+
+    auto baselineField = dynamic_cf_cast<CFNumberRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::kCMFormatDescriptionExtension_StereoCameraBaseline));
+    if (!baselineField)
+        return { };
+    CFNumberGetValue(baselineField, kCFNumberSInt32Type, &value);
+    metadata.baseline = value;
+
+    auto disparityAdjustmentField = dynamic_cf_cast<CFNumberRef>(PAL::CMFormatDescriptionGetExtension(formatDescription, PAL::kCMFormatDescriptionExtension_HorizontalDisparityAdjustment));
+    if (!disparityAdjustmentField)
+        return { };
+    CFNumberGetValue(disparityAdjustmentField, kCFNumberSInt32Type, &value);
+    metadata.disparityAdjustment = value / 10000.0;
+
+    CMVideoDimensions dimensions = PAL::CMVideoFormatDescriptionGetDimensions(formatDescription);
+    metadata.size = { dimensions.width, dimensions.height };
+
+    return metadata;
+}
+
+} // namespace WebCore

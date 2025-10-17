@@ -1,0 +1,74 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, September 10, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+// Â© 2023 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
+
+#include <cstring>
+
+#include "fuzzer_utils.h"
+#include "unicode/localpointer.h"
+#include "unicode/timezone.h"
+#include "unicode/vtzone.h"
+
+IcuEnvironment* env = new IcuEnvironment();
+
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+
+  // Limit the test for at most 1000 Unicode characters.
+  if (size > 2000) {
+    size = 2000;
+  }
+  size_t unistr_size = size/2;
+  std::unique_ptr<char16_t[]> fuzzbuff(new char16_t[unistr_size]);
+  std::memcpy(fuzzbuff.get(), data, unistr_size * 2);
+  icu::UnicodeString fuzzstr(false, fuzzbuff.get(), unistr_size);
+
+  icu::LocalPointer<icu::TimeZone> tz(
+      icu::TimeZone::createTimeZone(fuzzstr));
+
+  icu::TimeZone::getEquivalentID(fuzzstr, size);
+
+  icu::UnicodeString output;
+
+  UErrorCode status = U_ZERO_ERROR;
+  UBool system;
+  icu::TimeZone::getCanonicalID(fuzzstr, output, system, status);
+
+  status = U_ZERO_ERROR;
+  icu::TimeZone::getIanaID(fuzzstr, output, status);
+
+  status = U_ZERO_ERROR;
+  icu::TimeZone::getWindowsID(fuzzstr, output, status);
+
+  status = U_ZERO_ERROR;
+  icu::TimeZone::getRegion(fuzzstr, status);
+
+  tz.adoptInstead(icu::VTimeZone::createVTimeZoneByID(fuzzstr));
+
+  status = U_ZERO_ERROR;
+  tz.adoptInstead(icu::VTimeZone::createVTimeZone(fuzzstr, status));
+  return 0;
+}

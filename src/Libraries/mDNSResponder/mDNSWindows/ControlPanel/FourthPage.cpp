@@ -1,0 +1,204 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, May 25, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "FourthPage.h"
+#include "resource.h"
+
+#include "ConfigPropertySheet.h"
+#include "SharedSecret.h"
+
+#include <WinServices.h>
+    
+#define MAX_KEY_LENGTH 255
+
+
+IMPLEMENT_DYNCREATE(CFourthPage, CPropertyPage)
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::CFourthPage
+//---------------------------------------------------------------------------------------------------------------------------
+
+CFourthPage::CFourthPage()
+:
+	CPropertyPage(CFourthPage::IDD)
+{
+	//{{AFX_DATA_INIT(CFourthPage)
+	//}}AFX_DATA_INIT
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::~CFourthPage
+//---------------------------------------------------------------------------------------------------------------------------
+
+CFourthPage::~CFourthPage()
+{
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::DoDataExchange
+//---------------------------------------------------------------------------------------------------------------------------
+
+void CFourthPage::DoDataExchange(CDataExchange* pDX)
+{
+	CPropertyPage::DoDataExchange(pDX);
+	//{{AFX_DATA_MAP(CFourthPage)
+	//}}AFX_DATA_MAP
+	DDX_Control(pDX, IDC_POWER_MANAGEMENT, m_checkBox);
+}
+
+BEGIN_MESSAGE_MAP(CFourthPage, CPropertyPage)
+	//{{AFX_MSG_MAP(CFourthPage)
+	//}}AFX_MSG_MAP
+
+	ON_BN_CLICKED(IDC_POWER_MANAGEMENT, &CFourthPage::OnBnClickedPowerManagement)
+
+END_MESSAGE_MAP()
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::SetModified
+//---------------------------------------------------------------------------------------------------------------------------
+
+void CFourthPage::SetModified( BOOL bChanged )
+{
+	m_modified = bChanged;
+
+	CPropertyPage::SetModified( bChanged );
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::OnSetActive
+//---------------------------------------------------------------------------------------------------------------------------
+
+BOOL
+CFourthPage::OnSetActive()
+{
+	CConfigPropertySheet	*	psheet;
+	HKEY						key = NULL;
+	DWORD						dwSize;
+	DWORD						enabled;
+	DWORD						err;
+	BOOL						b = CPropertyPage::OnSetActive();
+
+	psheet = reinterpret_cast<CConfigPropertySheet*>(GetParent());
+	require_quiet( psheet, exit );
+
+	m_checkBox.SetCheck( 0 );
+
+	// Now populate the browse domain box
+
+	err = RegCreateKeyEx( HKEY_LOCAL_MACHINE, kServiceParametersNode L"\\Power Management", 0,
+		                  NULL, REG_OPTION_NON_VOLATILE, KEY_READ|KEY_WRITE, NULL, &key, NULL );
+	require_noerr( err, exit );
+
+	dwSize = sizeof( DWORD );
+	err = RegQueryValueEx( key, L"Enabled", NULL, NULL, (LPBYTE) &enabled, &dwSize );
+	require_noerr( err, exit );
+
+	m_checkBox.SetCheck( enabled );
+ 
+exit:
+
+	if ( key )
+	{
+		RegCloseKey( key );
+	}
+
+	return b;
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::OnOK
+//---------------------------------------------------------------------------------------------------------------------------
+
+void
+CFourthPage::OnOK()
+{
+	if ( m_modified )
+	{
+		Commit();
+	}
+}
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::Commit
+//---------------------------------------------------------------------------------------------------------------------------
+
+void
+CFourthPage::Commit()
+{
+	HKEY		key		= NULL;
+	DWORD		enabled;
+	DWORD		err;
+
+	err = RegCreateKeyEx( HKEY_LOCAL_MACHINE, kServiceParametersNode L"\\Power Management", 0,
+		                  NULL, REG_OPTION_NON_VOLATILE, KEY_READ|KEY_WRITE, NULL, &key, NULL );
+	require_noerr( err, exit );
+
+	enabled = m_checkBox.GetCheck();
+	err = RegSetValueEx( key, L"Enabled", NULL, REG_DWORD, (LPBYTE) &enabled, sizeof( enabled ) );
+	require_noerr( err, exit );
+	
+exit:
+
+	if ( key )
+	{
+		RegCloseKey( key );
+	}
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//	CFourthPage::OnBnClickedRemoveBrowseDomain
+//---------------------------------------------------------------------------------------------------------------------------
+
+
+
+void CFourthPage::OnBnClickedPowerManagement()
+
+{
+
+	char buf[ 256 ];
+
+
+
+	snprintf( buf, sizeof( buf ), "check box: %d", m_checkBox.GetCheck() );
+
+	OutputDebugStringA( buf );
+
+	// TODO: Add your control notification handler code here
+
+
+
+	SetModified( TRUE );
+
+}
+

@@ -1,0 +1,206 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, July 21, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "Disassembler.h"
+
+#include "MacroAssemblerCodeRef.h"
+#include <variant>
+#include <wtf/Condition.h>
+#include <wtf/DataLog.h>
+#include <wtf/Deque.h>
+#include <wtf/Lock.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Threading.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+namespace JSC {
+
+namespace Disassembler {
+
+Lock labelMapLock;
+
+using LabelMap = UncheckedKeyHashMap<void*, std::variant<CString, const char*>>;
+LazyNeverDestroyed<LabelMap> labelMap;
+
+static LabelMap& ensureLabelMap() WTF_REQUIRES_LOCK(labelMapLock)
+{
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [] {
+        labelMap.construct();
+    });
+    return labelMap.get();
+}
+
+} // namespace Disassembler
+
+void disassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, void* codeStart, void* codeEnd, const char* prefix, PrintStream& out)
+{
+    if (tryToDisassemble(codePtr, size, codeStart, codeEnd, prefix, out))
+        return;
+    
+    out.printf("%sdisassembly not available for range %p...%p\n", prefix, codePtr.untaggedPtr(), codePtr.untaggedPtr<char*>() + size);
+}
+
+namespace {
+
+// This is really a struct, except that it should be a class because that's what the WTF_* macros
+// expect.
+class DisassemblyTask {
+    WTF_MAKE_NONCOPYABLE(DisassemblyTask);
+    WTF_MAKE_TZONE_ALLOCATED(DisassemblyTask);
+public:
+    DisassemblyTask()
+    {
+    }
+    
+    ~DisassemblyTask()
+    {
+        if (header)
+            free(header); // free() because it would have been copied by strdup.
+    }
+    
+    char* header { nullptr };
+    MacroAssemblerCodeRef<DisassemblyPtrTag> codeRef;
+    size_t size { 0 };
+    void* codeStart { nullptr };
+    void* codeEnd { nullptr };
+    const char* prefix { nullptr };
+};
+
+class AsynchronousDisassembler {
+public:
+    AsynchronousDisassembler()
+    {
+        Thread::create("Asynchronous Disassembler"_s, [&] () { run(); });
+    }
+    
+    void enqueue(std::unique_ptr<DisassemblyTask> task)
+    {
+        Locker locker { m_lock };
+        m_queue.append(WTFMove(task));
+        m_condition.notifyAll();
+    }
+    
+    void waitUntilEmpty()
+    {
+        Locker locker { m_lock };
+        while (!m_queue.isEmpty() || m_working)
+            m_condition.wait(m_lock);
+    }
+    
+private:
+    NO_RETURN void run()
+    {
+        for (;;) {
+            std::unique_ptr<DisassemblyTask> task;
+            {
+                Locker locker { m_lock };
+                m_working = false;
+                m_condition.notifyAll();
+                while (m_queue.isEmpty())
+                    m_condition.wait(m_lock);
+                task = m_queue.takeFirst();
+                m_working = true;
+            }
+
+            dataLog(task->header);
+            disassemble(task->codeRef.code(), task->size, task->codeStart, task->codeEnd, task->prefix, WTF::dataFile());
+        }
+    }
+    
+    Lock m_lock;
+    Condition m_condition;
+    Deque<std::unique_ptr<DisassemblyTask>> m_queue WTF_GUARDED_BY_LOCK(m_lock);
+    bool m_working { false };
+};
+
+bool hadAnyAsynchronousDisassembly = false;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DisassemblyTask);
+
+AsynchronousDisassembler& asynchronousDisassembler()
+{
+    static LazyNeverDestroyed<AsynchronousDisassembler> disassembler;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        disassembler.construct();
+        hadAnyAsynchronousDisassembly = true;
+    });
+    return disassembler.get();
+}
+
+} // anonymous namespace
+
+void disassembleAsynchronously(
+    const CString& header, const MacroAssemblerCodeRef<DisassemblyPtrTag>& codeRef, size_t size, void* codeStart, void* codeEnd, const char* prefix)
+{
+    std::unique_ptr<DisassemblyTask> task = makeUnique<DisassemblyTask>();
+    task->header = strdup(header.data()); // Yuck! We need this because CString does racy refcounting.
+    task->codeRef = codeRef;
+    task->size = size;
+    task->codeStart = codeStart;
+    task->codeEnd = codeEnd;
+    task->prefix = prefix;
+    
+    asynchronousDisassembler().enqueue(WTFMove(task));
+}
+
+void waitForAsynchronousDisassembly()
+{
+    if (!hadAnyAsynchronousDisassembly)
+        return;
+    
+    asynchronousDisassembler().waitUntilEmpty();
+}
+
+void registerLabel(void* thunkAddress, CString&& label)
+{
+    Locker lock { Disassembler::labelMapLock };
+    Disassembler::ensureLabelMap().add(thunkAddress, WTFMove(label));
+}
+
+void registerLabel(void* address, const char* label)
+{
+    Locker lock { Disassembler::labelMapLock };
+    Disassembler::ensureLabelMap().add(address, label);
+}
+
+const char* labelFor(void* thunkAddress)
+{
+    Locker lock { Disassembler::labelMapLock };
+    auto& map = Disassembler::ensureLabelMap();
+    auto it = map.find(thunkAddress);
+    if (it == map.end())
+        return nullptr;
+    if (std::holds_alternative<CString>(it->value))
+        return std::get<CString>(it->value).data();
+    return std::get<const char*>(it->value);
+}
+
+} // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -1,0 +1,284 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, June 15, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if ENABLE(VIDEO)
+
+#include "MediaPlayer.h"
+#include "MediaProducer.h"
+#include "MediaUsageInfo.h"
+#include "PlatformMediaSession.h"
+#include "Timer.h"
+#include <memory>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/TypeCasts.h>
+
+namespace WebCore {
+class MediaElementSession;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaElementSession> : std::true_type { };
+}
+
+namespace WebCore {
+
+enum class MediaSessionMainContentPurpose { MediaControls, Autoplay };
+enum class MediaPlaybackState { Playing, Paused };
+
+enum class MediaPlaybackDenialReason {
+    UserGestureRequired,
+    FullscreenRequired,
+    PageConsentRequired,
+    InvalidState,
+};
+
+class Document;
+class HTMLMediaElement;
+class MediaMetadata;
+class MediaSession;
+class MediaElementSessionObserver;
+class SourceBuffer;
+
+struct MediaPositionState;
+
+enum class MediaSessionPlaybackState : uint8_t;
+
+class MediaElementSession final : public PlatformMediaSession {
+    WTF_MAKE_TZONE_ALLOCATED(MediaElementSession);
+public:
+    explicit MediaElementSession(HTMLMediaElement&);
+    virtual ~MediaElementSession();
+
+    void registerWithDocument(Document&);
+    void unregisterWithDocument(Document&);
+
+    void clientWillBeginAutoplaying() final;
+    bool clientWillBeginPlayback() final;
+    bool clientWillPausePlayback() final;
+    void clientCharacteristicsChanged(bool) final;
+
+    void visibilityChanged();
+    void isVisibleInViewportChanged();
+    void inActiveDocumentChanged();
+
+    Expected<void, MediaPlaybackDenialReason> playbackStateChangePermitted(MediaPlaybackState) const;
+    bool autoplayPermitted() const;
+    bool dataLoadingPermitted() const;
+    MediaPlayer::BufferingPolicy preferredBufferingPolicy() const;
+    bool fullscreenPermitted() const;
+    bool pageAllowsDataLoading() const;
+    bool pageAllowsPlaybackAfterResuming() const;
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    void showPlaybackTargetPicker();
+    bool hasWirelessPlaybackTargets() const;
+
+    bool wirelessVideoPlaybackDisabled() const;
+    void setWirelessVideoPlaybackDisabled(bool);
+
+    void setHasPlaybackTargetAvailabilityListeners(bool);
+
+    bool isPlayingToWirelessPlaybackTarget() const override;
+
+    void mediaStateDidChange(MediaProducerMediaStateFlags);
+#endif
+
+    bool requiresFullscreenForVideoPlayback() const;
+    WEBCORE_EXPORT bool allowsPictureInPicture() const;
+    MediaPlayer::Preload effectivePreloadForElement() const;
+    bool allowsAutomaticMediaDataLoading() const;
+
+    void mediaEngineUpdated();
+
+    void resetPlaybackSessionState() override;
+
+    void suspendBuffering() override;
+    void resumeBuffering() override;
+    bool bufferingSuspended() const;
+    void updateBufferingPolicy() { scheduleClientDataBufferingCheck(); }
+
+    // Restrictions to modify default behaviors.
+    enum BehaviorRestrictionFlags : unsigned {
+        NoRestrictions = 0,
+        RequireUserGestureForLoad = 1 << 0,
+        RequireUserGestureForVideoRateChange = 1 << 1,
+        RequireUserGestureForFullscreen = 1 << 2,
+        RequirePageConsentToLoadMedia = 1 << 3,
+        RequirePageConsentToResumeMedia = 1 << 4,
+        RequireUserGestureForAudioRateChange = 1 << 5,
+        RequireUserGestureToShowPlaybackTargetPicker = 1 << 6,
+        WirelessVideoPlaybackDisabled =  1 << 7,
+        RequireUserGestureToAutoplayToExternalDevice = 1 << 8,
+        AutoPreloadingNotPermitted = 1 << 10,
+        InvisibleAutoplayNotPermitted = 1 << 11,
+        OverrideUserGestureRequirementForMainContent = 1 << 12,
+        RequireUserGestureToControlControlsManager = 1 << 13,
+        RequirePlaybackToControlControlsManager = 1 << 14,
+        RequireUserGestureForVideoDueToLowPowerMode = 1 << 15,
+        RequirePageVisibilityToPlayAudio = 1 << 16,
+        RequireUserGestureForVideoDueToAggressiveThermalMitigation = 1 << 17,
+        RequirePageVisibilityForVideoToBeNowPlaying = 1 << 18,
+        AllRestrictions = ~NoRestrictions,
+    };
+    typedef unsigned BehaviorRestrictions;
+
+    WEBCORE_EXPORT BehaviorRestrictions behaviorRestrictions() const { return m_restrictions; }
+    WEBCORE_EXPORT void addBehaviorRestriction(BehaviorRestrictions);
+    WEBCORE_EXPORT void removeBehaviorRestriction(BehaviorRestrictions);
+    bool hasBehaviorRestriction(BehaviorRestrictions restriction) const { return restriction & m_restrictions; }
+
+    HTMLMediaElement& element() const { return m_element; }
+
+    bool wantsToObserveViewportVisibilityForMediaControls() const;
+    bool wantsToObserveViewportVisibilityForAutoplay() const;
+
+    bool canShowControlsManager(PlaybackControlsPurpose) const;
+    bool isLargeEnoughForMainContent(MediaSessionMainContentPurpose) const;
+    bool isLongEnoughForMainContent() const final;
+    bool isMainContentForPurposesOfAutoplayEvents() const;
+    MonotonicTime mostRecentUserInteractionTime() const;
+
+    bool allowsPlaybackControlsForAutoplayingAudio() const;
+
+    static bool isMediaElementSessionMediaType(MediaType type)
+    {
+        return type == MediaType::Video
+            || type == MediaType::Audio
+            || type == MediaType::VideoAudio;
+    }
+
+    std::optional<NowPlayingInfo> computeNowPlayingInfo() const;
+
+    WEBCORE_EXPORT void updateMediaUsageIfChanged() final;
+    std::optional<MediaUsageInfo> mediaUsageInfo() const { return m_mediaUsageInfo; }
+
+#if !RELEASE_LOG_DISABLED
+    String description() const final;
+    ASCIILiteral logClassName() const final { return "MediaElementSession"_s; }
+#endif
+
+#if ENABLE(MEDIA_SESSION)
+    void didReceiveRemoteControlCommand(RemoteControlCommandType, const RemoteCommandArgument&) final;
+#endif
+    void metadataChanged(const RefPtr<MediaMetadata>&);
+    void positionStateChanged(const std::optional<MediaPositionState>&);
+    void playbackStateChanged(MediaSessionPlaybackState);
+    void actionHandlersChanged();
+
+    MediaSession* mediaSession() const;
+
+    bool hasNowPlayingInfo() const;
+
+private:
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    void targetAvailabilityChangedTimerFired();
+
+    // MediaPlaybackTargetClient
+    void setPlaybackTarget(Ref<MediaPlaybackTarget>&&) override;
+    void externalOutputDeviceAvailableDidChange(bool) override;
+    void setShouldPlayToPlaybackTarget(bool) override;
+    void playbackTargetPickerWasDismissed() override;
+    void audioSessionCategoryChanged(AudioSessionCategory, AudioSessionMode, RouteSharingPolicy) override;
+#endif
+#if PLATFORM(IOS_FAMILY)
+    bool requiresPlaybackTargetRouteMonitoring() const override;
+#endif
+    void ensureIsObservingMediaSession();
+
+    bool updateIsMainContent() const;
+    void mainContentCheckTimerFired();
+
+    void scheduleClientDataBufferingCheck();
+    void clientDataBufferingTimerFired();
+    void updateClientDataBuffering();
+
+    void addMediaUsageManagerSessionIfNecessary();
+
+    HTMLMediaElement& m_element;
+    BehaviorRestrictions m_restrictions;
+
+    std::optional<MediaUsageInfo> m_mediaUsageInfo;
+
+    bool m_elementIsHiddenUntilVisibleInViewport { false };
+    bool m_elementIsHiddenBecauseItWasRemovedFromDOM { false };
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    mutable Timer m_targetAvailabilityChangedTimer;
+    RefPtr<MediaPlaybackTarget> m_playbackTarget;
+    bool m_shouldPlayToPlaybackTarget { false };
+    mutable bool m_hasPlaybackTargets { false };
+#endif
+#if PLATFORM(IOS_FAMILY)
+    bool m_hasPlaybackTargetAvailabilityListeners { false };
+#endif
+
+    MonotonicTime m_mostRecentUserInteractionTime;
+
+    mutable bool m_isMainContent { false };
+    Timer m_mainContentCheckTimer;
+    Timer m_clientDataBufferingTimer;
+
+#if !RELEASE_LOG_DISABLED
+    uint64_t m_logIdentifier { 0 };
+#endif
+
+#if ENABLE(MEDIA_USAGE)
+    bool m_haveAddedMediaUsageManagerSession { false };
+#endif
+    
+#if ENABLE(MEDIA_SESSION)
+    bool m_isScrubbing { false };
+    std::unique_ptr<MediaElementSessionObserver> m_observer;
+#endif
+};
+
+String convertEnumerationToString(const MediaPlaybackDenialReason);
+
+} // namespace WebCore
+
+namespace WTF {
+    
+template<typename Type>
+struct LogArgument;
+
+template <>
+struct LogArgument<WebCore::MediaPlaybackDenialReason> {
+    static String toString(const WebCore::MediaPlaybackDenialReason reason)
+    {
+        return convertEnumerationToString(reason);
+    }
+};
+    
+}; // namespace WTF
+
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaElementSession)
+static bool isType(const WebCore::PlatformMediaSession& session) { return WebCore::MediaElementSession::isMediaElementSessionMediaType(session.mediaType()); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(VIDEO)

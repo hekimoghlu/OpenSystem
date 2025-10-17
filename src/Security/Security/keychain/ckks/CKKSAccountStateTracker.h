@@ -1,0 +1,154 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, December 18, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import <Foundation/Foundation.h>
+
+#if OCTAGON
+#import <CloudKit/CKContainer_Private.h>
+#import <CloudKit/CloudKit.h>
+#include <Security/SecureObjectSync/SOSCloudCircle.h>
+#import "keychain/ckks/CKKSCondition.h"
+#import "keychain/ckks/CloudKitDependencies.h"
+#import "keychain/ckks/CKKSNearFutureScheduler.h"
+#import "keychain/ot/OTClique.h"
+
+NS_ASSUME_NONNULL_BEGIN
+
+/*
+ * Implements a 'debouncer' to store the current CK account and circle state, and receive updates to it.
+ *
+ * You can register for CK account changes, SOS account changes, or to be informed only when both are in
+ * a valid state.
+ *
+ * It will notify listeners on account state changes, so multiple repeated account state notifications with the same state are filtered by this class.
+ * Listeners can also get the 'current' state, no matter what it is. They will also then be atomically added to the notification queue, and so will
+ * always receive the next update, preventing them from getting a stale state and missing an immediate update.
+ */
+
+// This enum represents the combined states of a CK account and the SOS account
+typedef NS_ENUM(NSInteger, CKKSAccountStatus) {
+    /* Set at initialization. This means we haven't figured out what the account state is. */
+    CKKSAccountStatusUnknown = 0,
+    /* We have an iCloud account and are in-circle */
+    CKKSAccountStatusAvailable = 1,
+    /* No iCloud account is logged in on this device, or we're out of circle */
+    CKKSAccountStatusNoAccount = 3,
+};
+NSString* CKKSAccountStatusToString(CKKSAccountStatus status);
+
+@interface SOSAccountStatus : NSObject
+@property SOSCCStatus status;
+@property (nullable) NSError* error;
+- (instancetype)init:(SOSCCStatus)status error:(NSError* _Nullable)error;
+@end
+
+@interface OTCliqueStatusWrapper : NSObject
+@property (readonly) CliqueStatus status;
+- (instancetype)initWithStatus:(CliqueStatus)status;
+@end
+
+@protocol CKKSOctagonStatusMemoizer
+- (void)triggerOctagonStatusFetch;
+
+@property (readonly, nullable) OTCliqueStatusWrapper* octagonStatus;
+@property (readonly, nullable) NSString* octagonPeerID;
+
+// A little bit of a abstraction violation, but it'll do.
+- (void)setCDPCapableiCloudAccountStatus:(CKKSAccountStatus)status;
+@end
+
+#pragma mark -- Listener Protocols
+
+@protocol CKKSCloudKitAccountStateListener <NSObject>
+- (void)cloudkitAccountStateChange:(CKAccountInfo* _Nullable)oldAccountInfo to:(CKAccountInfo*)currentAccountInfo;
+@end
+@protocol CKKSCloudKitAccountStateTrackingProvider <NSObject>
+@property (nullable, copy) NSString* ckdeviceID;
+
+- (dispatch_semaphore_t)registerForNotificationsOfCloudKitAccountStatusChange:(id<CKKSCloudKitAccountStateListener>)listener;
+- (BOOL)notifyCKAccountStatusChangeAndWait:(dispatch_time_t)timeout;
+- (void)recheckCKAccountStatus;
+@end
+
+#pragma mark -- Tracker
+
+@interface CKKSAccountStateTracker : NSObject <CKKSCloudKitAccountStateTrackingProvider,
+                                               CKKSOctagonStatusMemoizer>
+@property CKKSCondition* finishedInitialDispatches;
+
+// Trigger this to refetch the CK account status in a bit
+@property (readonly) CKKSNearFutureScheduler* fetchCKAccountStatusScheduler;
+
+// If you use these, please be aware they could change out from under you at any time
+@property (readonly) CKContainer* container;
+@property (nullable) CKAccountInfo* currentCKAccountInfo;
+@property CKKSCondition* ckAccountInfoInitialized;
+
+
+// Fetched and memoized from CloudKit; we can't afford deadlocks with their callbacks
+@property (nullable, copy) NSString* ckdeviceID;
+@property (nullable) NSError* ckdeviceIDError;
+@property CKKSCondition* ckdeviceIDInitialized;
+
+// Fetched and memoized from SOS. Not otherwise used.
+@property (nullable) SOSAccountStatus* currentCircleStatus;
+@property (nullable) NSString* accountCirclePeerID;
+@property (nullable) NSError* accountCirclePeerIDError;
+@property CKKSCondition* accountCirclePeerIDInitialized;
+
+// Filled and memoized for quick reference. Don't use for anything vital.
+// This will only fetch the status for the default context.
+@property (readonly, nullable) OTCliqueStatusWrapper* octagonStatus;
+@property (readonly, nullable) NSString* octagonPeerID;
+@property (readonly) CKKSCondition* octagonInformationInitialized;
+
+// Filled by Octagon, as it's fairly hard to compute.
+@property (readonly) CKKSAccountStatus cdpCapableiCloudAccountStatus;
+@property (readonly) CKKSCondition* cdpCapableiCloudAccountInitialized;
+
+- (instancetype)init:(CKContainer*)container nsnotificationCenterClass:(Class<CKKSNSNotificationCenter>)nsnotificationCenterClass;
+
+- (dispatch_semaphore_t)registerForNotificationsOfCloudKitAccountStatusChange:(id<CKKSCloudKitAccountStateListener>)listener;
+
+// Call this to refetch the Octagon status
+- (void)triggerOctagonStatusFetch;
+
+// Methods useful for testing:
+- (void)performInitialDispatches;
+
+// Call this to simulate a notification (and pause the calling thread until all notifications are delivered)
+- (void)notifyCKAccountStatusChangeAndWaitForSignal;
+- (void)notifyCircleStatusChangeAndWaitForSignal;
+
+- (dispatch_group_t _Nullable)checkForAllDeliveries;
+
+- (void)setCDPCapableiCloudAccountStatus:(CKKSAccountStatus)status;
+
++ (SOSAccountStatus*)getCircleStatus;
++ (void)fetchCirclePeerID:(void (^)(NSString* _Nullable peerID, NSError* _Nullable error))callback;
+
+@end
+
+NS_ASSUME_NONNULL_END
+#endif  // OCTAGON

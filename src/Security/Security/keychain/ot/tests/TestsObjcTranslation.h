@@ -1,0 +1,160 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, May 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+
+#ifndef TestsObjcTranslation_h
+#define TestsObjcTranslation_h
+
+#import <Foundation/Foundation.h>
+#import <AppleFeatures/AppleFeatures.h>
+#import <TrustedPeers/TrustedPeers.h>
+#include <Security/SecureObjectSync/SOSCloudCircle.h>
+
+#import <AppleAccount/AppleAccount.h>
+#import <AppleAccount/AppleAccount_Private.h>
+#import <AppleAccount/ACAccount+AppleAccount.h>
+
+#include "keychain/ckks/CKKSPeer.h"
+#import "keychain/ot/OTClique.h"
+#import "keychain/ot/OTAccountsAdapter.h"
+#import "keychain/ot/OTControl.h"
+
+@class OTSecureElementPeerIdentity;
+@class OTCurrentSecureElementIdentities;
+@class OTAccountSettings;
+@class OTWalrus;
+@class OTWebAccess;
+@class KCPairingChannel;
+
+NS_ASSUME_NONNULL_BEGIN
+
+// This file is for translation of C/Obj-C APIs into swift-friendly things
+
+@interface TestsObjectiveC : NSObject
++ (void)setNewRecoveryKeyWithData:(OTConfigurationContext*)ctx
+                      recoveryKey:(NSString*)recoveryKey
+                            reply:(void(^)(void* rk,
+                                           NSError* _Nullable error))reply;
+
++ (BOOL)saveCoruptDataToKeychainForContainer:(NSString*)containerName
+                                   contextID:(NSString*)contextID
+                                       error:(NSError**)error;
+
++ (NSData* _Nullable)copyInitialSyncData:(SOSInitialSyncFlags)flags error:(NSError**)error;
+
++ (NSDictionary* _Nullable)copyPiggybackingInitialSyncData:(NSData*)data;
+
++ (BOOL)testSecKey:(CKKSSelves*)octagonSelf error:(NSError**)error;
+
++ (BOOL)addNRandomKeychainItemsWithoutUpgradedPersistentRefs:(int64_t)number;
++ (BOOL)checkAllPersistentRefBeenUpgraded;
++ (BOOL)expectXNumberOfItemsUpgraded:(int)expected;
++ (NSNumber* _Nullable)lastRowID;
++ (void)setError:(int)errorCode;
++ (void)clearError;
++ (void)clearLastRowID;
++ (void)clearErrorInsertionDictionary;
++ (void)setErrorAtRowID:(int)errorCode;
++ (void)setACAccountStoreWithInvalidationError:(id<OTAccountsAdapter>)adapter;
++ (void)setACAccountStoreWithRandomError:(id<OTAccountsAdapter>)adapter;
++ (int)getInvocationCount;
++ (void)clearInvocationCount;
++ (BOOL)isPlatformHomepod;
+@end
+
+// The swift-based OctagonTests can't call OctagonTrust methods. Bridge them!
+@interface OctagonTrustCliqueBridge : NSObject
+
+- (instancetype)initWithClique:(OTClique*)clique;
+
+- (BOOL)setLocalSecureElementIdentity:(OTSecureElementPeerIdentity*)secureElementIdentity
+                                error:(NSError**)error;
+
+- (BOOL)removeLocalSecureElementIdentityPeerID:(NSData*)sePeerID
+                                         error:(NSError**)error;
+
+- (OTCurrentSecureElementIdentities* _Nullable)fetchTrustedSecureElementIdentities:(NSError**)error;
+
+- (BOOL)setAccountSetting:(OTAccountSettings*)setting error:(NSError**)error;
+
+- (OTAccountSettings* _Nullable)fetchAccountSettings:(NSError**)error;
+
++ (OTAccountSettings* _Nullable)fetchAccountWideSettings:(OTConfigurationContext*)context error:(NSError**)error;
+
++ (OTAccountSettings* _Nullable)fetchAccountWideSettingsWithForceFetch:(bool)forceFetch
+                                                         configuration:(OTConfigurationContext*)configurationContext
+                                                                 error:(NSError**)error;
++ (OTAccountSettings* _Nullable)fetchAccountWideSettingsDefaultWithForceFetch:(bool)forceFetch
+                                                                configuration:(OTConfigurationContext*)configurationContext
+                                                                        error:(NSError**)error;
+
+- (BOOL)waitForPriorityViewKeychainDataRecovery:(NSError**)error;
+
+- (NSString*)createAndSetRecoveryKeyWithContext:(OTConfigurationContext*)context error:(NSError**)error;
+
+- (BOOL)registerRecoveryKeyWithContext:(OTConfigurationContext*)context recoveryKey:(NSString*)recoveryKey error:(NSError**)error;
+
++ (BOOL)isRecoveryKeySet:(OTConfigurationContext*)ctx error:(NSError**)error;
+
++ (BOOL)recoverWithRecoveryKey:(OTConfigurationContext*)ctx
+                   recoveryKey:(NSString*)recoveryKey
+                         error:(NSError**)error;
+
+- (BOOL)removeRecoveryKeyWithContext:(OTConfigurationContext*)context
+                               error:(NSError**)error;
+
+- (bool)preflightRecoveryKey:(OTConfigurationContext*)context recoveryKey:(NSString*)recoveryKey error:(NSError**)error;
+
++ (bool)setRecoveryKeyWithContext:(OTConfigurationContext*)ctx
+                      recoveryKey:(NSString*)recoveryKey
+                            error:(NSError**)error;
+
++ (NSNumber * _Nullable)totalTrustedPeers:(OTConfigurationContext*)ctx error:(NSError * __autoreleasing *)error;
+
++ (BOOL)areRecoveryKeysDistrusted:(OTConfigurationContext*)ctx error:(NSError* __autoreleasing *)error __attribute__((swift_error(nonnull_error)));
+
++ (OTControl*)makeMockOTControlObjectWithFailingEpochFetchWithXPCError;
++ (OTControl*)makeMockOTControlObjectWithFailingEpochFetchWithRandomError;
+
++ (OTControl*)makeMockOTControlObjectWithFailingVoucherFetchWithXPCError;
++ (OTControl*)makeMockOTControlObjectWithFailingVoucherFetchWithRandomError;
++ (OTControl*)makeMockOTControlObjectWithFailingVoucherFetchWithNetworkError;
++ (OTControl*)makeMockOTControlObjectWithFailingVoucherFetchWithUnderlyingNetworkError;
++ (OTControl*)makeMockOTControlObjectWithFailingVoucherFetchWithUnderlyingNetworkErrorConnectionLost;
+
++ (OTControl*)makeMockOTControlObjectWithFailingPrepareFetchWithRandomError;
++ (OTControl*)makeMockOTControlObjectWithFailingPrepareFetchWithXPCError;
++ (OTControl*)makeMockOTControlObjectWithFailingPrepareFetchWithOctagonErrorICloudAccountStateUnknown;
+
++ (OTControl*)makeMockOTControlObjectWithFailingJoinWithRandomError;
++ (OTControl*)makeMockOTControlObjectWithFailingJoinWithXPCError;
+
++ (OTControl*)makeMockFetchEgoPeerID;
+
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif /* TestsObjcTranslation_h */

@@ -1,0 +1,58 @@
+DEBUG_INFORMATION_FORMAT = dwarf;
+GCC_C_LANGUAGE_STANDARD = gnu99;
+GCC_ENABLE_CPP_EXCEPTIONS = NO;
+GCC_ENABLE_CPP_RTTI = NO;
+GCC_ENABLE_SYMBOL_SEPARATION = NO;
+GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
+GCC_PRECOMPILE_PREFIX_HEADER = YES;
+GCC_PREPROCESSOR_DEFINITIONS = $(DEBUG_DEFINES) HAVE_CONFIG_H _REENTRANT;
+// GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO;
+GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+LINKER_DISPLAYS_MANGLED_NAMES = YES;
+PREBINDING = NO;
+// WARNING_CFLAGS = -Wextra -Wcast-qual -Wextra-tokens -Winit-self -Wmissing-noreturn -Wpacked -Wredundant-decls -Wundef;
+WARNING_CFLAGS = -Wall -pedantic -W -Wunused -Wimplicit -Wreturn-type -Wswitch -Wcomment -Wtrigraphs -Wformat -Wchar-subscripts -Wparentheses -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline $(SECURITY_WARNING_CFLAGS);
+SECURITY_WARNING_CFLAGS = -Werror=array-bounds -Werror=array-bounds-pointer-arithmetic -Werror=builtin-memcpy-chk-size -Werror=conditional-uninitialized -Werror=empty-body -Werror=format-security -Werror=implicit-int-conversion -Werror=memset-transposed-args -Werror=return-stack-address -Werror=shadow -Werror=shorten-64-to-32 -Werror=sizeof-array-argument -Werror=sizeof-array-decay -Werror=sizeof-pointer-memaccess -Werror=uninitialized -Werror=unused-result -Werror=vla;
+
+OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_LIBFUZZER_$(ENABLE_LIBFUZZER)) $(OTHER_CFLAGS_UBSAN_$(ENABLE_UNDEFINED_BEHAVIOR_SANITIZER));
+OTHER_CFLAGS_LIBFUZZER_YES = -g -fno-omit-frame-pointer -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION -fsanitize-coverage=inline-8bit-counters,trace-cmp;
+OTHER_CFLAGS_UBSAN_YES = -fno-sanitize=float-divide-by-zero,pointer-overflow;
+
+OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_LIBFUZZER_$(ENABLE_LIBFUZZER));
+OTHER_LDFLAGS_LIBFUZZER_YES = -fsanitize-coverage=inline-8bit-counters,trace-cmp;
+
+CLANG_TRIVIAL_AUTO_VAR_INIT = zero;
+
+STRIP_INSTALLED_PRODUCT = YES;
+HEADER_SEARCH_PATHS = $(LIBXML2_HEADER_PATH);
+LIBXML2_HEADER_PATH = $(LIBXML2_HEADER_PATH_$(DEPLOYMENT_LOCATION));
+LIBXML2_HEADER_PATH_NO = $(SYMROOT)/$(CONFIGURATION)/usr/include;
+LIBXML2_HEADER_PATH_YES = /usr/include;
+
+DEBUG_DEFINES = $(DEBUG_DEFINES_$(CONFIGURATION));
+DEBUG_DEFINES_Debug = ;
+DEBUG_DEFINES_Release = NDEBUG;
+DEBUG_DEFINES_Production = $(DEBUG_DEFINES_Release);
+
+GCC_OPTIMIZATION_LEVEL = $(GCC_OPTIMIZATION_LEVEL_$(CONFIGURATION));
+GCC_OPTIMIZATION_LEVEL_Debug = 0;
+GCC_OPTIMIZATION_LEVEL_Release = s;
+GCC_OPTIMIZATION_LEVEL_Production = $(GCC_OPTIMIZATION_LEVEL_Release);
+
+COPY_PHASE_STRIP = NO;
+DEAD_CODE_STRIPPING = $(DEAD_CODE_STRIPPING_$(CONFIGURATION));
+DEAD_CODE_STRIPPING_Release = YES;
+DEAD_CODE_STRIPPING_Production = $(DEAD_CODE_STRIPPING_Release);
+
+SDKROOT = macosx.internal;
+
+CODE_SIGN_IDENTITY = -;
+AD_HOC_CODE_SIGNING_ALLOWED = YES;
+
+ALWAYS_SEARCH_USER_PATHS = NO;
+
+SUPPORTED_PLATFORMS = appletvos appletvsimulator iphoneos iphonesimulator macosx watchos watchsimulator;

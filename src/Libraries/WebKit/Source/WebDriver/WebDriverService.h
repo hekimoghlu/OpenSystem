@@ -1,0 +1,187 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, July 25, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include "HTTPServer.h"
+#include "Session.h"
+#include <wtf/Forward.h>
+#include <wtf/HashMap.h>
+#include <wtf/JSONValues.h>
+#include <wtf/text/StringHash.h>
+
+#if ENABLE(WEBDRIVER_BIDI)
+#include "WebSocketServer.h"
+#endif
+
+namespace WebDriver {
+
+struct Capabilities;
+class CommandResult;
+class Session;
+
+class WebDriverService final : public HTTPRequestHandler
+#if ENABLE(WEBDRIVER_BIDI)
+    , public WebSocketMessageHandler
+#endif
+{
+public:
+    WebDriverService();
+    ~WebDriverService();
+
+    int run(int argc, char** argv);
+
+    static void platformInit();
+    static bool platformCompareBrowserVersions(const String&, const String&);
+
+    RefPtr<Session> session() const { return m_session; }
+
+private:
+    enum class HTTPMethod { Get, Post, Delete };
+    typedef void (WebDriverService::*CommandHandler)(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    struct Command {
+        HTTPMethod method;
+        const char* uriTemplate;
+        CommandHandler handler;
+    };
+    static const Command s_commands[];
+
+    static std::optional<HTTPMethod> toCommandHTTPMethod(const String& method);
+    static bool findCommand(HTTPMethod, const String& path, CommandHandler*, HashMap<String, String>& parameters);
+
+    void newSession(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void deleteSession(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void status(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getTimeouts(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void setTimeouts(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void go(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getCurrentURL(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void back(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void forward(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void refresh(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getTitle(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getWindowHandle(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void closeWindow(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void switchToWindow(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getWindowHandles(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void newWindow(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void switchToFrame(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void switchToParentFrame(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getWindowRect(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void setWindowRect(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void maximizeWindow(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void minimizeWindow(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void fullscreenWindow(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void findElement(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void findElements(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void findElementFromElement(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void findElementsFromElement(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void findElementFromShadowRoot(RefPtr<JSON::Object>&&, Function<void(CommandResult&&)>&&);
+    void findElementsFromShadowRoot(RefPtr<JSON::Object>&&, Function<void(CommandResult&&)>&&);
+    void getActiveElement(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementShadowRoot(RefPtr<JSON::Object>&&, Function<void(CommandResult&&)>&&);
+    void isElementSelected(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementAttribute(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementProperty(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementCSSValue(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementText(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementTagName(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getElementRect(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void isElementEnabled(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getComputedRole(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getComputedLabel(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void isElementDisplayed(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void elementClick(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void elementClear(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void elementSendKeys(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getPageSource(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void executeScript(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void executeAsyncScript(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getAllCookies(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getNamedCookie(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void addCookie(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void deleteCookie(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void deleteAllCookies(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void performActions(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void releaseActions(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void dismissAlert(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void acceptAlert(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void getAlertText(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void sendAlertText(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void takeScreenshot(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+    void takeElementScreenshot(RefPtr<JSON::Object>&&, Function<void (CommandResult&&)>&&);
+
+#if ENABLE(WEBDRIVER_BIDI)
+    // BiDi message handlers
+    void bidiSessionStatus(unsigned id, RefPtr<JSON::Object>&&, Function<void (WebSocketMessageHandler::Message&&)>&&);
+    void bidiSessionSubscribe(unsigned id, RefPtr<JSON::Object>&&, Function<void (WebSocketMessageHandler::Message&&)>&&);
+    void bidiSessionUnsubscribe(unsigned id, RefPtr<JSON::Object>&&, Function<void (WebSocketMessageHandler::Message&&)>&&);
+#endif
+
+    static Capabilities platformCapabilities();
+    Vector<Capabilities> processCapabilities(const JSON::Object&, Function<void (CommandResult&&)>&) const;
+    RefPtr<JSON::Object> validatedCapabilities(const JSON::Object&) const;
+    RefPtr<JSON::Object> mergeCapabilities(const JSON::Object&, const JSON::Object&) const;
+    RefPtr<JSON::Object> matchCapabilities(const JSON::Object&) const;
+    bool platformValidateCapability(const String&, const Ref<JSON::Value>&) const;
+    bool platformMatchCapability(const String&, const Ref<JSON::Value>&) const;
+    bool platformSupportProxyType(const String&) const;
+    bool platformSupportBidi() const;
+    void parseCapabilities(const JSON::Object& desiredCapabilities, Capabilities&) const;
+    void platformParseCapabilities(const JSON::Object& desiredCapabilities, Capabilities&) const;
+    void connectToBrowser(Vector<Capabilities>&&, Function<void (CommandResult&&)>&&);
+    void createSession(Vector<Capabilities>&&, Ref<SessionHost>&&, Function<void (CommandResult&&)>&&);
+    bool findSessionOrCompleteWithError(JSON::Object&, Function<void (CommandResult&&)>&);
+
+    void handleRequest(HTTPRequestHandler::Request&&, Function<void (HTTPRequestHandler::Response&&)>&& replyHandler) override;
+    void sendResponse(Function<void (HTTPRequestHandler::Response&&)>&& replyHandler, CommandResult&&) const;
+
+#if ENABLE(WEBDRIVER_BIDI)
+    bool acceptHandshake(HTTPRequestHandler::Request&&) override;
+    void handleMessage(WebSocketMessageHandler::Message&&, Function<void (WebSocketMessageHandler::Message&&)>&& replyHandler) override;
+    void clientDisconnected(const WebSocketMessageHandler::Connection&) override;
+
+    void onBrowserTerminated(const String& sessionId);
+
+    typedef void (WebDriverService::*BidiCommandHandler)(unsigned id, RefPtr<JSON::Object>&&, Function<void (WebSocketMessageHandler::Message&&)>&&);
+    struct BidiCommand {
+        String method;
+        BidiCommandHandler handler;
+    };
+    static const BidiCommand s_bidiCommands[];
+    static bool findBidiCommand(RefPtr<JSON::Value>&, BidiCommandHandler*, unsigned& id, RefPtr<JSON::Object>& parsedParams);
+#endif // ENABLE(WEBDRIVER_BIDI)
+
+    HTTPServer m_server;
+#if ENABLE(WEBDRIVER_BIDI)
+    WebSocketServer m_bidiServer;
+    SessionHost::BrowserTerminatedObserver m_browserTerminatedObserver;
+#endif
+    RefPtr<Session> m_session;
+
+    String m_targetAddress;
+    uint16_t m_targetPort { 0 };
+};
+
+} // namespace WebDriver

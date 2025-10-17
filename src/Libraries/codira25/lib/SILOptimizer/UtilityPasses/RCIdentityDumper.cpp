@@ -1,0 +1,108 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, April 14, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===--- RCIdentityDumper.cpp ---------------------------------------------===//
+//
+// Copyright (c) NeXTHub Corporation. All rights reserved.
+// DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+//
+// This code is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// version 2 for more details (a copy is included in the LICENSE file that
+// accompanied this code).
+//
+// Author(-s): Tunjay Akbarli
+//
+
+//===----------------------------------------------------------------------===//
+///
+/// \file
+///
+/// This pass applies the RCIdentityAnalysis to all SILValues in a function in
+/// order to apply FileCheck testing to RCIdentityAnalysis without needing to
+/// test any other passes.
+///
+//===----------------------------------------------------------------------===//
+
+#define DEBUG_TYPE "sil-rc-identity-dumper"
+#include "language/SILOptimizer/PassManager/Passes.h"
+#include "language/SIL/SILArgument.h"
+#include "language/SIL/SILFunction.h"
+#include "language/SIL/SILValue.h"
+#include "language/SILOptimizer/Analysis/RCIdentityAnalysis.h"
+#include "language/SILOptimizer/PassManager/Transforms.h"
+#include "toolchain/Support/Debug.h"
+
+using namespace language;
+
+namespace {
+
+/// Dumps the alias relations between all instructions of a function.
+class RCIdentityDumper : public SILFunctionTransform {
+
+  void run() override {
+    auto *Fn = getFunction();
+    auto *RCId = PM->getAnalysis<RCIdentityAnalysis>()->get(Fn);
+
+    std::vector<std::pair<SILValue, SILValue>> Results;
+    unsigned ValueCount = 0;
+    toolchain::MapVector<SILValue, uint64_t> ValueToValueIDMap;
+
+    toolchain::outs() << "@" << Fn->getName() << "@\n";
+
+    for (auto &BB : *Fn) {
+      for (auto *Arg : BB.getArguments()) {
+        ValueToValueIDMap[Arg] = ValueCount++;
+        Results.push_back({Arg, RCId->getRCIdentityRoot(Arg)});
+      }
+      for (auto &II : BB) {
+        for (auto V : II.getResults()) {
+          ValueToValueIDMap[V] = ValueCount++;
+          Results.push_back({V, RCId->getRCIdentityRoot(V)});
+        }
+      }
+    }
+
+    toolchain::outs() << "ValueMap:\n";
+    for (auto P : ValueToValueIDMap) {
+      toolchain::outs() << "\tValueMap[" << P.second << "] = " << P.first;
+    }
+
+    unsigned ResultCount = 0;
+    for (auto P : Results) {
+      toolchain::outs() << "RESULT #" << ResultCount++ << ": "
+                   << ValueToValueIDMap[P.first] << " = "
+                   << ValueToValueIDMap[P.second] << "\n";
+    }
+
+    toolchain::outs() << "\n";
+  }
+
+};
+
+} // end anonymous namespace
+
+SILTransform *language::createRCIdentityDumper() { return new RCIdentityDumper(); }

@@ -1,0 +1,116 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, March 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* Copyright (C) 1991-2003 Free Software Foundation, Inc.
+
+   This file is part of GNU Readline, a library for reading lines
+   of text with interactive input and history editing.
+
+   Readline is free software; you can redistribute it and/or modify it
+   under the terms of the GNU General Public License as published by the
+   Free Software Foundation; either version 2, or (at your option) any
+   later version.
+
+   Readline is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with Readline; see the file COPYING.  If not, write to the Free
+   Software Foundation, 59 Temple Place, Suite 330, Boston, MA 02111 USA. */
+
+#if defined (HAVE_CONFIG_H)
+#include <config.h>
+#endif
+
+#include <stdio.h>
+
+#if defined (HAVE_STDLIB_H)
+#  include <stdlib.h>
+#else
+#  include "ansi_stdlib.h"
+#endif /* HAVE_STDLIB_H */
+
+/* Generic pointer type. */
+#ifndef PTR_T
+
+#if defined (__STDC__)
+#  define PTR_T void *
+#else
+#  define PTR_T char *
+#endif
+
+#endif /* PTR_T */
+
+/* **************************************************************** */
+/*								    */
+/*		   Memory Allocation and Deallocation.		    */
+/*								    */
+/* **************************************************************** */
+
+static void
+memory_error_and_abort (fname)
+     char *fname;
+{
+  fprintf (stderr, "%s: out of virtual memory\n", fname);
+  exit (2);
+}
+
+/* Return a pointer to free()able block of memory large enough
+   to hold BYTES number of bytes.  If the memory cannot be allocated,
+   print an error message and abort. */
+PTR_T
+xmalloc (bytes)
+     size_t bytes;
+{
+  PTR_T temp;
+
+  temp = malloc (bytes);
+  if (temp == 0)
+    memory_error_and_abort ("xmalloc");
+  return (temp);
+}
+
+PTR_T
+xrealloc (pointer, bytes)
+     PTR_T pointer;
+     size_t bytes;
+{
+  PTR_T temp;
+
+  temp = pointer ? realloc (pointer, bytes) : malloc (bytes);
+
+  if (temp == 0)
+    memory_error_and_abort ("xrealloc");
+  return (temp);
+}
+
+void
+xfree (string)
+     PTR_T string;
+{
+  if (string)
+    free (string);
+}

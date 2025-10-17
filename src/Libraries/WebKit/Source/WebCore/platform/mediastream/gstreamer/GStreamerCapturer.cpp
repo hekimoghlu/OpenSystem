@@ -1,0 +1,303 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, February 15, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+
+#if ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
+
+#include "GStreamerCapturer.h"
+#include "VideoFrameMetadataGStreamer.h"
+
+#include <gst/app/gstappsink.h>
+#include <gst/app/gstappsrc.h>
+#include <mutex>
+#include <wtf/HexNumber.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/PrintStream.h>
+#include <wtf/text/MakeString.h>
+
+GST_DEBUG_CATEGORY(webkit_capturer_debug);
+#define GST_CAT_DEFAULT webkit_capturer_debug
+
+namespace WebCore {
+
+static void initializeCapturerDebugCategory()
+{
+    ensureGStreamerInitialized();
+
+    static std::once_flag debugRegisteredFlag;
+    std::call_once(debugRegisteredFlag, [] {
+        GST_DEBUG_CATEGORY_INIT(webkit_capturer_debug, "webkitcapturer", 0, "WebKit Capturer");
+    });
+}
+
+GStreamerCapturer::GStreamerCapturer(GStreamerCaptureDevice&& device, GRefPtr<GstCaps>&& caps)
+    : m_caps(WTFMove(caps))
+    , m_sourceFactory(nullptr)
+    , m_deviceType(device.type())
+{
+    initializeCapturerDebugCategory();
+    m_device.emplace(WTFMove(device));
+}
+
+GStreamerCapturer::GStreamerCapturer(const char* sourceFactory, GRefPtr<GstCaps>&& caps, CaptureDevice::DeviceType deviceType)
+    : m_caps(WTFMove(caps))
+    , m_sourceFactory(sourceFactory)
+    , m_deviceType(deviceType)
+{
+    initializeCapturerDebugCategory();
+}
+
+GStreamerCapturer::~GStreamerCapturer()
+{
+    tearDown();
+}
+
+void GStreamerCapturer::tearDown(bool disconnectSignals)
+{
+    GST_DEBUG("Disposing capture pipeline %" GST_PTR_FORMAT " (disconnecting signals: %s)", m_pipeline.get(), boolForPrinting(disconnectSignals));
+    if (disconnectSignals && m_sink)
+        g_signal_handlers_disconnect_by_data(m_sink.get(), this);
+
+    if (m_pipeline) {
+        if (disconnectSignals) {
+            unregisterPipeline(m_pipeline);
+            disconnectSimpleBusMessageCallback(pipeline());
+        }
+        gst_element_set_state(pipeline(), GST_STATE_NULL);
+    }
+
+    if (!disconnectSignals)
+        return;
+
+    m_sink = nullptr;
+    m_valve = nullptr;
+    m_src = nullptr;
+    m_capsfilter = nullptr;
+    m_pipeline = nullptr;
+}
+
+GStreamerCapturerObserver::~GStreamerCapturerObserver()
+{
+}
+
+void GStreamerCapturer::addObserver(GStreamerCapturerObserver& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.add(observer);
+}
+
+void GStreamerCapturer::removeObserver(GStreamerCapturerObserver& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.remove(observer);
+}
+
+void GStreamerCapturer::forEachObserver(const Function<void(GStreamerCapturerObserver&)>& apply)
+{
+    ASSERT(isMainThread());
+    Ref protectedThis { *this };
+    m_observers.forEach(apply);
+}
+
+GstElement* GStreamerCapturer::createSource()
+{
+    if (m_sourceFactory) {
+        m_src = makeElement(m_sourceFactory);
+        ASSERT(m_src);
+
+        if (GST_IS_APP_SRC(m_src.get()))
+            g_object_set(m_src.get(), "is-live", TRUE, "format", GST_FORMAT_TIME, "do-timestamp", TRUE, nullptr);
+
+        if (m_deviceType == CaptureDevice::DeviceType::Screen) {
+            auto srcPad = adoptGRef(gst_element_get_static_pad(m_src.get(), "src"));
+            gst_pad_add_probe(srcPad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [](GstPad*, GstPadProbeInfo* info, void* userData) -> GstPadProbeReturn {
+                auto* event = gst_pad_probe_info_get_event(info);
+                if (GST_EVENT_TYPE(event) != GST_EVENT_CAPS)
+                    return GST_PAD_PROBE_OK;
+
+                auto self = reinterpret_cast<GStreamerCapturer*>(userData);
+                callOnMainThread([event = GRefPtr(event), weakThis = ThreadSafeWeakPtr { *self }] {
+                    RefPtr protectedThis = weakThis.get();
+                    if (!protectedThis)
+                        return;
+
+                    GstCaps* caps;
+                    gst_event_parse_caps(event.get(), &caps);
+                    protectedThis->forEachObserver([caps](GStreamerCapturerObserver& observer) {
+                        observer.sourceCapsChanged(caps);
+                    });
+                });
+                return GST_PAD_PROBE_OK;
+            }, this, nullptr);
+        }
+    } else {
+        ASSERT(m_device);
+        auto sourceName = makeString(unsafeSpan(name()), hex(reinterpret_cast<uintptr_t>(this)));
+        m_src = gst_device_create_element(m_device->device(), sourceName.ascii().data());
+        ASSERT(m_src);
+        g_object_set(m_src.get(), "do-timestamp", TRUE, nullptr);
+    }
+
+    if (m_deviceType == CaptureDevice::DeviceType::Camera) {
+        auto srcPad = adoptGRef(gst_element_get_static_pad(m_src.get(), "src"));
+        gst_pad_add_probe(srcPad.get(), static_cast<GstPadProbeType>(GST_PAD_PROBE_TYPE_PUSH | GST_PAD_PROBE_TYPE_BUFFER), [](GstPad*, GstPadProbeInfo* info, gpointer) -> GstPadProbeReturn {
+            VideoFrameTimeMetadata metadata;
+            metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();
+            auto modifiedBuffer = webkitGstBufferSetVideoFrameTimeMetadata(GRefPtr(GST_PAD_PROBE_INFO_BUFFER(info)), metadata);
+            GST_PAD_PROBE_INFO_DATA(info) = modifiedBuffer.leakRef();
+            return GST_PAD_PROBE_OK;
+        }, nullptr, nullptr);
+    }
+
+    return m_src.get();
+}
+
+GRefPtr<GstCaps> GStreamerCapturer::caps()
+{
+    if (m_sourceFactory) {
+        GRefPtr<GstElement> element = makeElement(m_sourceFactory);
+        auto pad = adoptGRef(gst_element_get_static_pad(element.get(), "src"));
+
+        return adoptGRef(gst_pad_query_caps(pad.get(), nullptr));
+    }
+
+    ASSERT(m_device);
+    return adoptGRef(gst_device_get_caps(m_device->device()));
+}
+
+void GStreamerCapturer::setupPipeline()
+{
+    if (m_pipeline) {
+        unregisterPipeline(m_pipeline);
+        disconnectSimpleBusMessageCallback(pipeline());
+    }
+
+    m_pipeline = makeElement("pipeline");
+    auto clock = adoptGRef(gst_system_clock_obtain());
+    gst_pipeline_use_clock(GST_PIPELINE(m_pipeline.get()), clock.get());
+    gst_element_set_base_time(m_pipeline.get(), 0);
+    gst_element_set_start_time(m_pipeline.get(), GST_CLOCK_TIME_NONE);
+
+    registerActivePipeline(m_pipeline);
+    connectSimpleBusMessageCallback(pipeline());
+
+    GRefPtr<GstElement> source = createSource();
+    GRefPtr<GstElement> converter = createConverter();
+
+    m_valve = makeElement("valve");
+    m_capsfilter = makeElement("capsfilter");
+    auto queue = gst_element_factory_make("queue", nullptr);
+    m_sink = makeElement("appsink");
+
+    gst_util_set_object_arg(G_OBJECT(m_capsfilter.get()), "caps-change-mode", "delayed");
+
+    gst_app_sink_set_emit_signals(GST_APP_SINK(m_sink.get()), TRUE);
+    g_object_set(m_sink.get(), "enable-last-sample", FALSE, nullptr);
+    g_object_set(m_capsfilter.get(), "caps", m_caps.get(), nullptr);
+
+    gst_bin_add_many(GST_BIN_CAST(m_pipeline.get()), source.get(), m_capsfilter.get(), m_valve.get(), queue, m_sink.get(), nullptr);
+    auto tail = source.get();
+    if (converter) {
+        gst_bin_add(GST_BIN_CAST(m_pipeline.get()), converter.get());
+        gst_element_link(source.get(), converter.get());
+        tail = converter.get();
+    }
+    gst_element_link_many(tail, m_capsfilter.get(), m_valve.get(), queue, m_sink.get(), nullptr);
+}
+
+GstElement* GStreamerCapturer::makeElement(const char* factoryName)
+{
+    auto* element = makeGStreamerElement(factoryName, nullptr);
+    auto elementName = makeString(unsafeSpan(name()), "_capturer_"_s, unsafeSpan(GST_OBJECT_NAME(element)), '_', hex(reinterpret_cast<uintptr_t>(this)));
+    gst_object_set_name(GST_OBJECT(element), elementName.ascii().data());
+
+    return element;
+}
+
+void GStreamerCapturer::start()
+{
+    if (!m_pipeline)
+        setupPipeline();
+
+    ASSERT(m_pipeline);
+    GST_INFO_OBJECT(pipeline(), "Starting");
+    gst_element_set_state(pipeline(), GST_STATE_PLAYING);
+}
+
+void GStreamerCapturer::stop()
+{
+    GST_INFO_OBJECT(pipeline(), "Stopping");
+    tearDown(false);
+}
+
+bool GStreamerCapturer::isStopped() const
+{
+    if (!m_pipeline)
+        return true;
+
+    return GST_STATE(m_pipeline.get()) == GST_STATE_NULL;
+}
+
+std::pair<GstClockTime, GstClockTime> GStreamerCapturer::queryLatency()
+{
+    if (!m_sink)
+        return { GST_CLOCK_TIME_NONE, GST_CLOCK_TIME_NONE };
+
+    GstClockTime minLatency, maxLatency;
+    if (gst_base_sink_query_latency(GST_BASE_SINK_CAST(m_sink.get()), nullptr, nullptr, &minLatency, &maxLatency))
+        return { minLatency, maxLatency };
+
+    return { GST_CLOCK_TIME_NONE, GST_CLOCK_TIME_NONE };
+}
+
+bool GStreamerCapturer::isInterrupted() const
+{
+    gboolean isInterrupted;
+    g_object_get(m_valve.get(), "drop", &isInterrupted, nullptr);
+    return isInterrupted;
+}
+
+void GStreamerCapturer::setInterrupted(bool isInterrupted)
+{
+    g_object_set(m_valve.get(), "drop", isInterrupted, nullptr);
+}
+
+void GStreamerCapturer::stopDevice(bool disconnectSignals)
+{
+    forEachObserver([](auto& observer) {
+        observer.captureEnded();
+    });
+    if (disconnectSignals) {
+        m_device.reset();
+        m_caps = nullptr;
+    }
+    tearDown(disconnectSignals);
+}
+
+#undef GST_CAT_DEFAULT
+
+} // namespace WebCore
+
+#endif // ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)

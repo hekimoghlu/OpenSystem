@@ -1,0 +1,80 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, June 13, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef WKPagePrivateMac_h
+#define WKPagePrivateMac_h
+
+#include <WebKit/WKBase.h>
+#include <sys/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __OBJC__
+
+@class WKWebView;
+@class _WKRemoteObjectRegistry;
+
+@protocol _WKObservablePageState
+
+@property (nonatomic, readonly, copy) NSString *title;
+@property (nonatomic, readonly, copy) NSURL *URL;
+@property (nonatomic, readonly, getter=isLoading) BOOL loading;
+@property (nonatomic, readonly) double estimatedProgress;
+@property (nonatomic, readonly) BOOL hasOnlySecureContent;
+@property (nonatomic, readonly) BOOL _webProcessIsResponsive;
+
+// Not KVO compliant.
+@property (nonatomic, readonly) NSURL *unreachableURL;
+@property (nonatomic, readonly) SecTrustRef serverTrust;
+
+@end
+
+WK_EXPORT id <_WKObservablePageState> WKPageCreateObservableState(WKPageRef page) NS_RETURNS_RETAINED;
+WK_EXPORT _WKRemoteObjectRegistry *WKPageGetObjectRegistry(WKPageRef page);
+
+@protocol _WKFullscreenDelegate;
+WK_EXPORT void WKPageSetFullscreenDelegate(WKPageRef page, id <_WKFullscreenDelegate>);
+WK_EXPORT id <_WKFullscreenDelegate> WKPageGetFullscreenDelegate(WKPageRef page);
+
+@class WKNavigation;
+WK_EXPORT WKNavigation *WKPageLoadURLRequestReturningNavigation(WKPageRef page, WKURLRequestRef request);
+WK_EXPORT WKNavigation *WKPageLoadFileReturningNavigation(WKPageRef page, WKURLRef fileURL, WKURLRef resourceDirectoryURL);
+
+WK_EXPORT WKWebView *WKPageGetWebView(WKPageRef page);
+
+#endif // __OBJC__
+
+WK_EXPORT bool WKPageIsURLKnownHSTSHost(WKPageRef page, WKURLRef url);
+
+#if !TARGET_OS_IPHONE
+WK_EXPORT bool WKPageIsPlayingVideoInEnhancedFullscreen(WKPageRef page);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* WKPagePrivateMac_h */

@@ -1,0 +1,326 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, September 21, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "WKContactPicker.h"
+
+#if HAVE(CONTACTSUI)
+
+#import "ContactsUISPI.h"
+#import "PickerDismissalReason.h"
+#import <Contacts/Contacts.h>
+#import <WebCore/ContactInfo.h>
+#import <WebCore/ContactsRequestData.h>
+#import <WebKit/WKWebView.h>
+#import <wtf/CompletionHandler.h>
+#import <wtf/RetainPtr.h>
+#import <wtf/SoftLinking.h>
+#import <wtf/WeakObjCPtr.h>
+
+#if PLATFORM(IOS_FAMILY)
+#import "UIKitSPI.h"
+#import "UIKitUtilities.h"
+#endif
+
+SOFT_LINK_FRAMEWORK(Contacts)
+SOFT_LINK_CLASS(Contacts, CNContactFormatter)
+SOFT_LINK_CLASS(Contacts, CNLabeledValue)
+SOFT_LINK_CLASS(Contacts, CNMutableContact)
+SOFT_LINK_CLASS(Contacts, CNPhoneNumber)
+
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+SOFT_LINK_FRAMEWORK(ContactsUI)
+SOFT_LINK_CLASS(ContactsUI, CNContactPickerViewController)
+#endif
+
+#pragma mark - Delegate Wrappers
+
+@interface WKCNContactPickerDelegate : NSObject<CNContactPickerDelegate> {
+@protected
+    WeakObjCPtr<id<CNContactPickerDelegate>> _contactPickerDelegate;
+}
+
+- (instancetype)initWithContactPickerDelegate:(id<CNContactPickerDelegate>)contactPickerDelegate;
+
+@end
+
+@implementation WKCNContactPickerDelegate
+
+- (instancetype)initWithContactPickerDelegate:(id<CNContactPickerDelegate>)contactPickerDelegate
+{
+    if (!(self = [super init]))
+        return nil;
+
+    _contactPickerDelegate = contactPickerDelegate;
+
+    return self;
+}
+
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+- (void)contactPickerDidCancel:(CNContactPickerViewController *)picker
+{
+    [_contactPickerDelegate contactPickerDidCancel:picker];
+}
+#endif
+
+@end
+
+@interface WKCNContactPickerSingleSelectDelegate : WKCNContactPickerDelegate
+@end
+
+@implementation WKCNContactPickerSingleSelectDelegate
+
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+- (void)contactPicker:(CNContactPickerViewController *)picker didSelectContact:(CNContact *)contact
+{
+    [_contactPickerDelegate contactPicker:picker didSelectContact:contact];
+}
+#endif
+
+@end
+
+@interface WKCNContactPickerMultiSelectDelegate : WKCNContactPickerDelegate
+@end
+
+@implementation WKCNContactPickerMultiSelectDelegate
+
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+- (void)contactPicker:(CNContactPickerViewController *)picker didSelectContacts:(NSArray<CNContact*> *)contacts
+{
+    [_contactPickerDelegate contactPicker:picker didSelectContacts:contacts];
+}
+#endif
+
+@end
+
+#pragma mark - WKContactPicker
+
+@interface WKContactPicker () <CNContactPickerDelegate>
+@end
+
+@implementation WKContactPicker {
+    WeakObjCPtr<WKWebView> _webView;
+    WeakObjCPtr<id<WKContactPickerDelegate>> _delegate;
+
+    Vector<WebCore::ContactProperty> _properties;
+    WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)> _completionHandler;
+
+    RetainPtr<WKCNContactPickerDelegate> _contactPickerDelegate;
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+    RetainPtr<CNContactPickerViewController> _contactPickerViewController;
+#endif
+}
+
+- (id<WKContactPickerDelegate>)delegate
+{
+    return _delegate.get().get();
+}
+
+- (void)setDelegate:(id<WKContactPickerDelegate>)delegate
+{
+    _delegate = delegate;
+}
+
+- (instancetype)initWithView:(WKWebView *)view
+{
+    if (!(self = [super init]))
+        return nil;
+
+    _webView = view;
+
+    return self;
+}
+
+- (void)presentWithRequestData:(const WebCore::ContactsRequestData&)requestData completionHandler:(WTF::CompletionHandler<void(std::optional<Vector<WebCore::ContactInfo>>&&)>&&)completionHandler
+{
+    _properties = requestData.properties;
+    _completionHandler = WTFMove(completionHandler);
+
+    if (requestData.multiple)
+        _contactPickerDelegate = adoptNS([[WKCNContactPickerMultiSelectDelegate alloc] initWithContactPickerDelegate:self]);
+    else
+        _contactPickerDelegate = adoptNS([[WKCNContactPickerSingleSelectDelegate alloc] initWithContactPickerDelegate:self]);
+
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+    _contactPickerViewController = adoptNS([allocCNContactPickerViewControllerInstance() init]);
+    [_contactPickerViewController setDelegate:_contactPickerDelegate.get()];
+    [_contactPickerViewController setPrompt:requestData.url];
+
+    auto presentationViewController = [_webView _wk_viewControllerForFullScreenPresentation];
+    [presentationViewController presentViewController:_contactPickerViewController.get() animated:YES completion:[weakSelf = WeakObjCPtr<WKContactPicker>(self)] {
+        auto strongSelf = weakSelf.get();
+        if (!strongSelf)
+            return;
+
+        if ([[strongSelf delegate] respondsToSelector:@selector(contactPickerDidPresent:)])
+            [[strongSelf delegate] contactPickerDidPresent:strongSelf.get()];
+    }];
+#endif
+}
+
+- (void)dismiss
+{
+    [self dismissWithContacts:nil];
+}
+
+- (BOOL)dismissIfNeededWithReason:(WebKit::PickerDismissalReason)reason
+{
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+    if (reason == WebKit::PickerDismissalReason::ViewRemoved) {
+        if ([_contactPickerViewController _wk_isInFullscreenPresentation])
+            return NO;
+    }
+#endif
+
+    if (reason == WebKit::PickerDismissalReason::ProcessExited || reason == WebKit::PickerDismissalReason::ViewRemoved)
+        [self setDelegate:nil];
+
+    [self dismiss];
+    return YES;
+}
+
+#pragma mark - Completion
+
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+
+- (void)contactPickerDidCancel:(CNContactPickerViewController *)picker
+{
+    Vector<WebCore::ContactInfo> info;
+    [self _contactPickerDidDismissWithContactInfo:WTFMove(info)];
+}
+
+- (void)contactPicker:(CNContactPickerViewController *)picker didSelectContact:(CNContact *)contact
+{
+    Vector<WebCore::ContactInfo> info = { [self _contactInfoFromCNContact:contact] };
+    [self _contactPickerDidDismissWithContactInfo:WTFMove(info)];
+}
+
+- (void)contactPicker:(CNContactPickerViewController *)picker didSelectContacts:(NSArray<CNContact*> *)contacts
+{
+    Vector<WebCore::ContactInfo> info(contacts.count, [&](size_t i) {
+        return WebCore::ContactInfo { [self _contactInfoFromCNContact:contacts[i]] };
+    });
+    [self _contactPickerDidDismissWithContactInfo:WTFMove(info)];
+}
+
+#endif
+
+- (void)_contactPickerDidDismissWithContactInfo:(Vector<WebCore::ContactInfo>&&)info
+{
+    _completionHandler(WTFMove(info));
+
+    if ([_delegate respondsToSelector:@selector(contactPickerDidDismiss:)])
+        [_delegate contactPickerDidDismiss:self];
+}
+
+- (WebCore::ContactInfo)_contactInfoFromCNContact:(CNContact *)contact
+{
+    WebCore::ContactInfo contactInfo;
+
+    if (_properties.contains(WebCore::ContactProperty::Name)) {
+        NSString *contactName = [getCNContactFormatterClass() stringFromContact:contact style:CNContactFormatterStyleFullName];
+        contactInfo.name = { contactName };
+    }
+
+    if (_properties.contains(WebCore::ContactProperty::Email)) {
+        for (CNLabeledValue<NSString *> *emailAddress in contact.emailAddresses)
+            contactInfo.email.append(emailAddress.value);
+    }
+
+    if (_properties.contains(WebCore::ContactProperty::Tel)) {
+        for (CNLabeledValue<CNPhoneNumber *> *phoneNumber in contact.phoneNumbers)
+            contactInfo.tel.append(phoneNumber.value.stringValue);
+    }
+
+    return contactInfo;
+}
+
+#pragma mark - Testing
+
+- (void)dismissWithContacts:(NSArray *)contacts
+{
+#if HAVE(CNCONTACTPICKERVIEWCONTROLLER)
+    [_contactPickerViewController dismissViewControllerAnimated:NO completion:[self, weakSelf = WeakObjCPtr<WKContactPicker>(self), jsContacts = RetainPtr<NSArray>(contacts)] {
+        auto strongSelf = weakSelf.get();
+        if (!strongSelf)
+            return;
+
+        [strongSelf contactPicker:_contactPickerViewController.get() didSelectContacts:[strongSelf _contactsFromJSContacts:jsContacts.get()]];
+    }];
+#endif
+}
+
+- (NSArray<CNContact*> *)_contactsFromJSContacts:(NSArray *)jsContacts
+{
+    if (!jsContacts)
+        return [NSArray array];
+
+    NSMutableArray<CNContact*> *contacts = [NSMutableArray arrayWithCapacity:jsContacts.count];
+
+    NSPredicate *stringValuePredicate = [NSPredicate predicateWithFormat:@"self isKindOfClass: %@", [NSString class]];
+
+    for (id jsContact in jsContacts) {
+        if (![jsContact isKindOfClass:[NSDictionary class]])
+            continue;
+
+        auto contact = adoptNS([allocCNMutableContactInstance() init]);
+
+        id names = [(NSDictionary *)jsContact objectForKey:@"name"];
+        if ([names isKindOfClass:[NSArray class]]) {
+            for (NSString *name in [names filteredArrayUsingPredicate:stringValuePredicate]) {
+                [contact setGivenName:name];
+                break;
+            }
+        }
+
+        id emails = [(NSDictionary *)jsContact objectForKey:@"email"];
+        if ([emails isKindOfClass:[NSArray class]]) {
+            NSMutableArray<CNLabeledValue<NSString*>*> *emailAddresses = [NSMutableArray array];
+            for (NSString *email in [emails filteredArrayUsingPredicate:stringValuePredicate]) {
+                CNLabeledValue<NSString*> *labeledValue = [getCNLabeledValueClass() labeledValueWithLabel:nil value:email];
+                [emailAddresses addObject:labeledValue];
+            }
+            [contact setEmailAddresses:emailAddresses];
+        }
+
+        id phoneNumbers = [(NSDictionary *)jsContact objectForKey:@"tel"];
+        if ([phoneNumbers isKindOfClass:[NSArray class]]) {
+            NSMutableArray<CNLabeledValue<CNPhoneNumber*>*> *numbers = [NSMutableArray array];
+            for (NSString *phoneNumber in [phoneNumbers filteredArrayUsingPredicate:stringValuePredicate]) {
+                CNPhoneNumber *cnPhoneNumber = [getCNPhoneNumberClass() phoneNumberWithStringValue:phoneNumber];
+                CNLabeledValue<CNPhoneNumber*> *labeledValue = [getCNLabeledValueClass() labeledValueWithLabel:nil value:cnPhoneNumber];
+                [numbers addObject:labeledValue];
+            }
+            [contact setPhoneNumbers:numbers];
+        }
+
+        [contacts addObject:contact.get()];
+    }
+
+    return contacts;
+}
+
+@end
+
+#endif // HAVE(CONTACTSUI)

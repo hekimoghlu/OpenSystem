@@ -1,0 +1,190 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, April 23, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include <type_traits>
+#include <wtf/Forward.h>
+
+// SFINAE depends on overload resolution. We indicate the overload we'd prefer
+// (if it can compile) using a higher priorty type (int), and the overload
+// to fall back to using a lower priority type (long). 0 can convert to int
+// or long, so we can trigger overload resolution using 0. C++ is awesome!
+#define SFINAE_OVERLOAD 0
+#define SFINAE_OVERLOAD_DEFAULT long
+#define SFINAE_OVERLOAD_PREFERRED int
+
+namespace WTF {
+
+namespace detail {
+
+// IsRefcountedSmartPointer implementation.
+template<typename CVRemoved>
+struct IsRefcountedSmartPointerHelper : std::false_type { };
+
+template<typename Pointee>
+struct IsRefcountedSmartPointerHelper<RefPtr<Pointee>> : std::true_type { };
+
+template<typename Pointee>
+struct IsRefcountedSmartPointerHelper<Ref<Pointee>> : std::true_type { };
+
+} // namespace detail
+
+template<typename T>
+struct IsRefcountedSmartPointer : detail::IsRefcountedSmartPointerHelper<std::remove_cv_t<T>> { };
+
+// IsSmartRef implementation
+namespace detail {
+
+template<typename CVRemoved>
+struct IsSmartRefHelper : std::false_type { };
+
+template<typename Pointee>
+struct IsSmartRefHelper<Ref<Pointee>> : std::true_type { };
+
+} // namespace detail
+
+template<typename T>
+struct IsSmartRef : detail::IsSmartRefHelper<std::remove_cv_t<T>> { };
+
+// RemoveSmartPointer implementation
+namespace detail {
+
+template<typename T, typename CVRemoved>
+struct RemoveSmartPointerHelper {
+    typedef T type;
+};
+
+template<typename T, typename Pointee>
+struct RemoveSmartPointerHelper<T, RefPtr<Pointee>> {
+    typedef Pointee type;
+};
+
+template<typename T, typename Pointee>
+struct RemoveSmartPointerHelper<T, Ref<Pointee>> {
+    typedef Pointee type;
+};
+
+} // namespace detail
+
+template<typename T>
+struct RemoveSmartPointer : detail::RemoveSmartPointerHelper<T, std::remove_cv_t<T>> { };
+
+// HasRefPtrMemberFunctions implementation
+namespace detail {
+
+template<typename>
+struct SFINAE1True : std::true_type { };
+
+template<class T>
+static auto HasRefPtrMemberFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->ref(), static_cast<std::remove_cv_t<T>*>(nullptr)->deref())>;
+template<class>
+static auto HasRefPtrMemberFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+} // namespace detail
+
+template<class T>
+struct HasRefPtrMemberFunctions : decltype(detail::HasRefPtrMemberFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasCheckedPtrMemberFunctions implementation
+namespace detail {
+
+template<class T>
+static auto HasCheckedPtrMemberFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->incrementCheckedPtrCount(), static_cast<std::remove_cv_t<T>*>(nullptr)->decrementCheckedPtrCount())>;
+template<class>
+static auto HasCheckedPtrMemberFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+} // namespace detail
+
+template<class T>
+struct HasCheckedPtrMemberFunctions : decltype(detail::HasCheckedPtrMemberFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasIsolatedCopy()
+namespace detail {
+
+// FIXME: This test is incorrectly false for RefCounted objects because
+// substitution for std::declval<T>() fails when the constructor is private.
+template<class T>
+static auto HasIsolatedCopyTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(std::declval<T>().isolatedCopy())>;
+template<class>
+static auto HasIsolatedCopyTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+} // namespace detail
+
+template<class T>
+struct HasIsolatedCopy : decltype(detail::HasIsolatedCopyTest<T>(SFINAE_OVERLOAD)) { };
+
+// LooksLikeRCSerialDispatcher implementation
+namespace detail {
+
+template <bool b, typename>
+struct SFINAE1If : std::integral_constant<bool, b> { };
+
+template <bool b, class T>
+static auto LooksLikeRCSerialDispatcherTest(SFINAE_OVERLOAD_PREFERRED)
+    -> SFINAE1If<b, decltype(std::declval<T>().ref(), std::declval<T>().deref())>;
+
+template <bool, typename>
+static auto LooksLikeRCSerialDispatcherTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+} // namespace detail
+
+template <class T>
+struct LooksLikeRCSerialDispatcher : decltype(detail::LooksLikeRCSerialDispatcherTest<std::is_base_of_v<SerialFunctionDispatcher, T>, T>(SFINAE_OVERLOAD)) { };
+
+class NativePromiseBase;
+class ConvertibleToNativePromise;
+
+template <typename T>
+concept IsNativePromise = std::is_base_of<NativePromiseBase, T>::value;
+
+template <typename T>
+concept IsConvertibleToNativePromise = std::is_base_of<ConvertibleToNativePromise, T>::value;
+
+template <typename T, typename U>
+concept RelatedNativePromise = requires(T, U)
+{
+    { IsConvertibleToNativePromise<T> };
+    { IsConvertibleToNativePromise<U> };
+    { std::is_same<typename T::PromiseType, typename U::PromiseType>::value };
+};
+
+template <typename T>
+struct IsExpected : std::false_type { };
+
+template <typename T, typename E>
+struct IsExpected<Expected<T, E>> : std::true_type { };
+
+template <typename... Args>
+struct ParameterCountImpl {
+    static constexpr std::size_t value = sizeof...(Args);
+};
+
+template <typename ReturnType, typename... Args>
+constexpr std::size_t parameterCount(ReturnType(*)(Args...))
+{
+    return ParameterCountImpl<Args...>::value;
+}
+
+} // namespace NTF

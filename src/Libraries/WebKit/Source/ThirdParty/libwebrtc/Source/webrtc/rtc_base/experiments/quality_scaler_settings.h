@@ -1,0 +1,59 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, November 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef RTC_BASE_EXPERIMENTS_QUALITY_SCALER_SETTINGS_H_
+#define RTC_BASE_EXPERIMENTS_QUALITY_SCALER_SETTINGS_H_
+
+#include <optional>
+
+#include "api/field_trials_view.h"
+#include "rtc_base/experiments/field_trial_parser.h"
+
+namespace webrtc {
+
+class QualityScalerSettings final {
+ public:
+  explicit QualityScalerSettings(const FieldTrialsView& field_trials);
+
+  std::optional<int> SamplingPeriodMs() const;
+  std::optional<int> AverageQpWindow() const;
+  std::optional<int> MinFrames() const;
+  std::optional<double> InitialScaleFactor() const;
+  std::optional<double> ScaleFactor() const;
+  std::optional<int> InitialBitrateIntervalMs() const;
+  std::optional<double> InitialBitrateFactor() const;
+
+ private:
+  FieldTrialOptional<int> sampling_period_ms_;
+  FieldTrialOptional<int> average_qp_window_;
+  FieldTrialOptional<int> min_frames_;
+  FieldTrialOptional<double> initial_scale_factor_;
+  FieldTrialOptional<double> scale_factor_;
+  FieldTrialOptional<int> initial_bitrate_interval_ms_;
+  FieldTrialOptional<double> initial_bitrate_factor_;
+};
+
+}  // namespace webrtc
+
+#endif  // RTC_BASE_EXPERIMENTS_QUALITY_SCALER_SETTINGS_H_

@@ -1,0 +1,307 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, February 1, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "ContextMenuItem.h"
+
+#include "ContextMenu.h"
+#include <wtf/TZoneMallocInlines.h>
+
+#if ENABLE(CONTEXT_MENUS)
+
+namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContextMenuItem);
+
+ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction action, const String& title, ContextMenu* subMenu)
+    : m_type(type)
+    , m_action(action)
+    , m_title(title)
+    , m_enabled(true)
+    , m_checked(false)
+    , m_indentationLevel(0)
+{
+    if (subMenu)
+        setSubMenu(subMenu);
+}
+
+ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction action, const String& title, bool enabled, bool checked, unsigned indentationLevel)
+    : m_type(type)
+    , m_action(action)
+    , m_title(title)
+    , m_enabled(enabled)
+    , m_checked(checked)
+    , m_indentationLevel(indentationLevel)
+{
+}
+        
+ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems, unsigned indentationLevel)
+    : m_type(ContextMenuItemType::Submenu)
+    , m_action(action)
+    , m_title(title)
+    , m_enabled(enabled)
+    , m_checked(checked)
+    , m_indentationLevel(indentationLevel)
+    , m_subMenuItems(subMenuItems)
+{
+}
+
+ContextMenuItem::ContextMenuItem()
+    : m_type(ContextMenuItemType::Separator)
+    , m_action(ContextMenuItemTagNoAction)
+    , m_enabled(false)
+    , m_checked(false)
+    , m_indentationLevel(0)
+{
+}
+
+ContextMenuItem::~ContextMenuItem() = default;
+
+bool ContextMenuItem::isNull() const
+{
+    // FIXME: This is a bit of a hack. Cross-platform ContextMenuItem users need a concrete way to track "isNull".
+    return m_action == ContextMenuItemTagNoAction && m_title.isNull() && m_subMenuItems.isEmpty();
+}
+
+void ContextMenuItem::setSubMenu(ContextMenu* subMenu)
+{
+    if (subMenu) {
+        m_type = ContextMenuItemType::Submenu;
+        m_subMenuItems = subMenu->items();
+    } else {
+        m_type = ContextMenuItemType::Action;
+        m_subMenuItems.clear();
+    }
+}
+
+void ContextMenuItem::setType(ContextMenuItemType type)
+{
+    m_type = type;
+}
+
+ContextMenuItemType ContextMenuItem::type() const
+{
+    return m_type;
+}
+
+void ContextMenuItem::setAction(ContextMenuAction action)
+{
+    m_action = action;
+}
+
+ContextMenuAction ContextMenuItem::action() const
+{
+    return m_action;
+}
+
+void ContextMenuItem::setIndentationLevel(unsigned indentationLevel)
+{
+    m_indentationLevel = indentationLevel;
+}
+
+unsigned ContextMenuItem::indentationLevel() const
+{
+    return m_indentationLevel;
+}
+
+void ContextMenuItem::setChecked(bool checked)
+{
+    m_checked = checked;
+}
+
+bool ContextMenuItem::checked() const
+{
+    return m_checked;
+}
+
+void ContextMenuItem::setEnabled(bool enabled)
+{
+    m_enabled = enabled;
+}
+
+bool ContextMenuItem::enabled() const
+{
+    return m_enabled;
+}
+
+static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
+{
+    switch (action) {
+    case ContextMenuAction::ContextMenuItemTagNoAction:
+    case ContextMenuAction::ContextMenuItemTagOpenLinkInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagDownloadLinkToDisk:
+    case ContextMenuAction::ContextMenuItemTagCopyLinkToClipboard:
+    case ContextMenuAction::ContextMenuItemTagOpenImageInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagDownloadImageToDisk:
+    case ContextMenuAction::ContextMenuItemTagCopyImageToClipboard:
+    case ContextMenuAction::ContextMenuItemTagCopySubject:
+#if PLATFORM(GTK)
+    case ContextMenuAction::ContextMenuItemTagCopyImageURLToClipboard:
+#endif
+    case ContextMenuAction::ContextMenuItemTagOpenFrameInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagCopy:
+    case ContextMenuAction::ContextMenuItemTagGoBack:
+    case ContextMenuAction::ContextMenuItemTagGoForward:
+    case ContextMenuAction::ContextMenuItemTagStop:
+    case ContextMenuAction::ContextMenuItemTagReload:
+    case ContextMenuAction::ContextMenuItemTagCut:
+    case ContextMenuAction::ContextMenuItemTagPaste:
+#if PLATFORM(GTK)
+    case ContextMenuAction::ContextMenuItemTagPasteAsPlainText:
+    case ContextMenuAction::ContextMenuItemTagDelete:
+    case ContextMenuAction::ContextMenuItemTagSelectAll:
+    case ContextMenuAction::ContextMenuItemTagInputMethods:
+    case ContextMenuAction::ContextMenuItemTagUnicode:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertLRMMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertRLMMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertLREMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertRLEMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertLROMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertRLOMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertPDFMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertZWSMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertZWJMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertZWNJMark:
+    case ContextMenuAction::ContextMenuItemTagInsertEmoji:
+#endif
+    case ContextMenuAction::ContextMenuItemTagSpellingGuess:
+    case ContextMenuAction::ContextMenuItemTagNoGuessesFound:
+    case ContextMenuAction::ContextMenuItemTagIgnoreSpelling:
+    case ContextMenuAction::ContextMenuItemTagLearnSpelling:
+    case ContextMenuAction::ContextMenuItemTagOther:
+    case ContextMenuAction::ContextMenuItemTagSearchWeb:
+    case ContextMenuAction::ContextMenuItemTagLookUpInDictionary:
+    case ContextMenuAction::ContextMenuItemTagOpenWithDefaultApplication:
+    case ContextMenuAction::ContextMenuItemPDFActualSize:
+    case ContextMenuAction::ContextMenuItemPDFZoomIn:
+    case ContextMenuAction::ContextMenuItemPDFZoomOut:
+    case ContextMenuAction::ContextMenuItemPDFAutoSize:
+    case ContextMenuAction::ContextMenuItemPDFSinglePage:
+    case ContextMenuAction::ContextMenuItemPDFSinglePageContinuous:
+    case ContextMenuAction::ContextMenuItemPDFTwoPages:
+    case ContextMenuAction::ContextMenuItemPDFTwoPagesContinuous:
+    case ContextMenuAction::ContextMenuItemPDFFacingPages:
+    case ContextMenuAction::ContextMenuItemPDFContinuous:
+    case ContextMenuAction::ContextMenuItemPDFNextPage:
+    case ContextMenuAction::ContextMenuItemPDFPreviousPage:
+    case ContextMenuAction::ContextMenuItemTagOpenLink:
+    case ContextMenuAction::ContextMenuItemTagIgnoreGrammar:
+    case ContextMenuAction::ContextMenuItemTagSpellingMenu:
+    case ContextMenuAction::ContextMenuItemTagShowSpellingPanel:
+    case ContextMenuAction::ContextMenuItemTagCheckSpelling:
+    case ContextMenuAction::ContextMenuItemTagCheckSpellingWhileTyping:
+    case ContextMenuAction::ContextMenuItemTagCheckGrammarWithSpelling:
+    case ContextMenuAction::ContextMenuItemTagFontMenu:
+    case ContextMenuAction::ContextMenuItemTagShowFonts:
+    case ContextMenuAction::ContextMenuItemTagBold:
+    case ContextMenuAction::ContextMenuItemTagItalic:
+    case ContextMenuAction::ContextMenuItemTagUnderline:
+    case ContextMenuAction::ContextMenuItemTagOutline:
+    case ContextMenuAction::ContextMenuItemTagStyles:
+    case ContextMenuAction::ContextMenuItemTagShowColors:
+    case ContextMenuAction::ContextMenuItemTagSpeechMenu:
+    case ContextMenuAction::ContextMenuItemTagStartSpeaking:
+    case ContextMenuAction::ContextMenuItemTagStopSpeaking:
+    case ContextMenuAction::ContextMenuItemTagWritingDirectionMenu:
+    case ContextMenuAction::ContextMenuItemTagDefaultDirection:
+    case ContextMenuAction::ContextMenuItemTagLeftToRight:
+    case ContextMenuAction::ContextMenuItemTagRightToLeft:
+    case ContextMenuAction::ContextMenuItemTagPDFSinglePageScrolling:
+    case ContextMenuAction::ContextMenuItemTagPDFFacingPagesScrolling:
+    case ContextMenuAction::ContextMenuItemTagInspectElement:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionMenu:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionDefault:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionLeftToRight:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionRightToLeft:
+    case ContextMenuAction::ContextMenuItemTagAddHighlightToCurrentQuickNote:
+    case ContextMenuAction::ContextMenuItemTagAddHighlightToNewQuickNote:
+    case ContextMenuAction::ContextMenuItemTagCopyLinkWithHighlight:
+#if PLATFORM(COCOA)
+    case ContextMenuAction::ContextMenuItemTagCorrectSpellingAutomatically:
+    case ContextMenuAction::ContextMenuItemTagSubstitutionsMenu:
+    case ContextMenuAction::ContextMenuItemTagShowSubstitutions:
+    case ContextMenuAction::ContextMenuItemTagSmartCopyPaste:
+    case ContextMenuAction::ContextMenuItemTagSmartQuotes:
+    case ContextMenuAction::ContextMenuItemTagSmartDashes:
+    case ContextMenuAction::ContextMenuItemTagSmartLinks:
+    case ContextMenuAction::ContextMenuItemTagTextReplacement:
+    case ContextMenuAction::ContextMenuItemTagTransformationsMenu:
+    case ContextMenuAction::ContextMenuItemTagMakeUpperCase:
+    case ContextMenuAction::ContextMenuItemTagMakeLowerCase:
+    case ContextMenuAction::ContextMenuItemTagCapitalize:
+    case ContextMenuAction::ContextMenuItemTagChangeBack:
+#endif
+    case ContextMenuAction::ContextMenuItemTagOpenMediaInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagDownloadMediaToDisk:
+    case ContextMenuAction::ContextMenuItemTagCopyMediaLinkToClipboard:
+    case ContextMenuAction::ContextMenuItemTagToggleMediaControls:
+    case ContextMenuAction::ContextMenuItemTagToggleMediaLoop:
+    case ContextMenuAction::ContextMenuItemTagShowMediaStats:
+    case ContextMenuAction::ContextMenuItemTagEnterVideoFullscreen:
+    case ContextMenuAction::ContextMenuItemTagMediaPlayPause:
+    case ContextMenuAction::ContextMenuItemTagMediaMute:
+    case ContextMenuAction::ContextMenuItemTagDictationAlternative:
+    case ContextMenuAction::ContextMenuItemTagToggleVideoFullscreen:
+    case ContextMenuAction::ContextMenuItemTagShareMenu:
+    case ContextMenuAction::ContextMenuItemTagToggleVideoViewer:
+    case ContextMenuAction::ContextMenuItemTagToggleVideoEnhancedFullscreen:
+    case ContextMenuAction::ContextMenuItemTagLookUpImage:
+    case ContextMenuAction::ContextMenuItemTagTranslate:
+    case ContextMenuAction::ContextMenuItemTagWritingTools:
+    case ContextMenuAction::ContextMenuItemBaseCustomTag:
+    case ContextMenuAction::ContextMenuItemLastCustomTag:
+    case ContextMenuAction::ContextMenuItemBaseApplicationTag:
+        return true;
+    case ContextMenuAction::ContextMenuItemTagPlayAllAnimations:
+    case ContextMenuAction::ContextMenuItemTagPauseAllAnimations:
+    case ContextMenuAction::ContextMenuItemTagPlayAnimation:
+    case ContextMenuAction::ContextMenuItemTagPauseAnimation:
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    if (action > ContextMenuAction::ContextMenuItemBaseCustomTag && action < ContextMenuAction::ContextMenuItemLastCustomTag)
+        return true;
+
+    if (action > ContextMenuAction::ContextMenuItemBaseApplicationTag)
+        return true;
+
+    return false;
+}
+
+} // namespace WebCore
+
+namespace WTF {
+
+template<> bool isValidEnum<WebCore::ContextMenuAction>(std::underlying_type_t<WebCore::ContextMenuAction> action)
+{
+    return WebCore::isValidContextMenuAction(static_cast<WebCore::ContextMenuAction>(action));
+}
+
+}
+
+#endif // ENABLE(CONTEXT_MENUS)

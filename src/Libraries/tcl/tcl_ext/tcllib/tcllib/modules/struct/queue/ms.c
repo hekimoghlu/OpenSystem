@@ -1,0 +1,95 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, October 17, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <ms.h>
+#include <m.h>
+#include <q.h>
+#include <util.h>
+
+/* .................................................. */
+/*
+ *---------------------------------------------------------------------------
+ *
+ * qums_objcmd --
+ *
+ *	Implementation of queue objects, the main dispatcher function.
+ *
+ * Results:
+ *	A standard Tcl result code.
+ *
+ * Side effects:
+ *	Per the called methods.
+ *
+ *---------------------------------------------------------------------------
+ */
+
+int
+qums_objcmd (ClientData cd, Tcl_Interp* interp, int objc, Tcl_Obj* CONST* objv)
+{
+    Q*  q = (Q*) cd;
+    int m;
+
+    static CONST char* methods [] = {
+	"clear", "destroy",	"get",
+	"peek",	 "put",		"size",
+	"unget",
+	NULL
+    };
+    enum methods {
+	M_CLEAR, M_DESTROY, M_GET,
+	M_PEEK,  M_PUT,     M_SIZE,
+	M_UNGET
+    };
+
+    if (objc < 2) {
+	Tcl_WrongNumArgs (interp, objc, objv, "option ?arg arg ...?");
+	return TCL_ERROR;
+    } else if (Tcl_GetIndexFromObj (interp, objv [1], methods, "option",
+				    0, &m) != TCL_OK) {
+	return TCL_ERROR;
+    }
+
+    /* Dispatch to methods. They check the #args in detail before performing
+     * the requested functionality
+     */
+
+    switch (m) {
+    case M_CLEAR:	return qum_CLEAR   (q, interp, objc, objv);
+    case M_DESTROY:	return qum_DESTROY (q, interp, objc, objv);
+    case M_GET:		return qum_PEEK    (q, interp, objc, objv, 1 /* get  */);
+    case M_PEEK:	return qum_PEEK    (q, interp, objc, objv, 0 /* peek */);
+    case M_PUT:		return qum_PUT     (q, interp, objc, objv);
+    case M_SIZE:	return qum_SIZE    (q, interp, objc, objv);
+    case M_UNGET:	return qum_UNGET   (q, interp, objc, objv);
+    }
+    /* Not coming to this place */
+}
+
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 4
+ * fill-column: 78
+ * End:
+ */

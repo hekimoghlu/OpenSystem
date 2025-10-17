@@ -1,0 +1,195 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, September 21, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include "ImageDecoder.h"
+#include "IntRect.h"
+#include "ScalableImageDecoderFrame.h"
+#include "SharedBuffer.h"
+#include <wtf/Assertions.h>
+#include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
+
+namespace WebCore {
+
+// ScalableImageDecoder is a base for all format-specific decoders
+// (e.g. JPEGImageDecoder). This base manages the ScalableImageDecoderFrame cache.
+
+class ScalableImageDecoder : public ImageDecoder {
+    WTF_MAKE_TZONE_ALLOCATED(ScalableImageDecoder);
+    WTF_MAKE_NONCOPYABLE(ScalableImageDecoder);
+public:
+    ScalableImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
+        : m_premultiplyAlpha(alphaOption == AlphaOption::Premultiplied)
+        , m_ignoreGammaAndColorProfile(gammaAndColorProfileOption == GammaAndColorProfileOption::Ignored)
+    {
+    }
+
+    virtual ~ScalableImageDecoder()
+    {
+    }
+
+    static bool supportsMediaType(MediaType type) { return type == MediaType::Image; }
+
+    // Returns nullptr if we can't sniff a supported type from the provided data (possibly
+    // because there isn't enough data yet).
+    static RefPtr<ScalableImageDecoder> create(FragmentedSharedBuffer& data, AlphaOption, GammaAndColorProfileOption);
+
+    bool premultiplyAlpha() const { return m_premultiplyAlpha; }
+
+    bool isAllDataReceived() const override
+    {
+        ASSERT(!m_decodingSizeFromSetData);
+        return m_encodedDataStatus == EncodedDataStatus::Complete;
+    }
+
+    void setData(const FragmentedSharedBuffer& data, bool allDataReceived) override
+    {
+        Locker locker { m_lock };
+        if (m_encodedDataStatus == EncodedDataStatus::Error)
+            return;
+
+        m_data = data.makeContiguous();
+
+        if (m_encodedDataStatus == EncodedDataStatus::TypeAvailable) {
+            m_decodingSizeFromSetData = true;
+            tryDecodeSize(allDataReceived);
+            m_decodingSizeFromSetData = false;
+        }
+
+        if (m_encodedDataStatus == EncodedDataStatus::Error)
+            return;
+
+        if (allDataReceived) {
+            ASSERT(m_encodedDataStatus == EncodedDataStatus::SizeAvailable);
+            m_encodedDataStatus = EncodedDataStatus::Complete;
+        }
+    }
+
+    EncodedDataStatus encodedDataStatus() const override { return m_encodedDataStatus; }
+
+    bool isSizeAvailable() const override { return m_encodedDataStatus >= EncodedDataStatus::SizeAvailable; }
+
+    IntSize size() const override { return isSizeAvailable() ? m_size : IntSize(); }
+
+    // This will only differ from size() for ICO (where each frame is a
+    // different icon) or other formats where different frames are different
+    // sizes. This does NOT differ from size() for GIF, since decoding GIFs
+    // composites any smaller frames against previous frames to create full-
+    // size frames.
+    IntSize frameSizeAtIndex(size_t, SubsamplingLevel) const override
+    {
+        return size();
+    }
+
+    // Returns whether the size is legal (i.e. not going to result in
+    // overflow elsewhere). If not, marks decoding as failed.
+    virtual bool setSize(const IntSize& size)
+    {
+        if (ImageBackingStore::isOverSize(size))
+            return setFailed();
+        m_size = size;
+        m_encodedDataStatus = EncodedDataStatus::SizeAvailable;
+        return true;
+    }
+
+    // Lazily-decodes enough of the image to get the frame count (if
+    // possible), without decoding the individual frames.
+    // FIXME: Right now that has to be done by each subclass; factor the
+    // decode call out and use it here.
+    size_t frameCount() const override { return 1; }
+
+    RepetitionCount repetitionCount() const override { return RepetitionCountNone; }
+
+    // Decodes as much of the requested frame as possible, and returns an
+    // ScalableImageDecoder-owned pointer.
+    virtual ScalableImageDecoderFrame* frameBufferAtIndex(size_t) = 0;
+
+    bool frameIsCompleteAtIndex(size_t) const override;
+
+    // Make the best effort guess to check if the requested frame has alpha channel.
+    bool frameHasAlphaAtIndex(size_t) const override;
+
+    // Number of bytes in the decoded frame requested. Return 0 if not yet decoded.
+    unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const override;
+
+    Seconds frameDurationAtIndex(size_t) const final;
+
+    PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) override;
+
+    void setIgnoreGammaAndColorProfile(bool flag) { m_ignoreGammaAndColorProfile = flag; }
+    bool ignoresGammaAndColorProfile() const { return m_ignoreGammaAndColorProfile; }
+
+    ImageOrientation frameOrientationAtIndex(size_t) const final { return m_orientation; }
+    std::optional<IntSize> frameDensityCorrectedSizeAtIndex(size_t) const final { return m_densityCorrectedSize; }
+
+    enum { ICCColorProfileHeaderLength = 128 };
+
+    size_t bytesDecodedToDetermineProperties() const final { return 0; }
+
+    static SubsamplingLevel subsamplingLevelForScale(float, SubsamplingLevel) { return SubsamplingLevel::Default; }
+
+    // Sets the "decode failure" flag. For caller convenience (since so
+    // many callers want to return false after calling this), returns false
+    // to enable easy tailcalling. Subclasses may override this to also
+    // clean up any local data.
+    virtual bool setFailed()
+    {
+        m_encodedDataStatus = EncodedDataStatus::Error;
+        return false;
+    }
+
+    bool failed() const { return m_encodedDataStatus == EncodedDataStatus::Error; }
+
+    // Clears decoded pixel data from before the provided frame unless that
+    // data may be needed to decode future frames (e.g. due to GIF frame
+    // compositing).
+    void clearFrameBufferCache(size_t) override { }
+
+    // If the image has a cursor hot-spot, stores it in the argument
+    // and returns true. Otherwise returns false.
+    std::optional<IntPoint> hotSpot() const override { return std::nullopt; }
+
+protected:
+    RefPtr<const SharedBuffer> m_data;
+    Vector<ScalableImageDecoderFrame, 1> m_frameBufferCache WTF_GUARDED_BY_LOCK(m_lock);
+    mutable Lock m_lock;
+    bool m_premultiplyAlpha;
+    bool m_ignoreGammaAndColorProfile;
+    ImageOrientation m_orientation;
+    std::optional<IntSize> m_densityCorrectedSize;
+
+private:
+    virtual void tryDecodeSize(bool) = 0;
+
+    IntSize m_size;
+    EncodedDataStatus m_encodedDataStatus { EncodedDataStatus::TypeAvailable };
+    bool m_decodingSizeFromSetData { false };
+};
+
+} // namespace WebCore

@@ -1,0 +1,160 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, March 3, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//
+//  IOHIDPointerScrollFilter.h
+//  IOHIDFamily
+//
+//  Created by Yevgen Goryachok 10/30/15.
+//
+//
+
+#ifndef _IOHIDFamily_IOHIDPointerScrollFilter_
+#define _IOHIDFamily_IOHIDPointerScrollFilter_
+#include <sys/cdefs.h>
+#include <CoreFoundation/CoreFoundation.h>
+#if COREFOUNDATION_CFPLUGINCOM_SEPARATE
+#include <CoreFoundation/CFPlugInCOM.h>
+#endif
+
+#include <IOKit/hid/IOHIDService.h>
+#include <IOKit/hid/IOHIDServiceFilterPlugIn.h>
+#include <IOKit/hid/IOHIDUsageTables.h>
+#include <atomic>
+#include "IOHIDAcceleration.hpp"
+#include "CF.h"
+
+#define kDefaultPointerResolutionFixed (400 << 16)
+
+#define kIOHIDDefaultReportRate 60.0
+
+class IOHIDPointerScrollFilter
+{
+public:
+    IOHIDPointerScrollFilter(CFUUIDRef factoryID);
+    ~IOHIDPointerScrollFilter();
+    HRESULT QueryInterface( REFIID iid, LPVOID *ppv );
+    ULONG AddRef();
+    ULONG Release();
+    
+    SInt32 match(IOHIDServiceRef service, IOOptionBits options);
+    IOHIDEventRef filter(IOHIDEventRef event);
+    void open(IOHIDServiceRef session, IOOptionBits options);
+    void close(IOHIDServiceRef session, IOOptionBits options);
+    void registerService(IOHIDServiceRef service);
+    void handlePendingStats();
+    void scheduleWithDispatchQueue(dispatch_queue_t queue);
+    void unscheduleFromDispatchQueue(dispatch_queue_t queue);
+    CFTypeRef copyPropertyForClient(CFStringRef key, CFTypeRef client);
+    void setPropertyForClient(CFStringRef key, CFTypeRef property, CFTypeRef client);
+    void setEventCallback(IOHIDServiceEventCallback callback, void * target, void * refcon);
+    
+private:
+    static IOHIDServiceFilterPlugInInterface sIOHIDEventSystemStatisticsFtbl;
+    IOHIDServiceFilterPlugInInterface *_serviceInterface;
+    CFUUIDRef                   _factoryID;
+    UInt32                      _refCount;
+    SInt32                      _matchScore;
+
+    static IOHIDServiceFilterPlugInInterface sIOHIDPointerScrollFilterFtbl;
+    static HRESULT QueryInterface( void *self, REFIID iid, LPVOID *ppv );
+    static ULONG AddRef( void *self );
+    static ULONG Release( void *self );
+    
+    static SInt32 match(void * self, IOHIDServiceRef service, IOOptionBits options);
+    static IOHIDEventRef filter(void * self, IOHIDEventRef event);
+    
+    static void open(void * self, IOHIDServiceRef inService, IOOptionBits options);
+    static void close(void * self, IOHIDServiceRef inSession, IOOptionBits options);
+    
+    static void scheduleWithDispatchQueue(void * self, dispatch_queue_t queue);
+    static void unscheduleFromDispatchQueue(void * self, dispatch_queue_t queue);
+
+    static CFTypeRef copyPropertyForClient(void * self, CFStringRef key, CFTypeRef client);
+    static void setPropertyForClient(void * self,CFStringRef key, CFTypeRef property, CFTypeRef client);
+    
+    IOHIDServiceEventCallback _eventCallback;
+    void * _eventTarget;
+    void * _eventContext;
+    static void setEventCallback(void * self, IOHIDServiceEventCallback callback, void * target, void * refcon);
+  
+    void setupAcceleration ();
+    void setupPointerAcceleration(double pointerAccelerationMultiplier);
+    void setupScrollAcceleration(double scrollAccelerationMultiplier);
+
+    IOHIDAccelerationAlgorithm * createPointerTableAlgorithm(SInt32 resolution);
+    IOHIDAccelerationAlgorithm * createPointerParametricAlgorithm(SInt32 resolution);
+    IOHIDAccelerationAlgorithm * createPointerAlgorithm(SInt32 resolution);
+
+    IOHIDAccelerationAlgorithm * createScrollTableAlgorithm(size_t index, SInt32 resolution, SInt32 rate);
+    IOHIDAccelerationAlgorithm * createScrollParametricAlgorithm(size_t index, SInt32 resolution, SInt32 rate);
+    IOHIDAccelerationAlgorithm * createScrollAlgorithm(size_t index, SInt32 resolution, SInt32 rate);
+
+    CFStringRef getAccelerationAlgorithmString(IOHIDAccelerationAlgorithmType type) const;
+
+    static void statsTimerCallback(void * context);
+    void createAccelStatsTimer(void);
+    void startAccelStatsTimer(void);
+  
+    void accelerateChildrens(IOHIDEventRef event);
+    void accelerateEvent(IOHIDEventRef event);
+
+    IOHIDEventRef filterPropertyEvent(IOHIDEventRef event);
+  
+    static CFStringRef          _cachedPropertyList[];
+
+    IOHIDAccelerator            *_pointerAccelerator;
+    IOHIDAccelerator            *_scrollAccelerators[3];
+
+    dispatch_queue_t            _queue;
+    CFMutableDictionaryRefWrap  _property;
+    CFMutableDictionaryRefWrap  _cachedProperty;
+
+    IOHIDServiceRef             _service;
+    double                      _pointerAcceleration;
+    double                      _minPointerAcceleration;
+    double                      _scrollAcceleration;
+    double                      _scrollMomentumMult;
+    boolean_t                   _leagacyShim;
+    bool                        _pointerAccelerationSupported;
+    bool                        _scrollAccelerationSupported;
+    bool                        _dropPropertyEvents;
+    dispatch_source_t           _statsTimer;
+    uint64_t                    _statsDelayMS;
+  
+    void serialize (CFMutableDictionaryRef dict) const;
+  
+    CFTypeRef copyCachedProperty (CFStringRef key) const;
+  
+  
+private:
+  
+    IOHIDPointerScrollFilter();
+    IOHIDPointerScrollFilter(const IOHIDPointerScrollFilter &);
+    IOHIDPointerScrollFilter &operator=(const IOHIDPointerScrollFilter &);
+};
+
+
+#endif /* defined(_IOHIDFamily_IOHIDPointerScrollFilter_) */

@@ -1,0 +1,542 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, August 28, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "MemoryObjectStore.h"
+
+#include "IDBBindingUtilities.h"
+#include "IDBError.h"
+#include "IDBGetAllResult.h"
+#include "IDBKeyRangeData.h"
+#include "IDBValue.h"
+#include "IndexKey.h"
+#include "Logging.h"
+#include "MemoryBackingStoreTransaction.h"
+#include "UniqueIDBDatabase.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/JSLock.h>
+
+namespace WebCore {
+using namespace JSC;
+namespace IDBServer {
+
+Ref<MemoryObjectStore> MemoryObjectStore::create(const IDBObjectStoreInfo& info)
+{
+    return adoptRef(*new MemoryObjectStore(info));
+}
+
+MemoryObjectStore::MemoryObjectStore(const IDBObjectStoreInfo& info)
+    : m_info(info)
+{
+}
+
+MemoryObjectStore::~MemoryObjectStore()
+{
+    m_writeTransaction = nullptr;
+}
+
+MemoryIndex* MemoryObjectStore::indexForIdentifier(IDBIndexIdentifier identifier)
+{
+    return m_indexesByIdentifier.get(identifier);
+}
+
+void MemoryObjectStore::transactionFinished(MemoryBackingStoreTransaction& transaction)
+{
+    if (transaction.isWriting())
+        writeTransactionFinished(transaction);
+
+    m_cursors.removeIf([&](auto& pair) {
+        return pair.value->transaction() == &transaction;
+    });
+
+    for (auto& index : m_indexesByIdentifier.values())
+        index->transactionFinished(transaction);
+}
+
+void MemoryObjectStore::writeTransactionStarted(MemoryBackingStoreTransaction& transaction)
+{
+    LOG(IndexedDB, "MemoryObjectStore::writeTransactionStarted");
+
+    ASSERT(!m_writeTransaction);
+    m_writeTransaction = &transaction;
+}
+
+void MemoryObjectStore::writeTransactionFinished(MemoryBackingStoreTransaction& transaction)
+{
+    LOG(IndexedDB, "MemoryObjectStore::writeTransactionFinished");
+
+    ASSERT_UNUSED(transaction, m_writeTransaction == &transaction);
+    m_writeTransaction = nullptr;
+}
+
+MemoryBackingStoreTransaction* MemoryObjectStore::writeTransaction()
+{
+    return m_writeTransaction.get();
+}
+
+IDBError MemoryObjectStore::createIndex(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& info)
+{
+    LOG(IndexedDB, "MemoryObjectStore::createIndex");
+
+    if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
+        return IDBError(ExceptionCode::ConstraintError);
+
+    ASSERT(!m_indexesByIdentifier.contains(info.identifier()));
+    if (m_indexesByIdentifier.contains(info.identifier()))
+        return IDBError { ExceptionCode::UnknownError, "Index with identifier already exists"_s };
+
+    auto index = MemoryIndex::create(info, *this);
+    // If there was an error populating the new index, then the current records in the object store violate its contraints
+    auto error = populateIndexWithExistingRecords(index.get());
+    if (!error.isNull())
+        return error;
+
+    m_info.addExistingIndex(info);
+    transaction.addNewIndex(index.get());
+    registerIndex(WTFMove(index));
+
+    return IDBError { };
+}
+
+void MemoryObjectStore::maybeRestoreDeletedIndex(Ref<MemoryIndex>&& index)
+{
+    LOG(IndexedDB, "MemoryObjectStore::maybeRestoreDeletedIndex");
+
+    if (m_info.hasIndex(index->info().name()))
+        return;
+
+    m_info.addExistingIndex(index->info());
+
+    ASSERT(!m_indexesByIdentifier.contains(index->info().identifier()));
+    index->clearIndexValueStore();
+    auto error = populateIndexWithExistingRecords(index.get());
+
+    // Since this index was installed in the object store before this transaction started,
+    // assuming things were in a valid state then, we should definitely be able to successfully
+    // repopulate the index with the object store's pre-transaction records.
+    ASSERT_UNUSED(error, error.isNull());
+
+    registerIndex(WTFMove(index));
+}
+
+RefPtr<MemoryIndex> MemoryObjectStore::takeIndexByIdentifier(IDBIndexIdentifier indexIdentifier)
+{
+    auto indexByIdentifier = m_indexesByIdentifier.take(indexIdentifier);
+    if (!indexByIdentifier)
+        return nullptr;
+
+    auto index = m_indexesByName.take(indexByIdentifier->info().name());
+    ASSERT(index);
+
+    return index;
+}
+
+IDBError MemoryObjectStore::deleteIndex(MemoryBackingStoreTransaction& transaction, IDBIndexIdentifier indexIdentifier)
+{
+    LOG(IndexedDB, "MemoryObjectStore::deleteIndex");
+
+    if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
+        return IDBError(ExceptionCode::ConstraintError);
+    
+    auto index = takeIndexByIdentifier(indexIdentifier);
+    ASSERT(index);
+    if (!index)
+        return IDBError(ExceptionCode::ConstraintError);
+
+    m_info.deleteIndex(indexIdentifier);
+    transaction.indexDeleted(*index);
+
+    return IDBError { };
+}
+
+void MemoryObjectStore::deleteAllIndexes(MemoryBackingStoreTransaction& transaction)
+{
+    auto indexIdentifiers = WTF::map(m_indexesByName, [](auto& entry) {
+        return entry.value->info().identifier();
+    });
+    for (auto identifier : indexIdentifiers)
+        deleteIndex(transaction, identifier);
+}
+
+bool MemoryObjectStore::containsRecord(const IDBKeyData& key)
+{
+    if (!m_keyValueStore)
+        return false;
+
+    return m_keyValueStore->contains(key);
+}
+
+void MemoryObjectStore::clear()
+{
+    LOG(IndexedDB, "MemoryObjectStore::clear");
+    ASSERT(m_writeTransaction);
+
+    m_writeTransaction->objectStoreCleared(*this, WTFMove(m_keyValueStore), WTFMove(m_orderedKeys));
+    for (auto& index : m_indexesByIdentifier.values())
+        index->objectStoreCleared();
+
+    for (auto& cursor : m_cursors.values())
+        cursor->objectStoreCleared();
+}
+
+void MemoryObjectStore::replaceKeyValueStore(std::unique_ptr<KeyValueMap>&& store, std::unique_ptr<IDBKeyDataSet>&& orderedKeys)
+{
+    ASSERT(m_writeTransaction);
+    ASSERT(m_writeTransaction->isAborting());
+
+    m_keyValueStore = WTFMove(store);
+    m_orderedKeys = WTFMove(orderedKeys);
+}
+
+void MemoryObjectStore::deleteRecord(const IDBKeyData& key)
+{
+    LOG(IndexedDB, "MemoryObjectStore::deleteRecord");
+
+    ASSERT(m_writeTransaction);
+
+    if (!m_keyValueStore) {
+        m_writeTransaction->recordValueChanged(*this, key, nullptr);
+        return;
+    }
+
+    ASSERT(m_orderedKeys);
+
+    auto iterator = m_keyValueStore->find(key);
+    if (iterator == m_keyValueStore->end()) {
+        m_writeTransaction->recordValueChanged(*this, key, nullptr);
+        return;
+    }
+
+    m_writeTransaction->recordValueChanged(*this, key, &iterator->value);
+    m_keyValueStore->remove(iterator);
+    m_orderedKeys->erase(key);
+
+    updateIndexesForDeleteRecord(key);
+    updateCursorsForDeleteRecord(key);
+}
+
+void MemoryObjectStore::deleteRange(const IDBKeyRangeData& inputRange)
+{
+    LOG(IndexedDB, "MemoryObjectStore::deleteRange");
+
+    ASSERT(m_writeTransaction);
+
+    if (inputRange.isExactlyOneKey()) {
+        deleteRecord(inputRange.lowerKey);
+        return;
+    }
+
+    IDBKeyRangeData range = inputRange;
+    while (true) {
+        auto key = lowestKeyWithRecordInRange(range);
+        if (key.isNull())
+            break;
+
+        deleteRecord(key);
+
+        range.lowerKey = key;
+        range.lowerOpen = true;
+    }
+}
+
+IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction, const IDBKeyData& keyData, const IDBValue& value)
+{
+    IndexIDToIndexKeyMap indexKeys;
+    callOnIDBSerializationThreadAndWait([info = m_info.isolatedCopy(), keyData = keyData.isolatedCopy(), value = value.isolatedCopy(), &indexKeys](auto& globalObject) {
+        indexKeys = generateIndexKeyMapForValueIsolatedCopy(globalObject, info, keyData, value);
+    });
+    return addRecord(transaction, keyData, indexKeys, value);
+}
+
+IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction, const IDBKeyData& keyData, const IndexIDToIndexKeyMap& indexKeys, const IDBValue& value)
+{
+    LOG(IndexedDB, "MemoryObjectStore::addRecord");
+
+    ASSERT(m_writeTransaction);
+    ASSERT_UNUSED(transaction, m_writeTransaction == &transaction);
+    ASSERT(!m_keyValueStore || !m_keyValueStore->contains(keyData));
+    ASSERT(!m_orderedKeys || m_orderedKeys->find(keyData) == m_orderedKeys->end());
+
+    if (!m_keyValueStore) {
+        ASSERT(!m_orderedKeys);
+        m_keyValueStore = makeUnique<KeyValueMap>();
+        m_orderedKeys = makeUniqueWithoutFastMallocCheck<IDBKeyDataSet>();
+    }
+
+    auto mapResult = m_keyValueStore->set(keyData, value.data());
+    ASSERT(mapResult.isNewEntry);
+    auto listResult = m_orderedKeys->insert(keyData);
+    ASSERT(listResult.second);
+
+    // If there was an error indexing this addition, then revert it.
+    auto error = updateIndexesForPutRecord(keyData, indexKeys);
+    if (!error.isNull()) {
+        m_keyValueStore->remove(mapResult.iterator);
+        m_orderedKeys->erase(listResult.first);
+    } else
+        updateCursorsForPutRecord(listResult.first);
+
+    return error;
+}
+
+void MemoryObjectStore::updateCursorsForPutRecord(IDBKeyDataSet::iterator iterator)
+{
+    for (auto& cursor : m_cursors.values())
+        cursor->keyAdded(iterator);
+}
+
+void MemoryObjectStore::updateCursorsForDeleteRecord(const IDBKeyData& key)
+{
+    for (auto& cursor : m_cursors.values())
+        cursor->keyDeleted(key);
+}
+
+void MemoryObjectStore::updateIndexesForDeleteRecord(const IDBKeyData& value)
+{
+    for (auto& index : m_indexesByName.values())
+        index->removeEntriesWithValueKey(value);
+}
+
+IDBError MemoryObjectStore::updateIndexesForPutRecord(const IDBKeyData& key, const IndexIDToIndexKeyMap& indexKeys)
+{
+    IDBError error;
+    Vector<std::pair<MemoryIndex*, IndexKey>> changedIndexRecords;
+
+    for (const auto& [indexID, indexKey] : indexKeys) {
+        auto* index = m_indexesByIdentifier.get(indexID);
+        ASSERT(index);
+        if (!index) {
+            error = IDBError { ExceptionCode::InvalidStateError, "Missing index metadata"_s };
+            break;
+        }
+
+        error = index->putIndexKey(key, indexKey);
+        if (!error.isNull())
+            break;
+
+        changedIndexRecords.append(std::make_pair(index, indexKey));
+    }
+
+    // If any of the index puts failed, revert all of the ones that went through.
+    if (!error.isNull()) {
+        for (auto& record : changedIndexRecords)
+            record.first->removeRecord(key, record.second);
+    }
+
+    return error;
+}
+
+IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
+{
+    if (!m_keyValueStore)
+        return IDBError { };
+
+    for (const auto& iterator : *m_keyValueStore) {
+        std::optional<IndexKey> resultIndexKey;
+        callOnIDBSerializationThreadAndWait([key = iterator.key.isolatedCopy(), value = iterator.value, info = m_info.isolatedCopy(), indexInfo = index.info().isolatedCopy(), &resultIndexKey](auto& globalObject) {
+            auto jsValue = deserializeIDBValueToJSValue(globalObject, value);
+            if (jsValue.isUndefinedOrNull())
+                return;
+
+            IndexKey indexKey;
+            generateIndexKeyForValue(globalObject, indexInfo, jsValue, indexKey, info.keyPath(), key);
+            resultIndexKey = WTFMove(indexKey).isolatedCopy();
+        });
+
+        if (!resultIndexKey)
+            return IDBError { };
+
+        if (resultIndexKey->isNull())
+            continue;
+
+        IDBError error = index.putIndexKey(iterator.key, *resultIndexKey);
+        if (!error.isNull())
+            return error;
+    }
+
+    return IDBError { };
+}
+
+uint64_t MemoryObjectStore::countForKeyRange(std::optional<IDBIndexIdentifier> indexIdentifier, const IDBKeyRangeData& inRange) const
+{
+    LOG(IndexedDB, "MemoryObjectStore::countForKeyRange");
+
+    if (indexIdentifier) {
+        auto* index = m_indexesByIdentifier.get(*indexIdentifier);
+        ASSERT(index);
+        return index->countForKeyRange(inRange);
+    }
+
+    if (!m_keyValueStore)
+        return 0;
+
+    uint64_t count = 0;
+    IDBKeyRangeData range = inRange;
+    while (true) {
+        auto key = lowestKeyWithRecordInRange(range);
+        if (key.isNull())
+            break;
+
+        ++count;
+        range.lowerKey = key;
+        range.lowerOpen = true;
+    }
+
+    return count;
+}
+
+ThreadSafeDataBuffer MemoryObjectStore::valueForKey(const IDBKeyData& key) const
+{
+    if (!m_keyValueStore)
+        return { };
+
+    return m_keyValueStore->get(key);
+}
+
+ThreadSafeDataBuffer MemoryObjectStore::valueForKeyRange(const IDBKeyRangeData& keyRangeData) const
+{
+    LOG(IndexedDB, "MemoryObjectStore::valueForKey");
+
+    IDBKeyData key = lowestKeyWithRecordInRange(keyRangeData);
+    if (key.isNull())
+        return ThreadSafeDataBuffer();
+
+    ASSERT(m_keyValueStore);
+    return m_keyValueStore->get(key);
+}
+
+void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, std::optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
+{
+    result = { type, m_info.keyPath() };
+
+    uint32_t targetCount;
+    if (count && count.value())
+        targetCount = count.value();
+    else
+        targetCount = std::numeric_limits<uint32_t>::max();
+
+    IDBKeyRangeData range = keyRangeData;
+    uint32_t currentCount = 0;
+    while (currentCount < targetCount) {
+        IDBKeyData key = lowestKeyWithRecordInRange(range);
+        if (key.isNull())
+            return;
+
+        range.lowerKey = key;
+        range.lowerOpen = true;
+        if (type == IndexedDB::GetAllType::Values)
+            result.addValue(valueForKey(key));
+        result.addKey(WTFMove(key));
+
+        ++currentCount;
+    }
+}
+
+IDBGetResult MemoryObjectStore::indexValueForKeyRange(IDBIndexIdentifier indexIdentifier, IndexedDB::IndexRecordType recordType, const IDBKeyRangeData& range) const
+{
+    LOG(IndexedDB, "MemoryObjectStore::indexValueForKeyRange");
+
+    auto* index = m_indexesByIdentifier.get(indexIdentifier);
+    ASSERT(index);
+    return index->getResultForKeyRange(recordType, range);
+}
+
+IDBKeyData MemoryObjectStore::lowestKeyWithRecordInRange(const IDBKeyRangeData& keyRangeData) const
+{
+    if (!m_keyValueStore)
+        return { };
+
+    if (keyRangeData.isExactlyOneKey() && m_keyValueStore->contains(keyRangeData.lowerKey))
+        return keyRangeData.lowerKey;
+
+    ASSERT(m_orderedKeys);
+
+    auto lowestInRange = m_orderedKeys->lower_bound(keyRangeData.lowerKey);
+
+    if (lowestInRange == m_orderedKeys->end())
+        return { };
+
+    if (keyRangeData.lowerOpen && *lowestInRange == keyRangeData.lowerKey)
+        ++lowestInRange;
+
+    if (lowestInRange == m_orderedKeys->end())
+        return { };
+
+    if (!keyRangeData.upperKey.isNull()) {
+        if (lowestInRange->compare(keyRangeData.upperKey) > 0)
+            return { };
+        if (keyRangeData.upperOpen && *lowestInRange == keyRangeData.upperKey)
+            return { };
+    }
+
+    return *lowestInRange;
+}
+
+void MemoryObjectStore::registerIndex(Ref<MemoryIndex>&& index)
+{
+    ASSERT(!m_indexesByIdentifier.contains(index->info().identifier()));
+    ASSERT(!m_indexesByName.contains(index->info().name()));
+
+    auto identifier = index->info().identifier();
+    m_indexesByName.set(index->info().name(), &index.get());
+    m_indexesByIdentifier.set(identifier, WTFMove(index));
+}
+
+void MemoryObjectStore::unregisterIndex(MemoryIndex& index)
+{
+    ASSERT(m_indexesByIdentifier.contains(index.info().identifier()));
+    ASSERT(m_indexesByName.contains(index.info().name()));
+
+    m_indexesByName.remove(index.info().name());
+    m_indexesByIdentifier.remove(index.info().identifier());
+}
+
+MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
+{
+    if (transaction.isWriting() && m_writeTransaction != &transaction)
+        return nullptr;
+
+    auto result = m_cursors.add(info.identifier(), nullptr);
+    if (!result.isNewEntry)
+        return nullptr;
+
+    result.iterator->value = MemoryObjectStoreCursor::create(*this, info, transaction);
+    return result.iterator->value.get();
+}
+
+void MemoryObjectStore::renameIndex(MemoryIndex& index, const String& newName)
+{
+    ASSERT(m_indexesByName.get(index.info().name()) == &index);
+    ASSERT(!m_indexesByName.contains(newName));
+    ASSERT(m_info.infoForExistingIndex(index.info().name()));
+    ASSERT(m_info.infoForExistingIndex(index.info().identifier()) == m_info.infoForExistingIndex(index.info().name()));
+
+    m_info.infoForExistingIndex(index.info().identifier())->rename(newName);
+    m_indexesByName.set(newName, m_indexesByName.take(index.info().name()));
+    index.rename(newName);
+}
+
+} // namespace IDBServer
+} // namespace WebCore

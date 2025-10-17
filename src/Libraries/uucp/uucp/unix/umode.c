@@ -1,0 +1,61 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, June 10, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "uucp.h"
+
+#include "uudefs.h"
+#include "sysdep.h"
+#include "system.h"
+
+#include <errno.h>
+
+unsigned int
+ixsysdep_user_file_mode (zfile)
+     const char *zfile;
+{
+  uid_t ieuid;
+  gid_t iegid;
+  int iret;
+  struct stat s;
+
+  if (! fsuser_perms (&ieuid, &iegid))
+    return 0;
+
+  iret = stat ((char *) zfile, &s);
+
+  if (! fsuucp_perms ((long) ieuid, (long) iegid))
+    return 0;
+
+  if (iret != 0)
+    {
+      ulog (LOG_ERROR, "stat (%s): %s", zfile, strerror (errno));
+      return 0;
+    }
+
+  /* We can't return 0, since that indicates an error.  */
+  if ((s.st_mode & 0777) == 0)
+    return 0400;
+
+  return s.st_mode & 0777;
+}

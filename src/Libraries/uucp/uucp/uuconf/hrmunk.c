@@ -1,0 +1,54 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, December 11, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "uucnfi.h"
+
+#if USE_RCS_ID
+const char _uuconf_hrmunk_rcsid[] = "$Id: hrmunk.c,v 1.5 2002/03/05 19:10:42 ian Rel $";
+#endif
+
+#include <errno.h>
+
+/* Get the name of the HDB remote.unknown shell script.  */
+
+int
+uuconf_hdb_remote_unknown (pglobal, pzname)
+     pointer pglobal;
+     char **pzname;
+{
+  struct sglobal *qglobal = (struct sglobal *) pglobal;
+  size_t csize;
+
+  csize = sizeof OLDCONFIGLIB + sizeof HDB_REMOTE_UNKNOWN - 1;
+  *pzname = malloc (csize);
+  if (*pzname == NULL)
+    {
+      qglobal->ierrno = errno;
+      return UUCONF_MALLOC_FAILED | UUCONF_ERROR_ERRNO;
+    }
+  memcpy (*pzname, OLDCONFIGLIB, sizeof OLDCONFIGLIB - 1);
+  memcpy (*pzname + sizeof OLDCONFIGLIB - 1, HDB_REMOTE_UNKNOWN,
+	  sizeof HDB_REMOTE_UNKNOWN);
+  return UUCONF_SUCCESS;
+}

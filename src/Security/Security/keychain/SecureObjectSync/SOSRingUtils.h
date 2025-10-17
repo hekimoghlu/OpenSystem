@@ -1,0 +1,166 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, May 18, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//
+//  SOSRingUtils.h
+//  sec
+//
+//  Created by Richard Murphy on 1/28/15.
+//
+//
+
+#ifndef _sec_SOSRingUtils_
+#define _sec_SOSRingUtils_
+
+#include <CoreFoundation/CFRuntime.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include "utilities/SecCFWrappers.h"
+#include "keychain/SecureObjectSync/SOSGenCount.h"
+#include "SOSRing.h"
+
+#define ALLOCATOR NULL
+
+
+struct __OpaqueSOSRing {
+    CFRuntimeBase _base;
+    CFMutableDictionaryRef unSignedInformation;
+    CFMutableDictionaryRef signedInformation;
+    CFMutableDictionaryRef signatures;      // Signatures keyed by peerid
+    CFMutableDictionaryRef data;            // Anything for ring-specific rule support
+};
+
+static inline
+bool SOSRingAssertStable(SOSRingRef ring) {
+    bool retval = false;
+    require_action_quiet(ring != NULL, errOut, secerror("no ring passed in"));
+    require_action_quiet(ring->unSignedInformation != NULL, errOut, secerror("ring has no unSignedInformation"));
+    require_action_quiet(ring->signedInformation != NULL, errOut, secerror("ring has no signedInformation"));
+    require_action_quiet(ring->signatures != NULL, errOut, secerror("ring has no signatures"));
+    require_action_quiet(ring->data != NULL, errOut, secerror("ring has no data"));
+    retval = true;
+errOut:
+    return retval;
+}
+
+static inline
+bool SOSRingIsStable(SOSRingRef ring) {
+    return (ring) && (ring->unSignedInformation) && (ring->signedInformation) && (ring->signatures)&& (ring->data);
+}
+
+/* unSignedInformation Dictionary Keys */
+extern CFStringRef sApplicantsKey;
+extern CFStringRef sRejectionsKey;
+extern CFStringRef sRetiredKey;
+extern CFStringRef sLastPeerToModifyKey;
+
+/* signedInformation Dictionary Keys */
+extern CFStringRef sNameKey;
+extern CFStringRef sVersion;
+extern CFStringRef sTypeKey;
+extern CFStringRef sIdentifierKey;
+extern CFStringRef sGenerationKey;
+extern CFStringRef sPeerIDsKey;
+extern CFStringRef sRingVersionKey;
+
+CF_RETURNS_RETAINED SOSRingRef SOSRingAllocate(void);
+SOSRingRef SOSRingCreate_Internal(CFStringRef name, SOSRingType type, CFErrorRef *error);
+SOSRingRef SOSRingCopyRing(SOSRingRef original, CFErrorRef *error);
+
+bool SOSRingRemoveSignatures(SOSRingRef ring, CFErrorRef *error);
+bool SOSRingVerifySignatureExists(SOSRingRef ring, SecKeyRef pubKey, CFErrorRef *error);
+bool SOSRingVerify(SOSRingRef ring, SecKeyRef pubKey, CFErrorRef *error);
+bool SOSRingVerifyPeerSigned(SOSRingRef ring, SOSPeerInfoRef peer, CFErrorRef *error);
+bool SOSRingGenerationSign_Internal(SOSRingRef ring, SecKeyRef privKey, CFErrorRef *error);
+bool SOSRingConcordanceSign_Internal(SOSRingRef ring, SecKeyRef privKey, CFErrorRef *error);
+SOSConcordanceStatus GetSignersStatus(CFSetRef peers, SOSRingRef signersRing, SOSRingRef statusRing,
+                                      SecKeyRef userPubkey, CFStringRef excludePeerID, CFErrorRef *error);
+SOSConcordanceStatus GetSignersStatus_Transitive(CFSetRef peers, SOSRingRef signersRing, SOSRingRef statusRing,
+                                                 SecKeyRef userPubkey, CFStringRef excludePeerID, CFErrorRef *error);
+SOSConcordanceStatus SOSRingUserKeyConcordanceTrust(SOSFullPeerInfoRef me, CFSetRef peers, SOSRingRef knownRing, SOSRingRef proposedRing,
+                                                    SecKeyRef knownPubkey, SecKeyRef userPubkey,
+                                                    CFStringRef excludePeerID, CFErrorRef *error);
+SOSConcordanceStatus SOSRingPeerKeyConcordanceTrust(SOSFullPeerInfoRef me, CFSetRef peers, SOSRingRef knownRing, SOSRingRef proposedRing,
+                                                    __unused SecKeyRef knownPubkey, SecKeyRef userPubkey,
+                                                    CFStringRef excludePeerID, CFErrorRef *error);
+
+bool SOSRingHasPeerWithID(SOSRingRef ring, CFStringRef peerid, CFErrorRef *error);
+
+int SOSRingCountPeers(SOSRingRef ring);
+CFStringRef SOSRingCopySignerList(SOSRingRef ring);
+CFDictionaryRef SOSRingCopyPeerIDList(SOSRingRef ring);
+
+
+int SOSRingCountApplicants(SOSRingRef ring);
+bool SOSRingHasApplicant(SOSRingRef ring, CFStringRef peerID);
+CFMutableSetRef SOSRingCopyApplicants(SOSRingRef ring);
+
+int SOSRingCountRejections(SOSRingRef ring);
+bool SOSRingHasRejection(SOSRingRef ring, CFStringRef peerID);
+CFMutableSetRef SOSRingCopyRejections(SOSRingRef ring);
+bool SOSRingHasPeerWithID(SOSRingRef ring, CFStringRef peerid, CFErrorRef *error);
+
+// Use this to determine whether a ring your interogating is the "same one" that you think you're going to change.
+bool SOSRingIsSame(SOSRingRef ring1, SOSRingRef ring2);
+
+const char *SOSRingGetNameC(SOSRingRef ring);
+
+void SOSRingGenerationIncrement(SOSRingRef ring);
+bool SOSRingIsOlderGeneration(SOSRingRef olderRing, SOSRingRef newerRing);
+void SOSRingGenerationCreateWithBaseline(SOSRingRef newring, SOSRingRef baseline);
+
+bool SOSRingSetApplicants(SOSRingRef ring, CFMutableSetRef applicants);
+
+bool SOSRingSetLastModifier(SOSRingRef ring, CFStringRef peerID);
+
+bool SOSRingResetToEmpty_Internal(SOSRingRef ring, CFErrorRef *error);
+bool SOSRingIsEmpty_Internal(SOSRingRef ring);
+bool SOSRingIsOffering_Internal(SOSRingRef ring);
+
+
+bool SOSRingAddApplicant(SOSRingRef ring, CFStringRef peerid);
+bool SOSRingRemoveApplicant(SOSRingRef ring, CFStringRef peerid);
+
+bool SOSRingAddRejection(SOSRingRef ring, CFStringRef peerid);
+bool SOSRingRemoveRejection(SOSRingRef ring, CFStringRef peerid);
+CFDataRef SOSRingGetPayload_Internal(SOSRingRef ring);
+bool SOSRingSetPayload_Internal(SOSRingRef ring, CFDataRef payload);
+CFSetRef SOSRingGetBackupViewset_Internal(SOSRingRef ring);
+bool SOSRingSetBackupViewset_Internal(SOSRingRef ring, CFSetRef viewSet);
+bool SOSRingSetPeerIDs(SOSRingRef ring, CFMutableSetRef peers);
+int SOSRingCountPeerIDs(SOSRingRef ring);
+bool SOSRingHasPeerID(SOSRingRef ring, CFStringRef peerID);
+CFMutableSetRef SOSRingCopyPeerIDs(SOSRingRef ring);
+void SOSRingAddAll(SOSRingRef ring, CFSetRef peerInfosOrIDs);
+bool SOSRingAddPeerID(SOSRingRef ring, CFStringRef peerid);
+bool SOSRingRemovePeerID(SOSRingRef ring, CFStringRef peerid);
+void SOSRingForEachPeerID(SOSRingRef ring, void (^action)(CFStringRef peerID));
+
+size_t SOSRingGetDEREncodedSize(SOSRingRef ring, CFErrorRef *error);
+uint8_t* SOSRingEncodeToDER(SOSRingRef ring, CFErrorRef* error, const uint8_t* der, uint8_t* der_end);
+SOSRingRef SOSRingCreateFromDER(CFErrorRef* error, const uint8_t** der_p, const uint8_t *der_end);
+
+CFDictionaryRef SOSRingCreateRetirementTicket(SOSFullPeerInfoRef fpi, CFErrorRef *error);
+
+#endif /* defined(_sec_SOSRingUtils_) */

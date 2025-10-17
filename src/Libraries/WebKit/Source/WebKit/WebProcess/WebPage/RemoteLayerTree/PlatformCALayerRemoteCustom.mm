@@ -1,0 +1,211 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, February 20, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "config.h"
+#import "PlatformCALayerRemoteCustom.h"
+
+#import "LayerHostingContext.h"
+#import "RemoteLayerTreeContext.h"
+#import "RemoteLayerTreePropertyApplier.h"
+#import "WebProcess.h"
+#import <AVFoundation/AVFoundation.h>
+#import <WebCore/GraphicsLayerCA.h>
+#import <WebCore/HTMLVideoElement.h>
+#import <WebCore/PlatformCALayerCocoa.h>
+#import <WebCore/WebCoreCALayerExtras.h>
+#import <WebCore/WebLayer.h>
+#import <wtf/RetainPtr.h>
+
+#if ENABLE(MODEL_PROCESS)
+#import <WebCore/ModelContext.h>
+#endif
+
+#import <pal/cocoa/AVFoundationSoftLink.h>
+
+namespace WebKit {
+using namespace WebCore;
+
+static NSString * const platformCALayerPointer = @"WKPlatformCALayer";
+
+Ref<PlatformCALayerRemote> PlatformCALayerRemoteCustom::create(PlatformLayer *platformLayer, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+{
+    auto layer = adoptRef(*new PlatformCALayerRemoteCustom(PlatformCALayerCocoa::layerTypeForPlatformLayer(platformLayer), platformLayer, owner, context));
+    context.layerDidEnterContext(layer.get(), layer->layerType());
+    return WTFMove(layer);
+}
+
+#if ENABLE(MODEL_PROCESS)
+Ref<PlatformCALayerRemote> PlatformCALayerRemoteCustom::create(Ref<WebCore::ModelContext> modelContext, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+{
+    auto layer = adoptRef(*new PlatformCALayerRemoteCustom(WebCore::PlatformCALayer::LayerType::LayerTypeCustom, modelContext, owner, context));
+    context.layerDidEnterContext(layer.get(), layer->layerType());
+    return WTFMove(layer);
+}
+#endif
+
+#if HAVE(AVKIT)
+Ref<PlatformCALayerRemote> PlatformCALayerRemoteCustom::create(WebCore::HTMLVideoElement& videoElement, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+{
+    auto layer = adoptRef(*new PlatformCALayerRemoteCustom(videoElement, owner, context));
+    context.layerDidEnterContext(layer.get(), layer->layerType(), videoElement);
+    return WTFMove(layer);
+}
+#endif
+
+PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(WebCore::PlatformCALayer::LayerType layerType, LayerHostingContextID hostedContextIdentifier, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+    : PlatformCALayerRemote(layerType, owner, context)
+{
+    m_layerHostingContext = LayerHostingContext::createTransportLayerForRemoteHosting(hostedContextIdentifier);
+}
+
+PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(HTMLVideoElement& videoElement, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+    : PlatformCALayerRemoteCustom(PlatformCALayer::LayerType::LayerTypeAVPlayerLayer, videoElement.layerHostingContextID(), owner, context)
+{
+    m_hasVideo = true;
+}
+
+#if ENABLE(MODEL_PROCESS)
+PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(WebCore::PlatformCALayer::LayerType layerType, Ref<WebCore::ModelContext> modelContext, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+    : PlatformCALayerRemoteCustom(layerType, modelContext->modelContentsLayerHostingContextIdentifier().toRawValue(), owner, context)
+{
+    m_modelContext = modelContext.ptr();
+}
+#endif
+
+PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(LayerType layerType, PlatformLayer * customLayer, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+    : PlatformCALayerRemote(layerType, owner, context)
+{
+    switch (context.layerHostingMode()) {
+    case LayerHostingMode::InProcess:
+#if HAVE(HOSTED_CORE_ANIMATION)
+        m_layerHostingContext = LayerHostingContext::createForPort(WebProcess::singleton().compositingRenderServerPort());
+#else
+        RELEASE_ASSERT_NOT_REACHED();
+#endif
+        break;
+#if HAVE(OUT_OF_PROCESS_LAYER_HOSTING)
+    case LayerHostingMode::OutOfProcess:
+        m_layerHostingContext = LayerHostingContext::createForExternalHostingProcess({
+#if PLATFORM(IOS_FAMILY)
+            context.canShowWhileLocked()
+#endif
+        });
+        break;
+#endif
+    }
+
+    m_layerHostingContext->setRootLayer(customLayer);
+    [customLayer setValue:[NSValue valueWithPointer:this] forKey:platformCALayerPointer];
+
+    m_platformLayer = customLayer;
+    [customLayer web_disableAllActions];
+
+    properties().position = FloatPoint3D(customLayer.position.x, customLayer.position.y, customLayer.zPosition);
+    properties().anchorPoint = FloatPoint3D(customLayer.anchorPoint.x, customLayer.anchorPoint.y, customLayer.anchorPointZ);
+    properties().bounds = customLayer.bounds;
+    properties().contentsRect = customLayer.contentsRect;
+}
+
+PlatformCALayerRemoteCustom::~PlatformCALayerRemoteCustom()
+{
+    [m_platformLayer setValue:nil forKey:platformCALayerPointer];
+}
+
+uint32_t PlatformCALayerRemoteCustom::hostingContextID()
+{
+    return m_layerHostingContext->cachedContextID();
+}
+
+void PlatformCALayerRemoteCustom::populateCreationProperties(RemoteLayerTreeTransaction::LayerCreationProperties& properties, const RemoteLayerTreeContext& context, PlatformCALayer::LayerType type)
+{
+    PlatformCALayerRemote::populateCreationProperties(properties, context, type);
+    ASSERT(std::holds_alternative<RemoteLayerTreeTransaction::LayerCreationProperties::NoAdditionalData>(properties.additionalData));
+
+#if ENABLE(MODEL_PROCESS)
+    if (m_modelContext) {
+        properties.additionalData = *m_modelContext;
+        return;
+    }
+#endif
+
+    properties.additionalData = RemoteLayerTreeTransaction::LayerCreationProperties::CustomData {
+        .hostingContextID = hostingContextID(),
+        .hostingDeviceScaleFactor = context.deviceScaleFactor(),
+        .preservesFlip = true
+    };
+}
+
+Ref<WebCore::PlatformCALayer> PlatformCALayerRemoteCustom::clone(PlatformCALayerClient* owner) const
+{
+    RetainPtr<CALayer> clonedLayer;
+    bool copyContents = true;
+
+    if (layerType() == PlatformCALayer::LayerType::LayerTypeAVPlayerLayer) {
+        
+        if (PAL::isAVFoundationFrameworkAvailable() && [platformLayer() isKindOfClass:PAL::getAVPlayerLayerClass()]) {
+            clonedLayer = adoptNS([PAL::allocAVPlayerLayerInstance() init]);
+
+            AVPlayerLayer *destinationPlayerLayer = static_cast<AVPlayerLayer *>(clonedLayer.get());
+            AVPlayerLayer *sourcePlayerLayer = static_cast<AVPlayerLayer *>(platformLayer());
+            RunLoop::main().dispatch([destinationPlayerLayer, sourcePlayerLayer] {
+                [destinationPlayerLayer setPlayer:[sourcePlayerLayer player]];
+            });
+        } else {
+            // On iOS, the AVPlayerLayer is inside a WebVideoContainerLayer. This code needs to share logic with MediaPlayerPrivateAVFoundationObjC::createAVPlayerLayer().
+            clonedLayer = adoptNS([[CALayer alloc] init]);
+        }
+
+        copyContents = false;
+    }
+
+    auto clone = adoptRef(*new PlatformCALayerRemoteCustom(layerType(), clonedLayer.get(), owner, *context()));
+    context()->layerDidEnterContext(clone.get(), clone->layerType());
+
+    updateClonedLayerProperties(clone.get(), copyContents);
+
+    clone->setClonedLayer(this);
+    return WTFMove(clone);
+}
+
+CFTypeRef PlatformCALayerRemoteCustom::contents() const
+{
+    return (__bridge CFTypeRef)[m_platformLayer contents];
+}
+
+void PlatformCALayerRemoteCustom::setContents(CFTypeRef contents)
+{
+    [m_platformLayer setContents:(__bridge id)contents];
+}
+
+void PlatformCALayerRemoteCustom::setNeedsDisplayInRect(const FloatRect& rect)
+{
+    PlatformCALayerRemote::setNeedsDisplayInRect(rect);
+}
+
+void PlatformCALayerRemoteCustom::setNeedsDisplay()
+{
+    PlatformCALayerRemote::setNeedsDisplay();
+}
+
+} // namespace WebKit

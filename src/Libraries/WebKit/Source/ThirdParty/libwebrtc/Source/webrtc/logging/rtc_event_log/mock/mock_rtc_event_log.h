@@ -1,0 +1,59 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, July 28, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef LOGGING_RTC_EVENT_LOG_MOCK_MOCK_RTC_EVENT_LOG_H_
+#define LOGGING_RTC_EVENT_LOG_MOCK_MOCK_RTC_EVENT_LOG_H_
+
+#include <cstdint>
+#include <memory>
+
+#include "api/rtc_event_log/rtc_event.h"
+#include "api/rtc_event_log/rtc_event_log.h"
+#include "api/rtc_event_log_output.h"
+#include "test/gmock.h"
+
+namespace webrtc {
+
+class MockRtcEventLog : public RtcEventLog {
+ public:
+  MockRtcEventLog();
+  ~MockRtcEventLog() override;
+
+  MOCK_METHOD(bool,
+              StartLogging,
+              (std::unique_ptr<RtcEventLogOutput> output,
+               int64_t output_period_ms),
+              (override));
+
+  MOCK_METHOD(void, StopLogging, (), (override));
+
+  void Log(std::unique_ptr<RtcEvent> event) override {
+    return LogProxy(event.get());
+  }
+  MOCK_METHOD(void, LogProxy, (RtcEvent*));
+};
+
+}  // namespace webrtc
+
+#endif  // LOGGING_RTC_EVENT_LOG_MOCK_MOCK_RTC_EVENT_LOG_H_

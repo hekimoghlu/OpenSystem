@@ -1,0 +1,60 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, June 28, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "gssdigest.h"
+
+OM_uint32 _gss_scram_display_name
+           (OM_uint32 * minor_status,
+            const gss_name_t input_name,
+            gss_buffer_t output_name_buffer,
+            gss_OID * output_name_type
+           )
+{
+	char *str;
+    *minor_status = 0;
+
+    if (output_name_type)
+	*output_name_type = GSS_SCRAM_MECHANISM;
+
+    if (output_name_buffer) {
+	char *n = (char *)input_name;
+	
+	output_name_buffer->length = 0;
+	output_name_buffer->value = NULL;
+
+	if (n == NULL) {
+	    *minor_status = 0;
+	    return GSS_S_BAD_NAME;
+	}
+
+	str = strdup(n);
+	if (str == NULL) {
+	    *minor_status = ENOMEM;
+	    return GSS_S_FAILURE;
+	}
+	output_name_buffer->length = strlen(str);
+	output_name_buffer->value = str;
+    }
+    return GSS_S_COMPLETE;
+}

@@ -1,0 +1,105 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, June 24, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#ifndef HEADER_CURL_SIGPIPE_H
+#define HEADER_CURL_SIGPIPE_H
+/***************************************************************************
+ *                                  _   _ ____  _
+ *  Project                     ___| | | |  _ \| |
+ *                             / __| | | | |_) | |
+ *                            | (__| |_| |  _ <| |___
+ *                             \___|\___/|_| \_\_____|
+ *
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution. The terms
+ * are also available at https://curl.se/docs/copyright.html.
+ *
+ * You may opt to use, copy, modify, merge, publish, distribute and/or sell
+ * copies of the Software, and permit persons to whom the Software is
+ * furnished to do so, under the terms of the COPYING file.
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
+ * KIND, either express or implied.
+ *
+ * SPDX-License-Identifier: curl
+ *
+ ***************************************************************************/
+#include "curl_setup.h"
+
+#if defined(HAVE_SIGACTION) &&        \
+  (defined(USE_OPENSSL) || defined(USE_MBEDTLS) || defined(USE_WOLFSSL))
+#include <signal.h>
+
+struct sigpipe_ignore {
+  struct sigaction old_pipe_act;
+  bool no_signal;
+};
+
+#define SIGPIPE_VARIABLE(x) struct sigpipe_ignore x
+
+/*
+ * sigpipe_ignore() makes sure we ignore SIGPIPE while running libcurl
+ * internals, and then sigpipe_restore() will restore the situation when we
+ * return from libcurl again.
+ */
+static void sigpipe_ignore(struct Curl_easy *data,
+                           struct sigpipe_ignore *ig)
+{
+  /* get a local copy of no_signal because the Curl_easy might not be
+     around when we restore */
+  ig->no_signal = data->set.no_signal;
+  if(!data->set.no_signal) {
+    struct sigaction action;
+    /* first, extract the existing situation */
+    sigaction(SIGPIPE, NULL, &ig->old_pipe_act);
+    action = ig->old_pipe_act;
+    /* ignore this signal */
+    action.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &action, NULL);
+  }
+}
+
+/*
+ * sigpipe_restore() puts back the outside world's opinion of signal handler
+ * and SIGPIPE handling. It MUST only be called after a corresponding
+ * sigpipe_ignore() was used.
+ */
+static void sigpipe_restore(struct sigpipe_ignore *ig)
+{
+  if(!ig->no_signal)
+    /* restore the outside state */
+    sigaction(SIGPIPE, &ig->old_pipe_act, NULL);
+}
+
+#else
+/* for systems without sigaction */
+#define sigpipe_ignore(x,y) Curl_nop_stmt
+#define sigpipe_restore(x)  Curl_nop_stmt
+#define SIGPIPE_VARIABLE(x)
+#endif
+
+#endif /* HEADER_CURL_SIGPIPE_H */

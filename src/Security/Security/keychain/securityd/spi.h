@@ -1,0 +1,46 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, March 12, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _SECURITYD_SPI_H_
+#define _SECURITYD_SPI_H_
+
+#include "utilities/SecCFError.h"
+#include <xpc/xpc.h>
+#include <CoreFoundation/CFURL.h>
+
+__BEGIN_DECLS
+
+/* Calling this function initializes the spi interface in the library to call
+   directly into the backend. It uses home_dir for root of files if specified.
+   This function only initializes the trust spi interface if libtrustd is linked
+   by the caller and LIBTRUSTD=1 is specified.  */
+void securityd_init(CFURLRef home_dir);
+
+// Don't call either of these functions unless you are really securityd
+void securityd_init_server(void);
+void securityd_init_local_spi(void);
+
+__END_DECLS
+
+#endif /* _SECURITYD_SPI_H_ */

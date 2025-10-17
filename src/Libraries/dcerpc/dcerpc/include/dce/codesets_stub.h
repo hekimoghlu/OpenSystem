@@ -1,0 +1,161 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, December 19, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+**
+**  NAME:
+**
+**      codesets_stub.h
+**
+**	This file cannot be IDL file, since
+**		idl_cs_convert_t 		-> (idlbase.h)
+**		wchar_t 			-> (stdlib.h)
+**	are defined in header file.  IDL file cannot import *.h files.
+**
+**  FACILITY:
+**
+**      Remote Procedure Call (RPC)
+**
+**  ABSTRACT:
+**
+**  This file defines stub support routines, which support marshalling and
+**  unmarshalling of i18n data.  Code set conversion is done automatically
+**  when code set interoperability functionality is enabled.
+**
+**
+*/
+
+#ifndef _CODESETS_STUB_H
+#define _CODESETS_STUB_H
+
+#include <dce/idlbase.h>
+#include <stdlib.h>
+
+/*
+ * cs_byte is used as I18N byte type from I18N applications.
+ */
+typedef ndr_byte cs_byte;
+
+/*
+ * rpc_ns_import_ctx_add_eval routine requires the identification for
+ * the evaluation routines.  If more evaluation routines are supported
+ * in the future, the new identifications need to be added here.
+ */
+#define rpc_c_eval_type_codesets		0x0001
+#define rpc_c_custom_eval_type_codesets		0x0002
+
+extern void cs_byte_net_size (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	unsigned32		l_storage_len,
+	/* [out] */	idl_cs_convert_t	*p_convert_type,
+	/* [out] */	unsigned32		*p_w_storage_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void wchar_t_net_size (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	unsigned32		l_storage_len,
+	/* [out] */	idl_cs_convert_t	*p_convert_type,
+	/* [out] */	unsigned32		*p_w_storage_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void cs_byte_local_size (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	unsigned32		w_storage_len,
+	/* [out] */	idl_cs_convert_t	*p_convert_type,
+	/* [out] */	unsigned32		*p_l_storage_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void wchar_t_local_size (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	unsigned32		w_storage_len,
+	/* [out] */	idl_cs_convert_t	*p_convert_type,
+	/* [out] */	unsigned32		*p_l_storage_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void cs_byte_to_netcs (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	idl_byte		*ldata,
+	/* [in] */	unsigned32		l_data_len,
+	/* [out] */	idl_byte		*wdata,
+	/* [out] */	unsigned32		*p_w_data_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void wchar_t_to_netcs (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	wchar_t			*ldata,
+	/* [in] */	unsigned32		l_data_len,
+	/* [out] */	idl_byte		*wdata,
+	/* [out] */	unsigned32		*p_w_data_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void cs_byte_from_netcs (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	idl_byte		*wdata,
+	/* [in] */	unsigned32		w_data_len,
+	/* [in] */	unsigned32		l_storage_len,
+	/* [out] */	idl_byte		*ldata,
+	/* [out] */	unsigned32		*p_l_data_len,
+	/* [out] */	error_status_t		*status
+);
+
+extern void wchar_t_from_netcs (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	unsigned32		tag,
+	/* [in] */	idl_byte		*wdata,
+	/* [in] */	unsigned32		w_data_len,
+	/* [in] */	unsigned32		l_storage_len,
+	/* [out] */	wchar_t			*ldata,
+	/* [out] */	unsigned32		*p_l_data_len,
+	/* [out] */	error_status_t		*status
+);
+
+/*
+ * R P C _ C S _ G E T _ T A G S
+ *
+ * Take a binding handle, and figure out the necessary tags value.
+ * This routine is called from stubs.
+ */
+extern void rpc_cs_get_tags (
+	/* [in] */	rpc_binding_handle_t	h,
+	/* [in] */	idl_boolean		server_side,
+	/* [out] */	unsigned32		*p_stag,
+	/* [in, out] */	unsigned32		*p_drtag,
+	/* [out] */	unsigned32		*p_rtag,
+	/* [out] */	error_status_t		*status
+);
+
+#endif

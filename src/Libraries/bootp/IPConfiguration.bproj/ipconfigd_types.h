@@ -1,0 +1,234 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, February 10, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _S_IPCONFIGD_TYPES_H
+#define _S_IPCONFIGD_TYPES_H
+
+#include <mach/boolean.h>
+#include <netinet/in.h>
+#include "DHCPv6.h"
+#include "DHCPv6Options.h"
+#include "timer.h"
+#include "dhcp_options.h"
+#include "symbol_scope.h"
+#include "RouterAdvertisement.h"
+
+#define kLeaseIsInfinite		CFSTR("LeaseIsInfinite")
+
+#define IPV4_METHOD_BIT		0x100
+#define IPV6_METHOD_BIT		0x200
+
+typedef enum {
+    ipconfig_method_none_e 	= 0x0,
+
+    /* IPv4 */
+    ipconfig_method_none_v4_e	= 0x100,
+    ipconfig_method_manual_e 	= 0x101,
+    ipconfig_method_bootp_e 	= 0x102,
+    ipconfig_method_dhcp_e 	= 0x103,
+    ipconfig_method_inform_e 	= 0x104,
+    ipconfig_method_linklocal_e = 0x105,
+    ipconfig_method_failover_e 	= 0x106,
+
+    /* IPv6 */
+    ipconfig_method_none_v6_e	= 0x200,
+    ipconfig_method_manual_v6_e	= 0x201,
+    ipconfig_method_automatic_v6_e = 0x202,
+    ipconfig_method_rtadv_e 	= 0x203,
+    ipconfig_method_stf_e 	= 0x204,
+    ipconfig_method_linklocal_v6_e = 0x205,
+    ipconfig_method_dhcpv6_pd_e	= 0x206,
+} ipconfig_method_t;
+
+const char *
+ipconfig_method_string(ipconfig_method_t m);
+
+INLINE boolean_t
+ipconfig_method_is_dhcp_or_bootp(ipconfig_method_t method)
+{
+    if (method == ipconfig_method_dhcp_e
+	|| method == ipconfig_method_bootp_e) {
+	return (TRUE);
+    }
+    return (FALSE);
+}
+
+INLINE boolean_t
+ipconfig_method_is_manual(ipconfig_method_t method)
+{
+    if (method == ipconfig_method_manual_e
+	|| method == ipconfig_method_failover_e
+	|| method == ipconfig_method_inform_e) {
+	return (TRUE);
+    }
+    return (FALSE);
+}
+
+INLINE boolean_t
+ipconfig_method_is_v4(ipconfig_method_t method)
+{
+    return ((method & IPV4_METHOD_BIT) != 0);
+}
+
+INLINE boolean_t
+ipconfig_method_is_v6(ipconfig_method_t method)
+{
+    return ((method & IPV6_METHOD_BIT) != 0);
+}
+
+typedef struct {
+    struct in_addr	addr;
+    struct in_addr	mask;
+    struct in_addr	router;
+    struct in_addr	dest;
+    boolean_t		ignore_link_status;
+    int32_t		failover_timeout;
+} ipconfig_method_data_manual, *ipconfig_method_data_manual_t;
+
+typedef struct {
+    int			client_id_len;
+    char *		client_id;	/* malloc'd */
+} ipconfig_method_data_dhcp, *ipconfig_method_data_dhcp_t;
+
+#define LINKLOCAL_ALLOCATE	TRUE
+#define LINKLOCAL_NO_ALLOCATE	FALSE
+typedef struct {
+    boolean_t	allocate;
+} ipconfig_method_data_linklocal, *ipconfig_method_data_linklocal_t;
+
+typedef struct {
+    struct in6_addr	addr;
+    int			prefix_length;
+} ipconfig_method_data_manual_v6, *ipconfig_method_data_manual_v6_t;
+
+typedef enum {
+    address_type_none_e,
+    address_type_ipv4_e,
+    address_type_ipv6_e,
+    address_type_dns_e
+} address_type_t;
+
+typedef struct {
+    address_type_t	relay_addr_type;
+    union {
+	struct in_addr	v4;
+	struct in6_addr	v6;
+	char * 		dns;	/* malloc'd */
+    } relay_addr;
+} ipconfig_method_data_stf, *ipconfig_method_data_stf_t;
+
+typedef struct {
+    struct in6_addr	requested_prefix;
+    uint8_t		requested_prefix_length;
+} ipconfig_method_data_dhcpv6_pd, *ipconfig_method_data_dhcpv6_pd_t;
+
+/*
+ * Type: ipconfig_method_data
+ * Purpose:
+ *   Used internally by IPConfiguration to communicate the config to
+ *   the various methods.
+ */
+typedef union {
+    ipconfig_method_data_manual		manual;
+    ipconfig_method_data_dhcp		dhcp;
+    ipconfig_method_data_linklocal	linklocal;
+    ipconfig_method_data_manual_v6	manual_v6;
+    ipconfig_method_data_stf		stf;
+    ipconfig_method_data_dhcpv6_pd	dhcpv6_pd;
+} ipconfig_method_data, * ipconfig_method_data_t;
+
+typedef struct {
+    ipconfig_method_t			method;
+    ipconfig_method_data		method_data;
+    boolean_t				disable_cga;
+    struct in6_addr			ipv6_linklocal;
+} ipconfig_method_info, * ipconfig_method_info_t;
+
+INLINE void
+ipconfig_method_info_init(ipconfig_method_info_t info)
+{
+    bzero(info, sizeof(*info));
+}
+
+INLINE void
+ipconfig_method_info_free(ipconfig_method_info_t info)
+{
+    switch (info->method) {
+    case ipconfig_method_dhcp_e:
+	if (info->method_data.dhcp.client_id != NULL) {
+	    free(info->method_data.dhcp.client_id);
+	    info->method_data.dhcp.client_id = NULL;
+	}
+	break;
+    case ipconfig_method_stf_e:
+	if (info->method_data.stf.relay_addr_type == address_type_dns_e
+	    && info->method_data.stf.relay_addr.dns != NULL) {
+	    free(info->method_data.stf.relay_addr.dns);
+	    info->method_data.stf.relay_addr.dns = NULL;
+	}
+	break;
+    default:
+	break;
+    }
+}
+
+/*
+ * Types to hold DHCP/auto-configuration information
+ */
+typedef struct {
+    const uint8_t *		pkt;
+    int				pkt_size;
+    dhcpol_t *			options;
+    absolute_time_t		lease_start;
+    absolute_time_t		lease_expiration;
+} dhcp_info_t;
+
+typedef struct {
+    DHCPv6PacketRef		pkt;
+    int				pkt_len;
+    DHCPv6OptionListRef		options;
+    absolute_time_t		lease_start;
+    absolute_time_t		lease_expiration;
+    RouterAdvertisementRef	ra;
+    boolean_t			perform_plat_discovery;
+    CFDictionaryRef		ipv4_dict;
+    CFStringRef			nat64_prefix;
+    boolean_t			is_stateful;
+    struct in6_addr		prefix;
+    uint8_t			prefix_length;
+    uint32_t			prefix_valid_lifetime;
+    uint32_t			prefix_preferred_lifetime;
+    CFDictionaryRef		pvd_additional_info_dict;
+} ipv6_info_t;
+
+typedef struct {
+    boolean_t			requested;
+    boolean_t			supported;
+} active_during_sleep_t;
+
+typedef struct {
+    int				prefix_count;
+    int				router_count;
+} ipv6_router_prefix_counts_t;
+#endif /* _S_IPCONFIGD_TYPES_H */

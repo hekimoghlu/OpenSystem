@@ -1,0 +1,196 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, May 10, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if OCTAGON
+
+#import <utilities/debugging.h>
+
+#import "keychain/ot/ErrorUtils.h"
+#import "keychain/ot/OTEstablishOperation.h"
+#import "keychain/ot/OTCuttlefishAccountStateHolder.h"
+#import "keychain/ot/OTFetchCKKSKeysOperation.h"
+#import "keychain/ckks/CloudKitCategories.h"
+#import "keychain/ckks/CKKSCurrentKeyPointer.h"
+#import "keychain/ckks/CKKSKeychainView.h"
+#import "keychain/SecureObjectSync/SOSAccount.h"
+
+#import "keychain/TrustedPeersHelper/TrustedPeersHelperProtocol.h"
+#import "keychain/ot/ObjCImprovements.h"
+
+#import <KeychainCircle/SecurityAnalyticsConstants.h>
+#import <KeychainCircle/SecurityAnalyticsReporterRTC.h>
+#import <KeychainCircle/AAFAnalyticsEvent+Security.h>
+
+@interface OTEstablishOperation ()
+@property OTOperationDependencies* operationDependencies;
+
+@property OctagonState* ckksConflictState;
+
+@property NSOperation* finishedOp;
+@end
+
+@implementation OTEstablishOperation
+@synthesize intendedState = _intendedState;
+
+- (instancetype)initWithDependencies:(OTOperationDependencies*)dependencies
+                       intendedState:(OctagonState*)intendedState
+                   ckksConflictState:(OctagonState*)ckksConflictState
+                          errorState:(OctagonState*)errorState
+{
+    if((self = [super init])) {
+        _operationDependencies = dependencies;
+
+        _intendedState = intendedState;
+        _nextState = errorState;
+        _ckksConflictState = ckksConflictState;
+    }
+    return self;
+}
+
+- (void)groupStart
+{
+    secnotice("octagon", "Beginning an establish operation");
+
+    AAFAnalyticsEventSecurity *establishEvent = [[AAFAnalyticsEventSecurity alloc] initWithKeychainCircleMetrics:nil
+                                                                                                         altDSID:self.operationDependencies.activeAccount.altDSID
+                                                                                                          flowID:self.operationDependencies.flowID
+                                                                                                 deviceSessionID:self.operationDependencies.deviceSessionID
+                                                                                                       eventName:kSecurityRTCEventNameEstablishOperation
+                                                                                                 testsAreEnabled:SecCKKSTestsEnabled()
+                                                                                                  canSendMetrics:self.operationDependencies.permittedToSendMetrics
+                                                                                                        category:kSecurityRTCEventCategoryAccountDataAccessRecovery];
+
+    WEAKIFY(self);
+
+    self.finishedOp = [NSBlockOperation blockOperationWithBlock:^{
+        STRONGIFY(self);
+        secnotice("octagon", "Finishing an establish operation with %@", self.error ?: @"no error");
+        if (self.error) {
+            [SecurityAnalyticsReporterRTC sendMetricWithEvent:establishEvent success:NO error:self.error];
+        } else {
+            [SecurityAnalyticsReporterRTC sendMetricWithEvent:establishEvent success:YES error:nil];
+        }
+    }];
+    [self dependOnBeforeGroupFinished:self.finishedOp];
+
+    // First, interrogate CKKS views, and see when they have a TLK proposal.
+    OTFetchCKKSKeysOperation* fetchKeysOp = [[OTFetchCKKSKeysOperation alloc] initWithDependencies:self.operationDependencies
+                                                                                     refetchNeeded:NO];
+    [self runBeforeGroupFinished:fetchKeysOp];
+
+    CKKSResultOperation* proceedWithKeys = [CKKSResultOperation named:@"establish-with-keys"
+                                                            withBlock:^{
+                                                                STRONGIFY(self);
+                                                                [self proceedWithKeys:fetchKeysOp.viewKeySets
+                                                                     pendingTLKShares:fetchKeysOp.pendingTLKShares];
+                                                            }];
+
+    [proceedWithKeys addDependency:fetchKeysOp];
+    [self runBeforeGroupFinished:proceedWithKeys];
+}
+
+- (void)proceedWithKeys:(NSArray<CKKSKeychainBackedKeySet*>*)viewKeySets pendingTLKShares:(NSArray<CKKSTLKShare*>*)pendingTLKShares
+{
+    WEAKIFY(self);
+
+    NSArray<NSData*>* publicSigningSPKIs = nil;
+    if (self.operationDependencies.sosAdapter.sosEnabled) {
+        NSError* sosPreapprovalError = nil;
+        publicSigningSPKIs = [OTSOSAdapterHelpers peerPublicSigningKeySPKIsForCircle:self.operationDependencies.sosAdapter error:&sosPreapprovalError];
+
+        if(publicSigningSPKIs) {
+            secnotice("octagon-sos", "SOS preapproved keys are %@", publicSigningSPKIs);
+        } else {
+            secnotice("octagon-sos", "Unable to fetch SOS preapproved keys: %@", sosPreapprovalError);
+        }
+
+    } else {
+        secnotice("octagon-sos", "SOS not enabled; no preapproved keys");
+    }
+
+    NSError* persistError = nil;
+    BOOL persisted = [self.operationDependencies.stateHolder persistOctagonJoinAttempt:OTAccountMetadataClassC_AttemptedAJoinState_ATTEMPTED error:&persistError];
+    if (!persisted || persistError) {
+        secerror("octagon: failed to save 'attempted join' state: %@", persistError);
+        self.error = persistError;
+    }
+
+    secnotice("octagon-ckks", "Beginning establish with keys: %@", viewKeySets);
+    [self.operationDependencies.cuttlefishXPCWrapper establishWithSpecificUser:self.operationDependencies.activeAccount
+                                                                      ckksKeys:viewKeySets
+                                                                     tlkShares:pendingTLKShares
+                                                               preapprovedKeys:publicSigningSPKIs
+                                                                       altDSID:self.operationDependencies.activeAccount.altDSID
+                                                                        flowID:self.operationDependencies.flowID
+                                                               deviceSessionID:self.operationDependencies.deviceSessionID
+                                                                canSendMetrics:self.operationDependencies.permittedToSendMetrics
+                                                                         reply:^(NSString * _Nullable peerID,
+                                                                                 NSArray<CKRecord*>* _Nullable keyHierarchyRecords,
+                                                                                 TPSyncingPolicy* _Nullable syncingPolicy,
+                                                                                 NSError * _Nullable error) {
+            STRONGIFY(self);
+
+            [[CKKSAnalytics logger] logResultForEvent:OctagonEventEstablishIdentity hardFailure:true result:error];
+            if (error) {
+                secerror("octagon: Error calling establish: %@", error);
+
+                if ([error isCuttlefishError:CuttlefishErrorKeyHierarchyAlreadyExists]) {
+                    secnotice("octagon-ckks", "A CKKS key hierarchy is out of date; moving to '%@'", self.ckksConflictState);
+                    self.nextState = self.ckksConflictState;
+                } else {
+                    self.error = error;
+                }
+                [self runBeforeGroupFinished:self.finishedOp];
+                return;
+            }
+
+            self.peerID = peerID;
+
+            NSError* localError = nil;
+            BOOL persisted = [self.operationDependencies.stateHolder persistAccountChanges:^OTAccountMetadataClassC * _Nonnull(OTAccountMetadataClassC * _Nonnull metadata) {
+                metadata.trustState = OTAccountMetadataClassC_TrustState_TRUSTED;
+                metadata.peerID = peerID;
+                [metadata setTPSyncingPolicy:syncingPolicy];
+                return metadata;
+            } error:&localError];
+
+            if (!persisted || localError) {
+                secnotice("octagon", "Couldn't persist results: %@", localError);
+                self.error = localError;
+            } else {
+                self.nextState = self.intendedState;
+            }
+
+            // Tell CKKS about our shiny new records!
+            // TODO: we should also set trust here
+            [self.operationDependencies.ckks setCurrentSyncingPolicy:syncingPolicy];
+            [self.operationDependencies.ckks receiveTLKUploadRecords:keyHierarchyRecords];
+
+            [self runBeforeGroupFinished:self.finishedOp];
+        }];
+}
+
+@end
+
+#endif // OCTAGON

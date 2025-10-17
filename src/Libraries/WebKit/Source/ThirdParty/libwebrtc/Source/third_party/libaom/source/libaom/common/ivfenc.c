@@ -1,0 +1,65 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, March 15, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "common/ivfenc.h"
+
+#include "aom/aom_encoder.h"
+#include "aom_ports/mem_ops.h"
+
+void ivf_write_file_header(FILE *outfile, const struct aom_codec_enc_cfg *cfg,
+                           unsigned int fourcc, int frame_cnt) {
+  char header[32];
+
+  header[0] = 'D';
+  header[1] = 'K';
+  header[2] = 'I';
+  header[3] = 'F';
+  mem_put_le16(header + 4, 0);                     // version
+  mem_put_le16(header + 6, 32);                    // header size
+  mem_put_le32(header + 8, fourcc);                // fourcc
+  mem_put_le16(header + 12, cfg->g_w);             // width
+  mem_put_le16(header + 14, cfg->g_h);             // height
+  mem_put_le32(header + 16, cfg->g_timebase.den);  // rate
+  mem_put_le32(header + 20, cfg->g_timebase.num);  // scale
+  mem_put_le32(header + 24, frame_cnt);            // length
+  mem_put_le32(header + 28, 0);                    // unused
+
+  fwrite(header, 1, 32, outfile);
+}
+
+void ivf_write_frame_header(FILE *outfile, int64_t pts, size_t frame_size) {
+  char header[12];
+
+  mem_put_le32(header, (int)frame_size);
+  mem_put_le32(header + 4, (int)(pts & 0xFFFFFFFF));
+  mem_put_le32(header + 8, (int)(pts >> 32));
+  fwrite(header, 1, 12, outfile);
+}
+
+void ivf_write_frame_size(FILE *outfile, size_t frame_size) {
+  char header[4];
+
+  mem_put_le32(header, (int)frame_size);
+  fwrite(header, 1, 4, outfile);
+}

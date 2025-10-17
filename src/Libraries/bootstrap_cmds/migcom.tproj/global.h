@@ -1,0 +1,119 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, August 26, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Mach Operating System
+ * Copyright (c) 1991,1990 Carnegie Mellon University
+ * All Rights Reserved.
+ *
+ * Permission to use, copy, modify and distribute this software and its
+ * documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation.
+ *
+ * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS
+ * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
+ * ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ *
+ * Carnegie Mellon requests users of this software to return to
+ *
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ *
+ * any improvements or extensions that they make and grant Carnegie the
+ * rights to redistribute these changes.
+ */
+
+#ifndef _GLOBAL_H
+#define _GLOBAL_H
+
+#include "type.h"
+
+extern boolean_t PrintVersion; /* print bootstrap_cmds project version and exit */
+extern boolean_t BeQuiet;   /* no warning messages */
+extern boolean_t BeVerbose; /* summarize types, routines */
+extern boolean_t BeDebug;   /* enters in the debug mode */
+extern boolean_t UseMsgRPC;
+extern boolean_t GenSymTab;
+extern boolean_t UseEventLogger;
+extern boolean_t BeLint;
+extern boolean_t BeAnsiC;
+extern boolean_t CheckNDR;
+extern boolean_t PackMsg;
+extern boolean_t UseSplitHeaders;
+extern boolean_t ShortCircuit;
+extern boolean_t UseRPCTrap;
+extern boolean_t TestRPCTrap;
+extern boolean_t IsVoucherCodeAllowed;
+extern boolean_t EmitCountAnnotations;
+
+extern boolean_t IsKernelUser;
+extern boolean_t IsKernelServer;
+extern boolean_t UseMachMsg2;
+extern boolean_t UseSpecialReplyPort;
+extern boolean_t HasUseSpecialReplyPort; /* whether UseSpecialReplyPort has ever been set to TRUE */
+extern boolean_t HasConsumeOnSendError; /* whether ConsumeOnSendError has ever been set */
+extern u_int     ConsumeOnSendError;
+extern int       MaxServerDescrs; /* limit on the number of descriptors on an incoming message */
+extern int       MaxServerReplyDescrs; /* limit on the number of descriptors on a reply message */
+
+extern string_t RCSId;
+
+extern string_t SubsystemName;
+extern u_int SubsystemBase;
+
+extern string_t MsgOption;
+extern string_t WaitTime;
+extern string_t SendTime;
+extern string_t ErrorProc;
+extern string_t ServerPrefix;
+extern string_t UserPrefix;
+extern string_t ServerDemux;
+extern string_t ServerImpl;
+extern string_t ServerSubsys;
+extern int MaxMessSizeOnStack;
+extern int UserTypeLimit;
+
+extern int yylineno;
+extern string_t yyinname;
+
+extern void init_global(void);
+
+extern string_t UserFilePrefix;
+extern string_t UserHeaderFileName;
+extern string_t ServerHeaderFileName;
+extern string_t InternalHeaderFileName;
+extern string_t DefinesHeaderFileName;
+extern string_t UserFileName;
+extern string_t ServerFileName;
+
+extern void more_global(void);
+
+extern char NewCDecl[];
+extern char LintLib[];
+
+#endif  /* _GLOBAL_H */

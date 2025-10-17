@@ -1,0 +1,69 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, December 13, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)funopen.c	8.1 (Berkeley) 6/4/93";
+#endif /* LIBC_SCCS and not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/lib/libc/stdio/funopen.c,v 1.7 2009/12/05 19:31:38 ed Exp $");
+
+#include <stdio.h>
+#include <errno.h>
+
+#include "local.h"
+
+FILE *
+funopen(const void *cookie,
+	int (*readfn)(void *, char *, int),
+	int (*writefn)(void *, const char *, int),
+	fpos_t (*seekfn)(void *, fpos_t, int),
+	int (*closefn)(void *))
+{
+	FILE *fp;
+	int flags;
+
+	if (readfn == NULL) {
+		if (writefn == NULL) {		/* illegal */
+			errno = EINVAL;
+			return (NULL);
+		} else
+			flags = __SWR;		/* write only */
+	} else {
+		if (writefn == NULL)
+			flags = __SRD;		/* read only */
+		else
+			flags = __SRW;		/* read-write */
+	}
+	/* funopen in not covered in SUSv3, so never count the streams */
+	if ((fp = __sfp(0)) == NULL)
+		return (NULL);
+	fp->_flags = flags;
+	fp->_file = -1;
+	fp->_cookie = (void *)cookie;
+	fp->_read = readfn;
+	fp->_write = writefn;
+	fp->_seek = seekfn;
+	fp->_close = closefn;
+	return (fp);
+}

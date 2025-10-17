@@ -1,0 +1,160 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, August 2, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* include tclInt.h for access to namespace API */
+#include "tclInt.h"
+
+#include "xotcl.h"
+
+#if defined(VISUAL_CC)
+#  include <windows.h>
+#  include <locale.h>
+#endif
+#include <stdio.h>
+
+#if TCL_MAJOR_VERSION < 7
+  #error Tcl distribution TOO OLD
+#endif
+
+/*
+ * The following variable is a special hack that is needed in order for
+ * Sun shared libraries to be used for Tcl.
+ */
+
+#ifdef NEED_MATHERR
+extern int matherr();
+int *tclDummyMathPtr = (int *) matherr;
+#endif
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * main --
+ *
+ *	This is the main program for the application.
+ *
+ * Results:
+ *	None: Tcl_Main never returns here, so this procedure never
+ *	returns either.
+ *
+ * Side effects:
+ *	Whatever the application does.
+ *
+ *----------------------------------------------------------------------
+ */
+
+#if TCL_MAJOR_VERSION == 7 && TCL_MINOR_VERSION < 4
+
+extern int main();
+int *tclDummyMainPtr = (int *) main;
+
+#else
+
+int
+main(argc, argv)
+    int argc;			/* Number of command-line arguments. */
+    char **argv;		/* Values of command-line arguments. */
+{
+#if defined(VISUAL_CC)
+    setlocale(LC_ALL, "C");
+#endif
+    Tcl_Main(argc, argv, Tcl_AppInit);
+    return 0;			/* Needed only to prevent compiler warning. */
+}
+
+#endif
+
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tcl_AppInit --
+ *
+ *	This procedure performs application-specific initialization.
+ *	Most applications, especially those that incorporate additional
+ *	packages, will have their own version of this procedure.
+ *
+ * Results:
+ *	Returns a standard Tcl completion code, and leaves an error
+ *	message in interp->result if an error occurs.
+ *
+ * Side effects:
+ *	Depends on the startup script.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tcl_AppInit(interp)
+    Tcl_Interp *interp;		/* Interpreter for application. */
+{
+    if (Tcl_Init(interp) == TCL_ERROR) {
+	return TCL_ERROR;
+    }
+
+    /*
+     * Call the init procedures for included packages.  Each call should
+     * look like this:
+     *
+     * if (Mod_Init(interp) == TCL_ERROR) {
+     *     return TCL_ERROR;
+     * }
+     *
+     * where "Mod" is the name of the module.
+
+    if (Xotcl_Init(interp) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+
+     Tcl_StaticPackage(interp, "XOTcl", Xotcl_Init, 0);
+    */
+
+    if (Tcl_PkgRequire(interp, "XOTcl", XOTCLVERSION, 1) == NULL) {
+      return TCL_ERROR;
+    }
+
+    /*
+     *  This is xotclsh, so import all xotcl commands by
+     *  default into the global namespace.  
+     */
+  
+    if (Tcl_Import(interp, Tcl_GetGlobalNamespace(interp),
+            "::xotcl::*", /* allowOverwrite */ 1) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    /*
+     * Call Tcl_CreateCommand for application-specific commands, if
+     * they weren't already created by the init procedures called above.
+     */
+
+    /*
+     * Specify a user-specific startup file to invoke if the application
+     * is run interactively.  Typically the startup file is "~/.apprc"
+     * where "app" is the name of the application.  If this line is deleted
+     * then no user-specific startup file will be run under any conditions.
+     */
+
+    Tcl_SetVar(interp, "tcl_rcFileName", "~/.tclshrc", TCL_GLOBAL_ONLY);
+    return TCL_OK;
+}

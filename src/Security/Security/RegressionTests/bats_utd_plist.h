@@ -1,0 +1,181 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, January 8, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#include <TargetConditionals.h>
+
+/*
+ * BATS Unit Test Discovery has a feature called "Disabled".  This is a
+ * boolean:  if True, the test is not run.
+ *
+ * Every test in Security.plist has a "Disabled" string:
+ *	<dict>
+ *		<key>TestName</key>
+ *		<string>KeychainSecd_iOS</string>
+ *		<key>Disabled</key>
+ *		<string>BATS_UTD_Disabled_KeychainSecd_iOS</string>
+ *	</dict>
+ *
+ * In Security.plist, we use a string instead of a boolean.  We will convert to
+ * booleans during the preprocssor stage.  This allows use to edit the plists
+ * in xcode.  So, the final plist will look like:
+ *	<dict>
+ *		<key>TestName</key>
+ *		<string>KeychainSecd_iOS</string>
+ *		<key>Disabled</key>
+ *		<true/>
+ *	</dict>
+ *
+ * When you add a new test, you will need to add a define to each branch and
+ * specify which platform you want the test to run on.
+ *
+ * If this include becomes to ugly, we either will need to have seperate UTD
+ * plists per platform or have the test executable skip if on platforms it does
+ * not like.
+ */
+
+#if TARGET_OS_BRIDGE
+/* For BridgeOS, only two tests are currently working */
+#define BATS_UTD_Disabled_AuthorizationTests _TRUE_
+#define BATS_UTD_Disabled_AuthorizationRootTests _TRUE_
+#define BATS_UTD_Disabled_EduModeTest _FALSE_
+#define BATS_UTD_Disabled_KCPairingTest _TRUE_
+#define BATS_UTD_Disabled_KeychainAnalyticsTests _TRUE_
+#define BATS_UTD_Disabled_KeychainMockAKSTests _TRUE_
+#define BATS_UTD_Disabled_KeychainSecd_iOS _TRUE_
+#define BATS_UTD_Disabled_KeychainSecd_macOS _TRUE_
+#define BATS_UTD_Disabled_SecurityUtiltitesTests _TRUE_
+#define BATS_UTD_Disabled_keychainnetworkextensionsharing _TRUE_
+#define BATS_UTD_Disabled_keystorectl_get_lock_state _FALSE_
+#define BATS_UTD_Disabled_security_sysdiagnose _TRUE_
+#define BATS_UTD_Disabled_KeychainSecdXCTests _TRUE_
+#define BATS_UTD_Disabled_SecCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITestUnsigned _TRUE_
+#define BATS_UTD_Disabled_SecLegacyCodeRegressions _TRUE_
+#define BATS_UTD_Disabled_SecCodeSignerAPITest _TRUE_
+#define BATS_UTD_Disabled_SecTaskAPITest _TRUE_
+#define BATS_UTD_Disabled_SecurityUnitTests _TRUE_
+#define BATS_UTD_Disabled_SecurityUnitTestsMacOS _TRUE_
+#define BATS_UTD_Disabled_CodesigningUnitTests _TRUE_
+
+#elif TARGET_OS_OSX
+/* For MacOS, we disable the iOS only tests. */
+#define BATS_UTD_Disabled_AuthorizationTests _FALSE_
+#define BATS_UTD_Disabled_AuthorizationRootTests _FALSE_
+#define BATS_UTD_Disabled_EduModeTest _FALSE_
+#define BATS_UTD_Disabled_KCPairingTest _FALSE_
+#define BATS_UTD_Disabled_KeychainAnalyticsTests _FALSE_
+#define BATS_UTD_Disabled_KeychainMockAKSTests _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_iOS _TRUE_
+#define BATS_UTD_Disabled_KeychainSecd_macOS _FALSE_
+#define BATS_UTD_Disabled_SecurityUtiltitesTests _FALSE_
+#define BATS_UTD_Disabled_keychainnetworkextensionsharing _FALSE_
+#define BATS_UTD_Disabled_keystorectl_get_lock_state _FALSE_
+#define BATS_UTD_Disabled_security_sysdiagnose _FALSE_
+#define BATS_UTD_Disabled_KeychainSecdXCTests _FALSE_
+#define BATS_UTD_Disabled_SecCodeAPITest _FALSE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITest _FALSE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITestUnsigned _FALSE_
+#define BATS_UTD_Disabled_SecLegacyCodeRegressions _FALSE_
+#define BATS_UTD_Disabled_SecCodeSignerAPITest _FALSE_
+#define BATS_UTD_Disabled_SecTaskAPITest _FALSE_
+#define BATS_UTD_Disabled_SecurityUnitTests _TRUE_
+#define BATS_UTD_Disabled_SecurityUnitTestsMacOS _FALSE_
+#define BATS_UTD_Disabled_CodesigningUnitTests _FALSE_
+
+#elif TARGET_OS_WATCH
+#define BATS_UTD_Disabled_AuthorizationTests _TRUE_
+#define BATS_UTD_Disabled_AuthorizationRootTests _TRUE_
+#define BATS_UTD_Disabled_EduModeTest _FALSE_
+#define BATS_UTD_Disabled_KCPairingTest _FALSE_
+#define BATS_UTD_Disabled_KeychainAnalyticsTests _FALSE_
+#define BATS_UTD_Disabled_KeychainMockAKSTests _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_iOS _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_macOS _TRUE_
+#define BATS_UTD_Disabled_SecurityUtiltitesTests _FALSE_
+#define BATS_UTD_Disabled_keychainnetworkextensionsharing _FALSE_
+#define BATS_UTD_Disabled_keystorectl_get_lock_state _FALSE_
+#define BATS_UTD_Disabled_security_sysdiagnose _FALSE_
+#define BATS_UTD_Disabled_KeychainSecdXCTests _FALSE_
+#define BATS_UTD_Disabled_SecCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITestUnsigned _TRUE_
+#define BATS_UTD_Disabled_SecLegacyCodeRegressions _TRUE_
+#define BATS_UTD_Disabled_SecCodeSignerAPITest _TRUE_
+#define BATS_UTD_Disabled_SecTaskAPITest _TRUE_
+#define BATS_UTD_Disabled_SecurityUnitTests _FALSE_
+#define BATS_UTD_Disabled_SecurityUnitTestsMacOS _TRUE_
+#define BATS_UTD_Disabled_CodesigningUnitTests _TRUE_
+
+#elif TARGET_OS_TV
+#define BATS_UTD_Disabled_AuthorizationTests _TRUE_
+#define BATS_UTD_Disabled_AuthorizationRootTests _TRUE_
+#define BATS_UTD_Disabled_EduModeTest _FALSE_
+#define BATS_UTD_Disabled_KCPairingTest _FALSE_
+#define BATS_UTD_Disabled_KeychainAnalyticsTests _FALSE_
+#define BATS_UTD_Disabled_KeychainMockAKSTests _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_iOS _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_macOS _TRUE_
+#define BATS_UTD_Disabled_SecurityUtiltitesTests _FALSE_
+#define BATS_UTD_Disabled_keychainnetworkextensionsharing _FALSE_
+#define BATS_UTD_Disabled_keystorectl_get_lock_state _FALSE_
+#define BATS_UTD_Disabled_security_sysdiagnose _FALSE_
+#define BATS_UTD_Disabled_KeychainSecdXCTests _FALSE_
+#define BATS_UTD_Disabled_SecCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITestUnsigned _TRUE_
+#define BATS_UTD_Disabled_SecLegacyCodeRegressions _TRUE_
+#define BATS_UTD_Disabled_SecCodeSignerAPITest _TRUE_
+#define BATS_UTD_Disabled_SecTaskAPITest _TRUE_
+#define BATS_UTD_Disabled_SecurityUnitTests _FALSE_
+#define BATS_UTD_Disabled_SecurityUnitTestsMacOS _TRUE_
+#define BATS_UTD_Disabled_CodesigningUnitTests _TRUE_
+
+#else
+/* By default, assume iOS platforms. We disable the MacOS only tests. */
+#define BATS_UTD_Disabled_AuthorizationTests _TRUE_
+#define BATS_UTD_Disabled_AuthorizationRootTests _TRUE_
+#define BATS_UTD_Disabled_EduModeTest _FALSE_
+#define BATS_UTD_Disabled_KCPairingTest _FALSE_
+#define BATS_UTD_Disabled_KeychainAnalyticsTests _FALSE_
+#define BATS_UTD_Disabled_KeychainMockAKSTests _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_iOS _FALSE_
+#define BATS_UTD_Disabled_KeychainSecd_macOS _TRUE_
+#define BATS_UTD_Disabled_SecurityUtiltitesTests _FALSE_
+#define BATS_UTD_Disabled_keychainnetworkextensionsharing _FALSE_
+#define BATS_UTD_Disabled_keystorectl_get_lock_state _FALSE_
+#define BATS_UTD_Disabled_security_sysdiagnose _FALSE_
+#define BATS_UTD_Disabled_KeychainSecdXCTests _FALSE_
+#define BATS_UTD_Disabled_SecCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITest _TRUE_
+#define BATS_UTD_Disabled_SecStaticCodeAPITestUnsigned _TRUE_
+#define BATS_UTD_Disabled_SecLegacyCodeRegressions _TRUE_
+#define BATS_UTD_Disabled_SecCodeSignerAPITest _FALSE_
+#define BATS_UTD_Disabled_SecTaskAPITest _TRUE_
+#define BATS_UTD_Disabled_SecurityUnitTests _FALSE_
+#define BATS_UTD_Disabled_SecurityUnitTestsMacOS _TRUE_
+#define BATS_UTD_Disabled_CodesigningUnitTests _FALSE_
+
+#endif

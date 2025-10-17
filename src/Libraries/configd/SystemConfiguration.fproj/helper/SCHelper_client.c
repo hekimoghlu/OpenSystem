@@ -1,0 +1,324 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, November 4, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <fcntl.h>
+#include <paths.h>
+#include <sandbox.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/wait.h>
+#include <mach/mach.h>
+#include <mach/mach_error.h>
+#include <servers/bootstrap.h>
+#include <bootstrap_priv.h>
+#include <pthread.h>
+
+#include "SCPreferencesInternal.h"
+#include "SCHelper_client.h"
+#include "helper.h"		// MiG generated file
+
+
+#define	HELPER					"SCHelper"
+#define	HELPER_LEN				(sizeof(HELPER) - 1)
+
+#define	SUFFIX_SYM				"~sym"
+#define	SUFFIX_SYM_LEN				(sizeof(SUFFIX_SYM) - 1)
+
+
+static pthread_mutex_t	_helper_lock		= PTHREAD_MUTEX_INITIALIZER;
+static mach_port_t	_helper_server		= MACH_PORT_NULL;
+
+
+static mach_port_t
+__SCHelperServerPort(kern_return_t *status)
+{
+	mach_port_t	server	= MACH_PORT_NULL;
+	char		*server_name;
+
+	server_name = getenv("SCHELPER_SERVER");
+	if (!server_name) {
+		server_name = SCHELPER_SERVER;
+	}
+
+#ifdef	BOOTSTRAP_PRIVILEGED_SERVER
+	*status = bootstrap_look_up2(bootstrap_port,
+				     server_name,
+				     &server,
+				     0,
+				     BOOTSTRAP_PRIVILEGED_SERVER);
+#else	// BOOTSTRAP_PRIVILEGED_SERVER
+	*status = bootstrap_look_up(bootstrap_port, server_name, &server);
+#endif	// BOOTSTRAP_PRIVILEGED_SERVER
+
+	if (*status != BOOTSTRAP_SUCCESS) {
+		static dispatch_once_t		once;
+		int				sb_err;
+		static enum sandbox_filter_type	sb_type;
+
+		dispatch_once(&once, ^{
+			sb_type	= SANDBOX_FILTER_GLOBAL_NAME;
+			if (!_SC_isAppleInternal()) {
+				sb_type |= SANDBOX_CHECK_NO_REPORT;
+			}
+		});
+
+		sb_err = sandbox_check(getpid(), "mach-lookup", sb_type, server_name);
+		switch (sb_err) {
+			case 0 :
+				// if not blocked by a sandbox
+				break;
+			case 1 :
+				SC_log(LOG_NOTICE, "sandbox restricting SCHelper access");
+				return MACH_PORT_NULL;
+			default :
+				SC_log(LOG_NOTICE, "sandbox_check() failed: %s", strerror(errno));
+				break;
+		}
+	}
+
+	switch (*status) {
+		case BOOTSTRAP_SUCCESS :
+			/* service currently registered, "a good thing" (tm) */
+			return server;
+		case BOOTSTRAP_NOT_PRIVILEGED :
+			/* the service is not privileged */
+			break;
+		case BOOTSTRAP_UNKNOWN_SERVICE :
+			/* service not currently registered, try again later */
+			break;
+		default :
+#ifdef	DEBUG
+			SC_log(LOG_INFO, "bootstrap_look_up() failed: status=%s",
+			       bootstrap_strerror(*status));
+#endif	/* DEBUG */
+			break;
+	}
+
+	return MACH_PORT_NULL;
+}
+
+
+__private_extern__
+Boolean
+_SCHelperOpen(CFDataRef authorizationData, mach_port_t *helper_port)
+{
+	kern_return_t		kr;
+	Boolean			ok;
+	mach_port_t		server;
+	uint32_t		status	= 0;
+
+	*helper_port = MACH_PORT_NULL;
+
+	// open a new session with the server
+	server = _helper_server;
+	while (TRUE) {
+		if (server != MACH_PORT_NULL) {
+			kr = helperinit(server,
+					helper_port,
+					&status);
+			if (kr == KERN_SUCCESS) {
+				break;
+			}
+
+			// our [cached] server port is not valid
+			if (kr != MACH_SEND_INVALID_DEST) {
+				// if we got an unexpected error, don't retry
+				status = kr;
+				break;
+			}
+		}
+
+		pthread_mutex_lock(&_helper_lock);
+		if (_helper_server != MACH_PORT_NULL) {
+			if (server == _helper_server) {
+				// if the server we tried returned the error
+				(void)mach_port_deallocate(mach_task_self(), _helper_server);
+				_helper_server = __SCHelperServerPort(&kr);
+				if (_helper_server == MACH_PORT_NULL) {
+					status = kr;
+				}
+			} else {
+				// another thread has refreshed the SCHelper server port
+			}
+		} else {
+			_helper_server = __SCHelperServerPort(&kr);
+			if (_helper_server == MACH_PORT_NULL) {
+				status = kr;
+			}
+		}
+		server = _helper_server;
+		pthread_mutex_unlock(&_helper_lock);
+
+		if (server == MACH_PORT_NULL) {
+			// if SCHelper server not available
+			break;
+		}
+	}
+	__MACH_PORT_DEBUG(TRUE, "*** _SCHelperOpen", *helper_port);
+
+	if (*helper_port == MACH_PORT_NULL) {
+		SC_log(LOG_NOTICE, "could not contact \"" HELPER "\": %s",
+		      SCErrorString(status));
+		return FALSE;
+	}
+
+	ok = _SCHelperExec(*helper_port, SCHELPER_MSG_AUTH, authorizationData, &status, NULL);
+	if (!ok) {
+		SC_log(LOG_NOTICE, "could not send authorization");
+		goto error;
+	}
+
+	ok = (status == 0);
+	if (!ok) {
+		SC_log(LOG_NOTICE, "could not start \"" HELPER "\", status = %u", status);
+		goto error;
+	}
+
+	return TRUE;
+
+    error :
+
+	if (*helper_port != MACH_PORT_NULL) {
+		(void)mach_port_deallocate(mach_task_self(), *helper_port);
+		*helper_port = MACH_PORT_NULL;
+	}
+
+	return FALSE;
+
+}
+
+
+__private_extern__
+void
+_SCHelperClose(mach_port_t *helper_port)
+{
+	if (!_SCHelperExec(*helper_port, SCHELPER_MSG_EXIT, NULL, NULL, NULL)) {
+		SC_log(LOG_INFO, "could not send exit request");
+	}
+
+	if (*helper_port != MACH_PORT_NULL) {
+		(void)mach_port_deallocate(mach_task_self(), *helper_port);
+		*helper_port = MACH_PORT_NULL;
+	}
+
+	return;
+}
+
+
+static CFDataRef
+_SCHelperExecCopyBacktrace(void)
+{
+	static Boolean		loggingEnabled	= FALSE;
+	static dispatch_once_t	once;
+	CFDataRef		traceData	= NULL;
+
+	dispatch_once(&once, ^{
+		if(getenv("ENABLE_SCHELPER_BACKTRACES")) {
+			loggingEnabled = TRUE;
+		}
+	});
+
+	if (loggingEnabled) {
+		CFStringRef	backtrace;
+
+		backtrace = _SC_copyBacktrace();
+		if (backtrace != NULL) {
+			(void)_SCSerializeString(backtrace, &traceData, NULL, NULL);
+			CFRelease(backtrace);
+		}
+	}
+
+	return traceData;
+}
+
+
+__private_extern__
+Boolean
+_SCHelperExec(mach_port_t port, uint32_t msgID, CFDataRef data, uint32_t *status, CFDataRef *reply)
+{
+	kern_return_t		kr;
+	CFDataRef		myData		= NULL;
+	xmlDataOut_t		replyRef	= NULL;		/* raw bytes */
+	mach_msg_type_number_t	replyLen	= 0;
+	uint32_t		replyStatus	= 0;
+	CFDataRef		traceData;
+
+	traceData = _SCHelperExecCopyBacktrace();
+
+	kr = helperexec(port,
+			msgID,
+			(data != NULL) ? (void *)CFDataGetBytePtr(data) : NULL,
+			(data != NULL) ? (mach_msg_type_number_t)CFDataGetLength(data) : 0,
+			(traceData != NULL) ? (void *)CFDataGetBytePtr(traceData) : NULL,
+			(traceData != NULL) ? (mach_msg_type_number_t)CFDataGetLength(traceData) : 0,
+			&replyStatus,
+			&replyRef,
+			&replyLen);
+
+	if (traceData != NULL) {
+		CFRelease(traceData);
+	}
+
+	if (kr != KERN_SUCCESS) {
+		if (replyRef != NULL) {
+			(void) vm_deallocate(mach_task_self(), (vm_address_t)replyRef, replyLen);
+		}
+
+		if (kr != MACH_SEND_INVALID_DEST) {
+			// if we got an unexpected error
+			SC_log(LOG_NOTICE, "_SCHelperExec() failed: %s", mach_error_string(kr));
+		}
+		_SCErrorSet(kr);
+
+		return FALSE;
+	}
+
+	// un-serialize the reply
+	if (replyRef != NULL) {
+		if (!_SCUnserializeData(&myData, replyRef, replyLen)) {
+			return FALSE;
+		}
+	}
+
+	if (status != NULL) {
+		__SCPreferencesHandleInternalStatus(&replyStatus);
+		*status = replyStatus;
+	}
+
+	if (reply != NULL) {
+		*reply = myData;
+	} else if (myData != NULL) {
+		SC_log(LOG_INFO, "data available with no place to go");
+		CFRelease(myData);
+	}
+
+	return TRUE;
+}

@@ -1,0 +1,76 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, August 7, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: msvc
+
+// <utility>
+
+// template <class T1, class T2> struct pair
+
+// template<class U, class V> pair& operator=(const pair<U, V>& p);
+
+#include <uscl/std/cassert>
+#include <uscl/std/utility>
+
+#include "archetypes.h"
+#include "test_macros.h"
+
+int main(int, char**)
+{
+  {
+    typedef cuda::std::pair<int, short> P1;
+    typedef cuda::std::pair<double, long> P2;
+    P1 p1(3, static_cast<short>(4));
+    P2 p2;
+    p2 = p1;
+    assert(p2.first == 3);
+    assert(p2.second == 4);
+  }
+  {
+    using C = TestTypes::TestType;
+    using P = cuda::std::pair<int, C>;
+    using T = cuda::std::pair<long, C>;
+    const T t(42, -42);
+    P p(101, 101);
+    C::reset_constructors();
+    p = t;
+    assert(C::constructed() == 0);
+    assert(C::assigned() == 1);
+    assert(C::copy_assigned() == 1);
+    assert(C::move_assigned() == 0);
+    assert(p.first == 42);
+    assert(p.second.value == -42);
+  }
+
+  return 0;
+}

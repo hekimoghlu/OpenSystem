@@ -1,0 +1,62 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, March 30, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef PC_RTP_PARAMETERS_CONVERSION_H_
+#define PC_RTP_PARAMETERS_CONVERSION_H_
+
+#include <optional>
+#include <vector>
+
+#include "api/rtc_error.h"
+#include "api/rtp_parameters.h"
+#include "media/base/codec.h"
+#include "media/base/stream_params.h"
+#include "pc/session_description.h"
+
+namespace webrtc {
+
+//*****************************************************************************
+// Functions for converting from old cricket:: structures to new webrtc::
+// structures. These are permissive with regards to
+// input validation; it's assumed that any necessary validation already
+// occurred.
+//
+// These are expected to be used to convert from audio/video engine
+// capabilities to RtpCapabilities.
+//*****************************************************************************
+
+// Returns empty value if `cricket_feedback` is a feedback type not
+// supported/recognized.
+std::optional<RtcpFeedback> ToRtcpFeedback(
+    const cricket::FeedbackParam& cricket_feedback);
+
+RtpCodecCapability ToRtpCodecCapability(const cricket::Codec& cricket_codec);
+
+RtpCapabilities ToRtpCapabilities(
+    const std::vector<cricket::Codec>& cricket_codecs,
+    const cricket::RtpHeaderExtensions& cricket_extensions);
+
+}  // namespace webrtc
+
+#endif  // PC_RTP_PARAMETERS_CONVERSION_H_

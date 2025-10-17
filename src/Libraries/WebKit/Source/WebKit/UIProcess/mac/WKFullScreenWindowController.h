@@ -1,0 +1,89 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, April 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if ENABLE(FULLSCREEN_API) && PLATFORM(MAC)
+
+#import <AppKit/AppKit.h>
+#import <wtf/CompletionHandler.h>
+#import <wtf/NakedPtr.h>
+#import <wtf/NakedRef.h>
+#import <wtf/RetainPtr.h>
+
+namespace WebKit { 
+class LayerTreeContext;
+class WebPageProxy;
+}
+
+namespace WebCore {
+class IntRect;
+}
+
+@class WKView;
+@class WebCoreFullScreenPlaceholderView;
+
+typedef enum FullScreenState : NSInteger FullScreenState;
+
+@interface WKFullScreenWindowController : NSWindowController<NSWindowDelegate> {
+@private
+    NSView *_webView; // Cannot be retained, see <rdar://problem/14884666>.
+    NakedPtr<WebKit::WebPageProxy> _page;
+    RetainPtr<WebCoreFullScreenPlaceholderView> _webViewPlaceholder;
+    RetainPtr<NSView> _exitPlaceholder;
+    RetainPtr<NSView> _clipView;
+    RetainPtr<NSView> _backgroundView;
+    NSRect _initialFrame;
+    NSRect _finalFrame;
+    RetainPtr<NSTimer> _watchdogTimer;
+    RetainPtr<NSArray> _savedConstraints;
+
+    bool _requestedExitFullScreen;
+    FullScreenState _fullScreenState;
+
+    double _savedScale;
+    float _savedTopContentInset;
+}
+
+@property (readonly) NSRect initialFrame;
+@property (readonly) NSRect finalFrame;
+@property (assign) NSArray *savedConstraints;
+
+- (id)initWithWindow:(NSWindow *)window webView:(NSView *)webView page:(NakedRef<WebKit::WebPageProxy>)page;
+
+- (WebCoreFullScreenPlaceholderView*)webViewPlaceholder;
+
+- (BOOL)isFullScreen;
+
+- (void)enterFullScreen:(NSScreen *)screen completionHandler:(CompletionHandler<void(bool)>&&)completionHandler;
+- (void)exitFullScreen;
+- (void)exitFullScreenImmediately;
+- (void)requestExitFullScreen;
+- (void)close;
+- (void)beganEnterFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame;
+- (void)beganExitFullScreenWithInitialFrame:(NSRect)initialFrame finalFrame:(NSRect)finalFrame;
+
+- (void)videoControlsManagerDidChange;
+
+@end
+
+#endif

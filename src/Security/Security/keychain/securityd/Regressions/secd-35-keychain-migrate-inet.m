@@ -1,0 +1,157 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, November 7, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "secd_regressions.h"
+
+#include "keychain/securityd/SecDbItem.h"
+#include <utilities/array_size.h>
+#include <utilities/SecCFWrappers.h>
+#include <utilities/SecFileLocations.h>
+#include <utilities/fileIo.h>
+
+#include "keychain/securityd/SecItemServer.h"
+
+#include <Security/SecBasePriv.h>
+
+#include <TargetConditionals.h>
+#include <AssertMacros.h>
+
+#if TARGET_OS_IPHONE && USE_KEYSTORE
+#include "OSX/utilities/SecAKSWrappers.h"
+
+#include "SecdTestKeychainUtilities.h"
+
+#include "ios8-inet-keychain-2.h"
+
+void SecAccessGroupsSetCurrent(CFArrayRef accessGroups);
+CFArrayRef SecAccessGroupsGetCurrent(void);
+
+int secd_35_keychain_migrate_inet(int argc, char *const *argv)
+{
+    plan_tests(14 + kSecdTestSetupTestCount);
+
+    __block keybag_handle_t keybag;
+    __block keybag_state_t state;
+    char *passcode="password";
+    int passcode_len=(int)strlen(passcode);
+
+    /* custom keychain dir */
+    secd_test_setup_temp_keychain("secd_35_keychain_migrate_inet", ^{
+        CFStringRef keychain_path_cf = __SecKeychainCopyPath();
+
+        CFStringPerformWithCString(keychain_path_cf, ^(const char *keychain_path) {
+            writeFile(keychain_path, ios8_inet_keychain_2_db, ios8_inet_keychain_2_db_len);
+
+            /* custom notification */
+            SecItemServerSetKeychainChangedNotification("com.apple.secdtests.keychainchanged");
+
+            /* Create and lock custom keybag */
+            ok(kAKSReturnSuccess==aks_create_bag(passcode, passcode_len, kAppleKeyStoreDeviceBag, &keybag), "create keybag");
+            ok(kAKSReturnSuccess==aks_get_lock_state(keybag, &state), "get keybag state");
+            ok(!(state&keybag_state_locked), "keybag unlocked");
+            SecItemServerSetKeychainKeybag(keybag);
+
+            /* lock */
+            ok(kAKSReturnSuccess==aks_lock_bag(keybag), "lock keybag");
+            ok(kAKSReturnSuccess==aks_get_lock_state(keybag, &state), "get keybag state");
+            ok(state&keybag_state_locked, "keybag locked");
+        });
+
+        CFReleaseSafe(keychain_path_cf);
+    });
+
+    CFArrayRef old_ag = CFRetainSafe(SecAccessGroupsGetCurrent());
+    CFMutableArrayRef test_ag = CFArrayCreateMutableCopy(NULL, 0, old_ag);
+    CFArrayAppendValue(test_ag, CFSTR("com.apple.cfnetwork"));
+    SecAccessGroupsSetCurrent(test_ag);
+
+    /* querying a password */
+    const void *keys[] = {
+        kSecClass,
+        kSecAttrAccessGroup,
+        kSecAttrSynchronizable,
+        kSecMatchLimit,
+        kSecReturnAttributes,
+    };
+    const void *values[] = {
+        kSecClassInternetPassword,
+        CFSTR("com.apple.cfnetwork"),
+        kSecAttrSynchronizableAny,
+        kSecMatchLimitAll,
+        kCFBooleanTrue,
+    };
+    CFDictionaryRef query = CFDictionaryCreate(NULL, keys, values,
+                                               array_size(keys), NULL, NULL);
+    CFTypeRef results = NULL;
+    is_status(SecItemCopyMatching(query, &results), errSecInteractionNotAllowed);
+
+    ok(kAKSReturnSuccess==aks_unlock_bag(keybag, passcode, passcode_len), "lock keybag");
+    ok(kAKSReturnSuccess==aks_get_lock_state(keybag, &state), "get keybag state");
+    ok(!(state&keybag_state_locked), "keybag unlocked");
+
+    // We should be able to query 2 inet items from the DB here.  But the database is encrypted
+    // by keybag which we do not know, so no item can be actually retrieved.  The test could be
+    // improved by crafting DB to update using keybag hardcoded in the test, that way it would be possible
+    // to check that 2 inet items are really retrieved here.
+    is_status(SecItemCopyMatching(query, &results), errSecItemNotFound);
+
+    /* Reset keybag */
+    SecItemServerSetKeychainKeybagToDefault();
+
+    // Reset server accessgroups.
+    SecAccessGroupsSetCurrent(old_ag);
+    CFReleaseNull(old_ag);
+    CFReleaseSafe(test_ag);
+
+    CFReleaseSafe(results);
+    CFReleaseSafe(query);
+
+    secd_test_teardown_delete_temp_keychain("secd_35_keychain_migrate_inet");
+
+    void* buf = NULL;
+    int bufLen = 0;
+    ok(kAKSReturnSuccess == aks_save_bag(keybag, &buf, &bufLen), "failed to save keybag for invalidation");
+    ok(kAKSReturnSuccess == aks_unload_bag(keybag), "failed to unload keybag for invalidation");
+    ok(kAKSReturnSuccess == aks_invalidate_bag(buf, bufLen), "failed to invalidate keybag");
+    free(buf);
+
+    return 0;
+}
+
+#else
+
+int secd_35_keychain_migrate_inet(int argc, char *const *argv)
+{
+    plan_tests(1);
+
+    todo("Not yet working in simulator");
+
+TODO: {
+    ok(false);
+}
+    /* not implemented in simulator (no keybag) */
+    /* Not implemented in OSX (no upgrade scenario) */
+    return 0;
+}
+#endif

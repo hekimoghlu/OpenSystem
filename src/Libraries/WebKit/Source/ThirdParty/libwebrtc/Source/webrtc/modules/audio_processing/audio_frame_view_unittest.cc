@@ -1,0 +1,105 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, April 16, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "modules/audio_processing/include/audio_frame_view.h"
+
+#include <array>
+
+#include "common_audio/channel_buffer.h"
+#include "modules/audio_processing/audio_buffer.h"
+#include "rtc_base/arraysize.h"
+#include "test/gtest.h"
+
+namespace webrtc {
+TEST(AudioFrameTest, ConstructFromAudioBuffer) {
+  constexpr int kSampleRateHz = 48000;
+  constexpr int kNumChannels = 2;
+  constexpr float kFloatConstant = 1272.f;
+  constexpr float kIntConstant = 17252;
+  const StreamConfig stream_config(kSampleRateHz, kNumChannels);
+  AudioBuffer buffer(
+      stream_config.sample_rate_hz(), stream_config.num_channels(),
+      stream_config.sample_rate_hz(), stream_config.num_channels(),
+      stream_config.sample_rate_hz(), stream_config.num_channels());
+
+  AudioFrameView<float> non_const_view(buffer.channels(), buffer.num_channels(),
+                                       buffer.num_frames());
+  // Modification is allowed.
+  non_const_view.channel(0)[0] = kFloatConstant;
+  EXPECT_EQ(buffer.channels()[0][0], kFloatConstant);
+
+  AudioFrameView<const float> const_view(
+      buffer.channels(), buffer.num_channels(), buffer.num_frames());
+  // Modification is not allowed.
+  // const_view.channel(0)[0] = kFloatConstant;
+
+  // Assignment is allowed.
+  AudioFrameView<const float> other_const_view = non_const_view;
+  static_cast<void>(other_const_view);
+
+  // But not the other way. The following will fail:
+  // non_const_view = other_const_view;
+
+  AudioFrameView<float> non_const_float_view(
+      buffer.channels(), buffer.num_channels(), buffer.num_frames());
+  non_const_float_view.channel(0)[0] = kIntConstant;
+  EXPECT_EQ(buffer.channels()[0][0], kIntConstant);
+}
+
+TEST(AudioFrameTest, ConstructFromChannelBuffer) {
+  ChannelBuffer<float> buffer(480, 2);
+  AudioFrameView<float> view(buffer.channels(), buffer.num_channels(),
+                             buffer.num_frames());
+  EXPECT_EQ(view.num_channels(), 2);
+  EXPECT_EQ(view.samples_per_channel(), 480);
+}
+
+TEST(AudioFrameTest, ToDeinterleavedView) {
+  ChannelBuffer<float> buffer(480, 2);
+  AudioFrameView<float> view(buffer.channels(), buffer.num_channels(),
+                             buffer.num_frames());
+
+  DeinterleavedView<float> non_const_view = view.view();
+  DeinterleavedView<const float> const_view =
+      static_cast<const AudioFrameView<float>&>(view).view();
+
+  ASSERT_EQ(non_const_view.num_channels(), 2u);
+  ASSERT_EQ(const_view.num_channels(), 2u);
+  for (size_t i = 0; i < non_const_view.num_channels(); ++i) {
+    EXPECT_EQ(non_const_view[i].data(), const_view[i].data());
+    EXPECT_EQ(non_const_view[i].data(), view.channel(i).data());
+  }
+}
+
+TEST(AudioFrameTest, FromDeinterleavedView) {
+  std::array<float, 480 * 2> buffer;
+  DeinterleavedView<float> view(buffer.data(), buffer.size() / 2u, 2u);
+  AudioFrameView<float> frame_view(view);
+  EXPECT_EQ(static_cast<size_t>(frame_view.num_channels()),
+            view.num_channels());
+  EXPECT_EQ(frame_view[0], view[0]);
+  EXPECT_EQ(frame_view[1], view[1]);
+}
+
+}  // namespace webrtc

@@ -1,0 +1,270 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, February 2, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include <wtf/EmbeddedFixedVector.h>
+
+namespace WTF {
+
+template<typename T, typename Malloc>
+class FixedVector {
+public:
+    using Storage = EmbeddedFixedVector<T, Malloc>;
+    using Self = FixedVector<T, Malloc>;
+    using value_type = typename Storage::value_type;
+    using pointer = typename Storage::pointer;
+    using reference = typename Storage::reference;
+    using const_reference = typename Storage::const_reference;
+    using const_pointer = typename Storage::const_pointer;
+    using size_type = typename Storage::size_type;
+    using difference_type = typename Storage::difference_type;
+    using iterator = typename Storage::iterator;
+    using const_iterator = typename Storage::const_iterator;
+    using reverse_iterator = typename Storage::reverse_iterator;
+    using const_reverse_iterator = typename Storage::const_reverse_iterator;
+
+    FixedVector() = default;
+    FixedVector(const FixedVector& other)
+        : m_storage(other.m_storage ? other.m_storage->clone().moveToUniquePtr() : nullptr)
+    { }
+    FixedVector(FixedVector&& other) = default;
+
+    FixedVector(std::initializer_list<T> initializerList)
+        : m_storage(initializerList.size() ? Storage::create(initializerList.size()).moveToUniquePtr() : nullptr)
+    {
+        size_t index = 0;
+        for (const auto& element : initializerList) {
+            m_storage->at(index) = element;
+            index++;
+        }
+    }
+
+    template<typename InputIterator> FixedVector(InputIterator begin, InputIterator end)
+        : m_storage(begin == end ? nullptr : Storage::create(begin, end).moveToUniquePtr())
+    {
+    }
+
+    FixedVector& operator=(const FixedVector& other)
+    {
+        FixedVector tmp(other);
+        swap(tmp);
+        return *this;
+    }
+
+    FixedVector& operator=(FixedVector&& other)
+    {
+        FixedVector tmp(WTFMove(other));
+        swap(tmp);
+        return *this;
+    }
+
+    explicit FixedVector(size_t size)
+        : m_storage(size ? Storage::create(size).moveToUniquePtr() : nullptr)
+    { }
+
+    FixedVector(size_t size, const T& value)
+        : m_storage(size ? Storage::create(size).moveToUniquePtr() : nullptr)
+    {
+        fill(value);
+    }
+
+    template<size_t inlineCapacity, typename OverflowHandler>
+    explicit FixedVector(const Vector<T, inlineCapacity, OverflowHandler>& other)
+        : m_storage(other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr())
+    { }
+
+    // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
+    // should probably go through the explicit constructor.
+    template<size_t inlineCapacity, typename OverflowHandler>
+    FixedVector& operator=(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    {
+        m_storage = other.isEmpty() ? nullptr : Storage::createFromVector(other).moveToUniquePtr();
+        return *this;
+    }
+
+    template<size_t inlineCapacity, typename OverflowHandler>
+    explicit FixedVector(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    {
+        Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
+        m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
+    }
+
+    // FIXME: Should we remove this now that it's not required for HashTable::add? This assignment is non-trivial and
+    // should probably go through the explicit constructor.
+    template<size_t inlineCapacity, typename OverflowHandler>
+    FixedVector& operator=(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    {
+        Vector<T, inlineCapacity, OverflowHandler> target = WTFMove(other);
+        m_storage = target.isEmpty() ? nullptr : Storage::createFromVector(WTFMove(target)).moveToUniquePtr();
+        return *this;
+    }
+
+    template<typename... Args>
+    static FixedVector createWithSizeAndConstructorArguments(size_t size, Args&&... args)
+    {
+        return Self { size ? Storage::createWithSizeAndConstructorArguments(size, std::forward<Args>(args)...).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
+    }
+
+    template<std::invocable<size_t> Generator>
+    static FixedVector createWithSizeFromGenerator(size_t size, NOESCAPE Generator&& generator)
+    {
+        return Self { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
+    }
+
+    size_t size() const { return m_storage ? m_storage->size() : 0; }
+    bool isEmpty() const { return m_storage ? m_storage->isEmpty() : true; }
+    size_t byteSize() const { return m_storage ? m_storage->byteSize() : 0; }
+
+    iterator begin() LIFETIME_BOUND { return m_storage ? m_storage->begin() : nullptr; }
+    iterator end() LIFETIME_BOUND { return m_storage ? m_storage->end() : nullptr; }
+
+    const_iterator begin() const LIFETIME_BOUND { return const_cast<FixedVector*>(this)->begin(); }
+    const_iterator end() const LIFETIME_BOUND { return const_cast<FixedVector*>(this)->end(); }
+
+    reverse_iterator rbegin() LIFETIME_BOUND { return m_storage ? m_storage->rbegin() : reverse_iterator(nullptr); }
+    reverse_iterator rend() LIFETIME_BOUND { return m_storage ? m_storage->rend() : reverse_iterator(nullptr); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_storage ? m_storage->rbegin() : const_reverse_iterator(nullptr); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_storage ? m_storage->rend() : const_reverse_iterator(nullptr); }
+
+    T& at(size_t i) LIFETIME_BOUND { return m_storage->at(i); }
+    const T& at(size_t i) const LIFETIME_BOUND { return m_storage->at(i); }
+
+    T& operator[](size_t i) LIFETIME_BOUND { return m_storage->at(i); }
+    const T& operator[](size_t i) const LIFETIME_BOUND { return m_storage->at(i); }
+
+    T& first() LIFETIME_BOUND { return (*this)[0]; }
+    const T& first() const LIFETIME_BOUND { return (*this)[0]; }
+    T& last() LIFETIME_BOUND { return (*this)[size() - 1]; }
+    const T& last() const LIFETIME_BOUND { return (*this)[size() - 1]; }
+
+    void clear() { m_storage = nullptr; }
+
+    void fill(const T& val)
+    {
+        if (!m_storage)
+            return;
+        m_storage->fill(val);
+    }
+
+    bool operator==(const Self& other) const
+    {
+        if (!m_storage) {
+            if (!other.m_storage)
+                return true;
+            return other.m_storage->isEmpty();
+        }
+        if (!other.m_storage)
+            return m_storage->isEmpty();
+        return *m_storage == *other.m_storage;
+    }
+
+    template<typename U> bool contains(const U&) const;
+    template<typename U> size_t find(const U&) const;
+    template<typename MatchFunction> size_t findIf(const MatchFunction&) const;
+
+    void swap(Self& other)
+    {
+        using std::swap;
+        swap(m_storage, other.m_storage);
+    }
+
+    static constexpr ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(FixedVector, m_storage); }
+
+    Storage* storage() LIFETIME_BOUND { return m_storage.get(); }
+
+    std::span<const T> span() const LIFETIME_BOUND { return m_storage ? m_storage->span() : std::span<const T> { }; }
+    std::span<T> mutableSpan() LIFETIME_BOUND { return m_storage ? m_storage->span() : std::span<T> { }; }
+
+    Vector<T> subvector(size_t offset, size_t length = std::dynamic_extent) const
+    {
+        return { span().subspan(offset, length) };
+    }
+
+    std::span<const T> subspan(size_t offset, size_t length = std::dynamic_extent) const LIFETIME_BOUND
+    {
+        return span().subspan(offset, length);
+    }
+
+private:
+    friend class JSC::LLIntOffsetsExtractor;
+
+    FixedVector(std::unique_ptr<Storage>&& storage)
+        :  m_storage { WTFMove(storage) }
+    { }
+
+    std::unique_ptr<Storage> m_storage;
+};
+static_assert(sizeof(FixedVector<int>) == sizeof(int*));
+
+template<typename T, typename Malloc>
+template<typename U>
+bool FixedVector<T, Malloc>::contains(const U& value) const
+{
+    return find(value) != notFound;
+}
+
+template<typename T, typename Malloc>
+template<typename MatchFunction>
+size_t FixedVector<T, Malloc>::findIf(const MatchFunction& matches) const
+{
+    for (size_t i = 0; i < size(); ++i) {
+        if (matches(at(i)))
+            return i;
+    }
+    return notFound;
+}
+
+template<typename T, typename Malloc>
+template<typename U>
+size_t FixedVector<T, Malloc>::find(const U& value) const
+{
+    return findIf([&](auto& item) {
+        return item == value;
+    });
+}
+
+template<typename T, typename Malloc>
+inline void swap(FixedVector<T, Malloc>& a, FixedVector<T, Malloc>& b)
+{
+    a.swap(b);
+}
+
+template<typename T, typename MapFunction, typename Malloc, typename ReturnType = typename std::invoke_result<MapFunction, const T&>::type>
+FixedVector<ReturnType, Malloc> map(const FixedVector<T, Malloc>& source, MapFunction&& mapFunction)
+{
+    FixedVector<ReturnType, Malloc> result(source.size());
+
+    size_t resultIndex = 0;
+    for (const auto& item : source) {
+        result[resultIndex] = mapFunction(item);
+        resultIndex++;
+    }
+
+    return result;
+}
+
+} // namespace WTF
+
+using WTF::FixedVector;

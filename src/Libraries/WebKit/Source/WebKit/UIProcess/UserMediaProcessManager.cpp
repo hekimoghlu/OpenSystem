@@ -1,0 +1,301 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, November 16, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "UserMediaProcessManager.h"
+
+#if ENABLE(MEDIA_STREAM)
+
+#include "Logging.h"
+#include "MediaDeviceSandboxExtensions.h"
+#include "SpeechRecognitionPermissionManager.h"
+#include "UserMediaPermissionRequestProxy.h"
+#include "WebPageProxy.h"
+#include "WebProcessMessages.h"
+#include "WebProcessProxy.h"
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TranslatedProcess.h>
+
+namespace WebKit {
+
+#if ENABLE(SANDBOX_EXTENSIONS)
+static const ASCIILiteral audioExtensionPath { "com.apple.webkit.microphone"_s };
+static const ASCIILiteral videoExtensionPath { "com.apple.webkit.camera"_s };
+static const ASCIILiteral appleCameraServicePath { "com.apple.applecamerad"_s };
+static const ASCIILiteral additionalAppleCameraServicePath { "com.apple.appleh13camerad"_s };
+static const ASCIILiteral appleCameraUserClientPath { "com.apple.aneuserd"_s };
+static const ASCIILiteral appleCameraUserClientIOKitClientClass { "H11ANEInDirectPathClient"_s };
+static const ASCIILiteral appleCameraUserClientIOKitServiceClass { "H11ANEIn"_s };
+#endif
+
+UserMediaProcessManager& UserMediaProcessManager::singleton()
+{
+    static NeverDestroyed<UserMediaProcessManager> manager;
+    return manager;
+}
+
+UserMediaProcessManager::UserMediaProcessManager()
+{
+}
+
+#if ENABLE(SANDBOX_EXTENSIONS)
+static bool needsAppleCameraService()
+{
+#if !PLATFORM(MAC) && !PLATFORM(MACCATALYST)
+    return false;
+#elif CPU(ARM64)
+    return true;
+#else
+    return WTF::isX86BinaryRunningOnARM();
+#endif
+}
+#endif
+
+bool UserMediaProcessManager::willCreateMediaStream(UserMediaPermissionRequestManagerProxy& proxy, const UserMediaPermissionRequestProxy& request)
+{
+    if (m_denyNextRequest) {
+        m_denyNextRequest = false;
+        return false;
+    }
+
+    if (request.requiresDisplayCapture() && !request.requiresDisplayCaptureWithAudio())
+        return true;
+
+    ASSERT(request.hasAudioDevice() || request.hasVideoDevice());
+
+#if ENABLE(SANDBOX_EXTENSIONS) && USE(APPLE_INTERNAL_SDK)
+    RefPtr proxyPage = proxy.page();
+    if (!proxyPage)
+        return false;
+
+    Ref process = proxyPage->legacyMainFrameProcess();
+    size_t extensionCount = 0;
+
+    bool needsAudioSandboxExtension = request.hasAudioDevice() && !process->hasAudioCaptureExtension() && !proxyPage->preferences().captureAudioInUIProcessEnabled() && !proxyPage->preferences().captureAudioInGPUProcessEnabled();
+    if (needsAudioSandboxExtension)
+        extensionCount++;
+
+    bool needsVideoSandboxExtension = request.hasVideoDevice() && !process->hasVideoCaptureExtension() && !proxyPage->preferences().captureVideoInUIProcessEnabled() && !proxyPage->preferences().captureVideoInGPUProcessEnabled();
+    if (needsVideoSandboxExtension)
+        extensionCount++;
+
+    bool needsAppleCameraSandboxExtension = needsVideoSandboxExtension && needsAppleCameraService();
+    if (needsAppleCameraSandboxExtension) {
+        extensionCount++;
+#if HAVE(ADDITIONAL_APPLE_CAMERA_SERVICE)
+        extensionCount++;
+#endif
+#if HAVE(APPLE_CAMERA_USER_CLIENT)
+        extensionCount += 3;
+#endif
+    }
+
+    if (extensionCount) {
+        Vector<SandboxExtension::Handle> handles;
+        Vector<String> ids;
+        SandboxExtension::Handle machBootstrapExtension;
+
+        if (!proxyPage->preferences().mockCaptureDevicesEnabled()) {
+            handles.grow(extensionCount);
+            ids.reserveInitialCapacity(extensionCount);
+
+            if (needsAudioSandboxExtension) {
+                if (auto handle = SandboxExtension::createHandleForGenericExtension(audioExtensionPath)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(audioExtensionPath);
+                }
+            }
+
+            if (needsVideoSandboxExtension) {
+                if (auto handle = SandboxExtension::createHandleForGenericExtension(videoExtensionPath)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(videoExtensionPath);
+                }
+            }
+
+            auto auditToken = process->auditToken();
+            if (needsAppleCameraSandboxExtension) {
+                machBootstrapExtension = SandboxExtension::createHandleForMachBootstrapExtension();
+                if (auto handle = SandboxExtension::createHandleForMachLookup(appleCameraServicePath, auditToken)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(appleCameraServicePath);
+                }
+#if HAVE(ADDITIONAL_APPLE_CAMERA_SERVICE)
+                if (auto handle = SandboxExtension::createHandleForMachLookup(additionalAppleCameraServicePath, auditToken)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(additionalAppleCameraServicePath);
+                }
+#endif
+#if HAVE(APPLE_CAMERA_USER_CLIENT)
+                if (auto handle = SandboxExtension::createHandleForMachLookup(appleCameraUserClientPath, auditToken)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(appleCameraUserClientPath);
+                }
+
+                if (auto handle = SandboxExtension::createHandleForIOKitClassExtension(appleCameraUserClientIOKitClientClass, auditToken)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(appleCameraUserClientIOKitClientClass);
+                }
+
+                if (auto handle = SandboxExtension::createHandleForIOKitClassExtension(appleCameraUserClientIOKitServiceClass, auditToken)) {
+                    handles[--extensionCount] = WTFMove(*handle);
+                    ids.append(appleCameraUserClientIOKitServiceClass);
+                }
+#endif
+            }
+
+            if (ids.size() != handles.size()) {
+                WTFLogAlways("Could not create a required sandbox extension, capture will fail!");
+                return false;
+            }
+
+            // FIXME: Is it correct to ensure that the corresponding entries in `handles` and `ids` are in reverse order?
+        }
+
+        for (const auto& id : ids)
+            RELEASE_LOG(WebRTC, "UserMediaProcessManager::willCreateMediaStream - granting extension %s", id.utf8().data());
+
+        if (needsAudioSandboxExtension)
+            process->grantAudioCaptureExtension();
+        if (needsVideoSandboxExtension)
+            process->grantVideoCaptureExtension();
+        process->send(Messages::WebProcess::GrantUserMediaDeviceSandboxExtensions(MediaDeviceSandboxExtensions(ids, WTFMove(handles), WTFMove(machBootstrapExtension))), 0);
+    }
+#else
+    UNUSED_PARAM(proxy);
+    UNUSED_PARAM(request);
+#endif
+
+    return true;
+}
+
+void UserMediaProcessManager::revokeSandboxExtensionsIfNeeded(WebProcessProxy& process)
+{
+#if ENABLE(SANDBOX_EXTENSIONS)
+    bool hasAudioCapture = false;
+    bool hasVideoCapture = false;
+    bool hasPendingCapture = false;
+
+    UserMediaPermissionRequestManagerProxy::forEach([&hasAudioCapture, &hasVideoCapture, &hasPendingCapture, &process](auto& managerProxy) {
+        RefPtr proxyPage = managerProxy.page();
+        if (!proxyPage)
+            return;
+        if (&process != &proxyPage->legacyMainFrameProcess())
+            return;
+        hasAudioCapture |= proxyPage->isCapturingAudio();
+        hasVideoCapture |= proxyPage->isCapturingVideo();
+        hasPendingCapture |= managerProxy.hasPendingCapture();
+    });
+
+    if (hasPendingCapture)
+        return;
+
+    if (hasAudioCapture && hasVideoCapture)
+        return;
+
+    Vector<String> params;
+    if (!hasAudioCapture && process.hasAudioCaptureExtension()) {
+        params.append(audioExtensionPath);
+        process.revokeAudioCaptureExtension();
+    }
+    if (!hasVideoCapture && process.hasVideoCaptureExtension()) {
+        params.append(videoExtensionPath);
+        if (needsAppleCameraService()) {
+            params.append(appleCameraServicePath);
+#if USE(APPLE_INTERNAL_SDK) && HAVE(ADDITIONAL_APPLE_CAMERA_SERVICE)
+            params.append(additionalAppleCameraServicePath);
+#endif
+#if USE(APPLE_INTERNAL_SDK) && HAVE(APPLE_CAMERA_USER_CLIENT)
+            params.append(appleCameraUserClientPath);
+#endif
+        }
+        process.revokeVideoCaptureExtension();
+    }
+
+    if (params.isEmpty())
+        return;
+
+    for (const auto& id : params)
+        RELEASE_LOG(WebRTC, "UserMediaProcessManager::endedCaptureSession - revoking extension %s", id.utf8().data());
+
+    process.send(Messages::WebProcess::RevokeUserMediaDeviceSandboxExtensions(params), 0);
+#endif
+}
+
+void UserMediaProcessManager::setCaptureEnabled(bool enabled)
+{
+    if (enabled == m_captureEnabled)
+        return;
+
+    m_captureEnabled = enabled;
+
+    if (enabled)
+        return;
+
+    UserMediaPermissionRequestManagerProxy::forEach([](auto& proxy) {
+        proxy.stopCapture();
+    });
+}
+
+void UserMediaProcessManager::captureDevicesChanged()
+{
+    UserMediaPermissionRequestManagerProxy::forEach([](auto& proxy) {
+        proxy.captureDevicesChanged();
+    });
+}
+
+void UserMediaProcessManager::updateCaptureDevices(ShouldNotify shouldNotify)
+{
+    WebCore::RealtimeMediaSourceCenter::singleton().getMediaStreamDevices([weakThis = WeakPtr { *this }, this, shouldNotify](Vector<WebCore::CaptureDevice>&& newDevices) mutable {
+        if (!weakThis)
+            return;
+
+        if (!haveDevicesChanged(m_captureDevices, newDevices))
+            return;
+
+        m_captureDevices = WTFMove(newDevices);
+        if (shouldNotify == ShouldNotify::Yes)
+            captureDevicesChanged();
+    });
+}
+
+void UserMediaProcessManager::devicesChanged()
+{
+    updateCaptureDevices(ShouldNotify::Yes);
+}
+
+void UserMediaProcessManager::beginMonitoringCaptureDevices()
+{
+    static std::once_flag onceFlag;
+
+    std::call_once(onceFlag, [this] {
+        updateCaptureDevices(ShouldNotify::No);
+        WebCore::RealtimeMediaSourceCenter::singleton().addDevicesChangedObserver(*this);
+    });
+}
+
+} // namespace WebKit
+
+#endif

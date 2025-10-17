@@ -1,0 +1,106 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, November 4, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Icons used by the toolbar code.
+ */
+#include "../pixmaps/tb_new.xpm"
+#include "../pixmaps/tb_open.xpm"
+#include "../pixmaps/tb_close.xpm"
+#include "../pixmaps/tb_save.xpm"
+#include "../pixmaps/tb_print.xpm"
+#include "../pixmaps/tb_cut.xpm"
+#include "../pixmaps/tb_copy.xpm"
+#include "../pixmaps/tb_paste.xpm"
+#include "../pixmaps/tb_find.xpm"
+#include "../pixmaps/tb_find_next.xpm"
+#include "../pixmaps/tb_find_prev.xpm"
+#include "../pixmaps/tb_find_help.xpm"
+#include "../pixmaps/tb_exit.xpm"
+#include "../pixmaps/tb_undo.xpm"
+#include "../pixmaps/tb_redo.xpm"
+#include "../pixmaps/tb_help.xpm"
+#include "../pixmaps/tb_macro.xpm"
+#include "../pixmaps/tb_make.xpm"
+#include "../pixmaps/tb_save_all.xpm"
+#include "../pixmaps/tb_jump.xpm"
+#include "../pixmaps/tb_ctags.xpm"
+#include "../pixmaps/tb_load_session.xpm"
+#include "../pixmaps/tb_save_session.xpm"
+#include "../pixmaps/tb_new_session.xpm"
+#include "../pixmaps/tb_blank.xpm"
+#include "../pixmaps/tb_maximize.xpm"
+#include "../pixmaps/tb_split.xpm"
+#include "../pixmaps/tb_minimize.xpm"
+#include "../pixmaps/tb_shell.xpm"
+#include "../pixmaps/tb_replace.xpm"
+#include "../pixmaps/tb_vsplit.xpm"
+#include "../pixmaps/tb_maxwidth.xpm"
+#include "../pixmaps/tb_minwidth.xpm"
+
+/*
+ * Those are the pixmaps used for the default buttons.
+ */
+static char **(built_in_pixmaps[]) =
+{
+    tb_new_xpm,
+    tb_open_xpm,
+    tb_save_xpm,
+    tb_undo_xpm,
+    tb_redo_xpm,
+    tb_cut_xpm,
+    tb_copy_xpm,
+    tb_paste_xpm,
+    tb_print_xpm,
+    tb_help_xpm,
+    tb_find_xpm,
+    tb_save_all_xpm,
+    tb_save_session_xpm,
+    tb_new_session_xpm,
+    tb_load_session_xpm,
+    tb_macro_xpm,
+    tb_replace_xpm,
+    tb_close_xpm,
+    tb_maximize_xpm,
+    tb_minimize_xpm,
+    tb_split_xpm,
+    tb_shell_xpm,
+    tb_find_prev_xpm,
+    tb_find_next_xpm,
+    tb_find_help_xpm,
+    tb_make_xpm,
+    tb_jump_xpm,
+    tb_ctags_xpm,
+    tb_vsplit_xpm,
+    tb_maxwidth_xpm,
+    tb_minwidth_xpm,
+    tb_exit_xpm
+};
+
+// Indices for named colors
+#define BACKGROUND	0
+#define FOREGROUND	1
+#define BOTTOM_SHADOW	2
+#define TOP_SHADOW	3
+#define HIGHLIGHT	4

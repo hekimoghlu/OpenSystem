@@ -1,0 +1,110 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, October 25, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import <Block.h>
+#import <stdio.h>
+#import <stdlib.h>
+#import "test.h"
+
+// TEST_CONFIG
+
+int recovered = 0;
+int constructors = 0;
+int destructors = 0;
+
+#define CONST const
+
+class TestObject
+{
+public:
+	TestObject(CONST TestObject& inObj);
+	TestObject();
+	~TestObject();
+	
+	TestObject& operator=(CONST TestObject& inObj);
+        
+        void test(void);
+
+	int version() CONST { return _version; }
+private:
+	mutable int _version;
+};
+
+TestObject::TestObject(CONST TestObject& inObj)
+	
+{
+        ++constructors;
+        _version = inObj._version;
+	//printf("%p (%d) -- TestObject(const TestObject&) called", this, _version); 
+}
+
+
+TestObject::TestObject()
+{
+        _version = ++constructors;
+	//printf("%p (%d) -- TestObject() called\n", this, _version); 
+}
+
+
+TestObject::~TestObject()
+{
+	//printf("%p -- ~TestObject() called\n", this);
+        ++destructors;
+}
+
+#if 1
+TestObject& TestObject::operator=(CONST TestObject& inObj)
+{
+	//printf("%p -- operator= called", this);
+        _version = inObj._version;
+	return *this;
+}
+#endif
+
+void TestObject::test(void)  {
+    void (^b)(void) = ^{ recovered = _version; };
+    void (^b2)(void) = Block_copy(b);
+    b2();
+    Block_release(b2);
+}
+
+
+
+void testRoutine() {
+    TestObject one;
+
+    
+    one.test();
+}
+    
+    
+
+int main() {
+    testRoutine();
+    if (recovered != 1) {
+        fail("didn't recover byref block variable");
+    }
+
+    succeed(__FILE__);
+}

@@ -1,0 +1,132 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, October 31, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "db_codegen.h"
+
+#ifndef lint
+static const char copyright[] =
+    "Copyright (c) 1996,2008 Oracle.  All rights reserved.\n";
+#endif
+
+static int usage __P((void));
+
+int main __P((int, char *[]));
+
+const char *progname;
+struct __head_env env_tree;
+
+int
+main(argc, argv)
+	int argc;
+	char *argv[];
+{
+	extern char *optarg;
+	extern int optind;
+	enum { C, CXX, JAVA } api;
+	int ch, verbose;
+	char *ofname;
+
+	TAILQ_INIT(&env_tree);
+
+	if ((progname = __db_rpath(argv[0])) == NULL)
+		progname = argv[0];
+	else
+		++progname;
+
+	api = C;
+	ofname = NULL;
+	verbose = 0;
+
+	while ((ch = getopt(argc, argv, "a:i:o:Vv")) != EOF)
+		switch (ch) {
+		case 'a':
+			if (strcasecmp(optarg, "c") == 0) {
+				api = C;
+			}
+			else if (
+			    strcasecmp(optarg, "c++") == 0 ||
+			    strcasecmp(optarg, "cxx") == 0)
+				api = CXX;
+			else if (strcasecmp(optarg, "java") == 0)
+				api = JAVA;
+			else
+				return (usage());
+			break;
+		case 'i':
+			if (freopen(optarg, "r", stdin) == NULL) {
+				fprintf(stderr, "%s: %s: %s\n",
+				    progname, optarg, strerror(errno));
+				return (EXIT_FAILURE);
+			}
+			break;
+		case 'o':
+			ofname = optarg;
+			break;
+		case 'V':
+			printf("%s\n", db_version(NULL, NULL, NULL));
+			return (EXIT_SUCCESS);
+		case 'v':
+			verbose = 1;
+			break;
+		case '?':
+		default:
+			return (usage());
+		}
+	argc -= optind;
+	argv += optind;
+
+	if (argc != 0)
+		return (usage());
+
+	if (parse_input(stdin))
+		return (EXIT_FAILURE);
+
+#ifdef DEBUG
+	if (verbose && parse_dump())
+		return (EXIT_FAILURE);
+#endif
+
+	if (TAILQ_FIRST(&env_tree) != NULL)
+		switch (api) {
+		case C:
+			if (api_c(ofname))
+				return (EXIT_FAILURE);
+			break;
+		case CXX:
+		case JAVA:
+			fprintf(stderr,
+			    "C++ and Java APIs not yet supported\n");
+			return (EXIT_FAILURE);
+		}
+
+	return (EXIT_SUCCESS);
+}
+
+static int
+usage()
+{
+	(void)fprintf(stderr,
+    "usage: %s [-Vv] [-a c] [-i input] [-o output]\n", progname);
+	return (EXIT_FAILURE);
+}

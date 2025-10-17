@@ -1,0 +1,249 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, November 28, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Modification History
+ *
+ * May 21, 2021			Allan Nathanson <ajn@apple.com>
+ * - add access controls
+ *
+ * June 1, 2001			Allan Nathanson <ajn@apple.com>
+ * - public API conversion
+ *
+ * June 2, 2000			Allan Nathanson <ajn@apple.com>
+ * - initial revision
+ */
+
+
+#ifndef _S_SCD_H
+#define _S_SCD_H
+
+#include <sys/cdefs.h>
+#include <CoreFoundation/CoreFoundation.h>
+
+#define APP_CLIP_ENTITLEMENT				\
+	"com.apple.security.on-demand-install-capable"
+
+// ********************************************************************************************************* //
+// *********************************** ATTENTION CODE SEARCH USERS ***************************************** //
+// **      DO NOT USE THIS ENTITLEMENT, EVEN INTERNALLY, WITHOUT GOING THROUGH PRIVACY REVIEW!            ** //
+// **                                                                                                     ** //
+// ** For 1st and 2nd party apps, reach out to privacy-entitlement@group.apple.com for approval.          ** //
+// ** For 3rd party apps, see https://at.apple.com/device-name-entitlement-public for the review process. ** //
+// ********************************************************************************************************* //
+#define DEVICE_NAME_PUBLIC_ENTITLEMENT			\
+	"com.apple.developer.device-information.user-assigned-device-name"
+
+/*
+ * keys in the "storeData" dictionary
+ */
+
+/*
+ * data associated with a key
+ */
+#define	kSCDData		CFSTR("data")
+
+/*
+ * access controls associated with the key
+ */
+#define kSCDAccessControls	CFSTR("access-controls")
+
+/*
+ * The kSCDAccessControls dictionary can include any of the
+ * following keys :
+ *
+ *   read-deny			<array of entitlements>
+ *     A process is denied read access if it has one of the specified
+ *     entitlements.
+ *
+ *   read-deny-background
+ *     A process is denied read access if it is a BackgroundAssets Extension.
+ *
+ *   read-allow			<array of entitlements>
+ *     A process is allowed read access if it has one of the specified
+ *     entitlements. A process without any of these entitlements is denied
+ *     read access except if read-allow-platform or read-allow-system
+ *     is applicable.
+ *
+ *   read-allow-platform
+ *     If read-allow is specified, but the process is a platform binary,
+ *     read is allowed but will generate a once-per-launch fault on the
+ *     client side.
+ *
+ *   read-allow-system
+ *     If read-allow is specified, but the process is a system process,
+ *     read is allowed.
+ *
+ *   write-protect
+ *     A process is only allowed write access if it has the SCDynamicStore
+ *     write entitlement for the specific key. For example, to allow
+ *     loginwindow to write the console users key, it must have this
+ *     entitlement:
+ *
+ *	<key>com.apple.SystemConfiguration.SCDynamicStore-write-access</key>
+ *	<dict>
+ *		<key>keys</key>
+ *		<array>
+ *			<string>State:/Users/ConsoleUser</string>
+ *		</array>
+ *	</dict>
+ */
+#define kSCDAccessControls_readDeny		CFSTR("read-deny")
+#define kSCDAccessControls_readDenyBackground	CFSTR("read-deny-background")
+#define kSCDAccessControls_readAllow		CFSTR("read-allow")
+#define kSCDAccessControls_readAllowPlatform	CFSTR("read-allow-platform")
+#define kSCDAccessControls_readAllowSystem	CFSTR("read-allow-system")
+#define kSCDAccessControls_writeProtect		CFSTR("write-protect")
+/*
+ * client session ids watching a key and, since we can possibly have
+ * multiple regex keys which reference the key, a count of active
+ * references
+ */
+#define	kSCDWatchers		CFSTR("watchers")
+#define	kSCDWatcherRefs		CFSTR("watcherRefs")
+
+/*
+ * client session id for per-session keys.
+ */
+#define	kSCDSession		CFSTR("session")
+
+
+extern CFMutableDictionaryRef	storeData;
+extern CFMutableDictionaryRef	patternData;
+extern CFMutableSetRef		changedKeys;
+extern CFMutableSetRef		deferredRemovals;
+extern CFMutableSetRef		removedSessionKeys;
+extern CFMutableSetRef		needsNotification;
+
+
+__BEGIN_DECLS
+
+void
+__SCDynamicStoreInit			(void);
+
+int
+__SCDynamicStoreOpen			(SCDynamicStoreRef	*store,
+					 CFStringRef		name);
+int
+__SCDynamicStoreClose			(SCDynamicStoreRef	*store);
+
+int
+__SCDynamicStorePush			(void);
+
+int
+__SCDynamicStoreCopyKeyList		(SCDynamicStoreRef	store,
+					 CFStringRef		prefix,
+					 Boolean		isRegex,
+					 CFArrayRef		*subKeys);
+
+int
+__SCDynamicStoreAddValue		(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 CFDataRef		value);
+
+int
+__SCDynamicStoreCopyValue		(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 CFDictionaryRef	*key_controls,
+					 CFDataRef		*value,
+					 Boolean		internal);
+
+int
+__SCDynamicStoreSetValue		(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 CFDataRef		value,
+					 Boolean		internal);
+
+int
+__SCDynamicStoreSetMultiple		(SCDynamicStoreRef	store,
+					 CFDictionaryRef	keysToSet,
+					 CFArrayRef		keysToRemove,
+					 CFArrayRef		keysToNotify);
+
+int
+__SCDynamicStoreRemoveValue		(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 Boolean		internal);
+
+int
+__SCDynamicStoreNotifyValue		(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 Boolean		internal);
+
+int
+__SCDynamicStoreSnapshot		(SCDynamicStoreRef	store);
+
+int
+__SCDynamicStoreAddWatchedKey		(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 Boolean		isRegex,
+					 Boolean		internal);
+
+int
+__SCDynamicStoreRemoveWatchedKey	(SCDynamicStoreRef	store,
+					 CFStringRef		key,
+					 Boolean		isRegex,
+					 Boolean		internal);
+
+int
+__SCDynamicStoreSetNotificationKeys	(SCDynamicStoreRef	store,
+					 CFArrayRef		keys,
+					 CFArrayRef		patterns);
+
+int
+__SCDynamicStoreCopyNotifiedKeys	(SCDynamicStoreRef	store,
+					 CFArrayRef		*notifierKeys);
+
+int
+__SCDynamicStoreNotifyMachPort		(SCDynamicStoreRef	store,
+					 mach_msg_id_t		msgid,
+					 mach_port_t		port);
+
+int
+__SCDynamicStoreNotifyFileDescriptor	(SCDynamicStoreRef	store);
+
+int
+__SCDynamicStoreNotifyCancel		(SCDynamicStoreRef	store);
+
+void
+_storeAddWatcher			(CFNumberRef		sessionNum,
+					 CFStringRef		watchedKey);
+
+void
+_storeRemoveWatcher			(CFNumberRef		sessionNum,
+					 CFStringRef		watchedKey);
+
+CFDictionaryRef
+_storeKeyGetAccessControls		(CFStringRef		key);
+
+void
+_storeKeySetAccessControls		(CFStringRef		key,
+					 CFDictionaryRef	controls);
+
+void
+pushNotifications			(void);
+
+__END_DECLS
+
+#endif	/* !_S_SCD_H */

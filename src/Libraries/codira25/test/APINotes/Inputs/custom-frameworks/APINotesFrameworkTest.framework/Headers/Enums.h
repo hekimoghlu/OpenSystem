@@ -1,0 +1,49 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, March 18, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#pragma clang assume_nonnull begin
+
+enum {
+  AnonymousEnumValue,
+  AnonymousEnumRenamed __attribute__((language_name("AnonymousEnumRenamedCodiraUnversioned")))
+};
+
+enum UnknownEnum {
+  UnknownEnumValue,
+  UnknownEnumRenamed __attribute__((language_name("UnknownEnumRenamedCodiraUnversioned")))
+};
+
+enum __attribute__((enum_extensibility(open))) TrueEnum {
+  TrueEnumValue,
+  TrueEnumRenamed __attribute__((language_name("renamedCodiraUnversioned"))),
+  TrueEnumAliasRenamed __attribute__((language_name("aliasRenamedCodiraUnversioned")))
+};
+
+enum __attribute__((flag_enum)) OptionyEnum {
+  OptionyEnumValue = 1,
+  OptionyEnumRenamed __attribute__((language_name("renamedCodiraUnversioned"))) = 2
+};
+
+#pragma clang assume_nonnull end

@@ -1,0 +1,106 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, July 4, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "test/fake_vp8_decoder.h"
+
+#include <stddef.h>
+
+#include <optional>
+
+#include "api/scoped_refptr.h"
+#include "api/video/i420_buffer.h"
+#include "api/video/video_frame.h"
+#include "api/video/video_frame_buffer.h"
+#include "api/video/video_rotation.h"
+#include "modules/video_coding/include/video_error_codes.h"
+#include "rtc_base/time_utils.h"
+
+namespace webrtc {
+namespace test {
+
+namespace {
+// Read width and height from the payload of the frame if it is a key frame the
+// same way as the real VP8 decoder.
+// FakeEncoder writes width, height and frame type.
+void ParseFakeVp8(const unsigned char* data, int* width, int* height) {
+  bool key_frame = data[0] == 0;
+  if (key_frame) {
+    *width = ((data[7] << 8) + data[6]) & 0x3FFF;
+    *height = ((data[9] << 8) + data[8]) & 0x3FFF;
+  }
+}
+}  // namespace
+
+FakeVp8Decoder::FakeVp8Decoder() : callback_(nullptr), width_(0), height_(0) {}
+
+bool FakeVp8Decoder::Configure(const Settings& settings) {
+  return true;
+}
+
+int32_t FakeVp8Decoder::Decode(const EncodedImage& input,
+                               int64_t render_time_ms) {
+  constexpr size_t kMinPayLoadHeaderLength = 10;
+  if (input.size() < kMinPayLoadHeaderLength) {
+    return WEBRTC_VIDEO_CODEC_ERROR;
+  }
+  ParseFakeVp8(input.data(), &width_, &height_);
+
+  VideoFrame frame =
+      VideoFrame::Builder()
+          .set_video_frame_buffer(I420Buffer::Create(width_, height_))
+          .set_rotation(webrtc::kVideoRotation_0)
+          .set_timestamp_ms(render_time_ms)
+          .build();
+  frame.set_rtp_timestamp(input.RtpTimestamp());
+  frame.set_ntp_time_ms(input.ntp_time_ms_);
+
+  callback_->Decoded(frame, /*decode_time_ms=*/std::nullopt,
+                     /*qp=*/std::nullopt);
+
+  return WEBRTC_VIDEO_CODEC_OK;
+}
+
+int32_t FakeVp8Decoder::RegisterDecodeCompleteCallback(
+    DecodedImageCallback* callback) {
+  callback_ = callback;
+  return WEBRTC_VIDEO_CODEC_OK;
+}
+
+int32_t FakeVp8Decoder::Release() {
+  return WEBRTC_VIDEO_CODEC_OK;
+}
+
+VideoDecoder::DecoderInfo FakeVp8Decoder::GetDecoderInfo() const {
+  DecoderInfo info;
+  info.implementation_name = kImplementationName;
+  info.is_hardware_accelerated = false;
+  return info;
+}
+
+const char* FakeVp8Decoder::ImplementationName() const {
+  return kImplementationName;
+}
+
+}  // namespace test
+}  // namespace webrtc

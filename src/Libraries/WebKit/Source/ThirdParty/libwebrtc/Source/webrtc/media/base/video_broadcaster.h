@@ -1,0 +1,96 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, September 15, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef MEDIA_BASE_VIDEO_BROADCASTER_H_
+#define MEDIA_BASE_VIDEO_BROADCASTER_H_
+
+#include "api/media_stream_interface.h"
+#include "api/scoped_refptr.h"
+#include "api/sequence_checker.h"
+#include "api/video/video_frame_buffer.h"
+#include "api/video/video_source_interface.h"
+#include "media/base/video_source_base.h"
+#include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/thread_annotations.h"
+
+namespace rtc {
+
+// VideoBroadcaster broadcast video frames to sinks and combines VideoSinkWants
+// from its sinks. It does that by implementing rtc::VideoSourceInterface and
+// rtc::VideoSinkInterface. The class is threadsafe; methods may be called on
+// any thread. This is needed because VideoStreamEncoder calls AddOrUpdateSink
+// both on the worker thread and on the encoder task queue.
+class VideoBroadcaster : public VideoSourceBase,
+                         public VideoSinkInterface<webrtc::VideoFrame> {
+ public:
+  VideoBroadcaster();
+  ~VideoBroadcaster() override;
+
+  // Adds a new, or updates an already existing sink. If the sink is new and
+  // ProcessConstraints has been called previously, the new sink's
+  // OnConstraintsCalled method will be invoked with the most recent
+  // constraints.
+  void AddOrUpdateSink(VideoSinkInterface<webrtc::VideoFrame>* sink,
+                       const VideoSinkWants& wants) override;
+  void RemoveSink(VideoSinkInterface<webrtc::VideoFrame>* sink) override;
+
+  // Returns true if the next frame will be delivered to at least one sink.
+  bool frame_wanted() const;
+
+  // Returns VideoSinkWants a source is requested to fulfill. They are
+  // aggregated by all VideoSinkWants from all sinks.
+  VideoSinkWants wants() const;
+
+  // This method ensures that if a sink sets rotation_applied == true,
+  // it will never receive a frame with pending rotation. Our caller
+  // may pass in frames without precise synchronization with changes
+  // to the VideoSinkWants.
+  void OnFrame(const webrtc::VideoFrame& frame) override;
+
+  void OnDiscardedFrame() override;
+
+  // Called on the network thread when constraints change. Forwards the
+  // constraints to sinks added with AddOrUpdateSink via OnConstraintsChanged.
+  void ProcessConstraints(
+      const webrtc::VideoTrackSourceConstraints& constraints);
+
+ protected:
+  void UpdateWants() RTC_EXCLUSIVE_LOCKS_REQUIRED(sinks_and_wants_lock_);
+  const rtc::scoped_refptr<webrtc::VideoFrameBuffer>& GetBlackFrameBuffer(
+      int width,
+      int height) RTC_EXCLUSIVE_LOCKS_REQUIRED(sinks_and_wants_lock_);
+
+  mutable webrtc::Mutex sinks_and_wants_lock_;
+
+  VideoSinkWants current_wants_ RTC_GUARDED_BY(sinks_and_wants_lock_);
+  rtc::scoped_refptr<webrtc::VideoFrameBuffer> black_frame_buffer_;
+  bool previous_frame_sent_to_all_sinks_ RTC_GUARDED_BY(sinks_and_wants_lock_) =
+      true;
+  std::optional<webrtc::VideoTrackSourceConstraints> last_constraints_
+      RTC_GUARDED_BY(sinks_and_wants_lock_);
+};
+
+}  // namespace rtc
+
+#endif  // MEDIA_BASE_VIDEO_BROADCASTER_H_

@@ -1,0 +1,65 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, October 5, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#ifndef FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
+#define FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
+
+#ifdef __has_include
+#if __has_include(<version>)
+#include <version>
+#endif
+#endif
+
+// Testing for https://wg21.link/N3652, adopted in C++14
+#if __cpp_constexpr >= 201304
+#define FASTFLOAT_CONSTEXPR14 constexpr
+#else
+#define FASTFLOAT_CONSTEXPR14
+#endif
+
+#if defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806L
+#define FASTFLOAT_HAS_BIT_CAST 1
+#else
+#define FASTFLOAT_HAS_BIT_CAST 0
+#endif
+
+#if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L
+#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 1
+#else
+#define FASTFLOAT_HAS_IS_CONSTANT_EVALUATED 0
+#endif
+
+// Testing for relevant C++20 constexpr library features
+#if FASTFLOAT_HAS_IS_CONSTANT_EVALUATED \
+    && FASTFLOAT_HAS_BIT_CAST \
+    && __cpp_lib_constexpr_algorithms >= 201806L /*For std::copy and std::fill*/
+#define FASTFLOAT_CONSTEXPR20 constexpr
+#define FASTFLOAT_IS_CONSTEXPR 1
+#else
+#define FASTFLOAT_CONSTEXPR20
+#define FASTFLOAT_IS_CONSTEXPR 0
+#endif
+
+#endif // FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H

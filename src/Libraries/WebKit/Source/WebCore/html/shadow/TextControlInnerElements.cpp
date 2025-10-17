@@ -1,0 +1,379 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, January 24, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "TextControlInnerElements.h"
+
+#include "CSSPrimitiveValue.h"
+#include "CSSToLengthConversionData.h"
+#include "CommonAtomStrings.h"
+#include "Document.h"
+#include "DocumentInlines.h"
+#include "EventNames.h"
+#include "HTMLInputElement.h"
+#include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "LocalizedStrings.h"
+#include "MouseEvent.h"
+#include "PlatformMouseEvent.h"
+#include "Quirks.h"
+#include "RenderSearchField.h"
+#include "RenderStyleSetters.h"
+#include "RenderTextControl.h"
+#include "RenderView.h"
+#include "ResolvedStyle.h"
+#include "ScriptController.h"
+#include "ScriptDisallowedScope.h"
+#include "ShadowRoot.h"
+#include "StyleResolver.h"
+#include "TextEvent.h"
+#include "TextEventInputType.h"
+#include "UserAgentParts.h"
+#include <wtf/Ref.h>
+#include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
+
+namespace WebCore {
+
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerContainer);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlInnerTextElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextControlPlaceholderElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldResultsButtonElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
+
+using namespace HTMLNames;
+
+TextControlInnerContainer::TextControlInnerContainer(Document& document)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
+{
+}
+
+Ref<TextControlInnerContainer> TextControlInnerContainer::create(Document& document)
+{
+    return adoptRef(*new TextControlInnerContainer(document));
+}
+    
+RenderPtr<RenderElement> TextControlInnerContainer::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
+{
+    return createRenderer<RenderTextControlInnerContainer>(*this, WTFMove(style));
+}
+
+static inline bool isStrongPasswordTextField(const Element* element)
+{
+    RefPtr inputElement = dynamicDowncast<HTMLInputElement>(element);
+    return inputElement && inputElement->hasAutofillStrongPasswordButton();
+}
+
+std::optional<Style::ResolvedStyle> TextControlInnerContainer::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle*)
+{
+    auto elementStyle = resolveStyle(resolutionContext);
+    if (isStrongPasswordTextField(shadowHost())) {
+        elementStyle.style->setFlexWrap(FlexWrap::Wrap);
+        elementStyle.style->setOverflowX(Overflow::Hidden);
+        elementStyle.style->setOverflowY(Overflow::Hidden);
+    }
+    return elementStyle;
+}
+
+TextControlInnerElement::TextControlInnerElement(Document& document)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
+{
+}
+
+Ref<TextControlInnerElement> TextControlInnerElement::create(Document& document)
+{
+    return adoptRef(*new TextControlInnerElement(document));
+}
+
+std::optional<Style::ResolvedStyle> TextControlInnerElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
+{
+    auto newStyle = RenderStyle::createPtr();
+    newStyle->inheritFrom(*shadowHostStyle);
+    newStyle->setFlexGrow(1);
+
+    // Needed for correct shrinking.
+    if (newStyle->writingMode().isHorizontal())
+        newStyle->setMinWidth(Length { 0, LengthType::Fixed });
+    else
+        newStyle->setMinHeight(Length { 0, LengthType::Fixed });
+
+    newStyle->setDisplay(DisplayType::Block);
+    newStyle->setDirection(TextDirection::LTR);
+    // We don't want the shadow DOM to be editable, so we set this block to read-only in case the input itself is editable.
+    newStyle->setUserModify(UserModify::ReadOnly);
+
+    if (isStrongPasswordTextField(shadowHost())) {
+        newStyle->setFlexShrink(0);
+        newStyle->setTextOverflow(TextOverflow::Clip);
+        newStyle->setOverflowX(Overflow::Hidden);
+        newStyle->setOverflowY(Overflow::Hidden);
+
+        // Set "flex-basis: 1em". Note that CSSPrimitiveValue::resolveAsLength<int>() only needs the element's
+        // style to calculate em lengths. Since the element might not be in a document, just pass nullptr
+        // for the root element style, the parent element style, and the render view.
+        auto emSize = CSSPrimitiveValue::create(1, CSSUnitType::CSS_EM);
+        int pixels = emSize->resolveAsLength<int>(CSSToLengthConversionData { *newStyle, nullptr, nullptr, nullptr });
+        newStyle->setFlexBasis(Length { pixels, LengthType::Fixed });
+    }
+
+    return Style::ResolvedStyle { WTFMove(newStyle) };
+}
+
+// MARK: TextControlInnerTextElement
+
+inline TextControlInnerTextElement::TextControlInnerTextElement(Document& document)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks )
+{
+}
+
+Ref<TextControlInnerTextElement> TextControlInnerTextElement::create(Document& document, bool isEditable)
+{
+    auto result = adoptRef(*new TextControlInnerTextElement(document));
+    constexpr bool initialization = true;
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { result };
+    result->updateInnerTextElementEditabilityImpl(isEditable, initialization);
+    return result;
+}
+
+void TextControlInnerTextElement::updateInnerTextElementEditabilityImpl(bool isEditable, bool initialization)
+{
+    const auto& value = isEditable ? plaintextOnlyAtom() : falseAtom();
+    if (initialization) {
+        Attribute attribute(contenteditableAttr, value);
+        parserSetAttributes(std::span(&attribute, 1));
+    } else
+        setAttributeWithoutSynchronization(contenteditableAttr, value);
+}
+
+void TextControlInnerTextElement::defaultEventHandler(Event& event)
+{
+    // FIXME: In the future, we should add a way to have default event listeners.
+    // Then we would add one to the text field's inner div, and we wouldn't need this subclass.
+    // Or possibly we could just use a normal event listener.
+    if (event.isBeforeTextInsertedEvent()) {
+        // A TextControlInnerTextElement can have no host if its been detached,
+        // but kept alive by an EditCommand. In this case, an undo/redo can
+        // cause events to be sent to the TextControlInnerTextElement. To
+        // prevent an infinite loop, we must check for this case before sending
+        // the event up the chain.
+        if (RefPtr host = shadowHost())
+            host->defaultEventHandler(event);
+    }
+    if (!event.defaultHandled())
+        HTMLDivElement::defaultEventHandler(event);
+}
+
+RenderPtr<RenderElement> TextControlInnerTextElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
+{
+    return createRenderer<RenderTextControlInnerBlock>(*this, WTFMove(style));
+}
+
+RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
+{
+    return downcast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
+}
+
+std::optional<Style::ResolvedStyle> TextControlInnerTextElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle)
+{
+    auto style = downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
+    return Style::ResolvedStyle { makeUnique<RenderStyle>(WTFMove(style)) };
+}
+
+// MARK: TextControlPlaceholderElement
+
+inline TextControlPlaceholderElement::TextControlPlaceholderElement(Document& document)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
+{
+}
+
+Ref<TextControlPlaceholderElement> TextControlPlaceholderElement::create(Document& document)
+{
+    auto element = adoptRef(*new TextControlPlaceholderElement(document));
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
+    element->setUserAgentPart(UserAgentParts::placeholder());
+    return element;
+}
+
+std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+{
+    auto style = resolveStyle(resolutionContext);
+
+    Ref controlElement = downcast<HTMLTextFormControlElement>(*containingShadowRoot()->host());
+    style.style->setDisplay(controlElement->isPlaceholderVisible() ? DisplayType::Block : DisplayType::None);
+
+    if (RefPtr inputElement = dynamicDowncast<HTMLInputElement>(controlElement)) {
+        style.style->setTextOverflow(inputElement->shouldTruncateText(*shadowHostStyle) ? TextOverflow::Ellipsis : TextOverflow::Clip);
+        style.style->setPaddingTop(Length { 0, LengthType::Fixed });
+        style.style->setPaddingBottom(Length { 0, LengthType::Fixed });
+    }
+    return style;
+}
+
+// MARK: SearchFieldResultsButtonElement
+
+static inline bool searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(const RenderStyle& style)
+{
+    auto appearance = style.appearance();
+    return appearance == StyleAppearance::TextField && appearance == style.usedAppearance();
+}
+
+inline SearchFieldResultsButtonElement::SearchFieldResultsButtonElement(Document& document)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
+{
+}
+
+Ref<SearchFieldResultsButtonElement> SearchFieldResultsButtonElement::create(Document& document)
+{
+    return adoptRef(*new SearchFieldResultsButtonElement(document));
+}
+
+std::optional<Style::ResolvedStyle> SearchFieldResultsButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+{
+    RefPtr input = downcast<HTMLInputElement>(shadowHost());
+    if (input && input->maxResults() >= 0)
+        return std::nullopt;
+
+    if (!shadowHostStyle)
+        return std::nullopt;
+
+    if (searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(*shadowHostStyle)) {
+        auto elementStyle = resolveStyle(resolutionContext);
+        elementStyle.style->setDisplay(DisplayType::None);
+        return elementStyle;
+    }
+
+    // By default, input[type=search] can use either the searchfield or textfield appearance depending
+    // on the platform and writing mode. Only adjust the style when that default is used.
+    auto usedAppearance = shadowHostStyle->usedAppearance();
+    if (usedAppearance != StyleAppearance::SearchField && usedAppearance != StyleAppearance::TextField) {
+        SetForScope canAdjustStyleForAppearance(m_canAdjustStyleForAppearance, false);
+        return resolveStyle(resolutionContext);
+    }
+
+    return std::nullopt;
+}
+
+void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
+{
+    // On mousedown, bring up a menu, if needed
+    if (RefPtr input = downcast<HTMLInputElement>(shadowHost())) {
+        auto* mouseEvent = dynamicDowncast<MouseEvent>(event);
+        if (event.type() == eventNames().mousedownEvent && mouseEvent && mouseEvent->button() == MouseButton::Left) {
+            input->focus();
+            input->select();
+#if !PLATFORM(IOS_FAMILY)
+            document().updateStyleIfNeeded();
+
+            if (auto* renderer = input->renderer()) {
+                auto& searchFieldRenderer = downcast<RenderSearchField>(*renderer);
+                if (searchFieldRenderer.popupIsVisible())
+                    searchFieldRenderer.hidePopup();
+                else if (input->maxResults() > 0)
+                    searchFieldRenderer.showPopup();
+            }
+#endif
+            event.setDefaultHandled();
+        }
+    }
+
+    if (!event.defaultHandled())
+        HTMLDivElement::defaultEventHandler(event);
+}
+
+#if !PLATFORM(IOS_FAMILY)
+bool SearchFieldResultsButtonElement::willRespondToMouseClickEventsWithEditability(Editability) const
+{
+    return true;
+}
+#endif
+
+// MARK: SearchFieldCancelButtonElement
+
+inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
+{
+}
+
+Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)
+{
+    auto element = adoptRef(*new SearchFieldCancelButtonElement(document));
+
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
+    element->setUserAgentPart(UserAgentParts::webkitSearchCancelButton());
+#if !PLATFORM(IOS_FAMILY)
+    element->setAttributeWithoutSynchronization(aria_labelAttr, AtomString { AXSearchFieldCancelButtonText() });
+#endif
+    element->setAttributeWithoutSynchronization(roleAttr, HTMLNames::buttonTag->localName());
+    return element;
+}
+
+std::optional<Style::ResolvedStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+{
+    auto elementStyle = resolveStyle(resolutionContext);
+    Ref inputElement = downcast<HTMLInputElement>(*shadowHost());
+    elementStyle.style->setVisibility(elementStyle.style->usedVisibility() == Visibility::Hidden || inputElement->value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
+
+    if (shadowHostStyle && searchFieldStyleHasExplicitlySpecifiedTextFieldAppearance(*shadowHostStyle))
+        elementStyle.style->setDisplay(DisplayType::None);
+
+    return elementStyle;
+}
+
+void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
+{
+    RefPtr input = downcast<HTMLInputElement>(shadowHost());
+    if (!input || !input->isMutable()) {
+        if (!event.defaultHandled())
+            HTMLDivElement::defaultEventHandler(event);
+        return;
+    }
+
+    if (auto* mouseEvent = dynamicDowncast<MouseEvent>(event); event.type() == eventNames().mousedownEvent && mouseEvent && mouseEvent->button() == MouseButton::Left) {
+        input->focus();
+        input->select();
+        event.setDefaultHandled();
+    }
+
+    if (isAnyClick(event)) {
+        input->setValue(emptyString(), DispatchChangeEvent);
+        event.setDefaultHandled();
+    }
+
+    if (!event.defaultHandled())
+        HTMLDivElement::defaultEventHandler(event);
+}
+
+#if !PLATFORM(IOS_FAMILY)
+bool SearchFieldCancelButtonElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
+{
+    RefPtr input = downcast<HTMLInputElement>(shadowHost());
+    if (input && input->isMutable())
+        return true;
+
+    return HTMLDivElement::willRespondToMouseClickEventsWithEditability(editability);
+}
+#endif
+
+}

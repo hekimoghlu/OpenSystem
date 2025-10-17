@@ -1,0 +1,126 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, October 18, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <math.h>
+#include "slu_sdefs.h"
+
+/*! \brief
+ *
+ * <pre>
+ * Purpose
+ * =======
+ *
+ * Compute the reciprocal pivot growth factor of the leading ncols columns
+ * of the matrix, using the formula:
+ *     min_j ( max_i(abs(A_ij)) / max_i(abs(U_ij)) )
+ *
+ * Arguments
+ * =========
+ *
+ * ncols    (input) int
+ *          The number of columns of matrices A, L and U.
+ *
+ * A        (input) SuperMatrix*
+ *	    Original matrix A, permuted by columns, of dimension
+ *          (A->nrow, A->ncol). The type of A can be:
+ *          Stype = NC; Dtype = SLU_S; Mtype = GE.
+ *
+ * L        (output) SuperMatrix*
+ *          The factor L from the factorization Pr*A=L*U; use compressed row 
+ *          subscripts storage for supernodes, i.e., L has type: 
+ *          Stype = SC; Dtype = SLU_S; Mtype = TRLU.
+ *
+ * U        (output) SuperMatrix*
+ *	    The factor U from the factorization Pr*A*Pc=L*U. Use column-wise
+ *          storage scheme, i.e., U has types: Stype = NC;
+ *          Dtype = SLU_S; Mtype = TRU.
+ * </pre>
+ */
+
+float
+sPivotGrowth(int ncols, SuperMatrix *A, int *perm_c, 
+             SuperMatrix *L, SuperMatrix *U)
+{
+
+    NCformat *Astore;
+    SCformat *Lstore;
+    NCformat *Ustore;
+    float  *Aval, *Lval, *Uval;
+    int      fsupc, nsupr, luptr, nz_in_U;
+    int      i, j, k, oldcol;
+    int      *inv_perm_c;
+    float   rpg, maxaj, maxuj;
+    float   smlnum;
+    float   *luval;
+   
+    /* Get machine constants. */
+    smlnum = slamch_("S");
+    rpg = 1. / smlnum;
+
+    Astore = A->Store;
+    Lstore = L->Store;
+    Ustore = U->Store;
+    Aval = Astore->nzval;
+    Lval = Lstore->nzval;
+    Uval = Ustore->nzval;
+    
+    inv_perm_c = (int *) SUPERLU_MALLOC(A->ncol*sizeof(int));
+    for (j = 0; j < A->ncol; ++j) inv_perm_c[perm_c[j]] = j;
+
+    for (k = 0; k <= Lstore->nsuper; ++k) {
+	fsupc = L_FST_SUPC(k);
+	nsupr = L_SUB_START(fsupc+1) - L_SUB_START(fsupc);
+	luptr = L_NZ_START(fsupc);
+	luval = &Lval[luptr];
+	nz_in_U = 1;
+	
+	for (j = fsupc; j < L_FST_SUPC(k+1) && j < ncols; ++j) {
+	    maxaj = 0.;
+            oldcol = inv_perm_c[j];
+	    for (i = Astore->colptr[oldcol]; i < Astore->colptr[oldcol+1]; ++i)
+		maxaj = SUPERLU_MAX( maxaj, fabs(Aval[i]) );
+	
+	    maxuj = 0.;
+	    for (i = Ustore->colptr[j]; i < Ustore->colptr[j+1]; i++)
+		maxuj = SUPERLU_MAX( maxuj, fabs(Uval[i]) );
+	    
+	    /* Supernode */
+	    for (i = 0; i < nz_in_U; ++i)
+		maxuj = SUPERLU_MAX( maxuj, fabs(luval[i]) );
+
+	    ++nz_in_U;
+	    luval += nsupr;
+
+	    if ( maxuj == 0. )
+		rpg = SUPERLU_MIN( rpg, 1.);
+	    else
+		rpg = SUPERLU_MIN( rpg, maxaj / maxuj );
+	}
+	
+	if ( j >= ncols ) break;
+    }
+
+    SUPERLU_FREE(inv_perm_c);
+    return (rpg);
+}

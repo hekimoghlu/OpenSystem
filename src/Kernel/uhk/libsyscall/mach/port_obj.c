@@ -1,0 +1,54 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, November 22, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * @OSF_COPYRIGHT@
+ */
+
+/*
+ * Define a service to map from a kernel-generated port name
+ * to server-defined "type" and "value" data to be associated
+ * with the port.
+ */
+#include <mach/port_obj.h>
+#include <mach/mach.h>
+
+#define DEFAULT_TABLE_SIZE      (64 * 1024)
+
+struct port_obj_tentry *port_obj_table;
+int port_obj_table_size = DEFAULT_TABLE_SIZE;
+
+void
+port_obj_init(int maxsize)
+{
+	kern_return_t kr;
+
+	kr = vm_allocate(mach_task_self_,
+	    (vm_offset_t *)&port_obj_table,
+	    (vm_size_t)(maxsize * sizeof(*port_obj_table)),
+	    TRUE);
+	if (kr != KERN_SUCCESS) {
+		panic("port_obj_init: can't vm_allocate");
+	}
+}

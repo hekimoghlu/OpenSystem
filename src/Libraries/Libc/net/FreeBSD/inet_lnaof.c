@@ -1,0 +1,64 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, July 25, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if defined(LIBC_SCCS) && !defined(lint)
+static const char sccsid[] = "@(#)inet_lnaof.c	8.1 (Berkeley) 6/4/93";
+#endif /* LIBC_SCCS and not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/lib/libc/inet/inet_lnaof.c,v 1.4 2007/06/03 17:20:26 ume Exp $");
+
+#include "port_before.h"
+
+#include <sys/param.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include "port_after.h"
+
+/*%
+ * Return the local network address portion of an
+ * internet address; handles class a/b/c network
+ * number formats.
+ */
+in_addr_t
+inet_lnaof(struct in_addr in)
+{
+	in_addr_t i = ntohl(in.s_addr);
+
+	if (IN_CLASSA(i))
+		return ((i)&IN_CLASSA_HOST);
+	else if (IN_CLASSB(i))
+		return ((i)&IN_CLASSB_HOST);
+	else
+		return ((i)&IN_CLASSC_HOST);
+}
+
+/*
+ * Weak aliases for applications that use certain private entry points,
+ * and fail to include <arpa/inet.h>.
+ */
+#undef inet_lnaof
+__weak_reference(__inet_lnaof, inet_lnaof);
+
+/*! \file */

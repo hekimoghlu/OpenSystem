@@ -1,0 +1,173 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, May 1, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import <Foundation/Foundation.h>
+#import <LocalAuthentication/LocalAuthentication_Private.h>
+#import <AssertMacros.h>
+#import <os/log.h>
+#include <IOKit/pwr_mgt/IOPMLib.h>
+#include <IOKit/pwr_mgt/IOPMLibDefs.h>
+#include <IOKit/pwr_mgt/IOPMLibPrivate.h>
+#import <HID/HID_Private.h>
+#import <HID/ProjectHeaders/HIDEventAccessors_Internal.h>
+#import <IOKit/hid/IOHIDPrivateKeys.h>
+#import <IOKit/hid/IOHIDEventSystemKeys.h>
+#import <IOKit/hid/IOHIDEventSystemConnection.h>
+#import <IOKit/hid/IOHIDLibPrivate.h>
+
+const int USER_ACTIVE_ASSERTION_TIMEOUT_SECONDS = 30;
+
+@interface IOHIDActivityReportingSessionFilter : NSObject <HIDSessionFilter>
+
+@property (nonatomic, readonly) HIDSession *        session;
+@property (nonatomic, nullable) dispatch_queue_t    queue;
+
+- (nullable instancetype)initWithSession:(HIDSession *)session;
+
+- (nullable id)propertyForKey:(NSString *)key;
+
+- (BOOL)setProperty:(nullable id)value
+             forKey:(NSString *)key;
+
+- (nullable HIDEvent *)filterEvent:(HIDEvent *)event
+                        forService:(HIDEventService *)service;
+
+- (void)activate;
+
+- (void)setDispatchQueue:(dispatch_queue_t)queue;
+
+- (nullable HIDEvent *)filterEvent:(HIDEvent *)event
+                      toConnection:(HIDConnection *)connection
+                       fromService:(HIDEventService *)service;
+
+@end
+
+
+@implementation IOHIDActivityReportingSessionFilter {
+   
+}
+
+- (nullable instancetype)initWithSession:(HIDSession *)session
+{
+    self = [super init];
+    if (!self) {
+        return self;
+    }
+
+    _session = session;
+    _queue = dispatch_queue_create("com.apple.HID.updateActivity", NULL);
+    
+    return self;
+}
+
+- (void)dealloc
+{
+
+}
+
+- (nullable id)propertyForKey:(NSString *)key
+{
+    id result = nil;
+    
+    if ([key isEqualToString:@(kIOHIDSessionFilterDebugKey)]) {
+        NSMutableDictionary * debug = [NSMutableDictionary new];
+        debug[@"Class"] = @"IOHIDActivityReportingSessionFilter";
+        
+        result = debug;
+    }
+    
+    return result;
+}
+
+- (BOOL)setProperty:(nullable id __unused)value
+             forKey:(NSString * __unused)key
+{
+    return NO;
+}
+
+- (nullable HIDEvent *)filterEvent:(HIDEvent *)event
+                        forService:(HIDEventService *)service
+{
+    require_quiet ([event integerValueForField:kIOHIDEventFieldIsBuiltIn] == 1, exit);
+    require_quiet (event.type == kIOHIDEventTypeKeyboard, exit);
+    require_quiet ([event integerValueForField:kIOHIDEventFieldKeyboardDown] != 0 , exit);
+
+    [self reportActivity:event fromService:service];
+    
+exit:
+    return event;
+}
+
+
+- (void)activate
+{
+}
+
+- (void)setDispatchQueue:(dispatch_queue_t)queue
+{
+    
+}
+
+- (nullable HIDEvent *)filterEvent:(HIDEvent * __unused)event
+                      toConnection:(HIDConnection * __unused)connection
+                       fromService:(HIDEventService * __unused)service
+{
+
+    return event;
+}
+
+- (void) reportActivity:(HIDEvent *)event fromService:(HIDEventService *)service
+{
+    
+    NSString * assertionNameStr = nil;
+    
+    if (service) {
+        assertionNameStr = [NSString stringWithFormat:@"com.apple.iohideventsystem.queue.tickle serviceID:%llx", service.serviceID];
+    } else {
+        assertionNameStr = @"com.apple.iohideventsystem.queue.tickle.queue.tickle";
+    }
+    
+    HIDLogDebug ("reportActivity: %@", assertionNameStr);
+
+    dispatch_async(self.queue, ^{
+        static IOPMAssertionID _AssertionID;
+        IOPMSystemState systemState;
+        
+        NSDictionary *properties = @{
+            (__bridge NSString *)kIOPMAssertionNameKey: assertionNameStr,
+            (__bridge NSString *)kIOPMAssertionTimeoutKey: @(USER_ACTIVE_ASSERTION_TIMEOUT_SECONDS),
+            (__bridge NSString *)kIOPMAssertionResourcesUsed: @[(__bridge NSString *)kIOPMAssertionResourceCamera],
+        };
+         
+        IOReturn status = IOPMAssertionDeclareSystemActivityWithProperties((__bridge CFMutableDictionaryRef)properties, &_AssertionID, &systemState);
+
+        if (status) {
+            HIDLogError ("IOPMAssertionDeclareSystemActivityWithProperties status:0x%x", status);
+            return;
+        }
+    });
+}
+
+@end
+

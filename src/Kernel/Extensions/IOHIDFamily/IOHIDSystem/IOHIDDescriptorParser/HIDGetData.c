@@ -1,0 +1,131 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, December 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, December 9, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */#include "HIDLib.h"
+
+/*
+ *------------------------------------------------------------------------------
+ *
+ * HIDGetData - Get a single data item from a report
+ *
+ *	 Input:
+ *			  psReport				- The report
+ *			  iReportLength			- The length of the report
+ *			  iStart				- Start Bit in report
+ *			  iSize					- Number of Bits
+ *			  piValue				- The place to write the data
+ *			  bSignExtend			- Sign extend?
+ *	 Output:
+ *			  piValue				- The data
+ *	 Returns:
+ *			  kHidP_Success			- Success
+ *			  kHidP_NullPointer		- Argument, Pointer was Null
+ *
+ *------------------------------------------------------------------------------
+*/
+OSStatus HIDGetData(void * report, IOByteCount iReportLength,
+						 UInt32 iStart, UInt32 iSize, SInt32 *piValue,
+						 Boolean bSignExtend)
+{
+	UInt8 * psReport = (UInt8 *)report;
+	unsigned data;
+	unsigned iSignBit;
+	unsigned iExtendMask;
+    unsigned iStartByte = iStart/8;
+    unsigned startBit = iStart&7;
+    unsigned iLastBit = iStart + iSize - 1;
+    unsigned iLastByte = iLastBit/8;
+    int iCurrentByte;		// needs to be signed, we terminate loop on -1
+    unsigned iMask;
+
+	// Check the parameters
+	if ((iSize == 0) || (iLastByte >= iReportLength) || (iLastByte < iStartByte))
+		return kHIDBadParameterErr;
+
+	// Pick up the data bytes backwards
+    data = 0;
+    for (iCurrentByte = iLastByte; iCurrentByte >= (int) iStartByte; iCurrentByte--)
+    {
+        data <<= 8;
+
+		iMask = 0xff;	//  1111 1111 initial mask
+		// if this is the 'last byte', then we need to mask off the top part of the byte
+		// to find the mask, we: find the position in this byte (lastBit % 8)
+		// then shift one to the left that many times plus one (to get one bit further)
+		// then subtract 1 to get all ones starting from the lastBit to the least signif bit
+		// ex: if iLastBit is 9, or iLastBit is 15, then we get: 
+		// 					1					7			(x % 8)
+		//			     0000 0100			1 0000 0000		(1 << (x + 1))
+		//				 0000 0011			0 1111 1111		(x - 1)
+		if (iCurrentByte == (int)iLastByte)
+			iMask = ((1 << (((unsigned) iLastBit % 8) + 1)) - 1);
+
+        data |= (unsigned) psReport[iCurrentByte] & iMask;
+	}
+
+	// Shift to the right to byte align the least significant bit
+	data >>= startBit;
+
+	// Sign extend the report item
+	if (bSignExtend)
+	{
+		iSignBit = 1;
+		if (iSize > 1)
+			iSignBit <<= (iSize-1);
+		iExtendMask = (iSignBit << 1) - 1;
+		if ((data & iSignBit)==0)
+			data &= iExtendMask;
+		else
+			data |= ~iExtendMask;
+	}
+
+	// Return the value
+	*piValue = (SInt32) data;
+
+	return kHIDSuccess;
+}
+

@@ -1,0 +1,93 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, February 12, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "LegacyRenderSVGResourceFilterPrimitive.h"
+
+#include "SVGElementTypeHelpers.h"
+#include "SVGFEDiffuseLightingElement.h"
+#include "SVGFEDropShadowElement.h"
+#include "SVGFEFloodElement.h"
+#include "SVGFESpecularLightingElement.h"
+#include "SVGFilterPrimitiveStandardAttributes.h"
+#include "SVGNames.h"
+#include "SVGRenderStyle.h"
+#include <wtf/TZoneMallocInlines.h>
+
+namespace WebCore {
+
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceFilterPrimitive);
+
+LegacyRenderSVGResourceFilterPrimitive::LegacyRenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes& filterPrimitiveElement, RenderStyle&& style)
+    : LegacyRenderSVGHiddenContainer(Type::LegacySVGResourceFilterPrimitive, filterPrimitiveElement, WTFMove(style))
+{
+}
+
+SVGFilterPrimitiveStandardAttributes& LegacyRenderSVGResourceFilterPrimitive::filterPrimitiveElement() const
+{
+    return static_cast<SVGFilterPrimitiveStandardAttributes&>(LegacyRenderSVGHiddenContainer::element());
+}
+
+void LegacyRenderSVGResourceFilterPrimitive::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+{
+    LegacyRenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
+
+    if (diff == StyleDifference::Equal || !oldStyle)
+        return;
+
+    Ref newStyle = style().svgStyle();
+    if (is<SVGFEFloodElement>(filterPrimitiveElement()) || is<SVGFEDropShadowElement>(filterPrimitiveElement())) {
+        if (newStyle->floodColor() != oldStyle->svgStyle().floodColor())
+            filterPrimitiveElement().primitiveAttributeChanged(SVGNames::flood_colorAttr);
+        if (newStyle->floodOpacity() != oldStyle->svgStyle().floodOpacity())
+            filterPrimitiveElement().primitiveAttributeChanged(SVGNames::flood_opacityAttr);
+    } else if (is<SVGFEDiffuseLightingElement>(filterPrimitiveElement()) || is<SVGFESpecularLightingElement>(filterPrimitiveElement())) {
+        if (newStyle->lightingColor() != oldStyle->svgStyle().lightingColor())
+            filterPrimitiveElement().primitiveAttributeChanged(SVGNames::lighting_colorAttr);
+    }
+}
+
+void LegacyRenderSVGResourceFilterPrimitive::markFilterEffectForRepaint(FilterEffect* effect)
+{
+    CheckedPtr parent = dynamicDowncast<LegacyRenderSVGResourceFilter>(this->parent());
+    if (!parent)
+        return;
+
+    if (effect)
+        parent->markFilterForRepaint(*effect);
+
+    parent->markAllClientLayersForInvalidation();
+}
+
+void LegacyRenderSVGResourceFilterPrimitive::markFilterEffectForRebuild()
+{
+    CheckedPtr parent = dynamicDowncast<LegacyRenderSVGResourceFilter>(this->parent());
+    if (!parent)
+        return;
+
+    parent->markFilterForRebuild();
+    parent->markAllClientLayersForInvalidation();
+}
+
+} // namespace WebCore

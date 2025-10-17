@@ -1,0 +1,208 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, March 17, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "WebPage.h"
+
+#include "EditorState.h"
+#include "InputMethodState.h"
+#include "MessageSenderInlines.h"
+#include "UserMessage.h"
+#include "WebKitUserMessage.h"
+#include "WebKitWebPagePrivate.h"
+#include "WebPageProxyMessages.h"
+#include "WebProcessExtensionManager.h"
+#include <WebCore/Editor.h>
+#include <WebCore/HTMLInputElement.h>
+#include <WebCore/HTMLTextAreaElement.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameView.h>
+#include <WebCore/Range.h>
+#include <WebCore/TextIterator.h>
+#include <WebCore/UserAgent.h>
+#include <WebCore/VisiblePosition.h>
+#include <WebCore/VisibleUnits.h>
+#include <wtf/text/MakeString.h>
+
+#if ENABLE(2022_GLIB_API)
+#include "WebKitWebProcessExtension.h"
+#else
+#include "WebKitWebExtension.h"
+#endif
+
+namespace WebKit {
+using namespace WebCore;
+
+void WebPage::platformInitialize(const WebPageCreationParameters&)
+{
+#if USE(ATSPI)
+    // Create the accessible object (the plug) that will serve as the
+    // entry point to the Web process, and send a message to the UI
+    // process to connect the two worlds through the accessibility
+    // object there specifically placed for that purpose (the socket).
+    if (RefPtr page = corePage()) {
+        m_accessibilityRootObject = AccessibilityRootAtspi::create(*page);
+        m_accessibilityRootObject->registerObject([&](const String& plugID) {
+            if (!plugID.isEmpty())
+                send(Messages::WebPageProxy::BindAccessibilityTree(plugID));
+        });
+    }
+#endif
+}
+
+void WebPage::platformDetach()
+{
+#if USE(ATSPI)
+    if (m_accessibilityRootObject)
+        m_accessibilityRootObject->unregisterObject();
+#endif
+}
+
+void WebPage::sendMessageToWebProcessExtensionWithReply(UserMessage&& message, CompletionHandler<void(UserMessage&&)>&& completionHandler)
+{
+    auto* extension = WebProcessExtensionManager::singleton().extension();
+    if (!extension) {
+        completionHandler(UserMessage(message.name, WEBKIT_USER_MESSAGE_UNHANDLED_MESSAGE));
+        return;
+    }
+
+#if ENABLE(2022_GLIB_API)
+    auto* page = webkit_web_process_extension_get_page(extension, m_identifier.toUInt64());
+#else
+    auto* page = webkit_web_extension_get_page(extension, m_identifier.toUInt64());
+#endif
+    if (!page) {
+        completionHandler(UserMessage(message.name, WEBKIT_USER_MESSAGE_UNHANDLED_MESSAGE));
+        return;
+    }
+
+    webkitWebPageDidReceiveUserMessage(page, WTFMove(message), WTFMove(completionHandler));
+}
+
+void WebPage::sendMessageToWebProcessExtension(UserMessage&& message)
+{
+    sendMessageToWebProcessExtensionWithReply(WTFMove(message), [](UserMessage&&) { });
+}
+
+void WebPage::getPlatformEditorState(LocalFrame& frame, EditorState& result) const
+{
+    if (!result.hasPostLayoutAndVisualData() || !frame.view() || frame.view()->needsLayout())
+        return;
+
+    auto& postLayoutData = *result.postLayoutData;
+    auto& visualData = *result.visualData;
+    visualData.caretRectAtStart = frame.selection().absoluteCaretBounds();
+
+    const VisibleSelection& selection = frame.selection().selection();
+    if (selection.isNone())
+        return;
+
+#if PLATFORM(GTK)
+    const Editor& editor = frame.editor();
+    if (selection.isRange()) {
+        if (editor.selectionHasStyle(CSSPropertyFontWeight, "bold"_s) == TriState::True)
+            postLayoutData.typingAttributes.add(TypingAttribute::Bold);
+        if (editor.selectionHasStyle(CSSPropertyFontStyle, "italic"_s) == TriState::True)
+            postLayoutData.typingAttributes.add(TypingAttribute::Italics);
+        if (editor.selectionHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline"_s) == TriState::True)
+            postLayoutData.typingAttributes.add(TypingAttribute::Underline);
+        if (editor.selectionHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "line-through"_s) == TriState::True)
+            postLayoutData.typingAttributes.add(TypingAttribute::StrikeThrough);
+    } else if (selection.isCaret()) {
+        if (editor.selectionStartHasStyle(CSSPropertyFontWeight, "bold"_s))
+            postLayoutData.typingAttributes.add(TypingAttribute::Bold);
+        if (editor.selectionStartHasStyle(CSSPropertyFontStyle, "italic"_s))
+            postLayoutData.typingAttributes.add(TypingAttribute::Italics);
+        if (editor.selectionStartHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline"_s))
+            postLayoutData.typingAttributes.add(TypingAttribute::Underline);
+        if (editor.selectionStartHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "line-through"_s))
+            postLayoutData.typingAttributes.add(TypingAttribute::StrikeThrough);
+    }
+#endif
+
+    if (selection.isContentEditable()) {
+        auto selectionStart = selection.visibleStart();
+        auto surroundingStart = startOfEditableContent(selectionStart);
+        auto surroundingRange = makeSimpleRange(surroundingStart, endOfEditableContent(selectionStart));
+        auto compositionRange = frame.editor().compositionRange();
+        if (surroundingRange && compositionRange && contains<ComposedTree>(*surroundingRange, *compositionRange)) {
+            auto beforeText = plainText({ surroundingRange->start, compositionRange->start });
+            postLayoutData.surroundingContext = makeString(beforeText, plainText({ compositionRange->end, surroundingRange->end }));
+            postLayoutData.surroundingContextCursorPosition = beforeText.length();
+            postLayoutData.surroundingContextSelectionPosition = postLayoutData.surroundingContextCursorPosition;
+        } else {
+            auto cursorPositionRange = makeSimpleRange(surroundingStart, selectionStart);
+            auto selectionPositionRange = makeSimpleRange(surroundingStart, selection.visibleEnd());
+            postLayoutData.surroundingContext = surroundingRange ? plainText(*surroundingRange) : emptyString();
+            postLayoutData.surroundingContextCursorPosition = cursorPositionRange ? characterCount(*cursorPositionRange) : 0;
+            postLayoutData.surroundingContextSelectionPosition = selectionPositionRange ? characterCount(*selectionPositionRange): 0;
+        }
+    }
+}
+
+static std::optional<InputMethodState> inputMethodStateForElement(Element* element)
+{
+    if (!element || !element->shouldUseInputMethod())
+        return std::nullopt;
+
+    InputMethodState state;
+    if (is<HTMLInputElement>(*element)) {
+        auto& inputElement = downcast<HTMLInputElement>(*element);
+        state.setPurposeForInputElement(inputElement);
+#if ENABLE(AUTOCAPITALIZE)
+        state.addHintsForAutocapitalizeType(inputElement.autocapitalizeType());
+#endif
+    } else if (is<HTMLTextAreaElement>(*element) || (element->hasEditableStyle() && is<HTMLElement>(*element))) {
+        auto& htmlElement = downcast<HTMLElement>(*element);
+        state.setPurposeOrHintForInputMode(htmlElement.canonicalInputMode());
+#if ENABLE(AUTOCAPITALIZE)
+        state.addHintsForAutocapitalizeType(htmlElement.autocapitalizeType());
+#endif
+    }
+
+    if (element->isSpellCheckingEnabled())
+        state.hints.add(InputMethodState::Hint::Spellcheck);
+
+    return state;
+}
+
+void WebPage::setInputMethodState(Element* element)
+{
+    auto state = inputMethodStateForElement(element);
+    if (m_inputMethodState == state)
+        return;
+
+    m_inputMethodState = state;
+    send(Messages::WebPageProxy::SetInputMethodState(state));
+}
+
+String WebPage::platformUserAgent(const URL& url) const
+{
+    if (url.isNull() || !m_page->settings().needsSiteSpecificQuirks())
+        return String();
+
+    return WebCore::standardUserAgentForURL(url);
+}
+
+} // namespace WebKit

@@ -1,0 +1,46 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, June 3, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#include <corecrypto/cchkdf.h>
+#include <corecrypto/ccstubs.h>
+#include <stdio.h>
+
+int cchkdf(const struct ccdigest_info *di, size_t ikmLen, const void *ikm,
+	size_t saltLen, const void *salt, size_t infoLen, const void *info,
+	size_t dkLen, void *dk) {
+	CC_STUB(-1);
+}
+
+int cchkdf_extract(const struct ccdigest_info *di, size_t saltLen, const void *salt,
+	size_t keyDerivationKeyLen, const void *keyDerivationKey, void *prk) {
+	printf("DARLING CRYPTO STUB: %s\n", __PRETTY_FUNCTION__);
+	CC_STUB(-1);
+}
+
+int cchkdf_expand(const struct ccdigest_info *di, size_t prkLen, const void *prk,
+	size_t contextLen, const void *context, size_t derivedKeyLen, void *derivedKey) {
+	printf("DARLING CRYPTO STUB: %s\n", __PRETTY_FUNCTION__);
+	CC_STUB(-1);
+}

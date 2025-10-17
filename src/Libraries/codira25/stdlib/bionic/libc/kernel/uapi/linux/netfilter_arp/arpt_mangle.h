@@ -1,0 +1,46 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, June 16, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _ARPT_MANGLE_H
+#define _ARPT_MANGLE_H
+#include <linux/netfilter_arp/arp_tables.h>
+#define ARPT_MANGLE_ADDR_LEN_MAX sizeof(struct in_addr)
+struct arpt_mangle {
+  char src_devaddr[ARPT_DEV_ADDR_LEN_MAX];
+  char tgt_devaddr[ARPT_DEV_ADDR_LEN_MAX];
+  union {
+    struct in_addr src_ip;
+  } u_s;
+  union {
+    struct in_addr tgt_ip;
+  } u_t;
+  __u8 flags;
+  int target;
+};
+#define ARPT_MANGLE_SDEV 0x01
+#define ARPT_MANGLE_TDEV 0x02
+#define ARPT_MANGLE_SIP 0x04
+#define ARPT_MANGLE_TIP 0x08
+#define ARPT_MANGLE_MASK 0x0f
+#endif

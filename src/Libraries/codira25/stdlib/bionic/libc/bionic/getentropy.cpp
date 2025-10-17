@@ -1,0 +1,52 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, September 11, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/random.h>
+#include <unistd.h>
+
+#include "private/ScopedFd.h"
+
+int getentropy(void* buffer, size_t buffer_size) {
+  if (buffer_size > 256) {
+    errno = EIO;
+    return -1;
+  }
+
+  int saved_errno = errno;
+
+  size_t collected = 0;
+  while (collected < buffer_size) {
+    long count = TEMP_FAILURE_RETRY(
+        getrandom(static_cast<char*>(buffer) + collected, buffer_size - collected, 0));
+    if (count == -1) {
+      return -1;
+    }
+    collected += count;
+  }
+
+  errno = saved_errno;
+  return 0;
+}

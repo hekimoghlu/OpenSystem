@@ -1,0 +1,90 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, April 2, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include <memory>
+
+#include "api/environment/environment.h"
+#include "api/environment/environment_factory.h"
+#include "modules/include/module_common_types_public.h"
+#include "modules/rtp_rtcp/source/byte_io.h"
+#include "modules/rtp_rtcp/source/fec_test_helper.h"
+#include "modules/rtp_rtcp/source/ulpfec_generator.h"
+#include "rtc_base/checks.h"
+#include "rtc_base/copy_on_write_buffer.h"
+#include "system_wrappers/include/clock.h"
+
+namespace webrtc {
+
+namespace {
+constexpr uint8_t kFecPayloadType = 96;
+constexpr uint8_t kRedPayloadType = 97;
+}  // namespace
+
+void FuzzOneInput(const uint8_t* data, size_t size) {
+  // Create Environment once because creating it for each input noticably
+  // reduces the speed of the fuzzer.
+  static const Environment* const env =
+      new Environment(CreateEnvironment(std::make_unique<SimulatedClock>(1)));
+
+  UlpfecGenerator generator(*env, kRedPayloadType, kFecPayloadType);
+  size_t i = 0;
+  if (size < 4)
+    return;
+  FecProtectionParams params = {
+      data[i++] % 128, static_cast<int>(data[i++] % 10), kFecMaskBursty};
+  generator.SetProtectionParameters(params, params);
+  uint16_t seq_num = data[i++];
+  uint16_t prev_seq_num = 0;
+  while (i + 3 < size) {
+    size_t rtp_header_length = data[i++] % 10 + 12;
+    size_t payload_size = data[i++] % 10;
+    if (i + payload_size + rtp_header_length + 2 > size)
+      break;
+    rtc::CopyOnWriteBuffer packet(&data[i], payload_size + rtp_header_length);
+    packet.EnsureCapacity(IP_PACKET_SIZE);
+    // Write a valid parsable header (version = 2, no padding, no extensions,
+    // no CSRCs).
+    ByteWriter<uint8_t>::WriteBigEndian(packet.MutableData(), 2 << 6);
+    // Make sure sequence numbers are increasing.
+    ByteWriter<uint16_t>::WriteBigEndian(packet.MutableData() + 2, seq_num++);
+    i += payload_size + rtp_header_length;
+    const bool protect = data[i++] % 2 == 1;
+
+    // Check the sequence numbers are monotonic. In rare case the packets number
+    // may loop around and in the same FEC-protected group the packet sequence
+    // number became out of order.
+    if (protect && IsNewerSequenceNumber(seq_num, prev_seq_num) &&
+        seq_num < prev_seq_num + kUlpfecMaxMediaPackets) {
+      RtpPacketToSend rtp_packet(nullptr);
+      // Check that we actually have a parsable packet, we want to fuzz FEC
+      // logic, not RTP header parsing.
+      RTC_CHECK(rtp_packet.Parse(packet));
+      generator.AddPacketAndGenerateFec(rtp_packet);
+      prev_seq_num = seq_num;
+    }
+
+    generator.GetFecPackets();
+  }
+}
+}  // namespace webrtc

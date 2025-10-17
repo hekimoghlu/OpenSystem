@@ -1,0 +1,125 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, November 11, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * SecImportExportCrypto.h - low-level crypto routines for wrapping and unwrapping
+ *							 keys.
+ */
+ 
+ 
+#ifndef	_SECURITY_SEC_IMPORT_EXPORT_CRYPTO_H_
+#define _SECURITY_SEC_IMPORT_EXPORT_CRYPTO_H_
+
+#include <Security/cssmtype.h>
+#include <Security/SecAccess.h>
+#include <Security/SecKeychain.h>
+#include <Security/SecImportExport.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <security_cdsa_utilities/cssmdata.h>
+#include <stdint.h>
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+/* 
+ * Post notification of a "new key added" event.
+ * If you know of another way to do this, other than a dlclient-based lookup of the
+ * existing key in order to get a KeychainCore::Item, by all means have at it. 
+ */
+OSStatus impExpKeyNotify(
+	SecKeychainRef	importKeychain,
+	const CssmData	&keyLabel,		// stored with this, we use it to do a lookup
+	const CSSM_KEY	&cssmKey);		// unwrapped key in CSSM format
+
+/*
+ * Attempt to import a raw key. This can be used as a lightweight
+ * "guess" evaluator if a handle to the raw CSP is passed in (with 
+ * no keychaain), or as the real thing which does full keychain import.
+ */
+OSStatus impExpImportRawKey(
+	CFDataRef							inData,
+	SecExternalFormat					externForm,
+	SecExternalItemType					itemType,
+	CSSM_ALGORITHMS						keyAlg,
+	SecKeychainRef						importKeychain, // optional
+	CSSM_CSP_HANDLE						cspHand,		// optional
+	SecItemImportExportFlags			flags,
+	const SecKeyImportExportParameters	*keyParams,		// optional 
+	const char							*printName,		// optional
+	CFMutableArrayRef					outArray);		// optional, append here 
+
+/*
+ * Auxiliary encryption parameters associated with a key unwrap.
+ * Most of these are usually zero (meaning "tell the CSP to take the default").
+ */
+typedef struct {
+	CSSM_ALGORITHMS			encrAlg;		// 0 ==> null unwrap
+	CSSM_ENCRYPT_MODE		encrMode;
+	CSSM_KEY_PTR			unwrappingKey;  // NULL ==> null unwrap
+	CSSM_PADDING			encrPad;
+	CSSM_DATA				iv;
+	
+	/* weird RC2/RC5 params */
+	uint32					effectiveKeySizeInBits; // RC2 
+	uint32					blockSizeInBits;		// RC5 
+	uint32					rounds;					// RC5 
+} impExpKeyUnwrapParams;
+
+/*
+ * Common code to unwrap a key, used for raw keys (which do a NULL unwrap) and 
+ * wrapped keys.
+ */
+OSStatus impExpImportKeyCommon(
+	const CSSM_KEY					*wrappedKey,
+	SecKeychainRef					importKeychain, // optional
+	CSSM_CSP_HANDLE					cspHand,		// optional
+	SecItemImportExportFlags		flags,
+	const SecKeyImportExportParameters *keyParams,  // optional 
+	const impExpKeyUnwrapParams		*unwrapParams,
+	const char						*printName,		// optional
+	CFMutableArrayRef				outArray);		// optional, append here 
+
+/* 
+ * Common code to wrap a key. NULL unwraps don't use this (yet?). 
+ */
+CSSM_RETURN impExpExportKeyCommon(
+	CSSM_CSP_HANDLE		cspHand,		// for all three keys
+	SecKeyRef			secKey,
+	CSSM_KEY_PTR		wrappingKey,
+	CSSM_KEY_PTR		wrappedKey,		// RETURNED
+	CSSM_ALGORITHMS		wrapAlg,
+	CSSM_ENCRYPT_MODE   wrapMode,
+	CSSM_PADDING		wrapPad,
+	CSSM_KEYBLOB_FORMAT	wrapFormat,		// NONE, PKCS7, PKCS8
+	CSSM_ATTRIBUTE_TYPE blobAttrType,	// optional raw key format attr
+	CSSM_KEYBLOB_FORMAT blobForm,		// ditto
+	const CSSM_DATA		*descData,		// optional descriptive data
+	const CSSM_DATA		*iv);
+	
+#ifdef	__cplusplus
+}
+#endif
+
+#endif  /* _SECURITY_SEC_IMPORT_EXPORT_CRYPTO_H_ */

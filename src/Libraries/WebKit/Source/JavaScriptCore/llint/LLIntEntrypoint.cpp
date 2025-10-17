@@ -1,0 +1,274 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, November 21, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "LLIntEntrypoint.h"
+#include "CodeBlock.h"
+#include "HeapInlines.h"
+#include "JITCode.h"
+#include "JSCellInlines.h"
+#include "LLIntData.h"
+#include "LLIntThunks.h"
+#include "MaxFrameExtentForSlowPathCall.h"
+#include "StackAlignment.h"
+
+namespace JSC { namespace LLInt {
+
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
+extern "C" void jsTrampolineProgramPrologue(void);
+extern "C" void jsTrampolineModuleProgramPrologue(void);
+extern "C" void jsTrampolineEvalPrologue(void);
+extern "C" void jsTrampolineFunctionForCallPrologue(void);
+extern "C" void jsTrampolineFunctionForConstructPrologue(void);
+extern "C" void jsTrampolineFunctionForCallArityCheckPrologue(void);
+extern "C" void jsTrampolineFunctionForConstructArityCheckPrologue(void);
+
+template<typename PtrType>
+static MacroAssemblerCodeRef<JSEntryPtrTag> entrypointTrampoline(PtrType address)
+{
+    return MacroAssemblerCodeRef<JSEntryPtrTag>::createSelfManagedCodeRef(CodePtr<JSEntryPtrTag>::fromTaggedPtr(retagCodePtr<void*, CFunctionPtrTag, JSEntryPtrTag>(address)));
+}
+#endif
+
+static void setFunctionEntrypoint(CodeBlock* codeBlock)
+{
+    CodeSpecializationKind kind = codeBlock->specializationKind();
+    
+#if ENABLE(JIT)
+    if (Options::useJIT()) {
+        if (kind == CodeForCall) {
+            static DirectJITCode* jitCode;
+            static std::once_flag onceKey;
+            std::call_once(onceKey, [&] {
+                auto callRef = functionForCallEntryThunk();
+                auto callArityCheckRef = functionForCallArityCheckThunk();
+                jitCode = new DirectJITCode(callRef, callArityCheckRef.code(), JITType::InterpreterThunk, JITCode::ShareAttribute::Shared);
+            });
+
+            codeBlock->setJITCode(*jitCode);
+            return;
+        }
+        ASSERT(kind == CodeForConstruct);
+
+        static DirectJITCode* jitCode;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            auto constructRef = functionForConstructEntryThunk();
+            auto constructArityCheckRef = functionForConstructArityCheckThunk();
+            jitCode = new DirectJITCode(constructRef, constructArityCheckRef.code(), JITType::InterpreterThunk, JITCode::ShareAttribute::Shared);
+        });
+
+        codeBlock->setJITCode(*jitCode);
+        return;
+    }
+#endif // ENABLE(JIT)
+
+    if (kind == CodeForCall) {
+        static DirectJITCode* jitCode;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
+            jitCode = new DirectJITCode(entrypointTrampoline(jsTrampolineFunctionForCallPrologue), entrypointTrampoline(jsTrampolineFunctionForCallArityCheckPrologue).code(), JITType::InterpreterThunk, JITCode::ShareAttribute::Shared);
+#else
+            jitCode = new DirectJITCode(getCodeRef<JSEntryPtrTag>(llint_function_for_call_prologue), getCodePtr<JSEntryPtrTag>(llint_function_for_call_arity_check), JITType::InterpreterThunk, JITCode::ShareAttribute::Shared);
+#endif
+        });
+        codeBlock->setJITCode(*jitCode);
+    } else {
+        static DirectJITCode* jitCode;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
+            jitCode = new DirectJITCode(entrypointTrampoline(jsTrampolineFunctionForConstructPrologue), entrypointTrampoline(jsTrampolineFunctionForConstructArityCheckPrologue).code(), JITType::InterpreterThunk, JITCode::ShareAttribute::Shared);
+#else
+            jitCode = new DirectJITCode(getCodeRef<JSEntryPtrTag>(llint_function_for_construct_prologue), getCodePtr<JSEntryPtrTag>(llint_function_for_construct_arity_check), JITType::InterpreterThunk, JITCode::ShareAttribute::Shared);
+#endif
+        });
+        codeBlock->setJITCode(*jitCode);
+    }
+}
+
+static void setEvalEntrypoint(CodeBlock* codeBlock)
+{
+#if ENABLE(JIT)
+    if (Options::useJIT()) {
+        static NativeJITCode* jitCode;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            MacroAssemblerCodeRef<JSEntryPtrTag> codeRef = evalEntryThunk();
+            jitCode = new NativeJITCode(codeRef, JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+        });
+        codeBlock->setJITCode(*jitCode);
+        return;
+    }
+#endif // ENABLE(JIT)
+
+    static NativeJITCode* jitCode;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
+        jitCode = new NativeJITCode(entrypointTrampoline(jsTrampolineEvalPrologue), JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+#else
+        jitCode = new NativeJITCode(getCodeRef<JSEntryPtrTag>(llint_eval_prologue), JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+#endif
+    });
+    codeBlock->setJITCode(*jitCode);
+}
+
+static void setProgramEntrypoint(CodeBlock* codeBlock)
+{
+#if ENABLE(JIT)
+    if (Options::useJIT()) {
+        static NativeJITCode* jitCode;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            MacroAssemblerCodeRef<JSEntryPtrTag> codeRef = programEntryThunk();
+            jitCode = new NativeJITCode(codeRef, JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+        });
+        codeBlock->setJITCode(*jitCode);
+        return;
+    }
+#endif // ENABLE(JIT)
+
+    static NativeJITCode* jitCode;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
+        jitCode = new NativeJITCode(entrypointTrampoline(jsTrampolineProgramPrologue), JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+#else
+        jitCode = new NativeJITCode(getCodeRef<JSEntryPtrTag>(llint_program_prologue), JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+#endif
+    });
+    codeBlock->setJITCode(*jitCode);
+}
+
+static void setModuleProgramEntrypoint(CodeBlock* codeBlock)
+{
+#if ENABLE(JIT)
+    if (Options::useJIT()) {
+        static NativeJITCode* jitCode;
+        static std::once_flag onceKey;
+        std::call_once(onceKey, [&] {
+            MacroAssemblerCodeRef<JSEntryPtrTag> codeRef = moduleProgramEntryThunk();
+            jitCode = new NativeJITCode(codeRef, JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+        });
+        codeBlock->setJITCode(*jitCode);
+        return;
+    }
+#endif // ENABLE(JIT)
+
+    static NativeJITCode* jitCode;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+#if CPU(ARM64E) && !ENABLE(C_LOOP)
+        jitCode = new NativeJITCode(entrypointTrampoline(jsTrampolineModuleProgramPrologue), JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+#else
+        jitCode = new NativeJITCode(getCodeRef<JSEntryPtrTag>(llint_module_program_prologue), JITType::InterpreterThunk, Intrinsic::NoIntrinsic, JITCode::ShareAttribute::Shared);
+#endif
+    });
+    codeBlock->setJITCode(*jitCode);
+}
+
+MacroAssemblerCodeRef<JSEntryPtrTag> defaultCall()
+{
+#if ENABLE(JIT)
+    if (Options::useJIT())
+        return defaultCallThunk();
+#endif // ENABLE(JIT)
+    return LLInt::getCodeRef<JSEntryPtrTag>(llint_default_call_trampoline);
+}
+
+CodePtr<JITThunkPtrTag> arityFixup()
+{
+#if ENABLE(JIT)
+    if (Options::useJIT())
+        return CodePtr<JITThunkPtrTag>::fromTaggedPtr(g_jscConfig.arityFixupThunk);
+#endif
+    return nullptr;
+}
+
+MacroAssemblerCodeRef<JSEntryPtrTag> getHostCallReturnValueEntrypoint()
+{
+#if ENABLE(JIT)
+    if (Options::useJIT())
+        return getHostCallReturnValueThunk();
+#endif // ENABLE(JIT)
+    return LLInt::getCodeRef<JSEntryPtrTag>(llint_get_host_call_return_value);
+}
+
+MacroAssemblerCodeRef<JSEntryPtrTag> fuzzerReturnEarlyFromLoopHintEntrypoint()
+{
+#if ENABLE(JIT)
+    if (Options::useJIT())
+        return fuzzerReturnEarlyFromLoopHintThunk();
+#endif // ENABLE(JIT)
+    return LLInt::getCodeRef<JSEntryPtrTag>(fuzzer_return_early_from_loop_hint);
+}
+
+MacroAssemblerCodeRef<JSEntryPtrTag> genericReturnPointEntrypoint(OpcodeSize size)
+{
+#if ENABLE(JIT)
+    if (Options::useJIT())
+        return genericReturnPointThunk(size);
+#endif // ENABLE(JIT)
+    switch (size) {
+    case OpcodeSize::Narrow:
+        return LLInt::getCodeRef<JSEntryPtrTag>(llint_generic_return_point);
+    case OpcodeSize::Wide16:
+        return LLInt::getWide16CodeRef<JSEntryPtrTag>(llint_generic_return_point);
+    case OpcodeSize::Wide32:
+        return LLInt::getWide32CodeRef<JSEntryPtrTag>(llint_generic_return_point);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return { };
+}
+
+void setEntrypoint(CodeBlock* codeBlock)
+{
+    switch (codeBlock->codeType()) {
+    case GlobalCode:
+        setProgramEntrypoint(codeBlock);
+        return;
+    case ModuleCode:
+        setModuleProgramEntrypoint(codeBlock);
+        return;
+    case EvalCode:
+        setEvalEntrypoint(codeBlock);
+        return;
+    case FunctionCode:
+        setFunctionEntrypoint(codeBlock);
+        return;
+    }
+    
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+unsigned frameRegisterCountFor(CodeBlock* codeBlock)
+{
+    ASSERT(static_cast<unsigned>(codeBlock->numCalleeLocals()) == WTF::roundUpToMultipleOf(stackAlignmentRegisters(), static_cast<unsigned>(codeBlock->numCalleeLocals())));
+
+    return roundLocalRegisterCountForFramePointerOffset(codeBlock->numCalleeLocals() + maxFrameExtentForSlowPathCallInRegisters);
+}
+
+} } // namespace JSC::LLInt

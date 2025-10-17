@@ -1,0 +1,120 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, June 29, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//
+//  tool_auth_helpers.m
+//  Security
+//
+
+#import <Foundation/Foundation.h>
+
+#if !TARGET_OS_TV && !TARGET_OS_BRIDGE
+#include <readpassphrase.h>
+#import <LocalAuthentication/LAContext+Private.h>
+#include "debugging.h"
+#endif // !TARGET_OS_TV && !TARGET_OS_BRIDGE
+
+#if TARGET_OS_OSX
+#include <os/variant_private.h>
+#endif
+
+#include <os/feature_private.h>
+
+#include "tool_auth_helpers.h"
+
+#if !TARGET_OS_TV && !TARGET_OS_BRIDGE
+static bool passphraseIsCorrect(const char * const passphrase) {
+    NSData* data = [NSData dataWithBytesNoCopy:(void*)passphrase length:strlen(passphrase) freeWhenDone:NO];
+    LAContext* la = [[LAContext alloc] init];
+    NSError* error = nil;
+    BOOL good = [la setCredential:data type:LACredentialTypePasscode error:&error];
+    if (good) {
+        return true;
+    }
+
+    if (error.code != LAErrorAuthenticationFailed) {
+        NSLog(@"error attempting auth: %@", error);
+    }
+    return false;
+}
+#endif // !TARGET_OS_TV && !TARGET_OS_BRIDGE
+
+// if bufLen == 0, use strlen to calculate size to wipe
+bool checkPassphrase(char* passphrase, rsize_t len) {
+#if TARGET_OS_TV || TARGET_OS_BRIDGE
+    fprintf(stderr, "Authentication unsupported on this platform! Continuing w/o auth.\n");
+    return true;
+#else
+    bool good = passphrase && passphraseIsCorrect(passphrase);
+    if (len == 0) {
+        len = passphrase ? strlen(passphrase) : 0;
+    }
+    memset_s(passphrase, len, 0, len);
+    if (!good) {
+        fprintf(stderr, "Authentication failed!\n");
+    }
+    return good;
+#endif // TARGET_OS_TV || TARGET_OS_BRIDGE
+}
+
+bool promptForAndCheckPassphrase(void) {
+#if TARGET_OS_TV || TARGET_OS_BRIDGE
+    fprintf(stderr, "Authentication unsupported on this platform! Continuing w/o auth.\n");
+    return true;
+#else
+    char buf[1024];
+    char* pw = readpassphrase("Passcode: ", buf, sizeof(buf), RPP_REQUIRE_TTY);
+    return checkPassphrase(pw, sizeof(buf));
+#endif // !TARGET_OS_TV || TARGET_OS_BRIDGE
+}
+
+bool authRequired(void) {
+#if TARGET_OS_TV || TARGET_OS_BRIDGE
+    return false;
+#else
+#if TARGET_OS_OSX
+    if (os_variant_is_darwinos("com.apple.security")) {
+        fprintf(stderr, "Authentication skipped on this subplatform!\n");
+        return false;
+    }
+#endif
+
+    if (os_feature_enabled(Security, SecSkipSecurityToolAuth)) {
+        fprintf(stderr,
+                "WARNING! Authentication skipped!\n"
+                "Please add \"-y\" to be prompted for authentication, or \"-Y passcode\" to specify on the command line.\n");
+        if (!os_feature_enabled(Security, SecSkipSecurityToolAuthSimCrash)) {
+#if TARGET_OS_IOS
+            fprintf(stderr, "A simulated crash has been generated.\n");
+#endif
+            __security_simulatecrash(CFSTR("security tool: auth skipped"), __sec_exception_code_ToolAuthReqd);
+        }
+        return false;
+    } else {
+        fprintf(stderr, "Authentication is required to interact with keychain items. Add -y after the subcommand for interactive authentication, or -Y <passcode> to authenticate directly, which is insecure.\n");
+        return true;
+    }
+#endif // TARGET_OS_TV || TARGET_OS_BRIDGE
+}

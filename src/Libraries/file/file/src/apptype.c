@@ -1,0 +1,175 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, July 16, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * amai: Darrel Hankerson did the changes described here.
+ *
+ * It remains to check the validity of comments (2.) since it's referred to an
+ * "old" OS/2 version.
+ *
+ */
+
+#include "file.h"
+
+#ifndef	lint
+FILE_RCSID("@(#)$File: apptype.c,v 1.14 2018/09/09 20:33:28 christos Exp $")
+#endif /* lint */
+
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef __EMX__
+#include <io.h>
+#define INCL_DOSSESMGR
+#define INCL_DOSERRORS
+#define INCL_DOSFILEMGR
+#include <os2.h>
+typedef ULONG   APPTYPE;
+
+protected int
+file_os2_apptype(struct magic_set *ms, const char *fn, const void *buf,
+    size_t nb)
+{
+	APPTYPE         rc, type;
+	char            path[_MAX_PATH], drive[_MAX_DRIVE], dir[_MAX_DIR],
+			fname[_MAX_FNAME], ext[_MAX_EXT];
+	char           *filename;
+	FILE           *fp;
+
+	if (fn)
+		filename = strdup(fn);
+	else if ((filename = tempnam("./", "tmp")) == NULL) {
+		file_error(ms, errno, "cannot create tempnam");
+		return -1;
+	}
+	/* qualify the filename to prevent extraneous searches */
+	_splitpath(filename, drive, dir, fname, ext);
+	(void)sprintf(path, "%s%s%s%s", drive,
+		(*dir == '\0') ? "./" : dir,
+		fname,
+		(*ext == '\0') ? "." : ext);
+
+	if (fn == NULL) {
+		if ((fp = fopen(path, "wb")) == NULL) {
+			file_error(ms, errno, "cannot open tmp file `%s'", path);
+			return -1;
+		}
+		if (fwrite(buf, 1, nb, fp) != nb) {
+			file_error(ms, errno, "cannot write tmp file `%s'",
+			    path);
+			(void)fclose(fp);
+			return -1;
+		}
+		(void)fclose(fp);
+	}
+	rc = DosQueryAppType((unsigned char *)path, &type);
+
+	if (fn == NULL) {
+		unlink(path);
+		free(filename);
+	}
+#if 0
+	if (rc == ERROR_INVALID_EXE_SIGNATURE)
+		printf("%s: not an executable file\n", fname);
+	else if (rc == ERROR_FILE_NOT_FOUND)
+		printf("%s: not found\n", fname);
+	else if (rc == ERROR_ACCESS_DENIED)
+		printf("%s: access denied\n", fname);
+	else if (rc != 0)
+		printf("%s: error code = %lu\n", fname, rc);
+	else
+#else
+
+	/*
+	 * for our purpose here it's sufficient to just ignore the error and
+	 * return w/o success (=0)
+	 */
+
+	if (rc)
+		return (0);
+
+#endif
+
+	if (type & FAPPTYP_32BIT)
+		if (file_printf(ms, "32-bit ") == -1)
+			return -1;
+	if (type & FAPPTYP_PHYSDRV) {
+		if (file_printf(ms, "physical device driver") == -1)
+			return -1;
+	} else if (type & FAPPTYP_VIRTDRV) {
+		if (file_printf(ms, "virtual device driver") == -1)
+			return -1;
+	} else if (type & FAPPTYP_DLL) {
+		if (type & FAPPTYP_PROTDLL)
+			if (file_printf(ms, "protected ") == -1)
+				return -1;
+		if (file_printf(ms, "DLL") == -1)
+			return -1;
+	} else if (type & (FAPPTYP_WINDOWSREAL | FAPPTYP_WINDOWSPROT)) {
+		if (file_printf(ms, "Windows executable") == -1)
+			return -1;
+	} else if (type & FAPPTYP_DOS) {
+		/*
+		 * The API routine is partially broken on filenames ending
+		 * ".com".
+		 */
+		if (stricmp(ext, ".com") == 0)
+			if (strncmp((const char *)buf, "MZ", 2))
+				return (0);
+		if (file_printf(ms, "DOS executable") == -1)
+			return -1;
+		/* ---------------------------------------- */
+		/* Might learn more from the magic(4) entry */
+		if (file_printf(ms, ", magic(4)-> ") == -1)
+			return -1;
+		return (0);
+		/* ---------------------------------------- */
+	} else if (type & FAPPTYP_BOUND) {
+		if (file_printf(ms, "bound executable") == -1)
+			return -1;
+	} else if ((type & 7) == FAPPTYP_WINDOWAPI) {
+		if (file_printf(ms, "PM executable") == -1)
+			return -1;
+	} else if (file_printf(ms, "OS/2 executable") == -1)
+		return -1;
+
+	switch (type & (FAPPTYP_NOTWINDOWCOMPAT |
+			FAPPTYP_WINDOWCOMPAT |
+			FAPPTYP_WINDOWAPI)) {
+	case FAPPTYP_NOTWINDOWCOMPAT:
+		if (file_printf(ms, " [NOTWINDOWCOMPAT]") == -1)
+			return -1;
+		break;
+	case FAPPTYP_WINDOWCOMPAT:
+		if (file_printf(ms, " [WINDOWCOMPAT]") == -1)
+			return -1;
+		break;
+	case FAPPTYP_WINDOWAPI:
+		if (file_printf(ms, " [WINDOWAPI]") == -1)
+			return -1;
+		break;
+	}
+	return 1;
+}
+#endif

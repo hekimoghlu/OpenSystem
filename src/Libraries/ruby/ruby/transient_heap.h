@@ -1,0 +1,76 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, February 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef RUBY_TRANSIENT_HEAP_H
+#define RUBY_TRANSIENT_HEAP_H
+
+#include "internal.h"
+
+#if USE_TRANSIENT_HEAP
+
+/* public API */
+
+/* Allocate req_size bytes from transient_heap.
+   Allocated memories are free-ed when next GC
+   if this memory is not marked by `rb_transient_heap_mark()`.
+ */
+void *rb_transient_heap_alloc(VALUE obj, size_t req_size);
+
+/* If `obj` uses a memory pointed by `ptr` from transient_heap,
+   you need to call `rb_transient_heap_mark(obj, ptr)`
+   to assert liveness of `obj` (and ptr). */
+void  rb_transient_heap_mark(VALUE obj, const void *ptr);
+
+/* used by gc.c */
+void rb_transient_heap_promote(VALUE obj);
+void rb_transient_heap_start_marking(int full_marking);
+void rb_transient_heap_finish_marking(void);
+
+/* for debug API */
+void rb_transient_heap_dump(void);
+void rb_transient_heap_verify(void);
+int  rb_transient_heap_managed_ptr_p(const void *ptr);
+
+/* evacuate functions for each type */
+void rb_ary_transient_heap_evacuate(VALUE ary, int promote);
+void rb_obj_transient_heap_evacuate(VALUE obj, int promote);
+void rb_hash_transient_heap_evacuate(VALUE hash, int promote);
+void rb_struct_transient_heap_evacuate(VALUE st, int promote);
+
+#else /* USE_TRANSIENT_HEAP */
+
+#define rb_transient_heap_alloc(o, s) NULL
+#define rb_transient_heap_verify() ((void)0)
+#define rb_transient_heap_promote(obj) ((void)0)
+#define rb_transient_heap_start_marking(full_marking) ((void)0)
+#define rb_transient_heap_finish_marking() ((void)0)
+#define rb_transient_heap_mark(obj, ptr) ((void)0)
+
+#define rb_ary_transient_heap_evacuate(x, y) ((void)0)
+#define rb_obj_transient_heap_evacuate(x, y) ((void)0)
+#define rb_hash_transient_heap_evacuate(x, y) ((void)0)
+#define rb_struct_transient_heap_evacuate(x, y) ((void)0)
+
+#endif /* USE_TRANSIENT_HEAP */
+#endif

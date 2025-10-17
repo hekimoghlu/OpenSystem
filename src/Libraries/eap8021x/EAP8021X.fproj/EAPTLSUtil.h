@@ -1,0 +1,251 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, January 9, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _EAP8021X_EAPTLSUTIL_H
+#define _EAP8021X_EAPTLSUTIL_H
+
+/*
+ * EAPTLSUtil.h
+ * - utility functions for dealing with Secure Transport API's
+ */
+
+/* 
+ * Modification History
+ *
+ * August 26, 2002	Dieter Siegmund (dieter@apple)
+ * - created
+ */
+
+#include <TargetConditionals.h>
+#include <os/availability.h>
+#include <Security/SecureTransport.h>
+#include <Security/SecCertificate.h>
+#include <Security/SecPolicy.h>
+#include <CoreFoundation/CFBase.h>
+#include <CoreFoundation/CFData.h>
+#include <CoreFoundation/CFArray.h>
+#include <CoreFoundation/CFDictionary.h>
+#include <stdbool.h>
+#include <EAP8021X/EAP.h>
+#include <EAP8021X/EAPTLS.h>
+#include <EAP8021X/EAPClientTypes.h>
+
+typedef struct memoryBuffer_s {
+    void *			data;
+    size_t			length;
+    size_t			offset;
+    bool			complete;
+} memoryBuffer, *memoryBufferRef;
+
+typedef struct {
+    bool			debug;
+    memoryBufferRef		read;
+    memoryBufferRef		write;
+} memoryIO, * memoryIORef;
+
+SSLContextRef
+EAPTLSMemIOContextCreate(CFDictionaryRef properties, bool is_server, memoryIORef mem_io,
+			 char * peername, OSStatus * ret_status);
+#if 0
+OSStatus
+EAPSSLContextSetCipherRestrictions(SSLContextRef ctx, char cipherRestrict);
+
+const char *
+EAPSSLCipherSuiteString(SSLCipherSuite cs);
+
+const char *
+EAPSSLProtocolVersionString(SSLProtocol prot);
+
+#endif /* 0 */
+
+const char *
+EAPSSLErrorString(OSStatus err);
+
+OSStatus 
+EAPSSLMemoryIORead(SSLConnectionRef connection, void * data_buf, 
+		  size_t * data_length);
+
+OSStatus
+EAPSSLMemoryIOWrite(SSLConnectionRef connection, const void * data_buf, 
+		   size_t * data_length);
+
+OSStatus
+EAPTLSComputeKeyData(SSLContextRef ssl_context, 
+		     const void * label, int label_length,
+		     void * key, int key_length);
+
+void
+memoryBufferClear(memoryBufferRef buf);
+
+void
+memoryBufferInit(memoryBufferRef buf);
+
+void
+memoryBufferAllocate(memoryBufferRef buf, size_t length);
+
+bool
+memoryBufferIsComplete(memoryBufferRef buf);
+
+bool
+memoryBufferAddData(memoryBufferRef buf, const void * data, size_t length);
+
+void
+memoryIOClearBuffers(memoryIORef mem_io);
+
+void
+memoryIOInit(memoryIORef mem_io, memoryBufferRef read_buf, 
+	     memoryBufferRef write_buf);
+
+void
+memoryIOSetDebug(memoryIORef mem_io, bool debug);
+
+EAPPacketRef
+EAPTLSPacketCreate(EAPCode code, int type, u_char identifier, int mtu,
+		   memoryBufferRef buf, int * ret_fraglen);
+
+EAPPacketRef
+EAPTLSPacketCreate2(EAPCode code, int type, u_char identifier, int mtu,
+		    memoryBufferRef buf, int * ret_fraglen, 
+		    bool always_mark_first);
+
+/*
+ * Function: EAPSSLCopyPeerCertificates
+ *
+ * Purpose:
+ *   A wrapper for SSLGetPeerCertificates that matches the CF function 
+ *   naming conventions, and allows the certificate array to be released
+ *   by simply calling CFRelease on the array. SSLGetPeerCertificates does
+ *   not CFRelease each certificate after adding it to the array.
+ */
+OSStatus 
+EAPSSLCopyPeerCertificates(SSLContextRef context, CFArrayRef * certs);
+
+/*
+ * Function: EAPTLSVerifyServerCertificateChain
+ * Purpose:
+ *   Given the configured EAP client properties and the server certificate
+ *   determine whether to proceed or not.
+ * Returns:
+ *   kEAPClientStatusOK if it's OK to proceed.
+ */
+EAPClientStatus
+EAPTLSVerifyServerCertificateChain(CFDictionaryRef properties,
+				   CFArrayRef server_certs,
+				   Boolean revocation_check,
+				   SecTrustRef sec_trust,
+				   OSStatus * ret_status);
+
+/*
+ * Function: EAPSecPolicyCopy
+ * Purpose:
+ *   Copies the EAP security policy object.
+ * Returns:
+ *   noErr if successful.
+ */
+OSStatus
+EAPSecPolicyCopy(SecPolicyRef * ret_policy);
+
+CFStringRef
+EAPTLSPacketCopyDescription(EAPTLSPacketRef eaptls_pkt, bool * packet_is_valid);
+
+/*
+ * Function: EAPTLSSecTrustSaveExceptionsBinding
+ * Purpose:
+ *   Given the evaluated SecTrustRef object, save an exceptions binding for the 
+ *   given domain, identifier, and server_hash_str, all of which must be
+ *   specified.
+ * Returns:
+ *   FALSE if the trust object was not in a valid state, 
+ *   TRUE otherwise.
+ */
+bool
+EAPTLSSecTrustSaveExceptionsBinding(SecTrustRef trust, 
+				    CFStringRef domain, CFStringRef identifier,
+				    CFStringRef server_hash_str) API_AVAILABLE(ios(8.0), watchos(5.0), tvos(9.0)) SPI_AVAILABLE(macos(10.16));
+/*
+ * Function: EAPTLSSecTrustApplyExceptionsBinding
+ * Purpose:
+ *   Finds a stored trust exceptions object for the given domain, identifier,
+ *   and server_cert_hash.  If it exists, applies the exceptions to the given
+ *   trust object.
+ * Returns:
+ *   TRUE if the trust exception is successfully applied,
+ *   FALSE otherwise.
+ */
+bool
+EAPTLSSecTrustApplyExceptionsBinding(SecTrustRef trust, CFStringRef domain, 
+				     CFStringRef identifier,
+				     CFStringRef server_cert_hash) API_AVAILABLE(ios(8.0), watchos(5.0), tvos(9.0)) SPI_AVAILABLE(macos(10.16));
+
+/* 
+ * Function: EAPTLSRemoveTrustExceptionsBindings
+ * Purpose:
+ *   Remove all of the trust exceptions bindings for the given 
+ *   trust domain and identifier.
+ * Example:
+ * EAPTLSRemoveTrustExceptionsBindings(kEAPTLSTrustExceptionsDomainWirelessSSID,
+ *                                     current_SSID);
+ */
+void
+EAPTLSRemoveTrustExceptionsBindings(CFStringRef domain,
+				    CFStringRef identifier) API_AVAILABLE(ios(8.0), watchos(5.0), tvos(9.0)) SPI_AVAILABLE(macos(10.16));
+
+/*
+ * Function: EAPTLSCopyTrustExceptionBindings
+ * Purpose:
+ *   Get a copy of trust exception bindings for the given identifier and trust domain.
+ * Returns:
+ *   NULL if trust exception list is not found for the given identifier and trust domain.
+ */
+CFDictionaryRef
+EAPTLSCopyTrustExceptionBindings(CFStringRef domain, CFStringRef identifier) API_AVAILABLE(ios(8.0), watchos(5.0), tvos(9.0)) SPI_AVAILABLE(macos(10.16));
+
+/*
+ * Function: EAPTLSSetTrustExceptionBindings
+ * Purpose:
+ *   Store the given trust exception list for the given trust domain and identifier.
+ *
+ */
+void
+EAPTLSSetTrustExceptionBindings(CFStringRef domain, CFStringRef identifier, CFDictionaryRef exceptionList) API_AVAILABLE(ios(8.0), watchos(5.0), tvos(9.0)) SPI_AVAILABLE(macos(10.16));
+
+/*
+ * Function: EAPTLSCopyIdentityChain
+ * Purpose:
+ *   Copy the trust chain corresponding to the given SecIdentityRef, or if NULL,
+ *   the one specified in the given properties dictionary.
+ */
+OSStatus
+EAPTLSCopyIdentityTrustChain(SecIdentityRef sec_identity,
+			     CFDictionaryRef properties,
+			     CFArrayRef * ret_array);
+
+OSStatus
+EAPTLSSecTrustEvaluate(SecTrustRef trust, SecTrustResultType *result);
+
+CFDataRef
+EAPTLSTrustExceptionsCopy(CFStringRef domain, CFStringRef identifier,
+			  CFStringRef hash_str);
+
+#endif /* _EAP8021X_EAPTLSUTIL_H */

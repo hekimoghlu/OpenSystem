@@ -1,0 +1,99 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, June 16, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* This work is part of OpenLDAP Software <http://www.openldap.org/>.
+ *
+ * Copyright 1998-2011 The OpenLDAP Foundation.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted only as authorized by the OpenLDAP
+ * Public License.
+ *
+ * A copy of this license is available in the file LICENSE in the
+ * top-level directory of the distribution or, alternatively, at
+ * <http://www.OpenLDAP.org/license.html>.
+ */
+/* ACKNOWLEDGEMENTS:
+ * This program was originally developed by Kurt D. Zeilenga for inclusion
+ * in OpenLDAP Software.
+ */
+
+/*
+ * LDAPv3 Cancel Operation Request
+ */
+
+#include "portable.h"
+
+#include <stdio.h>
+#include <ac/stdlib.h>
+
+#include <ac/socket.h>
+#include <ac/string.h>
+#include <ac/time.h>
+
+#include "ldap-int.h"
+#include "ldap_log.h"
+
+int
+ldap_cancel(
+	LDAP		*ld,
+	int		cancelid,
+	LDAPControl	**sctrls,
+	LDAPControl	**cctrls,
+	int		*msgidp )
+{
+	BerElement *cancelidber = NULL;
+	struct berval *cancelidvalp = NULL;
+	int rc;
+
+	cancelidber = ber_alloc_t( LBER_USE_DER );
+	ber_printf( cancelidber, "{i}", cancelid );
+	ber_flatten( cancelidber, &cancelidvalp );
+	rc = ldap_extended_operation( ld, LDAP_EXOP_CANCEL,
+		cancelidvalp, sctrls, cctrls, msgidp );
+	ber_free( cancelidber, 1 );
+	return rc;
+}
+
+int
+ldap_cancel_s(
+	LDAP		*ld,
+	int		cancelid,
+	LDAPControl	**sctrls,
+	LDAPControl	**cctrls )
+{
+	BerElement *cancelidber = NULL;
+	struct berval *cancelidvalp = NULL;
+	int rc;
+
+	cancelidber = ber_alloc_t( LBER_USE_DER );
+	ber_printf( cancelidber, "{i}", cancelid );
+	ber_flatten( cancelidber, &cancelidvalp );
+	rc = ldap_extended_operation_s( ld, LDAP_EXOP_CANCEL,
+		cancelidvalp, sctrls, cctrls, NULL, NULL );
+	ber_free( cancelidber, 1 );
+	return rc;
+}
+

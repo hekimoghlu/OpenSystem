@@ -1,0 +1,98 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, July 14, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#define OS_CRASH_ENABLE_EXPERIMENTAL_LIBTRACE 1
+#include <os/assumes.h>
+
+#include <darwintest.h>
+
+static const char *__unsafe_indexable expected_message = NULL;
+
+static void
+os_crash_function(const char *message)
+{
+	if (expected_message) {
+		T_ASSERT_EQ_STR(__terminated_by_to_indexable(message), __unsafe_forge_single(const char *, expected_message), NULL);
+		T_END;
+	} else {
+		T_PASS("Got crash message: %s", message);
+		T_END;
+	}
+}
+os_crash_redirect(os_crash_function);
+
+#if __has_feature(bounds_attributes)
+T_DECL(os_crash_sanity_fbounds_safety, "sanity check for os_crash")
+#else
+T_DECL(os_crash_sanity, "sanity check for os_crash")
+#endif
+{
+	expected_message = "My AWESOME assertion message.";
+	os_crash(expected_message);
+}
+
+extern int two;
+int two = 2;
+
+#if __has_feature(bounds_attributes)
+T_DECL(os_assert_no_msg_fbounds_safety, "sanity check for os_assert w/o a message")
+#else
+T_DECL(os_assert_no_msg, "sanity check for os_assert w/o a message")
+#endif
+{
+	expected_message = "assertion failure: \"two + two == 5\" -> %llu";
+	os_assert(two + two == 5);
+}
+
+#if __has_feature(bounds_attributes)
+T_DECL(os_assert_zero_no_msg_fbounds_safety, "sanity check for os_assert_zero w/o a message")
+#else
+T_DECL(os_assert_zero_no_msg, "sanity check for os_assert_zero w/o a message")
+#endif
+{
+	expected_message = "assertion failure: \"two + two\" -> %llu";
+	os_assert_zero(two + two);
+}
+
+#define DOGMA "Today, we celebrate the first glorious anniversary of the Information Purification Directives."
+#if __has_feature(bounds_attributes)
+T_DECL(os_assert_msg_fbounds_safety, "sanity check for os_assert with a message")
+#else
+T_DECL(os_assert_msg, "sanity check for os_assert with a message")
+#endif
+{
+	expected_message = "assertion failure: " DOGMA;
+	os_assert(two + two == 5, DOGMA);
+}
+
+#if __has_feature(bounds_attributes)
+T_DECL(os_assert_zero_msg_fbounds_safety, "sanity check for os_assert_zero with a message")
+#else
+T_DECL(os_assert_zero_msg, "sanity check for os_assert_zero with a message")
+#endif
+{
+	expected_message = "assertion failure (%llu != 0): " DOGMA;
+	os_assert_zero(two + two, DOGMA);
+}

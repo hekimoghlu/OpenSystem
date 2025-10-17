@@ -1,0 +1,159 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, December 8, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if OCTAGON
+
+#import "utilities/debugging.h"
+
+#import "keychain/ot/ObjCImprovements.h"
+#import "keychain/ot/OTDetermineCDPBitStatusOperation.h"
+#import "keychain/ot/OTStates.h"
+
+@interface OTDetermineCDPBitStatusOperation ()
+@property OTOperationDependencies* deps;
+@end
+
+@implementation OTDetermineCDPBitStatusOperation
+@synthesize intendedState = _intendedState;
+@synthesize nextState = _nextState;
+
+- (instancetype)initWithDependencies:(OTOperationDependencies*)dependencies
+                       intendedState:(OctagonState*)intendedState
+                          errorState:(OctagonState*)errorState
+{
+    if((self = [super init])) {
+        _deps = dependencies;
+        _intendedState = intendedState;
+        _nextState = errorState;
+    }
+    return self;
+}
+
+- (void)groupStart
+{
+    secnotice("octagon-cdp-status", "Checking CDP status");
+
+    NSError* localError = nil;
+    OTAccountMetadataClassC* account = [self.deps.stateHolder loadOrCreateAccountMetadata:&localError];
+    if(localError && [self.deps.lockStateTracker isLockedError:localError]) {
+        secnotice("octagon-cdp-status", "Device is locked! restarting on unlock");
+        self.nextState = OctagonStateWaitForClassCUnlock;
+        self.error = localError;
+        return;
+    }
+
+    if(localError) {
+        secnotice("octagon-cdp-status", "Failed to load account metadata: %@", localError);
+        self.error = localError;
+        return;
+    }
+
+    secnotice("octagon-cdp-status", "CDP is %@", OTAccountMetadataClassC_CDPStateAsString(account.cdpState));
+
+    if(account.cdpState == OTAccountMetadataClassC_CDPState_ENABLED) {
+        self.nextState = self.intendedState;
+    } else {
+        // If the CDP status is unknown or disabled, double-check with TPH.
+        // If there are any peers, the CDP status really should be ENABLED.
+        __block OTAccountMetadataClassC_CDPState newState = OTAccountMetadataClassC_CDPState_UNKNOWN;
+
+        WEAKIFY(self);
+        [self.deps.cuttlefishXPCWrapper trustStatusWithSpecificUser:self.deps.activeAccount
+                                                              reply:^(TrustedPeersHelperEgoPeerStatus *egoStatus,
+                                                                      NSError *xpcError) {
+            STRONGIFY(self);
+            if(xpcError) {
+                secnotice("octagon-cdp-status", "Unable to talk with TPH; leaving CDP status as 'unknown': %@", xpcError);
+                self.error = xpcError;
+
+                if ([self.deps.reachabilityTracker isNetworkError:xpcError]) {
+                    OctagonPendingFlag* pendingFlag = [[OctagonPendingFlag alloc] initWithFlag:OctagonFlagPendingNetworkAvailablity
+                                                                                    conditions:OctagonPendingConditionsNetworkReachable
+                                                                                delayInSeconds:.2];
+                    [self.deps.flagHandler handlePendingFlag:pendingFlag];
+                }
+                return;
+            }
+
+            secnotice("octagon-cdp-status", "Octagon reports %d peers", (int)egoStatus.numberOfPeersInOctagon);
+            if(egoStatus.numberOfPeersInOctagon > 0) {
+                newState = OTAccountMetadataClassC_CDPState_ENABLED;
+            } else {
+                // As a last gasp, check in with SOS (if enabled). If there's a circle (in or out), CDP is on
+                if(self.deps.sosAdapter.sosEnabled) {
+                    secnotice("octagon-cdp-status", "Requesting SOS status...");
+
+                    NSError* circleError = nil;
+                    SOSCCStatus circleStatus = [self.deps.sosAdapter circleStatus:&circleError];
+
+                    if(circleError || circleStatus == kSOSCCError) {
+                        secnotice("octagon-cdp-status", "Error fetching circle status. Leaving CDP status as 'unknown': %@", circleError);
+                    } else if(circleStatus == kSOSCCCircleAbsent) {
+                        secnotice("octagon-cdp-status", "SOS reports circle absent. Setting CDP to 'disabled'");
+                        newState = OTAccountMetadataClassC_CDPState_DISABLED;
+                    } else {
+                        secnotice("octagon-cdp-status", "SOS reports some existing circle (%d). Setting CDP to 'enabled'", (int)circleStatus);
+                        newState = OTAccountMetadataClassC_CDPState_ENABLED;
+                    }
+                } else {
+                    // No SOS? no CDP.
+                    secnotice("octagon-cdp-status", "No SOS. CDP bit is off.");
+                    newState = OTAccountMetadataClassC_CDPState_DISABLED;
+                }
+            }
+        }];
+        
+        if(account.cdpState != newState) {
+            NSError* stateError = nil;
+            [self.deps.stateHolder persistAccountChanges:^OTAccountMetadataClassC * _Nonnull(OTAccountMetadataClassC * _Nonnull metadata) {
+                if(metadata.cdpState == OTAccountMetadataClassC_CDPState_ENABLED) {
+                    secnotice("octagon-cdp-status", "CDP bit is enabled on-disk, not modifying (would have been %@)", OTAccountMetadataClassC_CDPStateAsString(newState));
+
+                    // Set this here to perform the right state choice later
+                    newState = OTAccountMetadataClassC_CDPState_ENABLED;
+                    return nil;
+                } else {
+                    secnotice("octagon-cdp-status", "Writing CDP bit as %@", OTAccountMetadataClassC_CDPStateAsString(newState));
+                    metadata.cdpState = newState;
+                    return metadata;
+                }
+            } error:&stateError];
+
+            if(stateError) {
+                secnotice("octagon-cdp-status", "Failed to load account metadata: %@", stateError);
+                self.error = stateError;
+            }
+        }
+
+        if(newState == OTAccountMetadataClassC_CDPState_ENABLED) {
+            self.nextState = self.intendedState;
+        } else {
+            self.nextState = OctagonStateWaitForCDP;
+        }
+    }
+}
+
+@end
+
+#endif // OCTAGON

@@ -1,0 +1,166 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Thursday, July 18, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "ResourceUsageOverlay.h"
+
+#if ENABLE(RESOURCE_USAGE) && OS(LINUX)
+
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "CommonVM.h"
+#include "GraphicsContext.h"
+#include "Page.h"
+#include "ResourceUsageThread.h"
+#include "SystemFontDatabase.h"
+#include <JavaScriptCore/VM.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
+
+namespace WebCore {
+
+static ResourceUsageData gData;
+
+static String cpuUsageString(float cpuUsage)
+{
+    if (cpuUsage < 0)
+        return "<unknown>"_s;
+    return makeString(FormattedNumber::fixedWidth(cpuUsage, 1), '%');
+}
+
+static String formatByteNumber(size_t number)
+{
+    if (number >= 1024 * 1048576)
+        return makeString(FormattedNumber::fixedWidth(number / (1024. * 1048576), 3), " GB"_s);
+    if (number >= 1048576)
+        return makeString(FormattedNumber::fixedWidth(number / 1048576., 2), " MB"_s);
+    if (number >= 1024)
+        return makeString(FormattedNumber::fixedWidth(number / 1024, 1), " kB"_s);
+    return String::number(number);
+}
+
+static String gcTimerString(MonotonicTime timerFireDate, MonotonicTime now)
+{
+    if (timerFireDate.isNaN())
+        return "[not scheduled]"_s;
+    return String::numberToStringFixedPrecision((timerFireDate - now).seconds());
+}
+
+static const float gFontSize = 14;
+
+class ResourceUsageOverlayPainter final : public GraphicsLayerClient {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ResourceUsageOverlayPainter);
+public:
+    ResourceUsageOverlayPainter(ResourceUsageOverlay& overlay)
+        : m_overlay(overlay)
+    {
+        auto& systemFontDatabase = SystemFontDatabase::singleton();
+        auto messageBox = SystemFontDatabase::FontShorthand::MessageBox;
+        FontCascadeDescription fontDescription;
+        fontDescription.setOneFamily(systemFontDatabase.systemFontShorthandFamily(messageBox));
+        fontDescription.setWeight(systemFontDatabase.systemFontShorthandWeight(messageBox));
+        fontDescription.setComputedSize(gFontSize);
+        m_textFont = FontCascade(WTFMove(fontDescription));
+        m_textFont.update(nullptr);
+    }
+
+    ~ResourceUsageOverlayPainter() = default;
+
+private:
+    void paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override
+    {
+        GraphicsContextStateSaver stateSaver(context);
+        context.fillRect(clip, Color::black.colorWithAlphaByte(204));
+        context.setFillColor(SRGBA<uint8_t> { 230, 230, 230 });
+
+        FloatPoint position = { 10, 20 };
+        auto string =  makeString("CPU: "_s, cpuUsageString(gData.cpu));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+
+        string = makeString("Memory: "_s, formatByteNumber(gData.totalDirtySize));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+
+        string = makeString("External: "_s, formatByteNumber(gData.totalExternalSize));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+
+        string = makeString("GC Heap: "_s, formatByteNumber(gData.categories[MemoryCategory::GCHeap].dirtySize));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+
+        string = makeString("GC owned: "_s, formatByteNumber(gData.categories[MemoryCategory::GCOwned].dirtySize));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+
+        MonotonicTime now = MonotonicTime::now();
+        string = makeString("Eden GC: "_s, gcTimerString(gData.timeOfNextEdenCollection, now));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+
+        string = makeString("Full GC: "_s, gcTimerString(gData.timeOfNextFullCollection, now));
+        context.drawText(m_textFont, TextRun(string), position);
+        position.move(0, gFontSize + 2);
+    }
+
+    void notifyFlushRequired(const GraphicsLayer*) override
+    {
+        m_overlay.overlay().page()->scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
+    }
+
+    ResourceUsageOverlay& m_overlay;
+    FontCascade m_textFont;
+};
+
+void ResourceUsageOverlay::platformInitialize()
+{
+    m_overlayPainter = makeUnique<ResourceUsageOverlayPainter>(*this);
+    m_paintLayer = GraphicsLayer::create(overlay().page()->chrome().client().graphicsLayerFactory(), *m_overlayPainter);
+    m_paintLayer->setAnchorPoint(FloatPoint3D());
+    m_paintLayer->setSize({ normalWidth, normalHeight });
+    m_paintLayer->setBackgroundColor(Color::black.colorWithAlphaByte(204));
+    m_paintLayer->setDrawsContent(true);
+    overlay().layer().addChild(*m_paintLayer);
+
+    ResourceUsageThread::addObserver(this, All, [this] (const ResourceUsageData& data) {
+        gData = data;
+        m_paintLayer->setNeedsDisplay();
+    });
+}
+
+void ResourceUsageOverlay::platformDestroy()
+{
+    ResourceUsageThread::removeObserver(this);
+    if (!m_paintLayer)
+        return;
+
+    m_paintLayer->removeFromParent();
+    m_paintLayer = nullptr;
+    m_overlayPainter = nullptr;
+}
+
+} // namespace WebCore
+
+#endif // ENABLE(RESOURCE_USAGE) && OS(LINUX)

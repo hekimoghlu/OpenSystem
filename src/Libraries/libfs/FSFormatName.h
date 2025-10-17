@@ -1,0 +1,127 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, August 30, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if !defined(__FS_FORMATNAME__)
+#define __FS_FORMATNAME__ 1
+
+#include "FSPrivate.h"
+
+#include "bootsect.h"	// for MSDOS
+#include "bpb.h"
+
+#include <CoreFoundation/CFBundle.h>
+#include <CoreFoundation/CFDictionary.h>
+#include <CoreFoundation/CFNumber.h>
+#include <CoreFoundation/CFPriv.h>
+#include <libkern/OSAtomic.h> 	// for OSSpinLock
+#include <sys/mount.h> 			// for struct statfs
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>	
+#include <stdio.h>
+#include <hfs/hfs_format.h>	// for HFS
+
+/* Currently HFS has maximum subtypes (5) */ 
+#define MAX_FS_SUBTYPES			5
+
+/* Maximum length of f_fstypename in /System/Library/Filesystem/ */
+#define MAX_FSNAME			10
+
+#define kFSSystemLibraryFileSystemsPath CFSTR("/System/Library/Filesystems")
+#define KEY_FS_PERSONALITIES 	CFSTR("FSPersonalities")
+#define KEY_FS_SUBTYPE 			CFSTR("FSSubType")
+#define KEY_FS_NAME 			CFSTR("FSName")
+#define UNKNOWN_FS_NAME			CFSTR("Unknown")
+
+// Temporary untill added to fsproperties.h
+#ifndef kFSEncryptNameKey
+#define    kFSEncryptNameKey             "FSEncryptionName"
+#endif
+
+// Disk Images IORegistry object keys
+#ifndef kIOHDIXImageEncryptedProperty
+#define kIOHDIXImageEncryptedProperty   "image-encrypted"
+#endif
+
+/* APFS type and subtype number */
+#define APFS_NAME	"apfs"
+#define CASE_SENSITIVE			CFSTR("CaseSensitive")
+
+// APFS IORegistry object keys - can remove this if they enter IOKit framework at some point
+#define kAPFSEncryptedKey			"Encrypted"		/* Volume is encrypted (boolean) */
+#define kAPFSEncryptionRolling      "EncryptionRolling"     /* Volume is encrypting or decrypting (boolean) */
+#define APFS_FS_NAME				CFSTR("APFS")
+#define APFS_CONTAINER_CLASS        "AppleAPFSContainer"
+
+enum {
+    kAPFSXSubType    = 0,    /* APFS Case-sensitive */
+    kAPFSSubType     = 1     /* APFS Case-insensitive */
+};
+
+// APFS constants for getting volume encryption key state
+#define APFS_IOUC_VOLUME_GET_VEK_STATE 19 // from apfs_iouc.h. If this changes, the world ends.
+
+typedef struct {
+    uint32_t index;
+} volume_vek_state_input;
+
+typedef struct {
+    bool user_protected;
+    bool sys_protected;
+} volume_vek_state_output;
+
+/* HFS type and subtype number */
+#define HFS_NAME	"hfs" 
+enum {
+    kHFSPlusSubType     = 0,    /* HFS Plus */
+    kHFSJSubType        = 1,    /* HFS Journaled */
+    kHFSXSubType        = 2,    /* HFS Case-sensitive */
+    kHFSXJSubType       = 3,    /* HFS Case-sensitive, Journaled */
+    kHFSSubType         = 128   /* HFS */
+};
+#define MAX_HFS_BLOCKSIZE 65536 // 64 KB
+
+/* MSDOS type and subtype number */
+#define MSDOS_NAME	"msdos"
+enum {
+    kFAT12SubType       = 0,    /* FAT 12 */
+    kFAT16SubType       = 1,    /* FAT 16 */
+    kFAT32SubType       = 2,    /* FAT 32 */
+};
+#define MAX_DOS_BLOCKSIZE	2048
+
+/* Internal function */
+CFStringRef FSCopyFormatNameForFSType(CFStringRef fsType, int16_t fsSubtype, bool localized, bool encrypted);
+bool getfstype(char *devnode, char *fsname, int *fssubtype);
+bool is_apfs(char *devnode, int *fssubtype);
+bool is_hfs(char *devnode, int *fssubtype);
+bool is_msdos(char *devnode, int *fssubtype);
+static size_t getblk(int fd, unsigned long blk, size_t blksize, char* buf);
+static int getwrapper(const HFSMasterDirectoryBlock *mdbp, off_t *offset);
+ssize_t readdisk(int fd, off_t startaddr, size_t length, size_t blocksize, char* buf);
+errno_t GetFSEncryptionStatus(const char *bsdname, bool *encryption_status, bool require_FDE,
+                              fs_media_encryption_details_t *encryption_details);
+errno_t GetDiskImageEncryptionStatus(const char *bsdname, bool *encryption_status);
+#endif /* !__FS_FORMATNAME__ */

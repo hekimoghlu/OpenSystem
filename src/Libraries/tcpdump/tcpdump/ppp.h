@@ -1,0 +1,76 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, October 18, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#define PPP_HDRLEN	4	/* length of PPP header */
+
+#define PPP_ADDRESS	0xff	/* The address byte value */
+#define PPP_CONTROL	0x03	/* The control byte value */
+
+#define PPP_PPPD_IN  0x00 /* non-standard for DLT_PPP_PPPD */
+#define PPP_PPPD_OUT 0x01 /* non-standard for DLT_PPP_PPPD */
+
+/* Protocol numbers */
+#define PPP_IP		0x0021	/* Raw IP */
+#define PPP_OSI		0x0023	/* OSI Network Layer */
+#define PPP_NS		0x0025	/* Xerox NS IDP */
+#define PPP_DECNET	0x0027	/* DECnet Phase IV */
+#define PPP_APPLE	0x0029	/* Appletalk */
+#define PPP_IPX		0x002b	/* Novell IPX */
+#define PPP_VJC		0x002d	/* Van Jacobson Compressed TCP/IP */
+#define PPP_VJNC	0x002f	/* Van Jacobson Uncompressed TCP/IP */
+#define PPP_BRPDU	0x0031	/* Bridging PDU */
+#define PPP_STII	0x0033	/* Stream Protocol (ST-II) */
+#define PPP_VINES	0x0035	/* Banyan Vines */
+#define PPP_ML		0x003d  /* Multi-Link PPP */
+#define PPP_IPV6	0x0057	/* IPv6 */
+#define PPP_COMP	0x00fd	/* Compressed Datagram */
+
+#define PPP_HELLO	0x0201	/* 802.1d Hello Packets */
+#define PPP_LUXCOM	0x0231	/* Luxcom */
+#define PPP_SNS		0x0233	/* Sigma Network Systems */
+#define PPP_MPLS_UCAST  0x0281  /* rfc 3032 */
+#define PPP_MPLS_MCAST  0x0283  /* rfc 3022 */
+
+#define PPP_IPCP	0x8021	/* IP Control Protocol */
+#define PPP_OSICP	0x8023	/* OSI Network Layer Control Protocol */
+#define PPP_NSCP	0x8025	/* Xerox NS IDP Control Protocol */
+#define PPP_DECNETCP	0x8027	/* DECnet Control Protocol */
+#define PPP_APPLECP	0x8029	/* Appletalk Control Protocol */
+#define PPP_IPXCP	0x802b	/* Novell IPX Control Protocol */
+#define PPP_STIICP	0x8033	/* Strean Protocol Control Protocol */
+#define PPP_VINESCP	0x8035	/* Banyan Vines Control Protocol */
+#define PPP_IPV6CP	0x8057	/* IPv6 Control Protocol */
+#define PPP_CCP		0x80fd	/* Compress Control Protocol */
+#define PPP_MPLSCP      0x8281  /* rfc 3022 */
+
+#define PPP_LCP		0xc021	/* Link Control Protocol */
+#define PPP_PAP		0xc023	/* Password Authentication Protocol */
+#define PPP_LQM		0xc025	/* Link Quality Monitoring */
+#define PPP_SPAP        0xc027
+#define PPP_CHAP	0xc223	/* Challenge Handshake Authentication Protocol */
+#define PPP_BACP	0xc02b	/* Bandwidth Allocation Control Protocol */
+#define PPP_BAP		0xc02d	/* BAP */
+#define PPP_MPCP		0xc03d	/* Multi-Link */
+#define PPP_SPAP_OLD    0xc123
+#define PPP_EAP         0xc227

@@ -1,0 +1,97 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, March 28, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+#include <tommath.h>
+#ifdef BN_MP_RSHD_C
+/* LibTomMath, multiple-precision integer library -- Tom St Denis
+ *
+ * LibTomMath is a library that provides multiple-precision
+ * integer arithmetic as well as number theoretic functionality.
+ *
+ * The library was designed directly after the MPI library by
+ * Michael Fromberger but has been written from scratch with
+ * additional optimizations in place.
+ *
+ * The library is free for all purposes without any express
+ * guarantee it works.
+ *
+ * Tom St Denis, tomstdenis@gmail.com, http://libtom.org
+ */
+
+/* shift right a certain amount of digits */
+void mp_rshd (mp_int * a, int b)
+{
+  int     x;
+
+  /* if b <= 0 then ignore it */
+  if (b <= 0) {
+    return;
+  }
+
+  /* if b > used then simply zero it and return */
+  if (a->used <= b) {
+    mp_zero (a);
+    return;
+  }
+
+  {
+    register mp_digit *bottom, *top;
+
+    /* shift the digits down */
+
+    /* bottom */
+    bottom = a->dp;
+
+    /* top [offset into digits] */
+    top = a->dp + b;
+
+    /* this is implemented as a sliding window where
+     * the window is b-digits long and digits from
+     * the top of the window are copied to the bottom
+     *
+     * e.g.
+
+     b-2 | b-1 | b0 | b1 | b2 | ... | bb |   ---->
+                 /\                   |      ---->
+                  \-------------------/      ---->
+     */
+    for (x = 0; x < (a->used - b); x++) {
+      *bottom++ = *top++;
+    }
+
+    /* zero the top digits */
+    for (; x < a->used; x++) {
+      *bottom++ = 0;
+    }
+  }
+
+  /* remove excess digits */
+  a->used -= b;
+}
+#endif
+
+/* $Source: /cvs/libtom/libtommath/bn_mp_rshd.c,v $ */
+/* $Revision: 1.4 $ */
+/* $Date: 2006/12/28 01:25:13 $ */

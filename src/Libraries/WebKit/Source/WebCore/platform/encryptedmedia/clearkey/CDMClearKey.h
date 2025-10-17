@@ -1,0 +1,130 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, March 31, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if ENABLE(ENCRYPTED_MEDIA)
+
+#include "CDMFactory.h"
+#include "CDMInstanceSession.h"
+#include "CDMPrivate.h"
+#include "CDMProxy.h"
+#include "SharedBuffer.h"
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+
+namespace ClearKey {
+
+// ClearKey CENC SystemID.
+// https://www.w3.org/TR/eme-initdata-cenc/#common-system
+constexpr std::array<uint8_t, 16> cencSystemId { 0x10, 0x77, 0xef, 0xec, 0xc0, 0xb2, 0x4d, 0x02, 0xac, 0xe3, 0x3c, 0x1e, 0x52, 0xe2, 0xfb, 0x4b };
+enum {
+    AES128CTRBlockSizeInBytes = 16,
+    KeyIDSizeInBytes = 16,
+    IVSizeInBytes = 16,
+};
+
+} // namespace ClearKey
+
+class CDMFactoryClearKey final : public CDMFactory {
+    WTF_MAKE_TZONE_ALLOCATED(CDMFactoryClearKey);
+public:
+    static CDMFactoryClearKey& singleton();
+
+    virtual ~CDMFactoryClearKey();
+
+    std::unique_ptr<CDMPrivate> createCDM(const String&, const CDMPrivateClient&) final;
+    bool supportsKeySystem(const String&) final;
+
+private:
+    friend class NeverDestroyed<CDMFactoryClearKey>;
+    CDMFactoryClearKey();
+};
+
+class CDMPrivateClearKey final : public CDMPrivate {
+    WTF_MAKE_TZONE_ALLOCATED(CDMPrivateClearKey);
+public:
+    CDMPrivateClearKey();
+    virtual ~CDMPrivateClearKey();
+
+    Vector<AtomString> supportedInitDataTypes() const final;
+    Vector<AtomString> supportedRobustnesses() const final;
+    bool supportsConfiguration(const CDMKeySystemConfiguration&) const final;
+    bool supportsConfigurationWithRestrictions(const CDMKeySystemConfiguration&, const CDMRestrictions&) const final;
+    bool supportsSessionTypeWithConfiguration(const CDMSessionType&, const CDMKeySystemConfiguration&) const final;
+    CDMRequirement distinctiveIdentifiersRequirement(const CDMKeySystemConfiguration&, const CDMRestrictions&) const final;
+    CDMRequirement persistentStateRequirement(const CDMKeySystemConfiguration&, const CDMRestrictions&) const final;
+    bool distinctiveIdentifiersAreUniquePerOriginAndClearable(const CDMKeySystemConfiguration&) const final;
+    RefPtr<CDMInstance> createInstance() final;
+    void loadAndInitialize() final;
+    bool supportsServerCertificates() const final;
+    bool supportsSessions() const final;
+    bool supportsInitData(const AtomString&, const SharedBuffer&) const final;
+    RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&) const final;
+    std::optional<String> sanitizeSessionId(const String&) const final;
+};
+
+class CDMInstanceClearKey final : public CDMInstanceProxy {
+public:
+    CDMInstanceClearKey();
+    virtual ~CDMInstanceClearKey();
+
+    uint32_t getNextSessionIdValue() { return m_nextSessionIdValue++; }
+
+    // CDMInstance
+    ImplementationType implementationType() const final { return ImplementationType::ClearKey; }
+    void initializeWithConfiguration(const CDMKeySystemConfiguration&, AllowDistinctiveIdentifiers, AllowPersistentState, SuccessCallback&&) final;
+    void setServerCertificate(Ref<SharedBuffer>&&, SuccessCallback&&) final;
+    void setStorageDirectory(const String&) final;
+    const String& keySystem() const final;
+    RefPtr<CDMInstanceSession> createSession() final;
+
+private:
+    uint32_t m_nextSessionIdValue { 0 };
+};
+
+class CDMInstanceSessionClearKey final : public CDMInstanceSessionProxy {
+public:
+    CDMInstanceSessionClearKey(CDMInstanceClearKey& parent)
+        : CDMInstanceSessionProxy(parent) { }
+    void requestLicense(LicenseType, KeyGroupingStrategy, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
+    void updateLicense(const String&, LicenseType, Ref<SharedBuffer>&&, LicenseUpdateCallback&&) final;
+    void loadSession(LicenseType, const String&, const String&, LoadSessionCallback&&) final;
+    void closeSession(const String&, CloseSessionCallback&&) final;
+    void removeSessionData(const String&, LicenseType, RemoveSessionDataCallback&&) final;
+    void storeRecordOfKeyUsage(const String&) final;
+private:
+    RefPtr<CDMInstanceClearKey> protectedParentInstance() const;
+
+    String m_sessionID;
+    KeyStore m_keyStore;
+};
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CDM_INSTANCE(WebCore::CDMInstanceClearKey, WebCore::CDMInstance::ImplementationType::ClearKey);
+
+#endif // ENABLE(ENCRYPTED_MEDIA)

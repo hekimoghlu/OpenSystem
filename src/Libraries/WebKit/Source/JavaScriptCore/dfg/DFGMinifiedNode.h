@@ -1,0 +1,97 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, September 30, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#if ENABLE(DFG_JIT)
+
+#include "DFGMinifiedID.h"
+#include "DFGNodeType.h"
+#include "InlineCallFrame.h"
+#include "JSCJSValue.h"
+
+namespace JSC { namespace DFG {
+
+struct Node;
+
+inline bool belongsInMinifiedGraph(NodeType type)
+{
+    switch (type) {
+    case JSConstant:
+    case Int52Constant:
+    case DoubleConstant:
+    case PhantomDirectArguments:
+    case PhantomClonedArguments:
+        return true;
+    default:
+        return false;
+    }
+}
+
+class MinifiedNode {
+public:
+    MinifiedNode() { }
+    
+    static MinifiedNode fromNode(Node*);
+    
+    MinifiedID id() const { return m_id; }
+    
+    bool hasConstant() const { return m_hasConstant; }
+    
+    JSValue constant() const
+    {
+        return JSValue::decode(std::bit_cast<EncodedJSValue>(m_info.get()));
+    }
+    
+    bool isPhantomDirectArguments() const { return m_isPhantomDirectArguments; }
+    bool isPhantomClonedArguments() const { return m_isPhantomClonedArguments; }
+    bool hasInlineCallFrame() const { return m_isPhantomDirectArguments || m_isPhantomClonedArguments; }
+    
+    InlineCallFrame* inlineCallFrame() const
+    {
+        return std::bit_cast<InlineCallFrame*>(static_cast<uintptr_t>(m_info.get()));
+    }
+    
+    static MinifiedID getID(MinifiedNode* node) { return node->id(); }
+    static bool compareByNodeIndex(const MinifiedNode& a, const MinifiedNode& b)
+    {
+        return a.m_id < b.m_id;
+    }
+    
+private:
+    static bool hasConstant(NodeType type)
+    {
+        return type == JSConstant || type == Int52Constant || type == DoubleConstant;
+    }
+    
+    Packed<uint64_t> m_info;
+    MinifiedID m_id;
+    bool m_hasConstant : 1;
+    bool m_isPhantomDirectArguments : 1;
+    bool m_isPhantomClonedArguments : 1;
+};
+
+} } // namespace JSC::DFG
+
+#endif // ENABLE(DFG_JIT)

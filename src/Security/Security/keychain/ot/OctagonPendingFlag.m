@@ -1,0 +1,151 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, September 25, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+
+#if OCTAGON
+
+#import "keychain/ot/OctagonPendingFlag.h"
+
+NSString* OctagonPendingConditionsToString(OctagonPendingConditions cond)
+{
+    if (cond == 0x0) {
+        return @"none";
+    }
+    NSMutableSet *items = [NSMutableSet set];
+    if (cond & OctagonPendingConditionsDeviceUnlocked) {
+        [items addObject:@"unlock"];
+        cond &= ~OctagonPendingConditionsDeviceUnlocked;
+    }
+    if (cond & OctagonPendingConditionsNetworkReachable) {
+        [items addObject:@"network"];
+        cond &= ~OctagonPendingConditionsNetworkReachable;
+    }
+    if (cond) {
+        [items addObject:[NSString stringWithFormat:@"Conditions<0x%x>", (int)cond]];
+    }
+    return [items.allObjects componentsJoinedByString:@","];
+}
+
+@interface OctagonPendingFlag()
+
+// If this pending flag depends on a scheduler, it needs to hold a strong reference to that scheduler
+@property (nullable) CKKSNearFutureScheduler* scheduler;
+@end
+
+@implementation OctagonPendingFlag
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag delayInSeconds:(NSTimeInterval)delay
+{
+    if ((self = [super init])) {
+        _flag = flag;
+        _fireTime = [NSDate dateWithTimeIntervalSinceNow:delay];
+        _afterOperation = nil;
+        _conditions = 0;
+    }
+    return self;
+}
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag
+                  conditions:(OctagonPendingConditions)conditions
+{
+    return [self initWithFlag:flag conditions:conditions delayInSeconds:0];
+}
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag
+                  conditions:(OctagonPendingConditions)conditions
+              delayInSeconds:(NSTimeInterval)delay
+{
+    if ((self = [super init])) {
+        _flag = flag;
+        _fireTime = delay > 0 ? [NSDate dateWithTimeIntervalSinceNow:delay] : nil;
+        _afterOperation = nil;
+        _conditions = conditions;
+    }
+    return self;
+}
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag
+                       after:(NSOperation*)op
+{
+    return [self initWithFlag:flag
+                   conditions:0
+                        after:op];
+}
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag
+                   scheduler:(CKKSNearFutureScheduler*)scheduler
+{
+    return [self initWithFlag:flag
+                   conditions:0
+                    scheduler:scheduler];
+}
+
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag
+                  conditions:(OctagonPendingConditions)conditions
+                   scheduler:(CKKSNearFutureScheduler*)scheduler
+{
+    [scheduler trigger];
+
+    if ((self = [super init])) {
+        _flag = flag;
+        _fireTime = nil;
+        _scheduler = scheduler;
+        _afterOperation = scheduler.operationDependency;
+        _conditions = conditions;
+    }
+    return self;
+}
+
+- (instancetype)initWithFlag:(OctagonFlag*)flag
+                  conditions:(OctagonPendingConditions)conditions
+                       after:(NSOperation*)op
+{
+    if ((self = [super init])) {
+        _flag = flag;
+        _fireTime = nil;
+        _afterOperation = op;
+        _conditions = conditions;
+    }
+    return self;
+}
+
+- (NSString*)description {
+    if(self.fireTime) {
+        return [NSString stringWithFormat:@"<OctagonPendingFlag: %@: %@>", self.flag, self.fireTime];
+    } else if(self.afterOperation) {
+        if(self.conditions == 0) {
+            return [NSString stringWithFormat:@"<OctagonPendingFlag: %@: %@>", self.flag, self.afterOperation];
+        } else {
+            return [NSString stringWithFormat:@"<OctagonPendingFlag: %@: %@ %@>", self.flag, self.afterOperation, OctagonPendingConditionsToString(self.conditions)];
+        }
+    } else {
+        return [NSString stringWithFormat:@"<OctagonPendingFlag: %@: %@>", self.flag, OctagonPendingConditionsToString(self.conditions)];
+    }
+}
+
+@end
+
+#endif // OCTAGON

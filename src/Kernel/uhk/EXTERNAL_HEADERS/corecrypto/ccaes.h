@@ -1,0 +1,132 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, May 6, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#ifndef _CORECRYPTO_CCAES_H_
+#define _CORECRYPTO_CCAES_H_
+
+#include <corecrypto/cc_config.h>
+#include <corecrypto/ccmode.h>
+
+CC_PTRCHECK_CAPABLE_HEADER()
+
+#define CCAES_BLOCK_SIZE 16
+#define CCAES_KEY_SIZE_128 16
+#define CCAES_KEY_SIZE_192 24
+#define CCAES_KEY_SIZE_256 32
+
+#define CCAES_CTR_MAX_PARALLEL_NBLOCKS 8
+
+extern const struct ccmode_ecb ccaes_ltc_ecb_decrypt_mode;
+extern const struct ccmode_ecb ccaes_ltc_ecb_encrypt_mode;
+
+extern const struct ccmode_cbc ccaes_gladman_cbc_encrypt_mode;
+extern const struct ccmode_cbc ccaes_gladman_cbc_decrypt_mode;
+
+#if  CCAES_ARM_ASM
+extern const struct ccmode_ecb ccaes_arm_ecb_encrypt_mode;
+extern const struct ccmode_ecb ccaes_arm_ecb_decrypt_mode;
+
+extern const struct ccmode_cbc ccaes_arm_cbc_encrypt_mode;
+extern const struct ccmode_cbc ccaes_arm_cbc_decrypt_mode;
+
+extern const struct ccmode_xts ccaes_arm_xts_encrypt_mode;
+extern const struct ccmode_xts ccaes_arm_xts_decrypt_mode;
+
+extern const struct ccmode_cfb ccaes_arm_cfb_encrypt_mode;
+extern const struct ccmode_cfb ccaes_arm_cfb_decrypt_mode;
+
+extern const struct ccmode_ofb ccaes_arm_ofb_crypt_mode;
+
+#endif
+
+#if  CCAES_INTEL_ASM
+extern const struct ccmode_ecb ccaes_intel_ecb_encrypt_opt_mode;
+extern const struct ccmode_ecb ccaes_intel_ecb_encrypt_aesni_mode;
+
+extern const struct ccmode_ecb ccaes_intel_ecb_decrypt_opt_mode;
+extern const struct ccmode_ecb ccaes_intel_ecb_decrypt_aesni_mode;
+
+extern const struct ccmode_cbc ccaes_intel_cbc_encrypt_opt_mode;
+extern const struct ccmode_cbc ccaes_intel_cbc_encrypt_aesni_mode;
+
+extern const struct ccmode_cbc ccaes_intel_cbc_decrypt_opt_mode;
+extern const struct ccmode_cbc ccaes_intel_cbc_decrypt_aesni_mode;
+
+extern const struct ccmode_xts ccaes_intel_xts_encrypt_opt_mode;
+extern const struct ccmode_xts ccaes_intel_xts_encrypt_aesni_mode;
+
+extern const struct ccmode_xts ccaes_intel_xts_decrypt_opt_mode;
+extern const struct ccmode_xts ccaes_intel_xts_decrypt_aesni_mode;
+#endif
+
+#if CC_USE_L4
+extern const struct ccmode_cbc ccaes_skg_cbc_encrypt_mode;
+extern const struct ccmode_cbc ccaes_skg_cbc_decrypt_mode;
+
+extern const struct ccmode_ecb ccaes_skg_ecb_encrypt_mode;
+extern const struct ccmode_ecb ccaes_skg_ecb_decrypt_mode;
+
+extern const struct ccmode_ecb ccaes_trng_ecb_encrypt_mode;
+#endif
+
+/* Implementation Selectors: */
+const struct ccmode_ecb *ccaes_ecb_encrypt_mode(void);
+const struct ccmode_cbc *ccaes_cbc_encrypt_mode(void);
+const struct ccmode_cfb *ccaes_cfb_encrypt_mode(void);
+const struct ccmode_cfb8 *ccaes_cfb8_encrypt_mode(void);
+const struct ccmode_xts *ccaes_xts_encrypt_mode(void);
+const struct ccmode_gcm *ccaes_gcm_encrypt_mode(void);
+const struct ccmode_ccm *ccaes_ccm_encrypt_mode(void);
+
+const struct ccmode_ecb *ccaes_ecb_decrypt_mode(void);
+const struct ccmode_cbc *ccaes_cbc_decrypt_mode(void);
+const struct ccmode_cfb *ccaes_cfb_decrypt_mode(void);
+const struct ccmode_cfb8 *ccaes_cfb8_decrypt_mode(void);
+const struct ccmode_xts *ccaes_xts_decrypt_mode(void);
+const struct ccmode_gcm *ccaes_gcm_decrypt_mode(void);
+const struct ccmode_ccm *ccaes_ccm_decrypt_mode(void);
+
+const struct ccmode_ctr *ccaes_ctr_crypt_mode(void);
+const struct ccmode_ofb *ccaes_ofb_crypt_mode(void);
+
+const struct ccmode_siv *ccaes_siv_encrypt_mode(void);
+const struct ccmode_siv *ccaes_siv_decrypt_mode(void);
+
+const struct ccmode_siv_hmac *ccaes_siv_hmac_sha256_encrypt_mode(void);
+const struct ccmode_siv_hmac *ccaes_siv_hmac_sha256_decrypt_mode(void);
+
+/*!
+  @function ccaes_unwind
+  @abstract "Unwind" an AES encryption key to the equivalent decryption key.
+
+  @param key_nbytes Length in bytes of both the input and output keys
+  @param key The input AES encryption key
+  @param out The output AES decryption key
+
+  @result @p CCERR_OK iff successful.
+  @discussion Only AES256 (i.e. 32-byte) keys are supported. This function is not necessary in typical AES usage; consult the maintainers before using it.
+*/
+int ccaes_unwind(size_t key_nbytes, const void *cc_sized_by(key_nbytes) key, void *cc_sized_by(key_nbytes) out);
+
+#endif /* _CORECRYPTO_CCAES_H_ */

@@ -1,0 +1,70 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, December 31, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <chrono>
+
+// constexpr hours make24(const hours& h, bool is_pm) noexcept;
+//   Returns: If is_pm is false, returns the 24-hour equivalent of h in the range [0h, 11h],
+//       assuming h represents an ante meridiem hour.
+//     Else returns the 24-hour equivalent of h in the range [12h, 23h],
+//       assuming h represents a post meridiem hour.
+//     If h is not in the range [1h, 12h], the value returned is unspecified.
+
+#include <uscl/std/cassert>
+#include <uscl/std/chrono>
+
+#include "test_macros.h"
+
+int main(int, char**)
+{
+  using hours = cuda::std::chrono::hours;
+  static_assert(cuda::std::is_same_v<hours, decltype(cuda::std::chrono::make24(cuda::std::declval<hours>(), false))>);
+  static_assert(noexcept(cuda::std::chrono::make24(cuda::std::declval<hours>(), false)));
+
+  static_assert(cuda::std::chrono::make24(hours(1), false) == hours(1), "");
+  static_assert(cuda::std::chrono::make24(hours(11), false) == hours(11), "");
+  static_assert(cuda::std::chrono::make24(hours(12), false) == hours(0), "");
+  static_assert(cuda::std::chrono::make24(hours(1), true) == hours(13), "");
+  static_assert(cuda::std::chrono::make24(hours(11), true) == hours(23), "");
+  static_assert(cuda::std::chrono::make24(hours(12), true) == hours(12), "");
+
+  for (int i = 1; i < 11; ++i)
+  {
+    assert((cuda::std::chrono::make24(hours(i), false)) == hours(i));
+    assert((cuda::std::chrono::make24(hours(i), true)) == hours(12 + i));
+  }
+  assert((cuda::std::chrono::make24(hours(12), false)) == hours(0));
+  assert((cuda::std::chrono::make24(hours(12), true)) == hours(12));
+
+  return 0;
+}

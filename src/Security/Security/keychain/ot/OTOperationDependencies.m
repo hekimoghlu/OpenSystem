@@ -1,0 +1,76 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, June 12, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+
+#import "keychain/ot/OTOperationDependencies.h"
+
+@implementation OTOperationDependencies
+- (instancetype)initForContainer:(NSString*)containerName
+                       contextID:(NSString*)contextID
+                   activeAccount:(TPSpecificUser* _Nullable)activeAccount
+                     stateHolder:(OTCuttlefishAccountStateHolder*)stateHolder
+                     flagHandler:(id<OctagonStateFlagHandler>)flagHandler
+                      sosAdapter:(id<OTSOSAdapter>)sosAdapter
+                  octagonAdapter:(id<CKKSPeerProvider> _Nullable)octagonAdapter
+                 accountsAdapter:(id<OTAccountsAdapter>)accountsAdapter
+                  authKitAdapter:(id<OTAuthKitAdapter>)authKitAdapter
+                  personaAdapter:(id<OTPersonaAdapter>)personaAdapter
+               deviceInfoAdapter:(id<OTDeviceInformationAdapter>)deviceInfoAdapter
+                 ckksAccountSync:(CKKSKeychainView* _Nullable)ckks
+                lockStateTracker:(CKKSLockStateTracker*)lockStateTracker
+            cuttlefishXPCWrapper:(CuttlefishXPCWrapper *)cuttlefishXPCWrapper
+              escrowRequestClass:(Class<SecEscrowRequestable>)escrowRequestClass
+                   notifierClass:(Class<CKKSNotifier>)notifierClass
+                          flowID:(NSString* _Nullable)flowID
+                 deviceSessionID:(NSString* _Nullable)deviceSessionID
+          permittedToSendMetrics:(BOOL)permittedToSendMetrics
+             reachabilityTracker:(CKKSReachabilityTracker*)reachabilityTracker
+{
+    if((self = [super init])) {
+        _containerName = containerName;
+        _contextID = contextID;
+        _activeAccount = activeAccount;
+        _stateHolder = stateHolder;
+        _flagHandler = flagHandler;
+        _sosAdapter = sosAdapter;
+        _octagonAdapter = octagonAdapter;
+        _accountsAdapter = accountsAdapter;
+        _authKitAdapter = authKitAdapter;
+        _personaAdapter = personaAdapter;
+        _deviceInformationAdapter = deviceInfoAdapter;
+        _ckks = ckks;
+        _lockStateTracker = lockStateTracker;
+        _cuttlefishXPCWrapper = cuttlefishXPCWrapper;
+        _escrowRequestClass = escrowRequestClass;
+        _notifierClass = notifierClass;
+        _flowID = flowID;
+        _deviceSessionID = deviceSessionID;
+        _permittedToSendMetrics = permittedToSendMetrics;
+        _reachabilityTracker = reachabilityTracker;
+    }
+    return self;
+}
+
+@end

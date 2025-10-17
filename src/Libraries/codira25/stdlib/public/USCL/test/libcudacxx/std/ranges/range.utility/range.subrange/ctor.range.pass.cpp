@@ -1,0 +1,77 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, May 31, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: msvc-19.16
+
+// class cuda::std::ranges::subrange;
+
+#include <uscl/std/cassert>
+#include <uscl/std/ranges>
+
+#include "test_iterators.h"
+#include "test_macros.h"
+#include "types.h"
+
+static_assert(cuda::std::is_constructible_v<ForwardSubrange, ForwardBorrowedRange>); // Default case.
+static_assert(!cuda::std::is_constructible_v<ForwardSubrange, ForwardRange>); // Not borrowed.
+// Iter convertible to sentinel (pointer) type.
+static_assert(cuda::std::is_constructible_v<ConvertibleForwardSubrange, ConvertibleForwardBorrowedRange>);
+// Where neither iter or sentinel are pointers, but they are different.
+static_assert(cuda::std::is_constructible_v<DifferentSentinelSubrange, ForwardBorrowedRangeDifferentSentinel>);
+static_assert(cuda::std::is_constructible_v<DifferentSentinelWithSizeMemberSubrange, DifferentSentinelWithSizeMember>);
+
+__host__ __device__ constexpr bool test()
+{
+  ForwardSubrange a{ForwardBorrowedRange()};
+  assert(base(a.begin()) == globalBuff);
+  assert(base(a.end()) == globalBuff + 8);
+
+  ConvertibleForwardSubrange b{ConvertibleForwardBorrowedRange()};
+  assert(b.begin() == globalBuff);
+  assert(b.end() == globalBuff + 8);
+
+  DifferentSentinelSubrange c{ForwardBorrowedRangeDifferentSentinel()};
+  assert(base(c.begin()) == globalBuff);
+  assert(c.end().value == globalBuff + 8);
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+  static_assert(test());
+
+  return 0;
+}

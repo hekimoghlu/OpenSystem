@@ -1,0 +1,86 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, July 18, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#pragma once
+
+#include "BytecodeIndex.h"
+#include "Heap.h"
+#include "LineColumn.h"
+#include "SlotVisitorMacros.h"
+#include "VM.h"
+#include "WasmIndexOrName.h"
+#include "WriteBarrier.h"
+#include <limits.h>
+
+namespace JSC {
+
+class CodeBlock;
+class JSObject;
+
+class StackFrame {
+public:
+    StackFrame(VM&, JSCell* owner, JSCell* callee);
+    StackFrame(VM&, JSCell* owner, JSCell* callee, CodeBlock*, BytecodeIndex);
+    StackFrame(VM&, JSCell* owner, CodeBlock*, BytecodeIndex);
+    StackFrame(Wasm::IndexOrName);
+    StackFrame() = default;
+
+    bool hasLineAndColumnInfo() const { return !!m_codeBlock; }
+    CodeBlock* codeBlock() const { return m_codeBlock.get(); }
+
+    LineColumn computeLineAndColumn() const;
+    String functionName(VM&) const;
+    SourceID sourceID() const;
+    String sourceURL(VM&) const;
+    String sourceURLStripped(VM&) const;
+    String toString(VM&) const;
+
+    bool hasBytecodeIndex() const { return m_bytecodeIndex && !m_isWasmFrame; }
+    BytecodeIndex bytecodeIndex()
+    {
+        ASSERT(hasBytecodeIndex());
+        return m_bytecodeIndex;
+    }
+
+    template<typename Visitor>
+    void visitAggregate(Visitor& visitor)
+    {
+        if (m_callee)
+            visitor.append(m_callee);
+        if (m_codeBlock)
+            visitor.append(m_codeBlock);
+    }
+
+    bool isMarked(VM& vm) const { return (!m_callee || vm.heap.isMarked(m_callee.get())) && (!m_codeBlock || vm.heap.isMarked(m_codeBlock.get())); }
+
+private:
+    WriteBarrier<JSCell> m_callee { };
+    WriteBarrier<CodeBlock> m_codeBlock { };
+    Wasm::IndexOrName m_wasmFunctionIndexOrName;
+    BytecodeIndex m_bytecodeIndex;
+    bool m_isWasmFrame { false };
+};
+
+} // namespace JSC
+

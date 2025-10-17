@@ -1,0 +1,182 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, June 26, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "FontCascadeDescription.h"
+
+#include "Font.h"
+#include <wtf/text/StringHash.h>
+#include <wtf/text/TextStream.h>
+
+#if USE(CORE_TEXT)
+#include "FontCascade.h"
+#endif
+
+namespace WebCore {
+
+struct SameSizeAsFontCascadeDescription {
+    Vector<void*> vector;
+    Vector<void*> vector2;
+    FontPalette palette;
+    FontSizeAdjust sizeAdjust;
+    FontVariantAlternates alternates;
+    AtomString string;
+    AtomString string2;
+    int16_t fontSelectionRequest[3];
+    float size;
+    TextSpacingTrim textSpacingTrim;
+    TextAutospace textAutospace;
+    unsigned bitfields1;
+    unsigned bitfields2 : 22;
+    void* array;
+    float size2;
+    unsigned bitfields3 : 10;
+};
+static_assert(sizeof(FontCascadeDescription) == sizeof(SameSizeAsFontCascadeDescription), "FontCascadeDescription should stay small");
+
+FontCascadeDescription::FontCascadeDescription()
+    : m_families(RefCountedFixedVector<AtomString>::create(1))
+    , m_isAbsoluteSize(false)
+    , m_kerning(enumToUnderlyingType(Kerning::Auto))
+    , m_keywordSize(0)
+    , m_fontSmoothing(enumToUnderlyingType(FontSmoothingMode::AutoSmoothing))
+    , m_isSpecifiedFont(false)
+{
+}
+
+FontSelectionValue FontCascadeDescription::lighterWeight(FontSelectionValue weight)
+{
+    if (weight < FontSelectionValue(100))
+        return weight;
+    if (weight < FontSelectionValue(550))
+        return FontSelectionValue(100);
+    if (weight < FontSelectionValue(750))
+        return FontSelectionValue(400);
+    return FontSelectionValue(700);
+}
+
+FontSelectionValue FontCascadeDescription::bolderWeight(FontSelectionValue weight)
+{
+    if (weight < FontSelectionValue(350))
+        return FontSelectionValue(400);
+    if (weight < FontSelectionValue(550))
+        return FontSelectionValue(700);
+    if (weight < FontSelectionValue(900))
+        return FontSelectionValue(900);
+    return weight;
+}
+
+#if ENABLE(TEXT_AUTOSIZING)
+
+bool FontCascadeDescription::familiesEqualForTextAutoSizing(const FontCascadeDescription& other) const
+{
+    unsigned thisFamilyCount = familyCount();
+    unsigned otherFamilyCount = other.familyCount();
+
+    if (thisFamilyCount != otherFamilyCount)
+        return false;
+
+    for (unsigned i = 0; i < thisFamilyCount; ++i) {
+        if (!familyNamesAreEqual(familyAt(i), other.familyAt(i)))
+            return false;
+    }
+
+    return true;
+}
+
+#endif // ENABLE(TEXT_AUTOSIZING)
+
+bool FontCascadeDescription::familyNamesAreEqual(const AtomString& family1, const AtomString& family2)
+{
+#if PLATFORM(COCOA)
+    if (family1.startsWith('.'))
+        return family1 == family2;
+#endif
+    return ASCIICaseInsensitiveHash::equal(family1, family2);
+}
+
+unsigned FontCascadeDescription::familyNameHash(const AtomString& family)
+{
+#if PLATFORM(COCOA)
+    if (family.startsWith('.'))
+        return family.existingHash();
+#endif
+    return ASCIICaseInsensitiveHash::hash(family);
+}
+
+String FontCascadeDescription::foldedFamilyName(const String& family)
+{
+#if PLATFORM(COCOA)
+    if (family.startsWith('.'))
+        return family;
+#endif
+    return family.convertToASCIILowercase();
+}
+
+FontSmoothingMode FontCascadeDescription::usedFontSmoothing() const
+{
+    auto fontSmoothingMode = fontSmoothing();
+#if USE(CORE_TEXT)
+    if (FontCascade::shouldDisableFontSubpixelAntialiasingForTesting() && (fontSmoothingMode == FontSmoothingMode::AutoSmoothing || fontSmoothingMode == FontSmoothingMode::SubpixelAntialiased))
+        return FontSmoothingMode::Antialiased;
+#endif
+    return fontSmoothingMode;
+}
+
+void FontCascadeDescription::resolveFontSizeAdjustFromFontIfNeeded(const Font& font)
+{
+    const auto& fontSizeAdjust = this->fontSizeAdjust();
+    if (!fontSizeAdjust.shouldResolveFromFont())
+        return;
+
+    auto aspectValue = fontSizeAdjust.resolve(computedSize(), font.fontMetrics());
+    setFontSizeAdjust({ fontSizeAdjust.metric, FontSizeAdjust::ValueType::FromFont, aspectValue });
+}
+
+TextStream& operator<<(TextStream& ts, const FontCascadeDescription& fontCascadeDescription)
+{
+    bool first = true;
+    for (auto& family : fontCascadeDescription.families()) {
+        if (!first)
+            ts << ", ";
+        ts << family;
+        first = false;
+    }
+
+    ts << ", specified size " << fontCascadeDescription.specifiedSize();
+    ts << ", computed size " << fontCascadeDescription.computedSize();
+    ts << ", is absolute size " << fontCascadeDescription.isAbsoluteSize();
+    if (fontCascadeDescription.kerning() != Kerning::Auto)
+        ts << ", kerning " << fontCascadeDescription.kerning();
+
+    if (fontCascadeDescription.fontSmoothing() != FontSmoothingMode::AutoSmoothing)
+        ts << ", font smoothing " << fontCascadeDescription.fontSmoothing();
+
+    ts << ", keyword size " << fontCascadeDescription.keywordSize();
+    ts << ", is specified font " << fontCascadeDescription.isSpecifiedFont();
+
+    return ts;
+}
+
+} // namespace WebCore

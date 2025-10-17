@@ -1,0 +1,386 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, April 7, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "JITWorklist.h"
+
+#if ENABLE(JIT)
+
+#include "DeferGCInlines.h"
+#include "HeapInlines.h"
+#include "JITSafepoint.h"
+#include "JITWorklistThread.h"
+#include "SlotVisitorInlines.h"
+#include "VMInlines.h"
+#include <wtf/CompilationThread.h>
+#include <wtf/TZoneMallocInlines.h>
+
+namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITWorklist);
+
+JITWorklist::JITWorklist()
+    : m_lock(Box<Lock>::create())
+    , m_planEnqueued(AutomaticThreadCondition::create())
+{
+    m_maximumNumberOfConcurrentCompilationsPerTier = {
+        Options::numberOfWorklistThreads(),
+        Options::numberOfDFGCompilerThreads(),
+        Options::numberOfFTLCompilerThreads(),
+    };
+
+    Locker locker { *m_lock };
+    for (unsigned i = 0; i < Options::numberOfWorklistThreads(); ++i)
+        m_threads.append(*new JITWorklistThread(locker, *this));
+}
+
+JITWorklist::~JITWorklist()
+{
+    UNREACHABLE_FOR_PLATFORM();
+}
+
+static JITWorklist* theGlobalJITWorklist { nullptr };
+
+JITWorklist* JITWorklist::existingGlobalWorklistOrNull()
+{
+    return theGlobalJITWorklist;
+}
+
+JITWorklist& JITWorklist::ensureGlobalWorklist()
+{
+    static std::once_flag once;
+    std::call_once(
+        once,
+        [] {
+            auto* worklist = new JITWorklist();
+            WTF::storeStoreFence();
+            theGlobalJITWorklist = worklist;
+        });
+    return *theGlobalJITWorklist;
+}
+
+CompilationResult JITWorklist::enqueue(Ref<JITPlan> plan)
+{
+    if (!Options::useConcurrentJIT()) {
+        plan->compileInThread(nullptr);
+        return plan->finalize();
+    }
+
+    Locker locker { *m_lock };
+    if (Options::verboseCompilationQueue()) {
+        dump(locker, WTF::dataFile());
+        dataLog(": Enqueueing plan to optimize ", plan->key(), "\n");
+    }
+    ASSERT(m_plans.find(plan->key()) == m_plans.end());
+    m_plans.add(plan->key(), plan.copyRef());
+    m_queues[static_cast<unsigned>(plan->tier())].append(WTFMove(plan));
+
+    // Notify when some of thread is waiting.
+    for (auto& thread : m_threads) {
+        if (thread->state() == JITWorklistThread::State::NotCompiling) {
+            m_planEnqueued->notifyOne(locker);
+            break;
+        }
+    }
+
+    return CompilationDeferred;
+}
+
+size_t JITWorklist::queueLength() const
+{
+    Locker locker { *m_lock };
+    return queueLength(locker);
+}
+
+size_t JITWorklist::queueLength(const AbstractLocker&) const
+{
+    size_t queueLength = 0;
+    for (unsigned i = 0; i < static_cast<unsigned>(JITPlan::Tier::Count); ++i)
+        queueLength += m_queues[i].size();
+    return queueLength;
+}
+
+void JITWorklist::suspendAllThreads() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
+{
+    m_suspensionLock.lock();
+    Vector<Ref<JITWorklistThread>, 8> busyThreads;
+    for (auto& thread : m_threads) {
+        if (!thread->m_rightToRun.tryLock())
+            busyThreads.append(thread.copyRef());
+    }
+    for (auto& thread : busyThreads)
+        thread->m_rightToRun.lock();
+}
+
+void JITWorklist::resumeAllThreads() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
+{
+    for (auto& thread : m_threads)
+        thread->m_rightToRun.unlock();
+    m_suspensionLock.unlock();
+}
+
+auto JITWorklist::compilationState(VM& vm, JITCompilationKey key) -> State
+{
+    if (!vm.numberOfActiveJITPlans())
+        return NotKnown;
+
+    Locker locker { *m_lock };
+    const auto& iter = m_plans.find(key);
+    if (iter == m_plans.end())
+        return NotKnown;
+    return iter->value->stage() == JITPlanStage::Ready ? Compiled : Compiling;
+}
+
+auto JITWorklist::completeAllReadyPlansForVM(VM& vm, JITCompilationKey requestedKey) -> State
+{
+    if (!vm.numberOfActiveJITPlans())
+        return NotKnown;
+
+    DeferGC deferGC(vm);
+
+    Vector<RefPtr<JITPlan>, 8> myReadyPlans;
+    State resultingState = removeAllReadyPlansForVM(vm, myReadyPlans, requestedKey);
+    for (auto& plan : myReadyPlans) {
+        dataLogLnIf(Options::verboseCompilationQueue(), *this, ": Completing ", plan->key());
+        RELEASE_ASSERT(plan->stage() == JITPlanStage::Ready);
+        plan->finalize();
+    }
+    return resultingState;
+}
+
+
+void JITWorklist::waitUntilAllPlansForVMAreReady(VM& vm)
+{
+    DeferGC deferGC(vm);
+
+    // While we are waiting for the compiler to finish, the collector might have already suspended
+    // the compiler and then it will be waiting for us to stop. That's a deadlock. We avoid that
+    // deadlock by relinquishing our heap access, so that the collector pretends that we are stopped
+    // even if we aren't.
+    // There can be the case where we already released heap access, for example when the VM is being
+    // destroyed as a result of JSLock::unlock unlocking the last reference to the VM.
+    // So we use a Release access scope that checks if we currently have access before releasing and later restoring.
+    ReleaseHeapAccessIfNeededScope releaseHeapAccessScope(vm.heap);
+
+    // Wait for all of the plans for the given VM to complete. The idea here
+    // is that we want all of the caller VM's plans to be done. We don't care
+    // about any other VM's plans, and we won't attempt to wait on those.
+    // After we release this lock, we know that although other VMs may still
+    // be adding plans, our VM will not be.
+    Locker locker { *m_lock };
+
+    if (Options::verboseCompilationQueue()) {
+        dump(locker, WTF::dataFile());
+        dataLog(": Waiting for all in VM to complete.\n");
+    }
+
+    for (;;) {
+        bool allAreCompiled = true;
+        for (const auto& entry : m_plans) {
+            if (entry.value->vm() != &vm)
+                continue;
+            if (entry.value->stage() != JITPlanStage::Ready) {
+                allAreCompiled = false;
+                break;
+            }
+        }
+
+        if (allAreCompiled)
+            break;
+
+        m_planCompiledOrCancelled.wait(*m_lock);
+    }
+}
+
+void JITWorklist::completeAllPlansForVM(VM& vm)
+{
+    if (!vm.numberOfActiveJITPlans())
+        return;
+
+    DeferGC deferGC(vm);
+    waitUntilAllPlansForVMAreReady(vm);
+    completeAllReadyPlansForVM(vm);
+}
+
+void JITWorklist::cancelAllPlansForVM(VM& vm)
+{
+    if (!vm.numberOfActiveJITPlans())
+        return;
+
+    removeMatchingPlansForVM(vm, [&](JITPlan& plan) {
+        return plan.stage() != JITPlanStage::Compiling;
+    });
+
+    waitUntilAllPlansForVMAreReady(vm);
+
+    Vector<RefPtr<JITPlan>, 8> myReadyPlans;
+    removeAllReadyPlansForVM(vm, myReadyPlans, { });
+}
+
+void JITWorklist::removeDeadPlans(VM& vm)
+{
+    if (!vm.numberOfActiveJITPlans())
+        return;
+
+    removeMatchingPlansForVM(vm, [&](JITPlan& plan) {
+        if (!plan.isKnownToBeLiveAfterGC())
+            return true;
+        plan.finalizeInGC();
+        return false;
+    });
+
+    // No locking needed for this part, see comment in visitWeakReferences().
+    for (auto& thread : m_threads) {
+        Safepoint* safepoint = thread->m_safepoint;
+        if (!safepoint)
+            continue;
+        if (safepoint->vm() != &vm)
+            continue;
+        if (safepoint->isKnownToBeLiveAfterGC())
+            continue;
+        safepoint->cancel();
+    }
+}
+
+unsigned JITWorklist::setMaximumNumberOfConcurrentDFGCompilations(unsigned n)
+{
+    unsigned oldValue = m_maximumNumberOfConcurrentCompilationsPerTier[static_cast<unsigned>(JITPlan::Tier::DFG)];
+    m_maximumNumberOfConcurrentCompilationsPerTier[static_cast<unsigned>(JITPlan::Tier::DFG)] = n;
+    return oldValue;
+}
+
+unsigned JITWorklist::setMaximumNumberOfConcurrentFTLCompilations(unsigned n)
+{
+    unsigned oldValue = m_maximumNumberOfConcurrentCompilationsPerTier[static_cast<unsigned>(JITPlan::Tier::FTL)];
+    m_maximumNumberOfConcurrentCompilationsPerTier[static_cast<unsigned>(JITPlan::Tier::FTL)] = n;
+    return oldValue;
+}
+
+template<typename Visitor>
+void JITWorklist::visitWeakReferences(Visitor& visitor)
+{
+    VM* vm = &visitor.heap()->vm();
+    {
+        Locker locker { *m_lock };
+        for (auto& entry : m_plans) {
+            if (entry.value->vm() != vm)
+                continue;
+            entry.value->checkLivenessAndVisitChildren(visitor);
+        }
+    }
+    // This loop doesn't need locking because:
+    // (1) no new threads can be added to m_threads. Hence, it is immutable and needs no locks.
+    // (2) JITWorklistThread::m_safepoint is protected by that thread's m_rightToRun which we must be
+    //     holding here because of a prior call to suspendAllThreads().
+    for (auto& thread : m_threads) {
+        Safepoint* safepoint = thread->m_safepoint;
+        if (safepoint && safepoint->vm() == vm)
+            safepoint->checkLivenessAndVisitChildren(visitor);
+    }
+}
+template void JITWorklist::visitWeakReferences(AbstractSlotVisitor&);
+template void JITWorklist::visitWeakReferences(SlotVisitor&);
+
+void JITWorklist::dump(PrintStream& out) const
+{
+    Locker locker { *m_lock };
+    dump(locker, out);
+}
+
+void JITWorklist::dump(const AbstractLocker& locker, PrintStream& out) const
+{
+    out.print(
+        "JITWorklist(", RawPointer(this), ")[Queue Length = ", queueLength(locker),
+        ", Map Size = ", m_plans.size(), ", Num Ready = ", m_readyPlans.size(),
+        ", Num Active Threads = ", m_numberOfActiveThreads, "/", m_threads.size(), "]");
+}
+
+JITWorklist::State JITWorklist::removeAllReadyPlansForVM(VM& vm, Vector<RefPtr<JITPlan>, 8>& myReadyPlans, JITCompilationKey requestedKey)
+{
+    DeferGC deferGC(vm);
+    Locker locker { *m_lock };
+
+    bool isCompiled = false;
+    m_readyPlans.removeAllMatching([&](RefPtr<JITPlan> plan) {
+        if (plan->vm() != &vm)
+            return false;
+        if (plan->stage() != JITPlanStage::Ready)
+            return false;
+        if (plan->key() == requestedKey)
+            isCompiled = true;
+        m_plans.remove(plan->key());
+        myReadyPlans.append(WTFMove(plan));
+        return true;
+    });
+
+    if (requestedKey) {
+        if (isCompiled)
+            return Compiled;
+
+        if (m_plans.contains(requestedKey))
+            return Compiling;
+    }
+    return NotKnown;
+}
+
+template<typename MatchFunction>
+void JITWorklist::removeMatchingPlansForVM(VM& vm, const MatchFunction& matches)
+{
+    Locker locker { *m_lock };
+    UncheckedKeyHashSet<JITCompilationKey> deadPlanKeys;
+    for (auto& entry : m_plans) {
+        JITPlan* plan = entry.value.get();
+        if (plan->vm() != &vm)
+            continue;
+        if (!matches(*plan))
+            continue;
+        RELEASE_ASSERT(plan->stage() != JITPlanStage::Canceled);
+        deadPlanKeys.add(plan->key());
+    }
+    bool didCancelPlans = !deadPlanKeys.isEmpty();
+    for (JITCompilationKey key : deadPlanKeys)
+        m_plans.take(key)->cancel();
+    for (auto& queue : m_queues) {
+        Deque<RefPtr<JITPlan>> newQueue;
+        while (!queue.isEmpty()) {
+            RefPtr<JITPlan> plan = queue.takeFirst();
+            if (plan->stage() != JITPlanStage::Canceled)
+                newQueue.append(plan);
+        }
+        queue.swap(newQueue);
+    }
+    for (unsigned i = 0; i < m_readyPlans.size(); ++i) {
+        if (m_readyPlans[i]->stage() != JITPlanStage::Canceled)
+            continue;
+        m_readyPlans[i--] = m_readyPlans.last();
+        m_readyPlans.removeLast();
+    }
+    if (didCancelPlans)
+        m_planCompiledOrCancelled.notifyAll();
+}
+
+} // namespace JSC
+
+#endif // ENABLE(JIT)
+

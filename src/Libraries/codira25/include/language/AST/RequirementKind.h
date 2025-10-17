@@ -1,0 +1,76 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, January 3, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===--- RequirementKind.h - Codira RequirementKind AST ---------*- C++ -*-===//
+//
+// Copyright (c) NeXTHub Corporation. All rights reserved.
+// DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+//
+// This code is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// version 2 for more details (a copy is included in the LICENSE file that
+// accompanied this code).
+//
+// Author(-s): Tunjay Akbarli
+//
+
+//===----------------------------------------------------------------------===//
+//
+// This file defines the RequirementKind enum.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LANGUAGE_AST_REQUIREMENTKIND_H
+#define LANGUAGE_AST_REQUIREMENTKIND_H
+
+namespace language {
+/// Describes the kind of a requirement that occurs within a requirements
+/// clause.
+enum class RequirementKind : unsigned {
+  /// A conformance requirement T : P, where T is a type that depends
+  /// on a generic parameter and P is a protocol to which T must conform.
+  Conformance,
+  /// A superclass requirement T : C, where T is a type that depends
+  /// on a generic parameter and C is a concrete class type which T must
+  /// equal or be a subclass of.
+  Superclass,
+  /// A same-type requirement T == U, where T and U are types that shall be
+  /// equivalent.
+  SameType,
+  /// A layout bound T : L, where T is a type that depends on a generic
+  /// parameter and L is some layout specification that should bound T.
+  Layout,
+  /// A same-shape requirement shape(T) == shape(U), where T and U are pack
+  /// parameters.
+  SameShape,
+
+  // Note: there is code that packs this enum in a 3-bit bitfield.  Audit users
+  // when adding enumerators.
+  LAST_KIND=SameShape
+};
+
+} // namespace language
+#endif

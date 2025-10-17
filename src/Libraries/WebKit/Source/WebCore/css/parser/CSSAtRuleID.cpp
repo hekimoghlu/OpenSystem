@@ -1,0 +1,96 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, July 6, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+//    * Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+//    * Neither the name of Google Inc. nor the names of its
+// contributors may be used to endorse or promote products derived from
+// this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#include "config.h"
+#include "CSSAtRuleID.h"
+
+#include <wtf/SortedArrayMap.h>
+
+namespace WebCore {
+
+CSSAtRuleID cssAtRuleID(StringView name)
+{
+    static constexpr std::pair<ComparableLettersLiteral, CSSAtRuleID> mappings[] = {
+        { "-webkit-keyframes"_s,     CSSAtRuleWebkitKeyframes },
+        { "annotation"_s,            CSSAtRuleAnnotation },
+        { "character-variant"_s,     CSSAtRuleCharacterVariant },
+        { "charset"_s,               CSSAtRuleCharset },
+        { "container"_s,             CSSAtRuleContainer },
+        { "counter-style"_s,         CSSAtRuleCounterStyle },
+        { "font-face"_s,             CSSAtRuleFontFace },
+        { "font-feature-values"_s,   CSSAtRuleFontFeatureValues },
+        { "font-palette-values"_s,   CSSAtRuleFontPaletteValues },
+        { "import"_s,                CSSAtRuleImport },
+        { "keyframes"_s,             CSSAtRuleKeyframes },
+        { "layer"_s,                 CSSAtRuleLayer },
+        { "media"_s,                 CSSAtRuleMedia },
+        { "namespace"_s,             CSSAtRuleNamespace },
+        { "ornaments"_s,             CSSAtRuleOrnaments },
+        { "page"_s,                  CSSAtRulePage },
+        { "position-try"_s,          CSSAtRulePositionTry },
+        { "property"_s,              CSSAtRuleProperty },
+        { "scope"_s,                 CSSAtRuleScope },
+        { "starting-style"_s,        CSSAtRuleStartingStyle },
+        { "styleset"_s,              CSSAtRuleStyleset },
+        { "stylistic"_s,             CSSAtRuleStylistic },
+        { "supports"_s,              CSSAtRuleSupports },
+        { "swash"_s,                 CSSAtRuleSwash },
+        { "view-transition"_s,       CSSAtRuleViewTransition },
+    };
+    static constexpr SortedArrayMap cssAtRules { mappings };
+    return cssAtRules.get(name, CSSAtRuleInvalid);
+}
+
+} // namespace WebCore
+

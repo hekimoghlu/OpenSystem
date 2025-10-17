@@ -1,0 +1,202 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, May 4, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+ * Display protocol blocks in the vsock domain.
+ */
+#include <sys/proc_info.h>
+#include <sys/socketvar.h>
+#include <sys/sysctl.h>
+#include <sys/vsock.h>
+
+#include <errno.h>
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "netstat.h"
+
+#ifdef AF_VSOCK
+
+static void vsockdomainpr __P((struct xvsockpcb *));
+
+void
+vsockpr(uint32_t proto,
+char *name, int af)
+{
+	char   *buf, *next;
+	size_t len;
+	struct xvsockpgen *xvg, *oxvg;
+	struct xvsockpcb *xpcb;
+
+	const char* mibvar = "net.vsock.pcblist";
+	len = 0;
+	if (sysctlbyname(mibvar, 0, &len, 0, 0) < 0) {
+		if (errno != ENOENT)
+			warn("sysctl: %s", mibvar);
+		return;
+	}
+	if ((buf = malloc(len)) == 0) {
+		warn("malloc %lu bytes", (u_long)len);
+		return;
+	}
+	if (sysctlbyname(mibvar, buf, &len, 0, 0) < 0) {
+		warn("sysctl: %s", mibvar);
+		free(buf);
+		return;
+	}
+
+	/*
+	 * Bail-out to avoid logic error in the loop below when
+	 * there is in fact no more control block to process
+	 */
+	if (len <= 2 * sizeof(struct xvsockpgen)) {
+		free(buf);
+		return;
+	}
+
+	oxvg = (struct xvsockpgen *)buf;
+
+	// Save room for the last xvsockpgen.
+	len -= oxvg->xvg_len;
+
+	for (next = buf + oxvg->xvg_len; next < buf + len; next += xpcb->xv_len) {
+		xpcb = (struct xvsockpcb *)next;
+
+		/* Ignore PCBs which were freed during copyout. */
+		if (xpcb->xvp_gencnt > oxvg->xvg_gen)
+			continue;
+		vsockdomainpr(xpcb);
+	}
+	xvg = (struct xvsockpgen *)next;
+	if (xvg != oxvg && xvg->xvg_gen != oxvg->xvg_gen) {
+		if (oxvg->xvg_count > xvg->xvg_count) {
+			printf("Some vsock sockets may have been deleted.\n");
+		} else if (oxvg->xvg_count < xvg->xvg_count) {
+			printf("Some vsock sockets may have been created.\n");
+		} else {
+			printf("Some vsock sockets may have been created or deleted.\n");
+		}
+	}
+	free(buf);
+}
+
+static void
+vsock_print_addr(buf, size, cid, port)
+	char *buf;
+    size_t size;
+	uint32_t cid;
+	uint32_t port;
+{
+	if (cid == VMADDR_CID_ANY && port == VMADDR_PORT_ANY) {
+		(void) snprintf(buf, size, "*:*");
+	} else if (cid == VMADDR_CID_ANY) {
+		(void) snprintf(buf, size, "*:%u", port);
+	} else if (port == VMADDR_PORT_ANY) {
+		(void) snprintf(buf, size, "%u:*", cid);
+	} else {
+		(void) snprintf(buf, size, "%u:%u", cid, port);
+	}
+}
+
+static void
+vsockdomainpr(xpcb)
+	struct xvsockpcb *xpcb;
+{
+	static int first = 1;
+
+	if (first) {
+		printf("Active VSock sockets\n");
+		printf("%-5.5s %-6.6s %-6.6s %-6.6s %-18.18s %-18.18s %-11.11s",
+			   "Proto", "Type",
+			   "Recv-Q", "Send-Q",
+			   "Local Address", "Foreign Address",
+			   "State");
+		if (vflag > 0)
+			printf(" %10.10s %10.10s %10.10s %10.10s %6.6s %6.6s %6.6s %6s %10s",
+				   "rxcnt", "txcnt", "peer_rxcnt", "peer_rxhiwat",
+				   "rxhiwat", "txhiwat", "pid", "state", "options");
+		printf("\n");
+		first = 0;
+	}
+
+	struct xsocket *so = &xpcb->xv_socket;
+
+	char srcAddr[50];
+	char dstAddr[50];
+
+	vsock_print_addr(srcAddr, sizeof(srcAddr), xpcb->xvp_local_cid, xpcb->xvp_local_port);
+	vsock_print_addr(dstAddr, sizeof(dstAddr), xpcb->xvp_remote_cid, xpcb->xvp_remote_port);
+
+	// Determine the vsock socket state.
+	char *state;
+	if (so->so_state & SOI_S_ISCONNECTING) {
+		state = "CONNECTING";
+	} else if (so->so_state & SOI_S_ISCONNECTED) {
+		state = "ESTABLISHED";
+	} else if (so->so_state & SOI_S_ISDISCONNECTING) {
+		state = "CLOSING";
+	} else if (so->so_options & SO_ACCEPTCONN) {
+		state = "LISTEN";
+	} else {
+		state = "CLOSED";
+	}
+
+	printf("%-5.5s %-6.6s %6u %6u %-18s %-18s %-11s",
+	       "vsock", "stream",
+		   so->so_rcv.sb_cc, so->so_snd.sb_cc,
+		   srcAddr, dstAddr,
+	       state);
+	if (vflag > 0)
+		printf(" %10u %10u %10u %10u %6u %6u %6u 0x%04x 0x%08x",
+			   xpcb->xvp_rxcnt,
+			   xpcb->xvp_txcnt,
+			   xpcb->xvp_peer_rxcnt,
+			   xpcb->xvp_peer_rxhiwat,
+			   so->so_rcv.sb_hiwat,
+			   so->so_snd.sb_hiwat,
+			   xpcb->xvp_last_pid,
+			   so->so_state,
+			   so->so_options);
+	printf("\n");
+}
+
+void
+vsockstats(uint32_t proto, char *name, int af)
+{
+#pragma unused(proto, name, af)
+	uint32_t pcbcount;
+	size_t len;
+
+	printf("vsock:\n");
+
+	len = sizeof(pcbcount);
+	if (sysctlbyname("net.vsock.pcbcount", &pcbcount, &len, 0, 0) < 0) {
+		warn("sysctl: net.vsock.pcbcount");
+		return;
+	}
+
+	printf("\t%u open vsock socket%s\n", pcbcount, plural(pcbcount));
+}
+
+#endif /* AF_VSOCK */

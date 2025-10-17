@@ -1,0 +1,282 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, February 20, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "JSRunLoopTimer.h"
+
+#include "IncrementalSweeper.h"
+#include "VM.h"
+#include <mutex>
+#include <wtf/NoTailCalls.h>
+#include <wtf/TZoneMallocInlines.h>
+
+#if USE(GLIB_EVENT_LOOP)
+#include <glib.h>
+#include <wtf/glib/RunLoopSourcePriority.h>
+#endif
+
+namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSRunLoopTimer::Manager);
+
+JSRunLoopTimer::Manager::PerVMData::PerVMData(Manager& manager, RunLoop& runLoop)
+    : runLoop(runLoop)
+    , timer(makeUnique<RunLoop::Timer>(runLoop, &manager, &JSRunLoopTimer::Manager::timerDidFireCallback))
+{
+#if USE(GLIB_EVENT_LOOP)
+    timer->setPriority(RunLoopSourcePriority::JavascriptTimer);
+    timer->setName("[JavaScriptCore] JSRunLoopTimer"_s);
+#endif
+}
+
+void JSRunLoopTimer::Manager::timerDidFireCallback()
+{
+    timerDidFire();
+}
+
+JSRunLoopTimer::Manager::PerVMData::~PerVMData()
+{
+    // Because RunLoop::Timer is not reference counted, we need to deallocate it
+    // on the same thread on which it fires; otherwise, we might deallocate it
+    // while it's firing.
+    runLoop->dispatch([timer = WTFMove(timer)] {
+    });
+}
+
+void JSRunLoopTimer::Manager::timerDidFire()
+{
+    Vector<Ref<JSRunLoopTimer>> timersToFire;
+
+    {
+        Locker locker { m_lock };
+        if (!m_mapping.isEmpty()) {
+            RunLoop* currentRunLoop = &RunLoop::current();
+            MonotonicTime now = MonotonicTime::now();
+            for (auto& entry : m_mapping) {
+                PerVMData& data = *entry.value;
+                if (data.runLoop.ptr() != currentRunLoop)
+                    continue;
+
+                Seconds interval = s_decade;
+                if (!data.timers.isEmpty()) {
+                    MonotonicTime scheduleTime = now + s_decade;
+                    for (size_t i = 0; i < data.timers.size(); ++i) {
+                        {
+                            auto& pair = data.timers[i];
+                            if (pair.second > now) {
+                                scheduleTime = std::min(pair.second, scheduleTime);
+                                continue;
+                            }
+                            auto& last = data.timers.last();
+                            if (&last != &pair)
+                                std::swap(pair, last);
+                            --i;
+                        }
+
+                        auto pair = data.timers.takeLast();
+                        timersToFire.append(WTFMove(pair.first));
+                    }
+                    interval = std::max(0_s, scheduleTime - now);
+                }
+                data.timer->startOneShot(interval);
+            }
+        }
+    }
+
+    for (auto& timer : timersToFire)
+        timer->timerDidFire();
+}
+
+JSRunLoopTimer::Manager& JSRunLoopTimer::Manager::shared()
+{
+    static Manager* manager;
+    static std::once_flag once;
+    std::call_once(once, [&] {
+        manager = new Manager;
+    });
+    return *manager;
+}
+
+void JSRunLoopTimer::Manager::registerVM(VM& vm)
+{
+    auto data = makeUnique<PerVMData>(*this, vm.runLoop());
+
+    Locker locker { m_lock };
+    auto addResult = m_mapping.add({ vm.apiLock() }, WTFMove(data));
+    RELEASE_ASSERT(addResult.isNewEntry);
+}
+
+void JSRunLoopTimer::Manager::unregisterVM(VM& vm)
+{
+    Locker locker { m_lock };
+
+    auto iter = m_mapping.find({ vm.apiLock() });
+    RELEASE_ASSERT(iter != m_mapping.end());
+    m_mapping.remove(iter);
+}
+
+void JSRunLoopTimer::Manager::scheduleTimer(JSRunLoopTimer& timer, Seconds delay)
+{
+    MonotonicTime now = MonotonicTime::now();
+    MonotonicTime fireEpochTime = now + delay;
+
+    Locker locker { m_lock };
+    auto iter = m_mapping.find(timer.m_apiLock);
+    RELEASE_ASSERT(iter != m_mapping.end()); // We don't allow calling this after the VM dies.
+
+    PerVMData& data = *iter->value;
+    MonotonicTime scheduleTime = fireEpochTime;
+    bool found = false;
+    for (auto& entry : data.timers) {
+        if (entry.first.ptr() == &timer) {
+            entry.second = fireEpochTime;
+            found = true;
+        }
+        scheduleTime = std::min(scheduleTime, entry.second);
+    }
+
+    if (!found)
+        data.timers.append({ timer, fireEpochTime });
+
+    data.timer->startOneShot(std::max(0_s, scheduleTime - now));
+}
+
+void JSRunLoopTimer::Manager::cancelTimer(JSRunLoopTimer& timer)
+{
+    Locker locker { m_lock };
+    auto iter = m_mapping.find(timer.m_apiLock);
+    if (iter == m_mapping.end()) {
+        // It's trivial to allow this to be called after the VM dies, so we allow for it.
+        return;
+    }
+
+    PerVMData& data = *iter->value;
+    Seconds interval = s_decade;
+    if (!data.timers.isEmpty()) {
+        MonotonicTime now = MonotonicTime::now();
+        MonotonicTime scheduleTime = now + s_decade;
+        for (unsigned i = 0; i < data.timers.size(); ++i) {
+            {
+                auto& entry = data.timers[i];
+                if (entry.first.ptr() == &timer) {
+                    RELEASE_ASSERT(timer.refCount() >= 2); // If we remove it from the entry below, we should not be the last thing pointing to it!
+                    auto& last = data.timers.last();
+                    if (&last != &entry)
+                        std::swap(entry, last);
+                    data.timers.removeLast();
+                    i--;
+                    continue;
+                }
+            }
+
+            scheduleTime = std::min(scheduleTime, data.timers[i].second);
+        }
+        interval = std::max(0_s, scheduleTime - now);
+    }
+    data.timer->startOneShot(interval);
+}
+
+std::optional<Seconds> JSRunLoopTimer::Manager::timeUntilFire(JSRunLoopTimer& timer)
+{
+    Locker locker { m_lock };
+    auto iter = m_mapping.find(timer.m_apiLock);
+    RELEASE_ASSERT(iter != m_mapping.end()); // We only allow this to be called with a live VM.
+
+    PerVMData& data = *iter->value;
+    for (auto& entry : data.timers) {
+        if (entry.first.ptr() == &timer)
+            return entry.second - MonotonicTime::now();
+    }
+
+    return std::nullopt;
+}
+
+void JSRunLoopTimer::timerDidFire()
+{
+    NO_TAIL_CALLS();
+
+    {
+        Locker locker { m_lock };
+        if (!m_isScheduled) {
+            // We raced between this callback being called and cancel() being called.
+            // That's fine, we just don't do anything here.
+            return;
+        }
+    }
+
+    Locker locker { m_apiLock.get() };
+    RefPtr<VM> vm = m_apiLock->vm();
+    if (!vm) {
+        // The VM has been destroyed, so we should just give up.
+        return;
+    }
+
+    doWork(*vm);
+}
+
+JSRunLoopTimer::JSRunLoopTimer(VM& vm)
+    : m_apiLock(vm.apiLock())
+{
+}
+
+JSRunLoopTimer::~JSRunLoopTimer() = default;
+
+std::optional<Seconds> JSRunLoopTimer::timeUntilFire()
+{
+    return Manager::shared().timeUntilFire(*this);
+}
+
+void JSRunLoopTimer::setTimeUntilFire(Seconds intervalInSeconds)
+{
+    {
+        Locker locker { m_lock };
+        m_isScheduled = true;
+        Manager::shared().scheduleTimer(*this, intervalInSeconds);
+    }
+
+    Locker locker { m_timerCallbacksLock };
+    for (auto& task : m_timerSetCallbacks)
+        task->run();
+}
+
+void JSRunLoopTimer::cancelTimer()
+{
+    Locker locker { m_lock };
+    m_isScheduled = false;
+    Manager::shared().cancelTimer(*this);
+}
+
+void JSRunLoopTimer::addTimerSetNotification(TimerNotificationCallback callback)
+{
+    Locker locker { m_timerCallbacksLock };
+    m_timerSetCallbacks.add(callback);
+}
+
+void JSRunLoopTimer::removeTimerSetNotification(TimerNotificationCallback callback)
+{
+    Locker locker { m_timerCallbacksLock };
+    m_timerSetCallbacks.remove(callback);
+}
+
+} // namespace JSC

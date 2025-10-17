@@ -1,0 +1,105 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Sunday, November 5, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "rubysocket.h"
+
+/*
+ * call-seq:
+ *    TCPSocket.new(remote_host, remote_port, local_host=nil, local_port=nil)
+ *
+ * Opens a TCP connection to +remote_host+ on +remote_port+.  If +local_host+
+ * and +local_port+ are specified, then those parameters are used on the local
+ * end to establish the connection.
+ */
+static VALUE
+tcp_init(int argc, VALUE *argv, VALUE sock)
+{
+    VALUE remote_host, remote_serv;
+    VALUE local_host, local_serv;
+
+    rb_scan_args(argc, argv, "22", &remote_host, &remote_serv,
+			&local_host, &local_serv);
+
+    return rsock_init_inetsock(sock, remote_host, remote_serv,
+			       local_host, local_serv, INET_CLIENT);
+}
+
+static VALUE
+tcp_sockaddr(struct sockaddr *addr, socklen_t len)
+{
+    return rsock_make_ipaddr(addr, len);
+}
+
+/*
+ * call-seq:
+ *   TCPSocket.gethostbyname(hostname) => [official_hostname, alias_hostnames, address_family, *address_list]
+ *
+ * Use Addrinfo.getaddrinfo instead.
+ * This method is deprecated for the following reasons:
+ *
+ * - The 3rd element of the result is the address family of the first address.
+ *   The address families of the rest of the addresses are not returned.
+ * - gethostbyname() may take a long time and it may block other threads.
+ *   (GVL cannot be released since gethostbyname() is not thread safe.)
+ * - This method uses gethostbyname() function already removed from POSIX.
+ *
+ * This method lookups host information by _hostname_.
+ *
+ *   TCPSocket.gethostbyname("localhost")
+ *   #=> ["localhost", ["hal"], 2, "127.0.0.1"]
+ *
+ */
+static VALUE
+tcp_s_gethostbyname(VALUE obj, VALUE host)
+{
+    struct rb_addrinfo *res =
+	rsock_addrinfo(host, Qnil, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME);
+    return rsock_make_hostent(host, res, tcp_sockaddr);
+}
+
+void
+rsock_init_tcpsocket(void)
+{
+    /*
+     * Document-class: TCPSocket < IPSocket
+     *
+     * TCPSocket represents a TCP/IP client socket.
+     *
+     * A simple client may look like:
+     *
+     *   require 'socket'
+     *
+     *   s = TCPSocket.new 'localhost', 2000
+     *
+     *   while line = s.gets # Read lines from socket
+     *     puts line         # and print them
+     *   end
+     *
+     *   s.close             # close socket when done
+     *
+     */
+    rb_cTCPSocket = rb_define_class("TCPSocket", rb_cIPSocket);
+    rb_define_singleton_method(rb_cTCPSocket, "gethostbyname", tcp_s_gethostbyname, 1);
+    rb_define_method(rb_cTCPSocket, "initialize", tcp_init, -1);
+}

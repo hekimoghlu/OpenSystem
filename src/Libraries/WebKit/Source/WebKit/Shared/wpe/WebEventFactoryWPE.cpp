@@ -1,0 +1,239 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, November 8, 2021.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "WebEventFactory.h"
+
+#if ENABLE(WPE_PLATFORM)
+#include <WebCore/FloatPoint.h>
+#include <WebCore/Scrollbar.h>
+#include <wpe/wpe-platform.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/WallTime.h>
+
+namespace WebKit {
+
+using namespace WebCore;
+
+static WallTime wallTimeForEvent(WPEEvent* event)
+{
+    auto time = wpe_event_get_time(event);
+    if (!time)
+        return WallTime::now();
+    return MonotonicTime::fromRawSeconds(time / 1000.).approximateWallTime();
+}
+
+static OptionSet<WebEventModifier> modifiersFromWPEModifiers(WPEModifiers wpeModifiers)
+{
+    OptionSet<WebEventModifier> modifiers;
+    if (wpeModifiers & WPE_MODIFIER_KEYBOARD_CONTROL)
+        modifiers.add(WebEventModifier::ControlKey);
+    if (wpeModifiers & WPE_MODIFIER_KEYBOARD_SHIFT)
+        modifiers.add(WebEventModifier::ShiftKey);
+    if (wpeModifiers & WPE_MODIFIER_KEYBOARD_ALT)
+        modifiers.add(WebEventModifier::AltKey);
+    if (wpeModifiers & WPE_MODIFIER_KEYBOARD_META)
+        modifiers.add(WebEventModifier::MetaKey);
+    if (wpeModifiers & WPE_MODIFIER_KEYBOARD_CAPS_LOCK)
+        modifiers.add(WebEventModifier::CapsLockKey);
+    return modifiers;
+}
+
+static WebMouseEventButton buttonForWPEButton(guint button)
+{
+    switch (button) {
+    case 1:
+        return WebMouseEventButton::Left;
+    case 2:
+        return WebMouseEventButton::Middle;
+    case 3:
+        return WebMouseEventButton::Right;
+    }
+    return WebMouseEventButton::None;
+}
+
+static WebMouseEventButton buttonFromWPEModifiers(WPEModifiers modifiers)
+{
+    if (modifiers & WPE_MODIFIER_POINTER_BUTTON1)
+        return WebMouseEventButton::Left;
+    if (modifiers & WPE_MODIFIER_POINTER_BUTTON2)
+        return WebMouseEventButton::Middle;
+    if (modifiers & WPE_MODIFIER_POINTER_BUTTON3)
+        return WebMouseEventButton::Right;
+    return WebMouseEventButton::None;
+}
+
+static FloatPoint movementDeltaFromEvent(WPEEvent* event)
+{
+    double x, y;
+    wpe_event_pointer_move_get_delta(event, &x, &y);
+    return FloatPoint(x, y);
+}
+
+static short pressedMouseButtons(WPEModifiers modifiers)
+{
+    // MouseEvent.buttons
+    // https://www.w3.org/TR/uievents/#ref-for-dom-mouseevent-buttons-1
+
+    // 0 MUST indicate no button is currently active.
+    short buttons = 0;
+
+    // 1 MUST indicate the primary button of the device (in general, the left button or the only button on
+    // single-button devices, used to activate a user interface control or select text).
+    if (modifiers & WPE_MODIFIER_POINTER_BUTTON1)
+        buttons |= 1;
+
+    // 4 MUST indicate the auxiliary button (in general, the middle button, often combined with a mouse wheel).
+    if (modifiers & WPE_MODIFIER_POINTER_BUTTON2)
+        buttons |= 4;
+
+    // 2 MUST indicate the secondary button (in general, the right button, often used to display a context menu),
+    // if present.
+    if (modifiers & WPE_MODIFIER_POINTER_BUTTON3)
+        buttons |= 2;
+
+    return buttons;
+}
+
+static IntPoint positionFromEvent(WPEEvent* event)
+{
+    double x, y;
+    if (wpe_event_get_position(event, &x, &y))
+        return { clampToInteger(x), clampToInteger(y) };
+    return { };
+}
+
+WebMouseEvent WebEventFactory::createWebMouseEvent(WPEEvent* event)
+{
+    auto modifiers = wpe_event_get_modifiers(event);
+    FloatPoint movementDelta;
+    std::optional<WebEventType> type;
+    auto button = WebMouseEventButton::None;
+    auto position = positionFromEvent(event);
+    unsigned clickCount = 0;
+
+    switch (wpe_event_get_event_type(event)) {
+    case WPE_EVENT_POINTER_DOWN:
+        type = WebEventType::MouseDown;
+        button = buttonForWPEButton(wpe_event_pointer_button_get_button(event));
+        clickCount = wpe_event_pointer_button_get_press_count(event);
+        break;
+    case WPE_EVENT_POINTER_UP:
+        type = WebEventType::MouseUp;
+        button = buttonForWPEButton(wpe_event_pointer_button_get_button(event));
+        break;
+    case WPE_EVENT_POINTER_MOVE:
+    case WPE_EVENT_POINTER_ENTER:
+    case WPE_EVENT_POINTER_LEAVE:
+        type = WebEventType::MouseMove;
+        button = buttonFromWPEModifiers(modifiers);
+        movementDelta = movementDeltaFromEvent(event);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    return WebMouseEvent({ type.value(), modifiersFromWPEModifiers(modifiers), wallTimeForEvent(event) },
+        button,
+        pressedMouseButtons(modifiers),
+        position,
+        position,
+        movementDelta.x(),
+        movementDelta.y(),
+        0 /* deltaZ */,
+        clickCount);
+}
+
+WebWheelEvent WebEventFactory::createWebWheelEvent(WPEEvent* event)
+{
+    auto phase = wpe_event_scroll_is_stop(event) ? WebWheelEvent::Phase::PhaseEnded : WebWheelEvent::Phase::PhaseChanged;
+    return createWebWheelEvent(event, phase);
+}
+
+WebWheelEvent WebEventFactory::createWebWheelEvent(WPEEvent* event, WebWheelEvent::Phase phase)
+{
+    double deltaX, deltaY;
+    wpe_event_scroll_get_deltas(event, &deltaX, &deltaY);
+    bool hasPreciseScrollingDeltas = wpe_event_scroll_has_precise_deltas(event);
+    auto position = positionFromEvent(event);
+
+    auto wheelTicks = FloatSize(deltaX, deltaY);
+    FloatSize delta;
+    if (hasPreciseScrollingDeltas) {
+        static const double wpeScrollDeltaMultiplier = 2.5;
+        delta = wheelTicks.scaled(wpeScrollDeltaMultiplier);
+    } else {
+        auto* view = wpe_event_get_view(event);
+        float stepX = wheelTicks.width() ? static_cast<float>(Scrollbar::pixelsPerLineStep(wpe_view_get_width(view))) : 0;
+        float stepY = wheelTicks.height() ? static_cast<float>(Scrollbar::pixelsPerLineStep(wpe_view_get_height(view))) : 0;
+        delta = wheelTicks.scaled(stepX, stepY);
+    }
+
+    return WebWheelEvent({ WebEventType::Wheel, modifiersFromWPEModifiers(wpe_event_get_modifiers(event)), wallTimeForEvent(event) },
+        position, position, delta, wheelTicks, WebWheelEvent::ScrollByPixelWheelEvent, phase, WebWheelEvent::Phase::PhaseNone, hasPreciseScrollingDeltas);
+}
+
+WebKeyboardEvent WebEventFactory::createWebKeyboardEvent(WPEEvent* event, const String& text, bool isAutoRepeat)
+{
+    auto type = wpe_event_get_event_type(event) == WPE_EVENT_KEYBOARD_KEY_DOWN ? WebEventType::KeyDown : WebEventType::KeyUp;
+    auto keyval = wpe_event_keyboard_get_keyval(event);
+    auto keycode = wpe_event_keyboard_get_keycode(event);
+    return WebKeyboardEvent({ type, modifiersFromWPEModifiers(wpe_event_get_modifiers(event)), wallTimeForEvent(event) },
+        text.isNull() ? WebKeyboardEvent::singleCharacterStringForWPEKeyval(keyval) : text,
+        WebKeyboardEvent::keyValueStringForWPEKeyval(keyval),
+        WebKeyboardEvent::keyCodeStringForWPEKeycode(keycode),
+        WebKeyboardEvent::keyIdentifierForWPEKeyval(keyval),
+        WebKeyboardEvent::windowsKeyCodeForWPEKeyval(keyval),
+        keyval, false, std::nullopt, std::nullopt, isAutoRepeat,
+        keyval >= WPE_KEY_KP_Space && keyval <= WPE_KEY_KP_9);
+}
+
+#if ENABLE(TOUCH_EVENTS)
+WebTouchEvent WebEventFactory::createWebTouchEvent(WPEEvent* event, Vector<WebPlatformTouchPoint>&& touchPoints)
+{
+    std::optional<WebEventType> type;
+    switch (wpe_event_get_event_type(event)) {
+    case WPE_EVENT_TOUCH_DOWN:
+        type = WebEventType::TouchStart;
+        break;
+    case WPE_EVENT_TOUCH_UP:
+        type = WebEventType::TouchEnd;
+        break;
+    case WPE_EVENT_TOUCH_MOVE:
+        type = WebEventType::TouchMove;
+        break;
+    case WPE_EVENT_TOUCH_CANCEL:
+        type = WebEventType::TouchCancel;
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    return WebTouchEvent({ type.value(), modifiersFromWPEModifiers(wpe_event_get_modifiers(event)), wallTimeForEvent(event) }, WTFMove(touchPoints), { }, { });
+}
+#endif // ENABLE(TOUCH_EVENTS)
+
+} // namespace WebKit
+
+#endif // ENABLE(WPE_PLATFORM)

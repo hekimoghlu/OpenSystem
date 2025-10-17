@@ -1,0 +1,286 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, January 18, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#include "config.h"
+#include "CtapHidDriver.h"
+
+#if ENABLE(WEB_AUTHN)
+
+#include "Logging.h"
+#include <WebCore/FidoConstants.h>
+#include <wtf/Assertions.h>
+#include <wtf/RunLoop.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Vector.h>
+#include <wtf/WeakRandomNumber.h>
+#include <wtf/text/Base64.h>
+
+namespace WebKit {
+using namespace fido;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CtapHidDriverWorker);
+
+CtapHidDriverWorker::CtapHidDriverWorker(CtapHidDriver& driver, Ref<HidConnection>&& connection)
+    : m_driver(driver)
+    , m_connection(WTFMove(connection))
+{
+    protectedConnection()->initialize();
+}
+
+CtapHidDriverWorker::~CtapHidDriverWorker()
+{
+    protectedConnection()->terminate();
+}
+
+void CtapHidDriverWorker::transact(fido::FidoHidMessage&& requestMessage, MessageCallback&& callback)
+{
+    ASSERT(m_state == State::Idle);
+    m_state = State::Write;
+    m_requestMessage = WTFMove(requestMessage);
+    m_responseMessage.reset();
+    m_callback = WTFMove(callback);
+
+    // HidConnection could hold data from other applications, and thereofore invalidate it before each transaction.
+    Ref connection = m_connection;
+    connection->invalidateCache();
+    connection->send(m_requestMessage->popNextPacket(), [weakThis = WeakPtr { *this }](HidConnection::DataSent sent) mutable {
+        ASSERT(RunLoop::isMain());
+        if (!weakThis)
+            return;
+        weakThis->write(sent);
+    });
+}
+
+void CtapHidDriverWorker::write(HidConnection::DataSent sent)
+{
+    if (m_state != State::Write)
+        return;
+    if (sent != HidConnection::DataSent::Yes) {
+        m_responseMessage = std::nullopt;
+        returnMessage();
+        return;
+    }
+
+    if (!m_requestMessage->numPackets()) {
+        m_state = State::Read;
+        protectedConnection()->registerDataReceivedCallback([weakThis = WeakPtr { *this }](Vector<uint8_t>&& data) mutable {
+            ASSERT(RunLoop::isMain());
+            if (!weakThis)
+                return;
+            weakThis->read(data);
+        });
+        return;
+    }
+
+    protectedConnection()->send(m_requestMessage->popNextPacket(), [weakThis = WeakPtr { *this }](HidConnection::DataSent sent) mutable {
+        ASSERT(RunLoop::isMain());
+        if (!weakThis)
+            return;
+        weakThis->write(sent);
+    });
+}
+
+void CtapHidDriverWorker::read(const Vector<uint8_t>& data)
+{
+    if (m_state != State::Read)
+        return;
+    if (!m_responseMessage) {
+        m_responseMessage = FidoHidMessage::createFromSerializedData(data);
+        // The first few reports could be for other applications, and therefore ignore those.
+        if (!m_responseMessage || m_responseMessage->channelId() != m_requestMessage->channelId()) {
+            LOG_ERROR("Couldn't parse a hid init packet: %s", m_responseMessage ? "wrong channel id." : "bad data.");
+            m_responseMessage.reset();
+            return;
+        }
+    } else {
+        if (!m_responseMessage->addContinuationPacket(data)) {
+            LOG_ERROR("Couldn't parse a hid continuation packet.");
+            m_responseMessage = std::nullopt;
+            returnMessage();
+            return;
+        }
+    }
+
+    if (m_responseMessage->messageComplete()) {
+        // A KeepAlive cmd could be sent between a request and a response to indicate that
+        // the authenticator is waiting for user consent. Keep listening for the response.
+        if (m_responseMessage->cmd() == FidoHidDeviceCommand::kKeepAlive) {
+            m_responseMessage.reset();
+            return;
+        }
+        returnMessage();
+        return;
+    }
+}
+
+void CtapHidDriverWorker::returnMessage()
+{
+    // Reset state before calling the response callback to avoid being deleted.
+    auto callback = WTFMove(m_callback);
+    auto message = WTFMove(m_responseMessage);
+    reset();
+    callback(WTFMove(message));
+}
+
+void CtapHidDriverWorker::reset()
+{
+    protectedConnection()->unregisterDataReceivedCallback();
+    m_callback = nullptr;
+    m_responseMessage = std::nullopt;
+    m_requestMessage = std::nullopt;
+    m_state = State::Idle;
+}
+
+// This implements CTAPHID_CANCEL which violates the transaction semantics:
+// https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#usb-hid-cancel
+void CtapHidDriverWorker::cancel(fido::FidoHidMessage&& requestMessage)
+{
+    reset();
+    Ref connection = m_connection;
+    connection->invalidateCache();
+    ASSERT(requestMessage.numPackets() == 1);
+    connection->sendSync(requestMessage.popNextPacket());
+}
+
+Ref<CtapHidDriver> CtapHidDriver::create(Ref<HidConnection>&& connection)
+{
+    return adoptRef(*new CtapHidDriver(WTFMove(connection)));
+}
+
+CtapHidDriver::CtapHidDriver(Ref<HidConnection>&& connection)
+    : CtapDriver(WebCore::AuthenticatorTransport::Usb)
+    , m_worker(makeUniqueRefWithoutRefCountedCheck<CtapHidDriverWorker>(*this, WTFMove(connection)))
+    , m_nonce(kHidInitNonceLength)
+{
+}
+
+void CtapHidDriver::transact(Vector<uint8_t>&& data, ResponseCallback&& callback)
+{
+    if (!isValidSize(data.size()))
+        RELEASE_LOG(WebAuthn, "CtapHidDriver::transact Sending data larger than maxSize. msgSize=%ld", data.size());
+    ASSERT(m_state == State::Idle);
+    m_state = State::AllocateChannel;
+    m_channelId = kHidBroadcastChannel;
+    m_requestData = WTFMove(data);
+    m_responseCallback = WTFMove(callback);
+
+    // Allocate a channel.
+    // Use a pseudo random nonce instead of a cryptographically strong one as the nonce
+    // is mainly for identifications.
+    size_t steps = kHidInitNonceLength / sizeof(uint32_t);
+    ASSERT(!(kHidInitNonceLength % sizeof(uint32_t)) && steps >= 1);
+    for (size_t i = 0; i < steps; ++i) {
+        uint32_t weakRandom = weakRandomNumber<uint32_t>();
+        memcpySpan(m_nonce.mutableSpan().subspan(i * sizeof(uint32_t)), asByteSpan(weakRandom));
+    }
+
+    auto initCommand = FidoHidMessage::create(m_channelId, FidoHidDeviceCommand::kInit, m_nonce);
+    ASSERT(initCommand);
+    protectedWorker()->transact(WTFMove(*initCommand), [weakThis = WeakPtr { *this }](std::optional<FidoHidMessage>&& response) mutable {
+        ASSERT(RunLoop::isMain());
+        if (!weakThis)
+            return;
+        weakThis->continueAfterChannelAllocated(WTFMove(response));
+    });
+}
+
+void CtapHidDriver::continueAfterChannelAllocated(std::optional<FidoHidMessage>&& message)
+{
+    if (m_state != State::AllocateChannel)
+        return;
+    if (!message) {
+        returnResponse({ });
+        return;
+    }
+    ASSERT(message->channelId() == m_channelId);
+
+    auto payload = message->getMessagePayload();
+    ASSERT(payload.size() == kHidInitResponseSize);
+    // Restart the transaction in the next run loop when nonce mismatches.
+    if (!spanHasPrefix(payload.span(), m_nonce.span())) {
+        m_state = State::Idle;
+        RunLoop::main().dispatch([weakThis = WeakPtr { *this }, data = WTFMove(m_requestData), callback = WTFMove(m_responseCallback)]() mutable {
+            if (!weakThis)
+                return;
+            weakThis->transact(WTFMove(data), WTFMove(callback));
+        });
+        return;
+    }
+
+    m_state = State::Ready;
+    auto index = kHidInitNonceLength;
+    m_channelId = static_cast<uint32_t>(payload[index++]) << 24;
+    m_channelId |= static_cast<uint32_t>(payload[index++]) << 16;
+    m_channelId |= static_cast<uint32_t>(payload[index++]) << 8;
+    m_channelId |= static_cast<uint32_t>(payload[index]);
+    // FIXME(191534): Check the rest of the payload.
+    auto cmd = FidoHidMessage::create(m_channelId, isCtap2Protocol() ?  FidoHidDeviceCommand::kCbor : FidoHidDeviceCommand::kMsg, m_requestData);
+    ASSERT(cmd);
+    protectedWorker()->transact(WTFMove(*cmd), [weakThis = WeakPtr { *this }](std::optional<FidoHidMessage>&& response) mutable {
+        ASSERT(RunLoop::isMain());
+        if (!weakThis)
+            return;
+        weakThis->continueAfterResponseReceived(WTFMove(response));
+    });
+}
+
+void CtapHidDriver::continueAfterResponseReceived(std::optional<fido::FidoHidMessage>&& message)
+{
+    if (m_state != State::Ready)
+        return;
+    ASSERT(!message || message->channelId() == m_channelId);
+    returnResponse(message ? message->getMessagePayload() : Vector<uint8_t>());
+}
+
+void CtapHidDriver::returnResponse(Vector<uint8_t>&& response)
+{
+    // Reset state before calling the response callback to avoid being deleted.
+    auto responseCallback = WTFMove(m_responseCallback);
+    reset();
+    responseCallback(WTFMove(response));
+}
+
+void CtapHidDriver::reset()
+{
+    m_responseCallback = nullptr;
+    m_channelId = fido::kHidBroadcastChannel;
+    m_state = State::Idle;
+}
+
+void CtapHidDriver::cancel()
+{
+    if (m_state == State::Idle || !isCtap2Protocol())
+        return;
+    // Cancel any outstanding requests.
+    if (m_state == State::Ready) {
+        auto cancelCommand = FidoHidMessage::create(m_channelId, FidoHidDeviceCommand::kCancel, { });
+        protectedWorker()->cancel(WTFMove(*cancelCommand));
+    }
+    reset();
+}
+
+} // namespace WebKit
+
+#endif // ENABLE(WEB_AUTHN)

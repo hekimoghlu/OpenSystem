@@ -1,0 +1,32 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, March 31, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+//This dummy header file is created for mig to check when to call mig_strncpy_zerofill.
+//Mig checks if this file is available to include and knows that Libsyscall has the new mig_strncpy_zerofill symbols to link to.
+//Do not delete this file, mig will stop calling mig_strncpy_zerofill.
+
+#ifndef __MACH_MIG_STRNCPY_ZEROFILL_SUPPORT__
+#define __MACH_MIG_STRNCPY_ZEROFILL_SUPPORT__
+
+#endif // __MACH_MIG_STRNCPY_ZEROFILL_SUPPORT__

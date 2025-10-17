@@ -1,0 +1,57 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Friday, September 6, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/****************************************************************************
+ *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
+ *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *     and:  Juergen Pfeifer,                       1998,2009               *
+ *     and:  Thomas E. Dickey                       1998-on                 *
+ ****************************************************************************/
+
+/*
+ *	lib_slklab.c
+ *	Soft key routines.
+ *      Fetch the label text.
+ */
+#include <curses.priv.h>
+
+MODULE_ID("$Id: lib_slklab.c,v 1.10 2009/10/24 22:12:21 tom Exp $")
+
+NCURSES_EXPORT(char *)
+NCURSES_SP_NAME(slk_label) (NCURSES_SP_DCLx int n)
+{
+    T((T_CALLED("slk_label(%p,%d)"), (void *) SP_PARM, n));
+
+    if (SP_PARM == 0 || SP_PARM->_slk == 0 || n < 1 || n > SP_PARM->_slk->labcnt)
+	returnPtr(0);
+    returnPtr(SP_PARM->_slk->ent[n - 1].ent_text);
+}
+
+#if NCURSES_SP_FUNCS
+NCURSES_EXPORT(char *)
+slk_label(int n)
+{
+    return NCURSES_SP_NAME(slk_label) (CURRENT_SCREEN, n);
+}
+#endif

@@ -1,0 +1,106 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Tuesday, January 24, 2023.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+//
+//===----------------------------------------------------------------------===//
+
+#include <uscl/atomic>
+#include <uscl/std/atomic>
+#include <uscl/std/cassert>
+
+#include <cmpxchg_loop.h>
+
+#include "test_macros.h"
+#if !TEST_COMPILER(MSVC)
+#  include "placement_new.h"
+#endif // !TEST_COMPILER(MSVC)
+#include "cuda_space_selector.h"
+
+template <class A, class T, template <typename, typename> class Selector>
+__host__ __device__ __noinline__ void do_test()
+{
+  Selector<A, constructor_initializer> sel;
+  A& obj                   = *sel.construct(T(0));
+  [[maybe_unused]] bool b0 = obj.is_lock_free();
+  obj.store(T(0));
+  assert(obj == T(0));
+  obj.store(T(1), cuda::std::memory_order_release);
+  assert(obj == T(1));
+  assert(obj.load() == T(1));
+  assert(obj.load(cuda::std::memory_order_acquire) == T(1));
+  assert(obj.exchange(T(2)) == T(1));
+  assert(obj == T(2));
+  assert(obj.exchange(T(3), cuda::std::memory_order_relaxed) == T(2));
+  assert(obj == T(3));
+  T x = obj;
+  assert(cmpxchg_weak_loop(obj, x, T(2)) == true);
+  assert(obj == T(2));
+  assert(x == T(3));
+  assert(obj.compare_exchange_weak(x, T(1)) == false);
+  assert(obj == T(2));
+  assert(x == T(2));
+  x = T(2);
+  assert(obj.compare_exchange_strong(x, T(1)) == true);
+  assert(obj == T(1));
+  assert(x == T(2));
+  assert(obj.compare_exchange_strong(x, T(0)) == false);
+  assert(obj == T(1));
+  assert(x == T(1));
+  assert((obj = T(0)) == T(0));
+  assert(obj == T(0));
+  assert(obj++ == T(0));
+  assert(obj == T(1));
+  assert(++obj == T(2));
+  assert(obj == T(2));
+  assert(--obj == T(1));
+  assert(obj == T(1));
+  assert(obj-- == T(1));
+  assert(obj == T(0));
+  obj = T(2);
+  assert((obj += T(3)) == T(5));
+  assert(obj == T(5));
+  assert((obj -= T(3)) == T(2));
+  assert(obj == T(2));
+  assert((obj |= T(5)) == T(7));
+  assert(obj == T(7));
+  assert((obj &= T(0xF)) == T(7));
+  assert(obj == T(7));
+  assert((obj ^= T(0xF)) == T(8));
+  assert(obj == T(8));
+
+#if TEST_STD_VER > 2017
+  NV_DISPATCH_TARGET(
+    NV_IS_HOST,
+    (alignas(alignof(A)) char storage[sizeof(A)] = {23}; A& zero = *new (storage) A(); assert(zero == 0); zero.~A();),
+    NV_PROVIDES_SM_70,
+    (alignas(alignof(A)) char storage[sizeof(A)] = {23}; A& zero = *new (storage) A(); assert(zero == 0); zero.~A();))
+#endif // TEST_STD_VER > 2017
+}

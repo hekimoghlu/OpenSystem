@@ -1,0 +1,152 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Monday, May 20, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/* $Id: atomic.h,v 1.6 2008/01/24 23:47:00 tbox Exp $ */
+
+#ifndef ISC_ATOMIC_H
+#define ISC_ATOMIC_H 1
+
+#include <isc/platform.h>
+#include <isc/types.h>
+
+#ifdef ISC_PLATFORM_USEGCCASM
+
+/* We share the gcc-version with x86_32 */
+#error "impossible case.  check build configuration"
+
+#elif defined(ISC_PLATFORM_USESTDASM)
+/*
+ * The followings are "generic" assembly code which implements the same
+ * functionality in case the gcc extension cannot be used.  It should be
+ * better to avoid inlining below, since we directly refer to specific
+ * registers for arguments, which would not actually correspond to the
+ * intended address or value in the embedded mnemonic.
+ */
+#include <isc/util.h>		/* for 'UNUSED' macro */
+
+static isc_int32_t
+isc_atomic_xadd(isc_int32_t *p, isc_int32_t val) {
+	UNUSED(p);
+	UNUSED(val);
+
+	__asm (
+		"movq %rdi, %rdx\n"
+		"movl %esi, %eax\n"
+#ifdef ISC_PLATFORM_USETHREADS
+		"lock;"
+#endif
+		"xadd %eax, (%rdx)\n"
+		/*
+		 * XXX: assume %eax will be used as the return value.
+		 */
+		);
+}
+
+#ifdef ISC_PLATFORM_HAVEXADDQ
+static isc_int64_t
+isc_atomic_xaddq(isc_int64_t *p, isc_int64_t val) {
+	UNUSED(p);
+	UNUSED(val);
+
+	__asm (
+		"movq %rdi, %rdx\n"
+		"movq %rsi, %rax\n"
+#ifdef ISC_PLATFORM_USETHREADS
+		"lock;"
+#endif
+		"xaddq %rax, (%rdx)\n"
+		/*
+		 * XXX: assume %rax will be used as the return value.
+		 */
+		);
+}
+#endif
+
+static void
+isc_atomic_store(isc_int32_t *p, isc_int32_t val) {
+	UNUSED(p);
+	UNUSED(val);
+
+	__asm (
+		"movq %rdi, %rax\n"
+		"movl %esi, %edx\n"
+#ifdef ISC_PLATFORM_USETHREADS
+		"lock;"
+#endif
+		"xchgl (%rax), %edx\n"
+		);
+}
+
+#ifdef ISC_PLATFORM_HAVEATOMICSTOREQ
+static void
+isc_atomic_storeq(isc_int64_t *p, isc_int64_t val) {
+	UNUSED(p);
+	UNUSED(val);
+
+	__asm (
+		"movq %rdi, %rax\n"
+		"movq %rsi, %rdx\n"
+#ifdef ISC_PLATFORM_USETHREADS
+		"lock;"
+#endif
+		"xchgq (%rax), %rdx\n"
+		);
+}
+#endif
+
+static isc_int32_t
+isc_atomic_cmpxchg(isc_int32_t *p, isc_int32_t cmpval, isc_int32_t val) {
+	UNUSED(p);
+	UNUSED(cmpval);
+	UNUSED(val);
+
+	__asm (
+		/*
+		 * p is %rdi, cmpval is %esi, val is %edx.
+		 */
+		"movl %edx, %ecx\n"
+		"movl %esi, %eax\n"
+		"movq %rdi, %rdx\n"
+
+#ifdef ISC_PLATFORM_USETHREADS
+		"lock;"
+#endif
+		/*
+		 * If [%rdi] == %eax then [%rdi] := %ecx (equal to %edx
+		 * from above), and %eax is untouched (equal to %esi)
+		 * from above.
+		 *
+		 * Else if [%rdi] != %eax then [%rdi] := [%rdi]
+		 * (rewritten in write cycle) and %eax := [%rdi].
+		 */
+		"cmpxchgl %ecx, (%rdx)"
+		);
+}
+
+#else /* !ISC_PLATFORM_USEGCCASM && !ISC_PLATFORM_USESTDASM */
+
+#error "unsupported compiler.  disable atomic ops by --disable-atomic"
+
+#endif
+#endif /* ISC_ATOMIC_H */

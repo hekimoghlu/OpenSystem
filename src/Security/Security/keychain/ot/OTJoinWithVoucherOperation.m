@@ -1,0 +1,197 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, January 4, 2025.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#if OCTAGON
+
+#import <utilities/debugging.h>
+
+#import <CloudKit/CloudKit_Private.h>
+
+#import "keychain/ot/ErrorUtils.h"
+#import "keychain/ot/OTJoinWithVoucherOperation.h"
+#import "keychain/ot/OTOperationDependencies.h"
+#import "keychain/ot/OTFetchCKKSKeysOperation.h"
+#import "keychain/ckks/CKKSNearFutureScheduler.h"
+#import "keychain/ckks/CloudKitCategories.h"
+
+#import "keychain/TrustedPeersHelper/TrustedPeersHelperProtocol.h"
+#import "keychain/ot/ObjCImprovements.h"
+#import "keychain/ot/OTStates.h"
+
+#import <KeychainCircle/SecurityAnalyticsConstants.h>
+#import <KeychainCircle/SecurityAnalyticsReporterRTC.h>
+#import <KeychainCircle/AAFAnalyticsEvent+Security.h>
+
+@interface OTJoinWithVoucherOperation ()
+@property OTOperationDependencies* deps;
+
+@property OctagonState* ckksConflictState;
+
+@property NSOperation* finishedOp;
+@end
+
+@implementation OTJoinWithVoucherOperation
+
+@synthesize intendedState = _intendedState;
+
+- (instancetype)initWithDependencies:(OTOperationDependencies*)dependencies
+                       intendedState:(OctagonState*)intendedState
+                   ckksConflictState:(OctagonState*)ckksConflictState
+                          errorState:(OctagonState*)errorState
+{
+    if((self = [super init])) {
+        _deps = dependencies;
+
+        _intendedState = intendedState;
+        _nextState = errorState;
+        _ckksConflictState = ckksConflictState;
+
+        _peerID = nil;
+        _voucherData = nil;
+        _voucherSig = nil;
+    }
+    return self;
+}
+
+- (void)groupStart
+{
+
+    AAFAnalyticsEventSecurity* event = [[AAFAnalyticsEventSecurity alloc] initWithKeychainCircleMetrics:nil
+                                                                                                altDSID:self.deps.activeAccount.altDSID
+                                                                                                 flowID:self.deps.flowID
+                                                                                        deviceSessionID:self.deps.deviceSessionID
+                                                                                              eventName:kSecurityRTCEventNameJoinWithVoucherOperation
+                                                                                        testsAreEnabled:SecCKKSTestsEnabled()
+                                                                                         canSendMetrics:self.deps.permittedToSendMetrics
+                                                                                               category:kSecurityRTCEventCategoryAccountDataAccessRecovery];
+    // Load the voucher from the state handler
+    NSError* error = nil;
+    OTAccountMetadataClassC* metadata = [self.deps.stateHolder loadOrCreateAccountMetadata:&error];
+
+    if (!metadata.voucher || !metadata.voucherSignature || error) {
+        secnotice("octagon", "No voucher available: %@", error);
+        self.error = error;
+        [SecurityAnalyticsReporterRTC sendMetricWithEvent:event success:NO error:self.error];
+        return;
+    }
+
+    self.voucherData = metadata.voucher;
+    self.voucherSig = metadata.voucherSignature;
+
+    secnotice("octagon", "joining with a voucher: %@", self.voucherData);
+
+    NSArray<CKKSTLKShare*>* newTLKShares = [metadata getTLKSharesPairedWithVoucher];
+
+    [self proceedWithPendingTLKShares:newTLKShares event:event];
+}
+
+- (void)proceedWithPendingTLKShares:(NSArray<CKKSTLKShare*>*)pendingTLKShares event:(AAFAnalyticsEventSecurity*)event
+{
+    WEAKIFY(self);
+
+    NSArray<NSData*>* publicSigningSPKIs = nil;
+    if (self.deps.sosAdapter.sosEnabled) {
+        NSError* sosPreapprovalError = nil;
+        publicSigningSPKIs = [OTSOSAdapterHelpers peerPublicSigningKeySPKIsForCircle:self.deps.sosAdapter error:&sosPreapprovalError];
+
+        if (publicSigningSPKIs) {
+            secnotice("octagon-sos", "SOS preapproved keys are %@", publicSigningSPKIs);
+        } else {
+            secnotice("octagon-sos", "Unable to fetch SOS preapproved keys: %@", sosPreapprovalError);
+        }
+
+    } else {
+        secnotice("octagon-sos", "SOS not enabled; no preapproved keys");
+    }
+
+    // We currently don't check if we want to bring up new CKKS views at join time.
+    [self.deps.cuttlefishXPCWrapper joinWithSpecificUser:self.deps.activeAccount
+                                             voucherData:self.voucherData
+                                              voucherSig:self.voucherSig
+                                                ckksKeys:@[]
+                                               tlkShares:pendingTLKShares
+                                         preapprovedKeys:publicSigningSPKIs
+                                                  flowID:self.deps.flowID
+                                         deviceSessionID:self.deps.deviceSessionID
+                                          canSendMetrics:self.deps.permittedToSendMetrics
+                                                   reply:^(NSString * _Nullable peerID,
+                                                           NSArray<CKRecord*>* keyHierarchyRecords,
+                                                           TPSyncingPolicy* _Nullable syncingPolicy,
+                                                           NSError * _Nullable error) {
+        STRONGIFY(self);
+            if (error){
+                secerror("octagon: Error joining with voucher: %@", error);
+                [[CKKSAnalytics logger] logRecoverableError:error forEvent:OctagonEventJoinWithVoucher withAttributes:NULL];
+
+                // IF this is a CKKS conflict error, don't retry
+                if ([error isCuttlefishError:CuttlefishErrorKeyHierarchyAlreadyExists]) {
+                    secnotice("octagon-ckks", "A CKKS key hierarchy is out of date; going to state '%@'", self.ckksConflictState);
+                    self.nextState = self.ckksConflictState;
+                } else if ([error isCuttlefishError:CuttlefishErrorResultGraphNotFullyReachable]) {
+                    secnotice("octagon", "requesting cuttlefish health check");
+                    self.nextState = OctagonStateCuttlefishTrustCheck;
+                    self.error = error;
+                } else {
+                    self.error = error;
+                }
+                [SecurityAnalyticsReporterRTC sendMetricWithEvent:event success:NO error:self.error];
+            } else {
+                self.peerID = peerID;
+
+                [[CKKSAnalytics logger] logSuccessForEventNamed:OctagonEventJoinWithVoucher];
+
+                [self.deps.ckks setCurrentSyncingPolicy:syncingPolicy];
+
+                NSError* localError = nil;
+                BOOL persisted = [self.deps.stateHolder persistAccountChanges:^OTAccountMetadataClassC * _Nonnull(OTAccountMetadataClassC * _Nonnull metadata) {
+                    metadata.trustState = OTAccountMetadataClassC_TrustState_TRUSTED;
+                    metadata.peerID = peerID;
+
+                    metadata.voucher = nil;
+                    metadata.voucherSignature = nil;
+                    [metadata.tlkSharesForVouchedIdentitys removeAllObjects];
+                    [metadata setTPSyncingPolicy:syncingPolicy];
+                    
+                    return metadata;
+                } error:&localError];
+                if(!persisted || localError) {
+                    secnotice("octagon", "Couldn't persist results: %@", localError);
+                    self.error = localError;
+                    [SecurityAnalyticsReporterRTC sendMetricWithEvent:event success:NO error:self.error];
+                } else {
+                    secerror("octagon: join successful");
+                    self.nextState = self.intendedState;
+                    [SecurityAnalyticsReporterRTC sendMetricWithEvent:event success:YES error:nil];
+                }
+
+                // Tell CKKS about our shiny new records!
+                [self.deps.ckks receiveTLKUploadRecords:keyHierarchyRecords];
+            }
+            [self runBeforeGroupFinished:self.finishedOp];
+        }];
+}
+
+@end
+
+#endif // OCTAGON

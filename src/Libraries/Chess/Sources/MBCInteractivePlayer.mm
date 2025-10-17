@@ -1,0 +1,671 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Wednesday, December 11, 2024.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+#import "MBCInteractivePlayer.h"
+#import "MBCEngine.h"
+#import "MBCBoardView.h"
+#import "MBCBoardWin.h"
+#import "MBCLanguageModel.h"
+#import "MBCController.h"
+#import "MBCDocument.h"
+
+#import <ApplicationServices/ApplicationServices.h>
+#include <dispatch/dispatch.h>
+//
+// Private selector to set the help text in the speech feedback window
+//
+#ifndef kSRCommandsDisplayCFPropListRef
+#define kSRCommandsDisplayCFPropListRef	'cdpl'
+#endif
+
+pascal OSErr HandleSpeechDoneAppleEvent (const AppleEvent *theAEevt, AppleEvent* reply, SRefCon refcon)
+{
+	long				actualSize;
+	DescType			actualType;
+	OSErr				status = 0;
+	OSErr				recStatus = 0;
+	SRRecognitionResult	recResult = 0;
+    SRRecognizer        recognizer;
+	
+	status = AEGetParamPtr(theAEevt,keySRSpeechStatus,typeSInt16,
+					&actualType, (Ptr)&recStatus, sizeof(status), &actualSize);
+	if (!status)
+		status = recStatus;
+
+	if (!status)
+		status = AEGetParamPtr(theAEevt,keySRRecognizer,
+							   typeSRRecognizer, &actualType, 
+							   (Ptr)&recognizer,
+							   sizeof(SRRecognizer), &actualSize);
+	if (!status)
+		status = AEGetParamPtr(theAEevt,keySRSpeechResult,
+							   typeSRSpeechResult, &actualType, 
+							   (Ptr)&recResult,
+							   sizeof(SRRecognitionResult), &actualSize);
+    if (!status) {
+        Size sz = sizeof(refcon);
+        status = SRGetProperty(recognizer, kSRRefCon, &refcon, &sz);
+    }
+	if (!status) {
+		[reinterpret_cast<MBCInteractivePlayer *>(refcon) 	
+						 recognized:recResult];
+		SRReleaseObject(recResult);
+	}
+
+	return status;
+}
+
+void SpeakStringWhenReady(NSSpeechSynthesizer * synth, NSString * text)
+{
+    static NSSpeechSynthesizer  * sLastSynth;
+    static NSMutableArray       * sSynthQueue;
+    
+    if (synth) {
+        if (!sSynthQueue)
+            sSynthQueue = [[NSMutableArray alloc] initWithCapacity:1];
+        [sSynthQueue addObject:[NSArray arrayWithObjects:synth, text, nil]];
+    }
+    if (sLastSynth) {
+        if ([sLastSynth isSpeaking]) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, [sSynthQueue count] ? 100*NSEC_PER_MSEC : NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                SpeakStringWhenReady(nil, nil);
+            });
+            return;
+        } else {
+            [sLastSynth release];
+            sLastSynth = nil;
+        }
+    }
+    if ([sSynthQueue count]) {
+        NSArray *   job = [sSynthQueue objectAtIndex:0];
+ 
+        sLastSynth = [[job objectAtIndex:0] retain];
+        [sLastSynth startSpeakingString:[job objectAtIndex:1]];
+        [sSynthQueue removeObjectAtIndex:0];
+    }
+}
+
+@implementation MBCInteractivePlayer
+
+- (void) makeSpeechHelp
+{
+	NSPropertyListFormat	format;
+
+	NSString * path = 
+		[[NSBundle mainBundle] pathForResource: @"SpeechHelp" ofType: @"plist"];
+	NSData *	help 	= 
+		[NSData dataWithContentsOfFile:path];
+	NSMutableDictionary * prop = 
+		[NSPropertyListSerialization 
+			propertyListFromData: help
+			mutabilityOption: NSPropertyListMutableContainers
+			format: &format
+			errorDescription:nil];
+	ProcessSerialNumber	psn;
+	GetCurrentProcess(&psn);
+	[prop setObject:[NSNumber numberWithLong:psn.highLongOfPSN] 
+		  forKey:@"ProcessPSNHigh"];
+	[prop setObject:[NSNumber numberWithLong:psn.lowLongOfPSN] 
+		  forKey:@"ProcessPSNLow"];
+	fSpeechHelp =
+		[[NSPropertyListSerialization 
+			 dataFromPropertyList:prop
+			 format: NSPropertyListXMLFormat_v1_0
+			 errorDescription:nil]
+			retain];
+}
+
+- (void) initSR
+{
+	if (SROpenRecognitionSystem(&fRecSystem, kSRDefaultRecognitionSystemID))
+		return;
+	SRNewRecognizer(fRecSystem, &fRecognizer, kSRDefaultSpeechSource);
+    SRSetProperty(fRecognizer, kSRRefCon, &self, sizeof(self));
+	short modes = kSRHasFeedbackHasListenModes;
+	SRSetProperty(fRecognizer, kSRFeedbackAndListeningModes, &modes, sizeof(short));
+	SRNewLanguageModel(fRecSystem, &fModel, "<moves>", 7);
+	fLanguageModel = 
+    [[MBCLanguageModel alloc] initWithRecognitionSystem:fRecSystem];
+	if (fSpeechHelp)
+		SRSetProperty(fRecognizer, kSRCommandsDisplayCFPropListRef,
+					  [fSpeechHelp bytes], [fSpeechHelp length]);
+	fStartingSR = false;
+	[self updateNeedMouse:self];
+}
+
+- (void) updateNeedMouse:(id)arg
+{
+    //
+    // Avoid multiple updates for same board position
+    //
+    fPendingMouseUpdate = YES;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (fPendingMouseUpdate) {
+            fPendingMouseUpdate = NO;
+            [self doUpdateNeedMouse];
+        }
+    });
+}
+
+- (void) doUpdateNeedMouse
+{
+	BOOL	wantMouse;
+
+	if (fLastSide == kBlackSide)
+		wantMouse = fSide == kWhiteSide || fSide == kBothSides;
+	else
+		wantMouse = fSide == kBlackSide || fSide == kBothSides;
+
+    if (wantMouse && [fDocument gameDone])
+        wantMouse = NO;
+    
+	[[fController renderView] wantMouse:wantMouse];
+    [[NSApp delegate] updateApplicationBadge];
+
+	if ([fController listenForMoves]) {
+		//
+		// Work with speech recognition
+		//
+		if (wantMouse) {
+			if (fStartingSR) {
+					; // Current starting, will update later
+			} else if (!fRecSystem) {
+                static dispatch_once_t  sInitOnce;
+                static dispatch_queue_t sInitQueue;
+                dispatch_once(&sInitOnce, ^{
+                    sInitQueue = dispatch_queue_create("InitSR", DISPATCH_QUEUE_SERIAL);
+                    AEInstallEventHandler(kAESpeechSuite, kAESpeechDone, 
+                                          NewAEEventHandlerUPP(HandleSpeechDoneAppleEvent), 
+                                          NULL, false);
+                });
+				fStartingSR = true;
+                dispatch_async(sInitQueue, ^{
+                    [self initSR];
+                });
+			} else {
+				if (!fSpeechHelp) {
+					[self makeSpeechHelp];
+					SRSetProperty(fRecognizer, kSRCommandsDisplayCFPropListRef,
+					  [fSpeechHelp bytes], [fSpeechHelp length]);
+				}
+
+				SRStopListening(fRecognizer);
+				MBCMoveCollector * moves = [MBCMoveCollector new];
+				MBCMoveGenerator generateMoves(moves, fVariant, 0);
+				generateMoves.Generate(fLastSide==kBlackSide,
+									   *[[fController board] curPos]);
+				[fLanguageModel buildLanguageModel:fModel 
+								fromMoves:[moves collection]
+								takeback:[[fController board] canUndo]];
+				SRSetLanguageModel(fRecognizer, fModel);
+				SRStartListening(fRecognizer);	
+				[moves release];
+			}
+		} else if (fRecSystem) 
+			SRStopListening(fRecognizer);
+	} else if (fRecSystem && !fStartingSR) {
+		// 	
+		// Time to take the recognition system down
+		//
+		SRStopListening(fRecognizer);
+		[fLanguageModel release];
+        fLanguageModel = nil;
+		SRReleaseObject(fRecognizer);
+		SRCloseRecognitionSystem(fRecSystem);
+		fRecSystem	=	0;
+	}
+}
+
+- (void)allowedToListen:(BOOL)allowed
+{
+    [self updateNeedMouse:self];
+    if (fRecSystem && !allowed)
+        SRStopListening(fRecognizer);
+}
+
+- (void) removeChessObservers
+{
+    if (!fHasObservers)
+        return;
+    
+    NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
+    [notificationCenter removeObserver:self name:MBCWhiteMoveNotification object:nil];
+    [notificationCenter removeObserver:self name:MBCBlackMoveNotification object:nil];
+    [notificationCenter removeObserver:self name:MBCIllegalMoveNotification object:nil];
+    [notificationCenter removeObserver:self name:MBCTakebackNotification object:nil];
+    [notificationCenter removeObserver:self name:MBCGameEndNotification object:nil];
+    [fDocument removeObserver:self forKeyPath:@"Result"];
+    
+    fHasObservers = NO;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
+    [self updateNeedMouse:self];
+}
+
+- (void)dealloc
+{
+    [self removeChessObservers];
+    [fSpeechHelp release];
+    [fLanguageModel release];
+    [super dealloc];
+}
+
+- (void) startGame:(MBCVariant)variant playing:(MBCSide)sideToPlay
+{
+	fVariant	=   variant;
+	fLastSide	=	
+		([[fController board] numMoves] & 1) 
+		? kWhiteSide : kBlackSide;
+
+    [self removeChessObservers];
+    NSNotificationCenter * notificationCenter = [NSNotificationCenter defaultCenter];
+	switch (fSide = sideToPlay) {
+	case kWhiteSide:
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(humanMoved:)
+			name:MBCWhiteMoveNotification
+			object:fDocument];
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(opponentMoved:)
+			name:MBCBlackMoveNotification
+			object:fDocument];
+		break;
+	case kBlackSide:
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(opponentMoved:)
+			name:MBCWhiteMoveNotification
+			object:fDocument];
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(humanMoved:)
+			name:MBCBlackMoveNotification
+			object:fDocument];
+		break;
+	case kBothSides:
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(humanMoved:)
+			name:MBCWhiteMoveNotification
+			object:fDocument];
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(humanMoved:)
+			name:MBCBlackMoveNotification
+			object:fDocument];
+		break;
+	case kNeitherSide:
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(opponentMoved:)
+			name:MBCWhiteMoveNotification
+			object:fDocument];
+		[notificationCenter 
+			addObserver:self
+			selector:@selector(opponentMoved:)
+			name:MBCBlackMoveNotification
+			object:fDocument];
+		break;
+	}
+	[notificationCenter 
+		addObserver:self
+		selector:@selector(reject:)
+		name:MBCIllegalMoveNotification
+		object:fDocument];
+	[notificationCenter 
+		addObserver:self
+		selector:@selector(takeback:)
+		name:MBCTakebackNotification
+		object:fDocument];
+	[notificationCenter 
+		addObserver:self
+		selector:@selector(gameEnded:)
+		name:MBCGameEndNotification
+		object:fDocument];
+    [fDocument addObserver:self forKeyPath:@"Result" options:NSKeyValueObservingOptionNew context:nil];
+    fHasObservers = YES;
+
+	[self updateNeedMouse:self];
+}
+
+- (void) reject:(NSNotification *)n
+{
+	NSBeep();
+	[[fController renderView] unselectPiece];
+}
+
+- (void) takeback:(NSNotification *)n
+{
+    [self updateNeedMouse:self];
+}
+
+- (void) switchSides:(NSNotification *)n
+{
+	fLastSide	= 	fLastSide==kBlackSide ? kWhiteSide : kBlackSide;
+
+	[self updateNeedMouse:self];
+}
+
+- (BOOL)useAlternateSynthForMove:(MBCMove *)move
+{
+    if (fSide == kBothSides || fSide == kNeitherSide)
+        return [[fController board] sideOfMove:move] == kBlackSide;
+    else
+        return fSide == [[fController board] sideOfMove:move];
+}
+
+- (NSString *)stringFromMove:(MBCMove *)move
+{
+	NSDictionary * localization = [self useAlternateSynthForMove:move] 
+		? [fController alternateLocalization]
+		: [fController primaryLocalization];
+
+    return [[fController board] stringFromMove:move withLocalization:localization];
+}
+
+- (NSString *)stringForCheck:(MBCMove *)move
+{
+	NSDictionary * localization = [self useAlternateSynthForMove:move] 
+        ? [fController alternateLocalization]
+        : [fController primaryLocalization];
+    
+    return LOC(@"check", @"Check!");
+}
+
+- (void) speakMove:(MBCMove *)move text:(NSString *)text check:(BOOL)check
+{
+	NSSpeechSynthesizer * synth = [self useAlternateSynthForMove:move] 
+		? [fController alternateSynth]
+		: [fController primarySynth];
+    
+    if (!check || (move->fCheck && !move->fCheckMate))
+        SpeakStringWhenReady(synth, text);
+        if (!check && move->fCheck)
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 200*NSEC_PER_MSEC), 
+                           dispatch_get_main_queue(), ^{
+                [self speakMove:move text:[self stringForCheck:move] check:YES];
+            });
+ }
+
+- (void) speakMove:(NSNotification *)notification
+{
+	MBCMove * 	move = reinterpret_cast<MBCMove *>([notification userInfo]);
+    
+	NSString *	text = [self stringFromMove:move];
+
+	[self speakMove:move text:text check:NO];
+}
+
+- (void) gameEnded:(NSNotification *)notification
+{
+    MBCSide humanSide   = [fDocument humanSide];
+    BOOL    wasHumanMove;
+    if (humanSide == kBothSides) {
+        wasHumanMove = YES;
+    } else if (humanSide == kNeitherSide) {
+        wasHumanMove = NO;
+    } else {
+        MBCMove * 	move = reinterpret_cast<MBCMove *>([notification userInfo]);
+        wasHumanMove    = [[fController board] sideOfMove:move] == humanSide;
+    }
+    if (wasHumanMove ? [fController speakHumanMoves] : [fController speakMoves]) 
+        if (![fDocument gameDone]) // Game was not previously finished
+            [self speakMove:notification];
+}
+
+- (void) speakMove:(MBCMove *) move withWrapper:(NSString *)wrapper
+{
+	if (move && ([fController speakHumanMoves] || [fController speakMoves])) {
+		NSString *	text = [self stringFromMove:move];
+		NSString *  wrapped = 
+			[NSString stringWithFormat:wrapper, text];
+	
+		[self speakMove:move text:wrapped check:NO];
+	}
+}
+
+- (void) announceHint:(MBCMove *) move
+{
+	if (!move)
+		return;
+
+	NSDictionary * localization = [self useAlternateSynthForMove:move] 
+		? [fController alternateLocalization]
+		: [fController primaryLocalization];
+
+	[self speakMove:move withWrapper:LOC(@"suggest_fmt", @"I would suggest \"%@\"")];
+}
+
+- (void) announceLastMove:(MBCMove *) move
+{
+	if (!move)
+		return;
+
+	NSDictionary * localization = [self useAlternateSynthForMove:move] 
+		? [fController alternateLocalization]
+		: [fController primaryLocalization];
+
+	[self speakMove:move withWrapper:LOC(@"last_move_fmt", @"The last move was \"%@\"")];
+}
+
+- (void) opponentMoved:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([fController speakMoves]) 
+            [self speakMove:notification];
+        [self switchSides:notification];
+    });
+}
+
+- (void) humanMoved:(NSNotification *)notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([fController speakHumanMoves]) 
+            [self speakMove:notification];
+        [self switchSides:notification];
+    });
+}
+
+- (void) startSelection:(MBCSquare)square
+{
+	MBCPiece	piece;
+	if (square > kInHandSquare) {
+		piece = square-kInHandSquare;
+		if (fVariant!=kVarCrazyhouse || ![[fController board] curInHand:piece])
+			return;
+	} else if (square == kWhitePromoSquare || square == kBlackPromoSquare)
+		return;
+	else
+		piece = [[fController board] oldContents:square];
+
+	if (!piece)
+		return;
+
+    NSLog(@"MBCInteractivePlayer startSelection: %d , fLastSide=%d, %d, connected=%d", Color(piece), fLastSide==kBlackSide,(fLastSide==kBlackSide ? kWhitePiece : kBlackPiece), [[MBCSharePlayManager sharedInstance] connected]);
+    NSLog(@"%p and %p", [MBCSharePlayManager sharedInstance].boardWindowDelegate, fController);
+    //If we are connected to a shareplay session and we are interacting with the specific SharePlay attached Window
+    if ([[MBCSharePlayManager sharedInstance] connected] == YES && [MBCSharePlayManager sharedInstance].boardWindowDelegate == fController) {
+        if(Color(piece) == (fLastSide==kBlackSide ? kWhitePiece : kBlackPiece)) {
+            NSLog(@"Sending Valid Move over Shareplay");
+            fFromSquare    =  square;
+            [[fController renderView] selectPiece:piece at:square];
+            StartSelectionMessage *message = [[StartSelectionMessage alloc] init];
+            message.square = (unsigned char)square;
+            [[MBCSharePlayManager sharedInstance] sendStartSelectionMessageWithMessage:message];
+        }
+    } else if (Color(piece) == (fLastSide==kBlackSide ? kWhitePiece : kBlackPiece)) {    //This prevents the other side from being chosen
+        fFromSquare	=  square;
+        [[fController renderView] selectPiece:piece at:square];
+	}
+}
+
+- (void)startSelectionWithoutShare:(MBCSquare)square {
+    NSLog(@"MBCInteractivePlayer startSelectionWithoutShare");
+    MBCPiece    piece;
+    
+    if (square > kInHandSquare) {
+        piece = square-kInHandSquare;
+        if (fVariant!=kVarCrazyhouse || ![[fController board] curInHand:piece])
+            return;
+    } else if (square == kWhitePromoSquare || square == kBlackPromoSquare)
+        return;
+    else
+        piece = [[fController board] oldContents:square];
+
+    if (!piece)
+        return;
+
+    fFromSquare    =  square;
+    [[fController renderView] selectPiece:piece at:square];
+}
+
+- (void) endSelection:(MBCSquare)square animate:(BOOL)animate
+{
+    NSLog(@"MBCInteractivePlayer endSelection");
+    
+    if ([[MBCSharePlayManager sharedInstance] connected] == YES && [MBCSharePlayManager sharedInstance].boardWindowDelegate == fController) {
+        EndSelectionMessage * message = [[EndSelectionMessage alloc] init];
+        message.square = square;
+        message.animate = animate;
+        [[MBCSharePlayManager sharedInstance] sendEndSelectionMessageWithMessage:message];
+    }
+    
+	if (fFromSquare == square) {
+		[[fController renderView] clickPiece];
+
+		return;
+	} else if (square > kSyntheticSquare) {
+		[[fController renderView] unselectPiece];
+		
+		return;
+	}
+
+	MBCMove *	move = [MBCMove moveWithCommand:kCmdMove];
+
+	if (fFromSquare > kInHandSquare) {
+		move->fCommand = kCmdDrop;
+		move->fPiece   = fFromSquare-kInHandSquare;
+	} else {
+		move->fFromSquare	= fFromSquare;
+	}
+	move->fToSquare		= square;
+	move->fAnimate		= animate;
+
+	//
+	// Fill in promotion info
+	//
+	[[fController board] tryPromotion:move];
+    
+	[[NSNotificationCenter defaultCenter] 
+	 postNotificationName:
+	 (fLastSide==kBlackSide 
+	  ? MBCUncheckedWhiteMoveNotification
+	  : MBCUncheckedBlackMoveNotification)
+	 object:fDocument userInfo:(id)move];
+}
+
+- (void) endSelectionWithoutShare:(MBCSquare)square animate:(BOOL) animate {
+    NSLog(@"MBCInteractivePlayer endSelectionWithoutShare");
+    if (fFromSquare == square) {
+        [[fController renderView] clickPiece];
+
+        return;
+    } else if (square > kSyntheticSquare) {
+        [[fController renderView] unselectPiece];
+        
+        return;
+    }
+
+    MBCMove *    move = [MBCMove moveWithCommand:kCmdMove];
+
+    if (fFromSquare > kInHandSquare) {
+        move->fCommand = kCmdDrop;
+        move->fPiece   = fFromSquare-kInHandSquare;
+    } else {
+        move->fFromSquare    = fFromSquare;
+    }
+    move->fToSquare        = square;
+    move->fAnimate        = animate;
+
+    //
+    // Fill in promotion info
+    //
+    [[fController board] tryPromotion:move];
+
+    [[NSNotificationCenter defaultCenter]
+     postNotificationName:
+     (fLastSide==kBlackSide
+      ? MBCUncheckedWhiteMoveNotification
+      : MBCUncheckedBlackMoveNotification)
+     object:fDocument userInfo:(id)move];
+}
+
+- (void) recognized:(SRRecognitionResult)result
+{
+	if (MBCMove * move = [fLanguageModel recognizedMove:result]) {
+		if (move->fCommand == kCmdUndo) {
+			[fController takeback:self];
+		} else {
+			//
+			// Fill in promotion info if missing
+			//
+			[[fController board] tryPromotion:move];
+
+			NSString * notification;			
+			if (fLastSide==kBlackSide)
+				notification = MBCUncheckedWhiteMoveNotification;
+			else
+				notification = MBCUncheckedBlackMoveNotification;
+			[[NSNotificationCenter defaultCenter] 
+				postNotificationName:notification
+             object:fDocument userInfo:(id)move];
+		}
+	}
+}
+
+- (void) removeController
+{
+    //
+    // Avoid crashes from delayed methods
+    //
+    fController = nil;
+}
+
+- (void) setLastSide:(MBCSide) side {
+    NSLog(@"set Interactive Last Side fLastSide=%@ newSide=%@, fSide=%d", fLastSide == kWhiteSide ? @"WhiteSide" : @"BlackSide", side == kWhiteSide ? @"WhiteSide" : @"BlackSide", fSide);
+    fLastSide = side;
+    
+}
+
+
+@end
+
+// Local Variables:
+// mode:ObjC
+// End:
+ 

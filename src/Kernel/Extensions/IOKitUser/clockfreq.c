@@ -1,0 +1,163 @@
+/*
+ *
+ * Copyright (c) NeXTHub Corporation. All Rights Reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * Author: Tunjay Akbarli
+ * Date: Saturday, May 14, 2022.
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Please contact NeXTHub Corporation, 651 N Broad St, Suite 201, 
+ * Middletown, DE 19709, New Castle County, USA.
+ *
+ */
+/*
+cc clockfreq.c -o /tmp/clockfreq -Wall -Wno-four-char-constants -framework IOKit
+*/
+
+#include <ctype.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <limits.h>
+#include <stdio.h>
+
+
+#include <IOKit/IOKitLib.h>
+
+
+mach_port_t	masterPort;
+
+
+void printInt32( CFDataRef data, CFStringRef key )
+{
+    UInt32	value;
+
+    printf("\"%s\" ", CFStringGetCStringPtr(key, kCFStringEncodingMacRoman));
+
+    if( data
+     && (CFDataGetLength(data) >= sizeof( value ))) {
+        value = *((UInt32 *)CFDataGetBytePtr(data));
+        printf("= %ld = %08lx\n", value, value );
+    } else
+	printf("not found\n");
+}
+
+void printDictInt32( CFDictionaryRef dict, CFStringRef key )
+{
+    printInt32( CFDictionaryGetValue(dict, key), key );
+}
+
+void printEntryInt32( io_registry_entry_t entry, CFStringRef key )
+{
+    CFDataRef data;
+
+    data = IORegistryEntryCreateCFProperty( entry, key,
+            kCFAllocatorDefault, kNilOptions );
+    printInt32( data, key );
+    if( data)
+        CFRelease(data);
+}
+
+void getClockFrequency( void )
+{
+    kern_return_t	kr;
+    io_registry_entry_t	root;
+    io_registry_entry_t	cpus;
+    io_registry_entry_t	cpu;
+    io_iterator_t	iter;
+    io_name_t		name;
+    CFDataRef		data;
+    CFDictionaryRef	properties;
+
+    assert( (
+    root = IORegistryEntryFromPath( masterPort,
+		kIODeviceTreePlane ":/" )
+    ));
+    assert( KERN_SUCCESS == (
+    kr = IORegistryEntryCreateCFProperties(root, &properties,
+                                        kCFAllocatorDefault, kNilOptions )
+    ));
+    data = CFDictionaryGetValue(properties, CFSTR("compatible"));
+
+    printf("machine ");
+    if( data)
+        printf(CFDataGetBytePtr(data));
+    printf("\n---------------------\n");
+    printDictInt32(properties, CFSTR("clock-frequency"));
+
+    CFRelease(properties);
+
+    // go looking for a cpu
+
+    if( (cpus = IORegistryEntryFromPath( masterPort,
+		kIODeviceTreePlane ":/cpus" ))) {
+        assert( KERN_SUCCESS == (
+	kr = IORegistryEntryGetChildIterator( cpus, kIODeviceTreePlane, &iter )
+        ));
+        IOObjectRelease( cpus );
+    } else {
+        assert( KERN_SUCCESS == (
+	kr = IORegistryEntryGetChildIterator( root, kIODeviceTreePlane, &iter )
+        ));
+    }
+
+    while( (cpu = IOIteratorNext( iter ))) {
+	if( (data = IORegistryEntryCreateCFProperty( cpu, CFSTR("device_type"),
+		kCFAllocatorDefault, kNilOptions ))
+	 && (0 == strcmp("cpu", CFDataGetBytePtr(data)))) {
+
+            printf("\nprocessor ");
+            if( KERN_SUCCESS == IORegistryEntryGetName( cpu, name))
+		printf(name);
+            printf("\n---------------------\n");
+
+
+            assert( KERN_SUCCESS == (
+            kr = IORegistryEntryCreateCFProperties(cpu, &properties,
+                                                kCFAllocatorDefault, kNilOptions )
+            ));
+
+	    printDictInt32(properties, CFSTR("clock-frequency"));
+	    printDictInt32(properties, CFSTR("bus-frequency"));
+	    printDictInt32(properties, CFSTR("timebase-frequency"));
+	    printDictInt32(properties, CFSTR("d-cache-size"));
+	    printDictInt32(properties, CFSTR("i-cache-size"));
+	    printDictInt32(properties, CFSTR("cpu-version"));
+
+            CFRelease(properties);
+	}
+	IOObjectRelease(cpu);
+    }
+
+    IOObjectRelease( iter );
+    IOObjectRelease( root );
+}
+
+int
+main(int argc, char **argv)
+{
+	kern_return_t		kr;
+
+	/*
+	 * Get master device port
+	 */
+	assert( KERN_SUCCESS == (
+	kr = IOMasterPort(   bootstrap_port,
+			     &masterPort)
+	));
+
+	getClockFrequency();
+
+        return(0);
+}
