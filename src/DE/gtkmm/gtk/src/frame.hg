@@ -1,0 +1,84 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+
+#include <gtkmm/widget.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** A Gtk::Widget with a decorative frame and optional label.
+ *
+ * The Frame widget surrounds its single child with a decorative frame and
+ * an optional label.  If present, the label is drawn in a gap in the top
+ * side of the frame. The position of the label can be controlled with
+ * set_label_align().
+ *
+ * A Frame widget looks like this:
+ * @image html frame1.png
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ */
+class GTKMM_API Frame : public Widget
+{
+  _CLASS_GTKOBJECT(Frame, GtkFrame, GTK_FRAME, Gtk::Widget, GtkWidget, , , GTKMM_API)
+public:
+
+  _CTOR_DEFAULT()
+  _WRAP_CTOR(Frame(const Glib::ustring& label), gtk_frame_new)
+
+  /** Set the label to appear in the top edge of the frame.
+   * Label alignment defaults to the upper left corner of the frame.
+   */
+  _WRAP_METHOD(void set_label(const Glib::ustring& label), gtk_frame_set_label)
+  void unset_label();
+  _WRAP_METHOD(Glib::ustring get_label() const, gtk_frame_get_label)
+
+  _WRAP_METHOD(void set_label_widget(Widget& label_widget), gtk_frame_set_label_widget)
+  _WRAP_METHOD(Widget* get_label_widget(), gtk_frame_get_label_widget)
+  _WRAP_METHOD(const Widget* get_label_widget() const, gtk_frame_get_label_widget, constversion)
+
+  _WRAP_METHOD(void set_label_align(float xalign = 0.0), gtk_frame_set_label_align)
+  /** Sets the X alignment of the frame widget’s label. The
+   * default values for a newly created frame is Gtk::Align::START.
+   *
+   * @param xalign The position of the label along the top edge
+   * of the widget. A value of Gtk::Align::START represents left alignment;
+   * Gtk::Align::END represents right alignment.
+   */
+  _WRAP_METHOD(void set_label_align(Align xalign), gtk_frame_set_label_align)
+
+  _WRAP_METHOD(float get_label_align() const, gtk_frame_get_label_align)
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_frame_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_frame_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_frame_get_child, constversion)
+
+  _WRAP_PROPERTY("label", Glib::ustring)
+  _WRAP_PROPERTY("label-xalign", double)
+  _WRAP_PROPERTY("label-widget", Widget*)
+  _WRAP_PROPERTY("child", Widget*)
+
+protected:
+#m4 _CONVERSION(`GtkAllocation*',`Allocation&',`($2)(Glib::wrap($3))')
+  _WRAP_VFUNC(void compute_child_allocation(Allocation& allocation), compute_child_allocation)
+};
+
+} // namespace Gtk

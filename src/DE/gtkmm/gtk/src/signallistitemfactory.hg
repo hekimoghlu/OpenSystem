@@ -1,0 +1,152 @@
+/* Copyright (C) 2020 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/listitem.h>
+#include <gtkmm/listitemfactory.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/listitemfactory_p.h)
+
+namespace Gtk
+{
+
+/** A listitem factory providing signals.
+ *
+ * %Gtk::SignalListItemFactory is a Gtk::ListItemFactory that provides signals
+ * with which user code can manage instances of ListItem or other list objects.
+ *
+ * Note the below signals, not suffixed `%_obj()` and taking ListItem arguments,
+ * only work if the factory is indeed making ListItem instances. If not, e.g. if
+ * it makes ListHeader objects as the ListView::property_header_factory(), these
+ * signals receive null args and cannot be used. In such cases, use the versions
+ * suffixed `%_obj()`, and cast the Glib::Object argument to the right subclass.
+ *
+ * Signals are emitted for every listitem in the same order:
+ *
+ *  1. signal_setup() is emitted to set up permanent things
+ *  on the listitem. This usually means constructing the widgets used in the
+ *  row and adding them to the listitem.
+ *
+ *  2. signal_bind() is emitted to bind the item passed via
+ *  Gtk::ListItem::property_item() to the widgets that have been
+ *  created in step 1 or to add item-specific widgets. Signals are
+ *  connected to listen to changes - both to changes in the item to
+ *  update the widgets or to changes in the widgets to update the
+ *  item. After this signal has been called, the listitem may be shown
+ *  in a list widget.
+ *
+ *  3. signal_unbind() is emitted to undo everything done in step 2.
+ *  Usually this means disconnecting signal handlers. Once this signal
+ *  has been called, the listitem will no longer be used in a list
+ *  widget.
+ *
+ *  4. signal_bind() and signal_unbind() may be emitted multiple times
+ *  again to bind the listitem for use with new items. By reusing
+ *  listitems, potentially costly setup can be avoided. However, it
+ *  means code needs to make sure to properly clean up the listitem in
+ *  step 3 so that no information from the previous use leaks into the
+ *  next use.
+ *
+ *  5. signal_teardown() is emitted to allow undoing the effects of
+ *  signal_setup(). After this signal was emitted on a listitem, the
+ *  listitem will be destroyed and not be used again.
+ *
+ * Note that during the signal emissions, changing properties on the
+ * Gtk::ListItems passed will not trigger notify signals as the listitem's
+ * notifications are frozen. See Glib::ObjectBase::freeze_notify() for details.
+ *
+ * For tracking changes in other properties in the Gtk::ListItem, the
+ * Gtk::ListItem notify signal is recommended. The signal can be connected
+ * in the signal_setup() signal and removed again during signal_teardown().
+ *
+ * @see Gtk::ListItemFactory
+ * @ingroup ListView
+ * @newin{3,98}
+ */
+class GTKMM_API SignalListItemFactory : public ListItemFactory
+{
+  _CLASS_GOBJECT(SignalListItemFactory, GtkSignalListItemFactory, GTK_SIGNAL_LIST_ITEM_FACTORY, Gtk::ListItemFactory, GtkListItemFactory, , , GTKMM_API)
+
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_CREATE()
+
+  // no_default_handler because GtkSignalListItemFactoryClass is private.
+
+  // Gtk now declares these signals as taking a GObject*. We can't make such a
+  // change in gtkmm. It would break API, and perhaps ABI.
+  // Fixed by gtk/src/gtk_signals.defs.patch
+  // https://gitlab.gnome.org/GNOME/gtk/-/issues/5056
+#m4 _CONVERSION(`GtkListItem*',`const Glib::RefPtr<ListItem>&',`Glib::wrap($3, true)')
+  /**
+   * This signal is only usable if the factory is being used to make ListItems.
+   * If not, e.g. because the factory is making ListHeader items via being used
+   * as a ListView::property_header_factory(), this signal will receive a null
+   * RefPtr and so not be usable. In such cases, use signal_setup_obj() instead.
+   */
+  _WRAP_SIGNAL(void setup(const Glib::RefPtr<ListItem>& list_item), "setup", no_default_handler)
+  /**
+   * This signal is only usable if the factory is being used to make ListItems.
+   * If not, e.g. because the factory is making ListHeader items via being used
+   * as a ListView::property_header_factory(), this signal will receive a null
+   * RefPtr and so not be usable. In such cases, use signal_bind_obj() instead.
+   */
+  _WRAP_SIGNAL(void bind(const Glib::RefPtr<ListItem>& list_item), "bind", no_default_handler)
+  /**
+   * This signal is only usable if the factory is being used to make ListItems.
+   * If not, e.g. because the factory is making ListHeader items via being used
+   * as a ListView::property_header_factory(), this signal will receive a null
+   * RefPtr and so not be usable. In such cases, use signal_unbind_obj() instead.
+   */
+  _WRAP_SIGNAL(void unbind(const Glib::RefPtr<ListItem>& list_item), "unbind", no_default_handler)
+  /**
+   * This signal is only usable if the factory is being used to make ListItems.
+   * If not, e.g. because the factory is making ListHeader items via being used
+   * as a ListView::property_header_factory(), this signal will receive a null
+   * RefPtr and so not be usable. In such cases, use signal_teardown_obj() instead.
+   */
+  _WRAP_SIGNAL(void teardown(const Glib::RefPtr<ListItem>& list_item), "teardown", no_default_handler)
+
+#m4 _CONVERSION(`GtkListItem*',`const Glib::RefPtr<Glib::Object>&',`Glib::wrap((GObject*)$3, true)')
+  /**
+   * This is a more generic version of signal_setup(), usable if the factory is
+   * being used to make something other than ListItems, for example ListHeader.
+   * It receives a RefPtr to Glib::Object, which can be cast to the actual type.
+   */
+  _WRAP_SIGNAL(void setup_obj(const Glib::RefPtr<Glib::Object>& object), "setup", no_default_handler, newin "4,14")
+  /**
+   * This is a more generic version of signal_bind(), usable if the factory is
+   * being used to make something other than ListItems, for example ListHeader.
+   * It receives a RefPtr to Glib::Object, which can be cast to the actual type.
+   */
+  _WRAP_SIGNAL(void bind_obj(const Glib::RefPtr<Glib::Object>& object), "bind", no_default_handler, newin "4,14")
+  /**
+   * This is a more generic version of signal_unbind(), usable if the factory is
+   * being used to make something other than ListItems, for example ListHeader.
+   * It receives a RefPtr to Glib::Object, which can be cast to the actual type.
+   */
+  _WRAP_SIGNAL(void unbind_obj(const Glib::RefPtr<Glib::Object>& object), "unbind", no_default_handler, newin "4,14")
+  /**
+   * This is a more generic version of signal_teardown(), usable if the factory is
+   * being used to make something other than ListItems, for example ListHeader.
+   * It receives a RefPtr to Glib::Object, which can be cast to the actual type.
+   */
+  _WRAP_SIGNAL(void teardown_obj(const Glib::RefPtr<Glib::Object>& object), "teardown", no_default_handler, newin "4,14")
+};
+
+} // namespace Gtk

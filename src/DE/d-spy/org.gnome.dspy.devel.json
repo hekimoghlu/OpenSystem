@@ -1,0 +1,61 @@
+{
+    "app-id": "org.gnome.dspy.devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "d-spy",
+    "finish-args": [
+        "--device=dri",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--socket=session-bus",
+        "--socket=system-bus"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name": "libdex",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Ddocs=false",
+                "-Dexamples=false",
+                "-Dintrospection=disabled",
+                "-Dsysprof=false",
+                "-Dtests=false",
+                "-Dvapi=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libdex.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name": "d-spy",
+            "builddir": true,
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Ddevelopment=true"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/d-spy.git",
+                    "branch" : "main"
+                }
+            ]
+        }
+    ]
+}

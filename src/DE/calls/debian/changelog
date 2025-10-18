@@ -1,0 +1,3268 @@
+gnome-calls (49.1.1) unstable; urgency=medium
+
+  [ Guido Günther ]
+  * doap: Add Guido as co-maintainer
+  * doap: Update Evangelos email.
+    The dropped one isn't used since ages
+  * main-window: Drop confusing cast
+  * record-store: Track async operations.
+    We need to be able to tell when all async operations finished.
+    Otherwise we might shut down the daemon with in flight operations
+    leaving a open database around.
+  * application: Wait until all async database operations finished.
+    When shutting down make sure there are no in-flight database operations.
+    Otherwise the database might not be closed correctly.
+    Improves fix for https://gitlab.gnome.org/GNOME/calls/-/issues/508
+  * tests: Make the application test depend on the binary.
+    Otherwise it is not rebuilt when it changes
+  * application: Actually test for write ahead log.
+    While the test was correct and checked if there is only
+    `record.db` in a given dir (and no other files) it wouldn't
+    tell us whether the file wasn't there or there were additional
+    files found. Hence replace the test by assertions that tell
+    use exactly what failed easing debugging in CI.
+    Fixes: e4bd4580 ("tests: Add application shutdown tests")
+  * app: Use automatic cleanup
+  * application: Load plugins early.
+    Fixes: 574e1f79 ("application: Drop ignore_activation flag")
+    Closes: https://gitlab.gnome.org/GNOME/calls/-/issues/718
+
+  [ Markus Göllnitz ]
+  * main-window: increase width of switcher breakpoint.
+    The current breakpoint is more or less perfect for
+    English. However, there are other languages with longer
+    strings there, such as German. Increasing the width at
+    which the breakpoint sits to switch the switcher location
+    enables most languages to have no or minimal ellipses
+    while not looking too spacious with English.
+  * main-window: move bottom switcher to toolbar.
+    The toolbar view is meant for these. This allows
+    libadwaita's style to apply the way it can be seen in
+    basically every other GNOME app.
+    The differences are with the scroll dependent undershoot
+    instead of an unconditional border.
+  * new-call-box: wrap dialer in scrolled window.
+    It was possible to increase the window's size below the
+    minimum size of the dialer view. As such it is important
+    to wrap it in a scrolled window in order not to lose
+    access to otherwise hidden interface components.
+    This is, of course, not a replacement for a better
+    adapting dialer.
+  * contacts-box: adjust search bar's margin inside toolbar.
+    A toolbar view, per its docs, expects its toolbar
+    children to either be of a set of known widget types that
+    are supported by default, or otherwise be a Gtk.Box-like
+    container with the .toolbar CSS style class.
+    This expectation was not met, but instead similar, but
+    not identical margins manually applied. These similar yet
+    different margins made it look off.
+    While this now adheres to the toolbar child requirements
+    of libadwaita, and the margins look more familiar, it
+    still breaks with libadwaita's assumption that toolbars
+    are not stacked. Its stylesheet allows for stacking
+    toolbar views only if one is providing the top and the
+    other the bottom one.
+    This view, especially, deserves a more thorough design
+    overhaul, regardless of this. Thus, I will leave it at
+    this.
+    Link: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/class.ToolbarView.html
+
+  [ Evangelos Ribeiro Tzaras ]
+  * test-application: Check for expected plugins to be loaded.
+    These tests helps ensure the application will always have plugins
+    loaded and prevent regressions.
+    Helps: https://gitlab.gnome.org/GNOME/calls/-/issues/718
+  * plugin-manager: Add API to unload all plugins.
+    And add tests for it.
+
+ -- Evangelos Ribeiro Tzaras <devrtz@debian.org>  Tue, 14 Oct 2025 16:05:51 +0200
+
+gnome-calls (49.1) unstable; urgency=medium
+
+  [ Baxrom Raxmatov ]
+  * Add Uzbek (Latin) translation
+
+  [ Jan Tojnar ]
+  * ci: Fix dist tarball name
+
+  [ Guido Günther ]
+  * data: Start calls as part of gnome-session
+  * call-box: Use correct property
+  * build: Drop meson version check
+  * account-overview: Ref list models
+  * application: Don't try to remove inexistent window
+  * data: Switch calls to DBus activation
+  * application: Validate daemon flag only on first startup
+  * application: Drop ignore_activation flag
+
+  [ Bardia Moshiri ]
+  * ofono: implement USSD interface
+  * ofono: fixup styling
+
+  [ Yi-Jyun Pan ]
+  * Update Chinese (Taiwan) translation
+
+  [ knoppix ]
+  * main-window.ui: add a proper callback for Close button
+
+  [ Vivek wagdare ]
+  * contacts-box: Add vertical margins to SearchEntry in contacts view
+
+  [ Evangelos Ribeiro Tzaras ]
+  * metainfo: Wrap old release notes in paragraph
+
+  [ Boris Shtrasman ]
+  * emergency-call-types: add Israeli emergency numbers
+
+  [ Bjørn Mørkedal ]
+  * Add Norwegian Nynorsk translation
+
+  [ Kristjan SCHMIDT ]
+  * Update Esperanto translation
+
+  [ Sabri Ünal ]
+  * Update Turkish translation
+
+  [ Ziri Sut ]
+  * Update Kabyle translation
+
+  [ Abduqadir Abliz ]
+  * Add Uighur translation
+
+  [ Markus Göllnitz ]
+  * flatpak: update to resolve build errors
+
+  [ Iverson Briones ]
+  * Add Filipino translation
+
+  [ Emilio Sepúlveda ]
+  * Add Interlingua translation
+
+  [ Zayar Lwin ]
+  * Update Burmese translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Mon, 06 Oct 2025 08:50:45 +0200
+
+gnome-calls (48.0) unstable; urgency=medium
+
+  [ Pawan Chitrakar ]
+  * Update Nepali translation
+
+  [ Changwoo Ryu ]
+  * Update Korean translation
+
+  [ Abdullah Ibrahim ]
+  * Add Arabic translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Mon, 17 Mar 2025 02:31:50 +0100
+
+gnome-calls (48~beta.1) unstable; urgency=medium
+
+  * ci: Rename dist tarball so it will be found by the release pipeline
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 15 Feb 2025 08:45:33 +0100
+
+gnome-calls (48~beta.0) unstable; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * ci: Include appstreamcli and desktop-file-utils in images
+  * ci: Update image
+  * ci: Use GNOME release pipeline
+
+  [ Guido Günther ]
+  * calls-notifier: Use official notification category
+  * calls-manager: Keep ref on list models
+  * calls-manager: Don't leak hash tables
+  * settings: Don't leak audio codecs
+  * settings: Don't leak autoload plugins
+  * history-box: No need to unparent the stack
+  * history-box: Keep ref on list model
+  * call-record-row: Drop superfluous cast
+  * call-record-row: Use g_clear_signal_handler
+  * util: Drop now unused macros
+  * call-record-row: Unparent popover in dispose
+  * call-record-row: Turn the realized check into a critical
+  * ci: Use newer image
+  * build: Bump libadwaita dependency to 1.6
+  * main-window: Set log domain
+  * ussd-dialog: Set phone input purose on entry
+  * ussd-dialog: Simplify navigation
+  * main-window: Use AdwDialog for USSD
+  * ussd-dialog: Use AdwSpinner
+
+  [ Juliano de Souza Camargo ]
+  * Update Brazilian Portuguese translation
+
+  [ Fabio Tomat ]
+  * Update Friulian translation
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Милош Поповић ]
+  * Update Serbian translation
+  * Add Serbian (Latin) translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Fri, 14 Feb 2025 14:23:50 +0100
+
+gnome-calls (47.0) unstable; urgency=medium
+
+  [ Sabri Ünal ]
+  * Update Turkish translation
+
+  [ Aurimas Černius ]
+  * Update Lithuanian translation
+
+  [ Fran Dieguez ]
+  * Update Galician translation
+
+  [ Chris Talbot ]
+  * application: add signal for main window hiding
+  * contacts-box: clear entry if window is closed
+  * new-call-box: clear number entry when windows is closed
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Efstathios Iosifidis ]
+  * Update Greek translation
+
+  [ Daniel ]
+  * Updated Spanish translation
+
+  [ Andika Triwidada ]
+  * Update Indonesian translation
+
+  [ Irénée THIRION ]
+  * Update French translation
+
+  [ Guido Günther ]
+  * packaging: Keep meson verson in sync with changelog
+  * ci: Avoid duplicate pipelines
+  * ci: Use shared checks
+  * ci: Check consistency
+
+  [ Evangelos Ribeiro Tzaras ]
+  * flatpak: Fix libpeas2 configuration options
+  * tree: Ignore gdb history
+  * dir-locals: Update projectile commands
+  * record-store: Remove unnecessary casts
+  * record-row: Remove unnecessary cast
+  * record-row: Remove unused include
+  * record-row: Define log domain
+  * history-box: Add debug statement
+  * record-row: Prefer g_autoptr for GDateTime
+  * record-store: Simplify struct setup of record call data
+  * tree: Remove custom clearing macros
+  * record-row: Prefer g_signal_connect_object() over a plain connect()
+  * record-row: Only popup context menu if row is realized
+  * libcall-ui: Bump to 0.2.1
+
+  [ Andi Chandler ]
+  * Update British English translation
+
+  [ Piotr Drąg ]
+  * Update Polish translation
+
+  [ Aefgh Threenine ]
+  * Update Thai translation
+
+  [ Alan Mortensen ]
+  * Update Danish translation
+
+  [ Quentin PAGÈS ]
+  * Update Occitan translation
+
+  [ Rūdolfs Mazurs ]
+  * Update Latvian translation
+
+  [ Vincent Chatelain ]
+  * Update French translation
+
+  [ Jose Riha ]
+  * Update Slovak translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 14 Sep 2024 21:53:36 +0200
+
+gnome-calls (47~rc.1) unstable; urgency=medium
+
+  [ Balázs Úr ]
+  * Update Hungarian translation
+  * Update Hungarian translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Jordi Mas i Hernandez ]
+  * Update Catalan translation
+
+  [ Vasil Pupkin ]
+  * Update Belarusian translation
+
+  [ Ekaterine Papava ]
+  * Update Georgian translation
+
+  [ Luming Zh ]
+  * Update Chinese (China) translation
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Juliano de Souza Camargo ]
+  * Update Brazilian Portuguese translation
+  * Update Brazilian Portuguese translation
+
+  [ Asier Sarasua Garmendia ]
+  * Update Basque translation
+
+  [ Daniel Rusek ]
+  * Update Czech translation
+  * Update Czech translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+  * Update Portuguese translation
+
+  [ Brage Fuglseth ]
+  * Add Norwegian Bokmål translation
+
+  [ Balló György ]
+  * application: Set default window icon
+  * build: Actually translate metainfo
+
+  [ Jürgen Benvenuti ]
+  * Update German translation
+
+  [ twlvnn kraftwerk ]
+  * Update Bulgarian translation
+
+  [ Guido Günther ]
+  * ci: Update image
+  * build: Bump libadwaita dep to 1.5
+  * main-window: Use AdwAboutDialog
+
+  [ Anton Lazarev ]
+  * call buttons: Add .flat CSS class
+  * contacts-box: add .boxed-list CSS class
+
+  [ Evangelos Ribeiro Tzaras ]
+  * d/gbp.conf: Add dch postedit hook to keep meson project version in sync
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 31 Aug 2024 23:17:38 +0200
+
+gnome-calls (47~beta.0) unstable; urgency=medium
+
+  [ Martin ]
+  * Update Slovenian translation
+  * Update Slovenian translation
+
+  [ Artur S0 ]
+  * Update Russian translation
+  * Update Russian translation
+
+  [ Antonio Marin ]
+  * Update Romanian translation
+
+  [ Clayton Craft ]
+  * data: add systemd unit file for running daemon
+  * readme: mention systemctl for stopping calls
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+
+  [ Scrambled 777 ]
+  * Update Hindi translation
+  * Update Hindi translation
+
+  [ Guido Günther ]
+  * README: Link to linphone's sofia-sip
+  * build: Bump minimum glib version
+  * call: Fix name of parent class
+  * call: Track which side hung up the call
+  * manager: Emit phone-hangup event if the other side hung up
+
+  [ Evangelos Ribeiro Tzaras ]
+  * application: Remove unused variable in startup()
+  * application: Log version on startup
+  * gschema: Reword confusing always-allow-sdes key description
+  * sip/account-widget: Adjust to renamed AdwComboRow property
+  * treewide: Port to libpeas-2
+  * plugin: Reindent
+  * ci: Update debian image
+
+  [ Yaron Shahrabani ]
+  * Update Hebrew translation
+
+  [ Chao-Hsiung Liao ]
+  * Update Chinese (Taiwan) translation
+
+  [ Emin Tufan Çetin ]
+  * Update Turkish translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 03 Aug 2024 19:53:14 +0200
+
+gnome-calls (47~alpha.0) unstable; urgency=medium
+
+  [ A S Alam ]
+  * Update Punjabi translation
+
+  [ Aefgh Threenine ]
+  * Add Thai translation
+
+  [ Anton Lazarev ]
+  * history-box: compose with GtkBin instead of subclassing GtkStack
+  * in-app-notification: compose with GtkBin instead of subclassing GtkRevealer
+  * sip-account-widget: compose with GtkBin instead of subclassing GtkBox
+  * calls-new-call-box: compose with GtkBin instead of subclassing GtkBox
+  * meson: Bump gtk dependency to 4.0
+  * libcall-ui: bump version to v0.2.0
+  * ci: replace NO_AT_BRIDGE with GTK_A11Y
+  * gtklistmodels: remove gtklistmodels polyfills
+  * treewide: Subclass custom classes from GtkWidget
+  * treewide: Replace libhandy with libadwaita
+  * treewide: Remove GtkEventBox
+  * treewide: GtkEntry -> GtkEditable
+  * treewide: Remove icon size from constructors
+  * calls-best-match: AdwAvatar API changes
+  * treewide: Replace hide/show with set_visible
+  * treewide: `gtk_widget_destroy()` removal
+  * calls-application: Unconditionally use `AdwStyleManager`
+  * calls-main-window: Adapt to GtkContainer removal
+  * calls-main-window: Adapt to GTKWidget's size allocation changes
+  * calls-application: Stop using GdkScreen
+  * calls-sip-account-widget: Stop using `HdyValueObject` and adapt to `AdwComboRow` API changes
+  * calls-new-call-box: adapt to `AdwComboRow` API changes
+  * calls-application: Replace GtkClipboard with GdkClipboard
+  * calls-call-window: Adapt to GtkContainer removal
+  * calls-account-overview: Adapt to GtkBin/GtkContainer removal
+  * calls-contacts-box: Adapt to GtkContainer removal
+  * calls-contacts-box: Stop using GtkShadowType property
+  * calls-account-overview: Adapt to event controller API changes
+  * calls-call-record-row: Adapt to GtkPopover changes
+  * calls-call-window: Adapt to GtkBin removal
+  * calls-call-record-row: Adapt to event controller API changes
+  * calls-call-record-row: migrate button-press-event to GtkGestureClick
+  * calls-call-record-row: Stop using Gtk.Widget::popup-menu
+  * calls-contacts-row: AdwAvatar API changes
+  * calls-call-selector-item: Adapt to `GtkBox` API changes
+  * calls-new-call-box: `gtk_widget_get_toplevel` has been removed
+  * calls-record-store: GtkApplicationWindow is not a GListModel
+  * ui: gtk4-builder-tool simplify --3to4 --replace *.ui
+  * main-window: Stop using GtkContainer::border-width
+  * main-window: Adapt to View Switcher API Changes
+  * stylesheet: Don't use -gtk-outline-...-radius
+  * treewide: Dispose and layout manager implementations
+  * treewide: remove `<packing>` from Adwaita widgets
+  * new-call-box: Stop using `GtkButton`'s image-related API
+  * treewide: Adapt to `GtkHeaderBar` API changes
+  * treewide: Replace gtk_widget_hide_on_delete with hide-on-close property
+  * treewide: Remove GtkWindow::hide-titlebar-when-maximized
+  * call-window: Remove no-show-all property
+  * main-window: Stop setting `::has-default`
+  * main-window: Replace vbox internal-child with content_area
+  * main-window: Use menu model for app menu popover
+  * history-box: expand to fill available horizontal space
+  * calls-account-overview: Use `content` property for `AdwWindow`
+  * sip-account-widget: move GtkSizeGroup out of child
+  * call-record-row: Accessible role changes
+  * calls-in-app-notification: migrate to AdwToastOverlay
+  * treewide: Use AdwToolbarView for all windows with header bars
+  * treewide: Replace "content" style class with "boxed-list"
+  * treewide: Remove unused placeholder elements
+  * call-window: receives_default is already true for buttons
+  * treewide: image-button style class is automatically handled by GTK
+  * treewide: Use `GtkButton:icon-name` instead of manual `GtkImage` child
+  * contacts-box: Use `title-1` instead of `large-title`
+  * main-window: Set `menu-model` directly on the `GtkMenuButton`
+  * calls-application: subclass `AdwApplication`
+  * calls-main-window: Widgets are visible by default
+  * call-selector-item: Remove misc unavailable properties
+  * treewide: Remove `visible=True` on adwaita widgets
+  * call-record-row: Improve event handling
+  * call-record-row: Fix layout
+  * call-window: Remove superfluous `GtkViewport`
+  * treewide: Parent from `AdwBin` where possible
+  * main-window: Replace `AdwViewSwitcherTitle`
+  * contacts-box: Use `AdwStatusPage` for the placeholder
+  * contacts-box: Use `AdwToolbarView` with search as top bar
+  * treewide: Ensure memory is not disposed multiple times
+  * new-call-box: Expand to fill horizontal width
+  * build: Specify required GTK version
+  * sip-account-widget: Use GtkPasswordEntry
+  * treewide: Remove `requires` glade-isms from ui definitions
+  * calls-contacts-box: Migrate to `GListModel`
+  * sip-account-widget: Remove set_password_visibility
+  * build: Use gtk4.10, libadwaita 1.3
+  * treewide: Replace StyleContext with GtkWidget CSS operations
+  * main-window: Change GtkDialog to GtkWindow
+  * treewide: Use gtk4.12, libadwaita 1.4
+  * about: Switch to AdwAboutWindow
+  * main-window: Use `AdwBanner` for the permanent error label
+  * sip-account-widget: Use adwaita rows for server settings
+
+  [ Julian Sparber ]
+  * Remove Julian Sparber as maintainer
+
+  [ Guido Günther ]
+  * mm-origin: Don't crash when Modem has no location services
+  * ci: Simplify image updates
+  * ci: Update image
+  * mm-origin: Handle missing SIM case more gracefully
+  * build: Add summary
+  * calls-ringer: Don't restart when feedback got ended explicitly
+  * sip: Don't crash when handles never got set up
+  * sip: Don't drop errors when recreating sip account
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+
+  [ Scrambled 777 ]
+  * Update Hindi translation
+
+  [ Pawan Chitrakar ]
+  * Add Nepali translation
+  * Update Nepali translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 29 Jun 2024 10:11:02 +0200
+
+gnome-calls (46.0) unstable; urgency=medium
+
+  [ Sabri Ünal ]
+  * appdata: add vcs-browser support.
+    This URL is visible on Flathub and GNOME Control Center.
+  * Update Turkish translation
+  * appdata: Improve appdata for AppStream 1.0
+  * Update developer ID.
+
+  [ Eugenio Paolantonio (g7) ]
+  * ofono: Implement empty emergency call property.
+    See 75cbc30dc06a417ab014795c6cf08e31fbabe7bf.
+
+  [ Guido Günther ]
+  * ci: Switch to package test to trixie.
+    PureOS Byzantium tracks Debian oldstable which isn't suitable for an
+    upstream test. Track Debian testing instead which has recent GNOME.
+  * ci: Switch to a trixie based base image.
+    Debian Bookworm doesn't get any GNOME updates and we want to ensure
+    we build and run against latest.
+  * dir-locals: Avoid tabs in C mode
+  * dir-locals: Ease formatting of CSS, meson and ui files
+  * po: Ignore generated files
+  * origin: Add network country code.
+    This is technically only useful for mobile networks.
+  * mm-origin: Get 3gpp network country code when available.
+    We currently don't enable location gathering explicitly so we rely
+    on other services (like geoclue) to do so. Use
+        mmcli -m 0 --location-enable-3gpp
+    We could enable for a short time when there's an explicit emergency
+    number request.
+  * mm-origin: Notify emergency number change when we get a location.
+    Technically the emergency numbers exported by the origin doesn't change
+    but it's enough to trigger the DBus signal so clients see the updated
+    numbers.
+  * emergency-call-types: Allow to lookup emergency numbers by country code.
+    We build a hash as cache to speed up lookups. As this is a one time
+    thing we just do it once and don't bother to free it up.
+    We currently assume that all numbers can be used for the location based
+    lookups. Should that change we want to add a flag indicating that.
+  * emergency-call-types: Use hash for flag lookups too
+  * emergency-call-types: Add location source.
+    We named it fallback but location is a better name as we get it
+    from the current country code.
+  * emergency-calls-manager: Fix object name
+  * emergency-calls-manager: Move contact adding to separate function.
+    Improves readability and will be get another call site soon.
+  * emergency-calls-manager: Use network code to get emergency numbers.
+    By far not all sims have emergency numbers and we want to respect the
+    users current location anyway.
+    We use a hash to avoid duplicates.
+  * emergency-call-types: Add EU countries.
+    They all support 112.
+  * calls-manager: Connect listener past the list model filters.
+    The list model filters connect signal handlers for item-changed to
+    refilter the list models.
+    In order to enable protocols based on what the origin supports
+    `on_origins_changed` needs these filtered results. Since it is a signal
+    handler by itself connect it late so it runs later in the filter chain.
+    Closes: https://gitlab.gnome.org/GNOME/calls/-/issues/601
+  * d/control: Don't require root for building.
+    Helps in ci
+    Part-of: <https://gitlab.gnome.org/GNOME/calls/-/merge_requests/723>
+
+  [ Марко Костић ]
+  * Update Serbian translation
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ zayar lwin ]
+  * Add Burmese translation
+
+  [ Jürgen Benvenuti ]
+  * Update German translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Ekaterine Papava ]
+  * Update Georgian translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Aurimas Černius ]
+  * Update Lithuanian translation
+
+  [ Marek Černocký ]
+  * Update Czech translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Artur S0 ]
+  * Update Russian translation
+
+  [ Vasil Pupkin ]
+  * Update Belarusian translation
+
+  [ Fran Dieguez ]
+  * Update Galician translation
+
+  [ Jordi Mas i Hernandez ]
+  * Update Catalan translation
+
+  [ Kukuh Syafaat ]
+  * Update Indonesian translation
+
+  [ Yaron Shahrabani ]
+  * Update Hebrew translation
+
+  [ Balázs Úr ]
+  * Update Hungarian translation
+
+  [ Matej Urbančič ]
+  * Update Slovenian translation
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Andi Chandler ]
+  * Update British English translation
+
+  [ Asier Sarasua Garmendia ]
+  * Update Basque translation
+
+  [ Irénée THIRION ]
+  * Update French translation
+
+  [ Daniel Mustieles ]
+  * Updated Spanish translation
+
+  [ Alan Mortensen ]
+  * Update Danish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Rūdolfs Mazurs ]
+  * Add Latvian translation
+
+  [ Daniel Rusek ]
+  * emergency-call-types: Add Czech Republic
+
+  [ Piotr Drąg ]
+  * Update Polish translation
+
+  [ Athmane MOKRAOUI ]
+  * Add Kabyle translation
+
+ -- Guido Günther <agx@sigxcpu.org>  Wed, 13 Mar 2024 16:41:16 +0100
+
+gnome-calls (45.0) unstable; urgency=medium
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Changwoo Ryu ]
+  * Update Korean translation
+
+  [ Irénée THIRION ]
+  * Update French translation
+
+  [ Leônidas Araújo ]
+  * Update Brazilian Portuguese translation
+
+  [ Kristjan SCHMIDT ]
+  * Update Esperanto translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 23 Sep 2023 05:08:10 +0200
+
+gnome-calls (45~rc.0) experimental; urgency=medium
+
+  [ Fabio Tomat ]
+  * Update Friulian translation
+  * Update Friulian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * mm-provider: Don't warn about cancelled mm_manager_new()
+  * ci: Allow flatpak jobs to fail
+  * tests: Use g_test_init instead of gtk_test_init
+  * ci: Build tarball for tags
+  * srtp-utils: Pass MKI length into error message
+  * mm-origin: Don't unref origin in call_deleted_cb (Closes: #573)
+  * ci: Allow nightly jobs to fail
+  * sip-provider: Add debugging to password lookup
+  * test-application: Use dummy plugin
+  * test-manager: Codestyle
+  * build: Define po_dir variable
+  * po: Add plugin desktop files
+  * sip: Reword plugin information
+  * ofono: Reword plugin information
+  * mm: Reword plugin information
+  * dummy: Reword plugin information
+  * Introduce CallsPlugin
+  * Introduce CallsPluginManager
+  * test-plugins: Switch to CallsPluginManager
+  * refactor: Switch to CallsPluginManager
+  * application: Reindent struct members
+  * plugin-manager: Add debugging to init()
+  * build: Install .plugin files (Closes: #585)
+
+  [ Florian Weimer ]
+  * test-sip: Use su_random() (not su_random64())
+
+  [ Дилян Палаузов ]
+  * srtp-utils: Remove unused variable srtp_crypto_suites
+  * srtp-utils: Strip padding characters in crypto attribute lines
+  * srtp-utils: Add implicit padding characters explicitly
+  * srtp-utils: Reuse existing function to get expected key length
+  * sdp-crypto: Include "ICM" in crypto suite enums
+  * srtp-utils: Add support for AES 256 bit crypto suites
+  * srtp-utils: Add skeleton code to ease adding crypto suites
+
+  [ Pablo Correa Gómez ]
+  * Update Spanish translation
+
+  [ Jordi Mas i Hernandez ]
+  * Update Catalan translation
+  * Update Catalan translation
+
+  [ Sabri Ünal ]
+  * Update Turkish translation
+  * Update Turkish translation
+
+  [ Dušan Kazik ]
+  * Update Slovak translation
+
+  [ Bruce Cowan ]
+  * Update British English translation
+
+  [ Boyuan Yang ]
+  * Update Chinese (China) translation
+
+  [ Balázs Úr ]
+  * Update Hungarian translation
+
+  [ Ekaterine Papava ]
+  * Update Georgian translation
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Jürgen Benvenuti ]
+  * Update German translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Efstathios Iosifidis ]
+  * Update Greek translation
+
+  [ Vasil Pupkin ]
+  * Update Belarusian translation
+
+  [ Matej Urbančič ]
+  * Update Slovenian translation
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+
+  [ Artur So ]
+  * Update Russian translation
+
+  [ Asier Sarasua Garmendia ]
+  * Update Basque translation
+
+  [ Daniel Rusek ]
+  * Update Czech translation
+
+  [ Piotr Drąg ]
+  * Update Polish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Daniel Mustieles ]
+  * Updated Spanish translation
+
+  [ Kukuh Syafaat ]
+  * Update Indonesian translation
+
+  [ Fran Dieguez ]
+  * Update Galician translation
+
+  [ Aurimas Černius ]
+  * Update Lithuanian translation
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Amn Alam ]
+  * Add Punjabi translation
+
+  [ Alan Mortensen ]
+  * Update Danish translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 02 Sep 2023 11:11:01 +0200
+
+gnome-calls (45~alpha.0) experimental; urgency=medium
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Boyuan Yang ]
+  * Update Chinese (China) translation
+
+  [ Guido Günther ]
+  * mm-provider: Initialize parent class first
+  * origin: Allow to fetch country code
+  * emergency-calls: Notify on DBus when emergency numbers change
+  * mm-provider: Fetch emergency numbers from sim
+  * mm-provider: Implement get_country_code
+  * build: Run tests under C locale
+  * Resolve emergency number types
+  * emergency-calls-manager: Don't leak origin
+  * emergency-calls-manager: Add support for dialing emergency numbers
+  * mm-provider: Don't exit early when country code matches
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Alexander Shopov ]
+  * Update Bulgarian translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Aleksandr Melman ]
+  * Update Russian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Update libcall-ui to v0.1.0
+  * emergency-calls-manager: Fix indentation
+  * emergency-calls-manager: Add missing argument for on_origins_changed handler
+  * emergency-calls-manager: Don't leak origin
+  * tests: Add CALLS_SIP_ACCOUNT_FILE to environment
+  * sip-provider: Remove unused variables
+  * sip-provider: Don't leak keyfile
+  * sip-provider: Improve debugging of account loading
+  * sip-provider: Chain up to constructed early
+  * best-match: Allow both NULL and empty strings as phone number
+  * best-match: Add gtk-doc annotations to the public API
+  * contacts-provider: Simplify refcounting in lookup_id()
+  * contacts-provider: Handle NULL and empty strings graceful in lookup
+    (Closes: #567)
+  * best-match: Don't special case NULL best match
+  * test-contacts: Add more test cases
+  * build: Sort enum headers
+  * resources: Sort alphabetically
+  * main-window: Sort includes
+  * main-window: Codestyle
+  * test-manager: Remove unused variable
+  * test-manager: Remove unused include
+  * application: Remove unused macro
+  * call-window: Remove dead code
+  * manager: Use STR_IS_NULL_OR_EMPTY macro
+  * new-call-box: Use STR_IS_NULL_OR_EMPTY macro
+  * new-call-box: Don't leak CallsOrigin
+  * application: Don't leak CallsManager
+  * application: Handle setting verbosity first
+  * application: Initialize objects before parsing options
+  * manager: Respect object life cycle for signal handlers
+  * account-overview: Respect object life cycle for signal handlers
+  * main-window: Use gtk_widget_destroy() for windows
+  * manager: Clear providers after origins
+  * sip-origin: Use g_clear_pointer() instead of emulating it
+  * sip-origin: Keep sofia running to allow unregistering on dispose
+    (Closes: #554)
+  * sip-origin: Include SIP address in debugging
+  * sip-origin: Don't leak address
+  * sip-origin: Prefer named constant over magic numbers
+  * account-row: Guard calls_account_row_new() against invalid provider
+  * contacts-provider: Disconnect signals on finalize
+  * manager: Respect object life cycle for signal handlers
+
+  [ Balázs Úr ]
+  * Update Hungarian translation
+
+  [ Sabri Ünal ]
+  * Update Turkish translation
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Tue, 25 Apr 2023 11:03:35 +0200
+
+gnome-calls (44.0) byzantium; urgency=medium
+
+  [ Hemish ]
+  * Add Hindi translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * tests: ui-call: Prefer type specific assertions
+  * tests: Remove unused mock-libfeedback.h
+  * tests: Use key-file folks backend
+  * tests: Don't mock calls_contacts_provider_new()
+  * ui-call-data: Use the name of the best match if individual was found
+  * ui-call-data: Assert best_match is set
+  * ui-call-data: Always use calls_best_match_get_avatar() to retrieve avatars
+  * tests: Add DBus server binary
+  * tests: Add skeleton DBus API client test suite
+  * test-dbus: Test basic call interaction
+  * contacts-provider: Codestyle
+  * contacts-provider: Use STR_IS_NULL_OR_EMPTY macro
+  * contacts-row: Use g_autoptr
+  * notifier: Add explicit include
+  * manager: Add explicit include
+  * dbus-manager: Add explicit include
+  * new-call-box: Add explicit include
+  * provider: Remove unused include
+  * origin: Remove unused include
+  * build: Rename util.{c,h} to calls-util.{c,h}
+  * gcovr: Exclude src/gtklistmodels
+  * README: Fix typo
+  * HACKING: Update and clarify
+  * sip-provider: Sort includes
+  * sip-provider: Use STR_IS_NULL_OR_EMPTY macro
+  * best-match: Add API to query if individual is a favourite
+  * contacts-box: Show favourites at the top (Closes: #493)
+  * record-store: Don't crash on unexpected call state changes (Closes: #547)
+  * flatpak: Adjust to libphonenumber tarball magically changing
+  * flatpak: Adjust to sofia-sip tarball magically changing
+  * Revert "flatpak: Adjust to libphonenumber tarball magically changing"
+  * Revert "flatpak: Adjust to sofia-sip tarball magically changing"
+  * mm-call: Codestyle
+  * mm-call: Guard public API
+  * mm-origin: Codestyle
+  * mm-origin: Chain up to to parent's constructed() early
+  * mm-origin: Explicitly cast ussd state
+  * mm-origin: Prefer STR_IS_NULL_OR_EMPTY macro to explicit checks
+  * mm-origin: Prefer g_autoptr instead of explicit reference counting
+  * mm-origin: Avoid unnecessary allocation
+  * mm-origin: Don't leak MMModemVoice
+  * mm-origin: Don't leak MMModem
+  * mm-origin: Don't leak ID
+  * mm-origin: Remove unnecessary cast
+  * mm-origin: Ensure objects stay alive during async operations
+  * mm-origin: Disable call waiting
+  * new-call-box: Uncrustify
+  * record-store: Fix coding style
+  * application: Coding style
+  * application: Only destroy previously created widgets
+  * application: Shut down cleanly when application quits
+  * application: Guard against setting application name twice
+  * record-store: Ensure store stays alive during async tasks
+  * new-call-box: Respect object lifecycle for signals
+  * main-window: Respect object lifecycle for signals
+  * call-window: Respect object lifecycle for signals
+  * application: Respect object lifecycle for signals
+  * account-overview: Respect object lifecycle for signals
+  * d/control: Add svg pixbufloader
+  * debian: Ran wrap-and-sort -ast
+  * ci: Update debian image
+  * record-store: Allow overriding database location
+  * tests: Prevent tests from accessing user home
+  * record-store: Emit signal once DB is migrated
+  * application: Delay shutting down until database is done
+  * tests: Add application shutdown tests
+  * sip-provider: Use STR_IS_NULL_OR_EMPTY macro
+  * sip-provider: Remove duplicated check
+  * tests: Don't override XDG_CONFIG_HOME
+
+  [ Dark Dragon ]
+  * flatpak: Update evolution-data-server to 3.47.1
+
+  [ Aurimas Černius ]
+  * Added Lithuanian translation
+
+  [ Martin ]
+  * Update Slovenian translation
+
+  [ Daniel Rusek ]
+  * Update Czech translation
+
+  [ Jürgen Benvenuti ]
+  * Update German translation
+
+  [ Efstathios Iosifidis ]
+  * Update Greek translation
+
+  [ Fran Dieguez ]
+  * Update Galician translation
+
+  [ Guido Günther ]
+  * tests/dbus: Switch to g_test_init
+  * dbus: Add initial interface for emergency calls
+  * Add emergency-call manager to interface with DBus
+  * dbus-manager: Use emergency-call manager
+  * origin: Add interface to get emergency numbers
+  * dummy: Support getting emergency call numbers
+  * emergency-calls-manager: Query origins for numbers
+  * sip: Implement empty emegency call property
+  * mm: Implement empty emegency call property
+  * tests/dbus: Check for error early
+  * tests: Add emergency call DBus test
+
+  [ Дилян Палаузов ]
+  * SIP:calls_sdp_crypto_context_generate_answer() accept the first supporetd a=crypto: line
+
+  [ Марко Костић ]
+  * Update Serbian translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Quentin PAGÈS ]
+  * Update Occitan translation
+
+  [ Daniel ]
+  * Updated Spanish translation
+
+  [ Ngọc Quân Trần ]
+  * Add Vietnamese translation
+
+  [ Changwoo Ryu ]
+  * Add Korean translation
+
+  [ Alan Paris ]
+  * Update French translation
+
+  [ Alan Mortensen ]
+  * Update Danish translation
+
+  [ Alexander Shopov ]
+  * Add Bulgarian translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Fri, 17 Mar 2023 09:49:46 +0100
+
+gnome-calls (44~alpha.1) byzantium; urgency=medium
+
+  [ Fabio Tomat ]
+  * Update Friulian translation
+  * Update Friulian translation
+
+  [ Vasil Pupkin ]
+  * Add Belarusian translation
+
+  [ Chris Talbot ]
+  * meson: use version_compare to check meson version
+
+  [ Дилян Палаузов ]
+  * ringer: Fix typo
+
+  [ Fran Dieguez ]
+  * Update Galician translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * build: Rename config.h to calls-config.h
+  * meson: Add option to use gstreamer debugging API
+  * sip-pipeline: Only use gstreamer debugging if option is set
+  * record-row: Defer enabling popup actions until displaying
+  * ringer: Remove explicit DBus timeout handling
+  * ci: Move flatpak jobs to packaging stage
+  * history-box: Fix clearing signal handler
+  * application: Set unix signal handler source ID to 0
+  * application: Remove and destroy application windows on shutdown
+
+  [ Bruce Cowan ]
+  * Update British English translation
+
+  [ Efstathios Iosifidis ]
+  * Update Greek translation
+
+  [ Freddy Cheng ]
+  * Add Chinese (Taiwan) translation
+
+  [ Sabri Ünal ]
+  * Update Turkish translation
+
+  [ Matheus Barbosa ]
+  * Update Brazilian Portuguese translation
+
+  [ Abderrahim Kitouni ]
+  * Only define EPhoneNumber autocleanup for old versions
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Thu, 12 Jan 2023 10:50:09 +0100
+
+gnome-calls (44~alpha.0) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * meson: Post release bump
+  * manager: Remove unused include
+  * record-store: Removed deprecated CuiCallStates
+  * ringer: Remove deprecated CuiCallStates
+  * ringer: Move libfeedback related cleanup to finalize()
+  * ringer: Cancel any ongoing actions on shutdown
+  * application: Don't return value in start_proper()
+  * application: Don't show application window if started as daemon
+  * meson: Sort sources alphabetically
+  * flatpak: Fix flatpak build
+  * test-ringer: Remove cancellable test
+  * tests: Mock libfeedback
+  * tests: Rename functions
+  * test-ringer: Use glib testing functions instead of mocka
+  * build: drop libmocka dependency
+  * d/copyright: Update
+  * media-pipeline: Bind to the unspecified IPv6 address
+  * Revert "Disable g722 to avoid test failure with ffmpeg 5.0/gst-libav"
+  * new-call-box: Switch to using CuiDialpad
+  * new-call-box: Reindent
+  * application: Fix indentation
+  * log: Use unsigned int for verbosity
+  * application: Propagate verbosity to main instance
+  * test-util: Remove unused include
+  * util: Remove unused code
+  * util: Rename function to calls_find_in_model() and adjust documentation
+  * util: Add API to check address family of IP address
+  * sip: media-manager: Simplify SDP generation
+  * media-pipeline: Dump dot graph without GST_DEBUG_DUMP_DOT_DIR set
+  * sip-origin: Honour set port when completing address
+  * ui-call-data: Add debugging for state changes
+  * ui-call-data: Prevent timer being started multiple times
+  * contacts-provider: Remove unused variable
+  * contact-provider: Allow can-add-contacts to be reset
+  * mm-provider: Cancel ongoing operations
+  * test-ringer: Assert object finalization
+  * mock-lfb-event: Uncrustify
+  * mock-lfb-event: Emit "feedback-ended" signal
+  * ringer: Never cancel async DBus calls and refactor (Closes: #470)
+  * ringer: Cancel async libfeedback calls on timeout
+  * ringer: Break loop if triggered event was ended immediately
+  * application: Shut down graceful on SIGTERM/SIGINT
+  * account-overview: Close windows when pressing Escape (Closes: #511)
+  * account-overview: Set window title
+  * gcovr: Exclude sip-provider.c and dummy-provider.c
+  * d/control: Bump required feedbackd version to 0.0.1
+  * flatpak: Bump required feedbackd version to 0.0.1
+  * run-docker: Don't cache container images
+  * ci: Update image
+  * log: Fix returned verbosity delta
+  * application: Print positive delta when changing verbosity
+  * log: Use feature test macro before any include
+
+  [ anteater ]
+  * po/es: Fix "llamadase" typo
+
+  [ Daniel Rusek ]
+  * Update Czech translation
+
+  [ Balázs Úr ]
+  * Update Hungarian translation
+  * Update Hungarian translation
+
+  [ Дилян Палаузов ]
+  * SIP dial() convert the port from int to string
+  * provider/sip: on_origin_pw_looked_up() display_name is read twice
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Zurab Kargareteli ]
+  * Update Georgian translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Piotr Drąg ]
+  * Update Polish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Aleksandr Melman ]
+  * Update Russian translation
+
+  [ Kukuh Syafaat ]
+  * Update Indonesian translation
+
+  [ Asier Sarasua Garmendia ]
+  * Add Basque translation
+
+  [ Boyuan Yang ]
+  * Add Chinese (China) translation
+
+  [ Julian Sparber ]
+  * flatpak: Drop libcanberra and gsound deps
+  * flatpak: Update libpeas and disable some features
+  * flatpak: Build local files
+  * flatpak: Don't use boost
+  * flatpak: Update protobuf and GTest
+  * flatpak: update sofia-sip
+  * flatpak: Add gvfs-access
+  * tests: Fix sdp-crypto test for flatpak
+  * tests: Ensure that desktop files are built before testing them
+  * meson: Don't set G_TEST_*
+  * plugins: Rescan for plugins after adding search paths
+  * tests: Use CALLS_PLUGIN_DIR to search for plugins in the build dir
+  * manager: Only set search path from CALLS_PLUGIN_DIR when path exists
+  * ci: Build and deploy nightly flatpaks for aarch64 and x86_64
+  * flatpak: Set build_dir properly
+  * tests: Make ringer test depend on mocked libfeedback
+  * tests: Ensure that plugins are build for tests that need them
+  * flatpak: Don't run calls:sip tests in CI
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 03 Dec 2022 20:19:21 +0100
+
+gnome-calls (43.0) unstable; urgency=medium
+
+  [ Emin Tufan Çetin ]
+  * Update Turkish translation
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Update libcall-ui to always reset audio profile (Closes: #452)
+  * i18n: mm-call: Clarify "transfer" and "deflect" (Closes: #499)
+  * tests: Remove unused code
+  * metainfo: Correct screenshot URLs
+
+  [ Daniel Mustieles ]
+  * Update Spanish translation
+
+  [ Martin ]
+  * Update Slovenian translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Mon, 19 Sep 2022 20:17:54 +0200
+
+gnome-calls (43~rc.0) unstable; urgency=medium
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Piotr Drąg ]
+  * Update Polish translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * manager: Drop unused get_contact_name() declaration
+  * manager: Remove unused has_active_call() function
+  * ci: Include intltool in Debian image
+  * ci: Update Debian image
+  * Move provider plugins into a dedicated directory
+  * Move plugin specific tests into dedicated directory
+  * plugins.in: Add package version and update copyright
+  * plugins: Fix install directory typo
+  * ci: Include flatpak_ci_initiative.yml and remove inline copy
+  * sip: origin: Actually set "auto-connect" property (Closes: #466)
+  * mm: call: Check call direction when mapping waiting state
+  * call: Remove waiting state
+  * Revert "new-call-box: Clear entry after dialing"
+  * application: Whitespaces style nitpicks
+  * application: Consistent use of user_data in action "activate" callbacks.
+  * application: Fix typo in message emission
+  * call: Prefer using enum values
+  * call: Document call states
+  * d/gbp.conf: Set default branch to 'main' (was 'master')
+  * ofono-provider: Add TODO about preferring async functions
+  * mm-provider: Don't leak error
+  * mm-provider: Avoid using g_error()
+  * ofono-provider: Don't g_error() without good reason (Closes: #4)
+  * ci: (Slightly) rename flatpak CI job
+  * ci: Publish pages for main branch (not master)
+  * readme: Update links to d/control
+  * hacking: Refresh links
+  * mm-provider: Remove unused variable
+  * mm-provider: Prefer g_clear_*() in dispose() and finalize()
+  * mm-provider: Don't leak MMManager
+  * Update libcall-ui to v0.0.5
+
+  [ Emin Tufan Çetin ]
+  * Update Turkish translation
+
+  [ Zurab Kargareteli ]
+  * Update Georgian translation
+
+  [ Марко Костић ]
+  * Update Serbian translation
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+
+  [ Luna Jernberg ]
+  * Update Swedish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Guido Günther ]
+  * main-window: Add translator comment to not translate the application name
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Goran Vidović ]
+  * Update Croatian translation
+  * Update Croatian translation
+
+  [ Éloi Rivard ]
+  * Update French translation
+
+  [ Matt Turner ]
+  * build: Use GNOME module post_install()
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 03 Sep 2022 20:41:59 +0200
+
+gnome-calls (43~beta.0) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Post release bump
+  * d/gbp.conf: Adjust debian-tag-msg
+  * ci: Allow flatpak failures
+  * sip: origin: Drop comparison that always evaluates as true
+  * Add various gtk list models
+  * history-box: Chain up to constructed() early
+  * Drop use of volatile
+  * meson: Add gtk sources to build
+  * history-box: Switch to GtkSliceListModel
+  * history-box: Dynamically adjust slice list model size
+  * history-box: Allow transition from non-empty to empty history
+  * history-box: Cap size of slice at number of call records
+  * record-row: Remove unused code
+  * record-row: Rename callback to conform to on_* naming scheme
+  * record-row: Chain up early to constructed()
+  * record-row: Use STR_IS_NULL_OR_EMPTY macro
+  * record-row: Simplify add-action logic
+  * record-row: Add SMS action (Closes: #182)
+  * Update libcall-ui to v0.0.4
+  * Disable g722 to avoid test failure with ffmpeg 5.0/gst-libav
+  * ci: Update debian image
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Мирослав Николић ]
+  * Update Serbian translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+
+  [ Zurab Kargareteli ]
+  * Update Georgian translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Piotr Drąg ]
+  * Update POTFILES.skip
+
+  [ Aleksandr Melman ]
+  * Update Russian translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 06 Aug 2022 20:18:02 +0200
+
+gnome-calls (43~alpha.2) byzantium; urgency=medium
+
+  [Anders Jonsson]
+  * Update Swedish translation
+
+  [Yosef Or Boczko]
+  * Update Hebrew Translation
+
+  [ Piotr Drąg ]
+  * Update POTFILES.in
+  * Update Polish translation
+  * Update Polish translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+  * Fix minor typo
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+  * Update Romanian translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Post release bump
+  * README: Update section on debugging
+  * doc: Add manpage as reStructuredText
+  * Add python3-docutils as build dependency
+  * ci: Update debian bookworm image for rst2man
+  * meson: Build manpage with rst2man
+  * flatpak: Don't build manpage
+  * debian: Install manpage
+  * sip: origin: Codestyle
+  * sip: origin: Don't mix code and declarations
+  * data: Add D-Bus service file
+  * mm: call: Use correct enum type
+  * mm: call: Better debugging
+  * sip: origin: Don't fetch the contact header repeatedly
+  * sip: origin: Only set own IP if it has changed
+  * sip: origin: Reduce logspam from REGISTER keep-alives
+  * record-store: Add debug statement for call state changes
+  * doc: Add call state diagram
+  * new-call-box: Order includes alphabetically
+  * new-call-box: Fix memory leak
+  * new-call-box: Don't auto select offline accounts
+  * dir-locals: Exhaustive projectile setup
+  * dir-locals: Use the linux coding style
+
+  [ eladyn ]
+  * sip: origin: Honor preferred codecs for incoming calls
+
+  [ Chris Talbot ]
+  * calls-ui-call-data: change DELAY_UI_MS to 100 ms
+
+  [ Andrey Skvortsov ]
+  * application: fix 'tel:' URL handling with escaped symbols
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Aleksandr Melman ]
+  * Update Russian translation
+  * Update Russian translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Guido Günther ]
+  * data: Indicate that we're using feedbackd
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sun, 26 Jun 2022 15:45:45 +0200
+
+gnome-calls (43~alpha.1) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * dir-locals: Treat G_DEFINE_FINAL_* macros as including a semicolon
+  * uncrustify: Treat g_auto* as types
+  * sip: call: Fix header alignment
+  * sip: origin: Remove unused variable
+  * meson: Enable warning for unused variables
+  * sip: call: Defer setting up codecs for pipeline until activated
+  * Fix header alignment
+  * settings: Convert to the singleton pattern
+  * settings: Break settings binding cycle
+  * tests: Add testing for sideeffects of using CallsSettings
+  * Update libcall-ui to v0.0.3
+  * account-row: Fix header alignments
+  * sip-origin: Codestyle
+  * sip: origin: Tweak debugging
+  * sip: origin: Notify on state change
+  * account-row: Use delayed state changes for GtkSwitch
+  * sip: origin: Always notify state changes when relevant to the UI
+  * sip: origin: Don't treat DNS failures as errors
+  * account-widgets: Conform to style
+  * account-widgets: Make row activatable
+  * sip-origin: Notify on account property updates
+  * sip: account-widget: Include option for automatically connecting
+  * Add editorconfig
+  * sip: account-widget: Warn when trying to find unknown protocol
+  * dbus-manager: Remove unused variables
+  * sip: Add srtp-utilities
+  * sip: media-pipeline: Use cryptographic parameters
+  * sip: media-pipeline: Uncrustify struct members
+  * sip: Add SDP crypto context class
+  * sip: media-manager: Include crypto attributes for capabilities
+  * sip: Allow specifying if media encryption is desired
+  * call: Add "encrypted" property
+  * dbus-manager: Bind encrypted property
+  * schema: Add setting allowing to use SDES
+  * sip: account-widget: Add media encryption option
+  * sip: Store media encryption account preference to disk
+
+  [ Zurab Kargareteli ]
+  * Add Georgian translation
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Pablo Correa Gómez ]
+  * Update Spanish translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Wed, 25 May 2022 20:15:47 +0200
+
+gnome-calls (43~alpha.0) byzantium; urgency=medium
+
+  [ Piotr Drąg ]
+  * Update Polish translation
+  * Update Polish translation
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+  * Update Italian translation
+
+  [ Emin Tufan Çetin ]
+  * Update Turkish translation
+  * Update Turkish translation
+
+  [ Martin ]
+  * Update Slovenian translation
+  * Update Slovenian translation
+
+  [ Yosef Or Boczko ]
+  * Update Hebrew translation
+  * Update Hebrew translation
+
+  [ Pablo Correa Gómez ]
+  * Update Spanish translation
+  * Update Spanish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+  * Update Romanian translation
+
+  [ Andrey Skvortsov ]
+  * sip-account-widget: Add switch to display password
+
+  [ Anders Jonsson ]
+  * plugins: Use American spelling
+  * Update Swedish translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * manager: Don't raise critical when origin id lookup fails
+  * sip: media-pipeline: Use debug macros to allow graphing pipelines
+  * sip: media-pipeline: No need to undef locally declared macros
+  * tests: media: Rename tests
+  * sip: pipeline: Unify send and receive pipeline
+  * d/control: Add "bad" gstreamer plugins in order to test srtp elements
+  * ci: Use new debian image
+  * dir-locals: Add projectile commands
+  * sip: media-pipeline: Remove unused variables
+  * sip: origin: Debug print public IP as seen by the registrar
+  * sip: media-pipeline: Fix socket reuse
+  * Add uncrustify config
+  * Uncrustify sources
+  * sip: media: Allow specifying SRTP for GStreamer capabilities
+  * sip: media-pipeline: Debug pipeline graph on SIGUSR2
+  * sip: media-pipeline: Introduce SRTP elements
+  * sip: media-pipeline: Take srtp into account when determing pipeline state
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Eugenio Paolantonio (g7) ]
+  * ofono: call: do not try to pass the "properties" property
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Mon, 25 Apr 2022 18:02:02 +0200
+
+gnome-calls (42.0) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * meson: Post release bump
+  * NEWS: Remove trailing whitespace
+  * po: Add Armenian to LINGUAS
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Мирослав Николић ]
+  * Update Serbian translation
+
+  [ Jordi Mas i Hernandez ]
+  * Update Catalan translation
+
+  [ Emin Tufan Çetin ]
+  * Update Turkish translation
+
+  [ Piotr Drąg ]
+  * Remove .pot file
+  * Use standard translator comments in .desktop files
+  * Update POTFILES.in and POTFILES.skip
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ AvagSayan ]
+  * Add new file for Armenian Lang.
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 19 Mar 2022 21:35:28 +0100
+
+gnome-calls (42~rc.1) byzantium; urgency=medium
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * sip: media-pipeline: Add G_BEGIN_DECLS and G_END_DECLS to header
+  * sip: media-manager: Don't include sofia-sip/nua.h in public header
+  * sip: Debug print remote SDP and codec to be used
+  * sip: build: Use simple variant of gnome.mkenums
+  * sip: media-pipeline: Remove comment about preexisting linked pads
+  * sip: media-pipeline: Prefix overriden GObjectClass methods
+  * sip: call: Remove unnecessary G_OBJECT() cast
+  * media-manager: Don't run deinitialize GStreamer in finalize()
+  * sip: media-manager: Initialize GStreamer if it's not already initialized
+  * sip: media-pipeline: Initialize GStreamer if it's not already initialized
+  * tests: sip: Codestyle: Use int and char instead of gint and gchar
+  * tests: sip: Initialize and deinitialize GStreamer explicitly
+  * tests: Split media tests into separate file
+  * sip: media-manager: Remove unused code
+  * tests: build: Avoid linking against sip module
+  * flatpak: Update dependencies
+  * ci: Bump flatpak job timeout to 4 hours
+  * desktop: Add X-GNOME-UsesNotification
+  * schema: Set G722 as the preferred audio codec
+  * record-store: Sort include headers
+  * call: Prefer pragma once over explicit include guard
+  * manager: Remove unused function declaration
+  * plugins: Implement call-type property
+  * origin: Add id property and adapt to changes
+  * ui-call-data: Store origin id and adapt to changes
+  * manager: Implement lookup_origin_by_id()
+  * ui-call-data: Provide API to get the name of the origin used
+  * record-store: Switch to CallsUiCallData
+  * manager: Remove call-add and call-remove signal
+  * record-row: Avoid raising critical
+  * meson: Post release bump to 42.rc.1
+  * ci: Fix typo in packaging job name
+  * sip: media-pipeline: Allow pausing pipeline
+  * sip: media-pipeline: Split initialization per GstPipeline
+  * sip: media-pipeline: Delay setting codec
+  * sip: media-pipeline: Check codec availability before setup
+  * sip: media-pipeline: Allow new pipeline without codec set
+  * sip: media-pipeline: Let the OS allocate sockets for udpsrc
+  * sip: media-pipeline: Keep track of pipeline state
+  * sip: media-pipeline: Don't implement GInitable
+  * media manager: Manage and hand out available pipelines
+  * sip: call: Add pipeline as a construct only property
+  * sip: media-pipeline: Remove lport-rtp and lport-rtcp property
+  * sip: origin: Try fetching RTCP port from SDP attributes
+  * sip: media-pipeline: Setup socket reuse for RTP and RTCP during initialization
+  * tests: media: Test pipeline
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Sat, 05 Mar 2022 23:07:23 +0100
+
+gnome-calls (42~rc.0) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * sip: origin: Fix comment style
+  * origin: Add transfer annotation for calls_origin_get_calls ()
+  * sip: origin: Fix memory leak
+  * tests: call: Prefer G_SOURCE_REMOVE instead of FALSE
+  * call: Fix memory leaks
+  * tests: origin: Fix memory leaks
+  * dummy: origin: Fix memory leaks
+  * log: Fix One Definition Rule
+  * settings: Fix memory leak
+  * Update libcallui subproject and adjust to CuiCallState changes
+  * ui-call-data: Implement "active-time" property
+  * manager: Remove unused key argument in g_hash_table_iter_next()
+  * dummy: origin: Restrict supported protocols to "tel"
+  * manager: Hardcode supported protocols and adapt to changes
+  * manager: Add per protocol dial actions
+  * record-row: Use per protocol dial action
+  * dummy: provider: Fake being a modem
+  * manager: Use state flags instead of an enum and adapt to changes
+  * ringer: Reorder headers
+  * notifier: Sort include headers
+  * notifier: Remove unused GList
+  * notifier: Expand on comment
+  * tests: mock-contacts-provider: Add license header
+  * call: Add transfer annotation for get_protocol()
+  * ringer: Switch to state notify signal
+  * ui-call-data: Add "state-changed" signal
+  * manager: Add new set of add and remove signals for CuiCalls
+  * tests: manager: Switch to CallsUiCallData
+  * ui-call-data: Allow contact provider to be NULL
+  * ui-call-data: Add proxy properties for CallsCall
+  * call-window: Switch to CallsUiCallData
+  * call: Remove unused calls_call_state_to_string()
+  * ringer: Use CallsUiCallData instead of CallsCall
+  * dbus-manager: Switch to CallsUiCallData
+  * call: Remove API for silencing
+  * ui-call-data: Remove get_call() function
+  * manager: Switch to CallsUiCallData
+  * notifier: Switch to CallsUiCallData
+  * ui-call-data: Document calls_call_state_to_cui_call_state()
+  * record-row: Remove unnecessary G_OBJECT cast
+  * dbus-manager: Prefer canonical signal names
+  * dbus-manager: Fix wrong property being bound
+  * record-row: Fix passing widget instead of string as action target
+  * tests: Fix typo
+  * tests: Add ui-call tests
+  * tests: ui-call: Test property equality
+  * selector: Fix property binding
+  * dummy-origin: Emit call-added only after adding to list
+  * ui-call-data: Add property to delay showing call display and ringing
+  * ringer: Take ui-active property into account
+  * call-window: Take ui-active property into account
+  * dbus: Add hint property
+  * manager: Delay UI Call removal and adjust to changes
+  * doc: meson: Get rid of redundant if block
+  * doc: Include API reference for all core sources
+  * manager: Add section documentation
+  * call: Get rid of get_contact() API
+  * call: Add call-type property
+  * ci: Bump used debian image
+  * meson: Post release bump
+  * main-window: Bump copyright year in about window
+  * media-pipeline: Put deprecated GStreamer function behind version check macro
+  * contacts-provider: Guard against lookup with NULL id
+  * application: Reuse existing functions in app.dial action
+  * best-match: Codestyle
+  * best-match: Assert CALLS_IS_BEST_MATCH in private functions
+  * notifier: Chain up to parents constructed() before doing anything else
+  * notifier: Codestyle
+  * call: Annotate properties and add introspection attributes on getters/setters
+  * call: Allow setting NULL id
+  * contacts-provider: Don't throw a critical when trying to lookup NULL id
+  * ui-call-data: Handle anonymous callers gracefully
+  * dummy-provider: Add new anonymous incoming call on SIGUSR2
+  * best-match: Add property for primary and secondary display information
+  * tests: Add primitive contact tests
+  * record-row: Use primary info instead of name property
+  * record-row: Handle calls with NULL id gracefully
+  * util: Add STR_IS_NULL_OR_EMPTY macro
+  * tests: util: Test STR_IS_NULL_OR_EMPTY macro
+  * notifier: Fix expression testing if there is a contact
+  * notifier: Fix logic error
+  * Update libcall-ui
+
+  [ Matheus Barbosa ]
+  * Update Brazilian Portuguese translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Yosef Or Boczko ]
+  * Add Hebrew translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Thu, 24 Feb 2022 10:24:18 +0100
+
+gnome-calls (42~beta.1) byzantium; urgency=medium
+
+  * ci: Deploy documentation as gitlab pages
+  * readme: Mention that documentation is available as gitlab page
+  * dbus-manager: Fix critical when transforming call states
+  * Update libcall-ui subproject to v0.0.1
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Wed, 26 Jan 2022 14:30:38 +0100
+
+gnome-calls (42~beta.0) byzantium; urgency=medium
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * sip: origin: Prevent dialing when not online
+  * in-app-notification: Codestyle
+  * in-app-notification: Use DEFAULT_TIMEOUT_SECONDS as the default timeout
+  * in-app-notification: Use unsigned integers for timeout property
+  * in-app-notification: Use g_clear_* instead of emulating it
+  * call: Codestyle
+  * ofono: call: Codestyle
+  * dummy: call: Codestyle
+  * mm: call: Codestyle
+  * test: call: Codestyle
+  * call-window: Use g_assert in private functions
+  * call: Add unknown state
+  * call: Move inbound property into base class
+  * call: Move state property into base class
+  * call: Move id property into base class
+  * call: Move name property to base class
+  * call: Use protocol fallback
+  * gitlab-ci: Use prebuilt containers
+  * ci: Use prebuilt debian images
+  * project: Do not allow deprecated gtk/gdk symbols
+  * best-match: Fix header include
+  * sip: codecs: Fix transfer annotation of media_codecs_get_candidates()
+  * settings: Chain up to parents constructed() early
+  * settings: Add docstring for autoload-plugins setter and getter
+  * test: sip: Add debug messages
+  * settings: Add GSetting for preferred audio codecs
+  * media-codecs: Add codec availability check to public API
+  * media-codecs: Clarify that codec availability should be checked before use
+  * media-manager: Take preferred audio codecs into account for SDP
+  * sip: origin: Include address in warning when we cannot dial
+  * new-call-box: Decide if numeric input is needed based on the origins protocol
+  * origin: Get rid of "numeric-addresses" property
+  * sip: origin: Add property tracking usage for tel URIs
+  * sip-account-widget: Add switch to specify account can handle tel URI
+  * sip: origin: Pass telephone number to the call object
+  * sip: origin: Fix host being passed as number
+  * meson: Don't use deprecated Dependency.get_pkgconfig_variable()
+  * meson: Don't use deprecated meson.build_root()
+  * meson: Don't use deprecated meson.source_root()
+  * sip: origin: Decouple TLS usage from target address
+  * sip: call: Remove unnecessary code
+  * sip: Use per origin IP instead of a global IP
+  * sip: media-manager: Get rid of global session IP
+  * sip: origin: Purge own IP when uninitialising account
+  * sip: origin: Codestyle
+  * manager: Codestyle
+  * util: Use pragma once instead of include guard
+  * message-source: Use pragma once instead of include guard
+  * message-source: Clean up includes
+  * message-source: Get rid of unnecessary semicolon
+  * manager: Clean up includes
+  * application: Sort includes alphabetically
+  * message-source: Add API to emit message
+  * manager: Remove the "error" signal and adapt to changes
+  * manager: Implement message source interface
+  * sip: origin: Make go_online() a no-op in the direct connection case
+  * account: Rework account states
+  * account: Add message emission API
+  * sip: origin: Emit user feedback on state change
+  * account-overview: Show notification on account message
+  * account-overview: Reindent ui file
+  * manager: Propagate messages from account
+  * contacts-provider: Sort includes
+  * contacts-provider: Codestyle
+  * contacts-provider: Remove unused config.h include
+  * contacts-provider: Add GDBusActionGroup to query if contacts can be added
+  * contacts-provider: Add API to add new contacts
+  * record-row: Add context menu entry for adding a new contact
+  * potfiles: Add src/account.c
+  * call: Fix typos in section docstring
+  * meson: Warn when using misleading indentation
+  * dbus: document states
+  * ui-call-data: Don't use deprecated states in mapping
+  * ui-call-data: Add call state mapping to public API
+  * dbus-manager: Use CuiCallStates instead of CallsCallStates
+  * meson: Don't access the network when validating metadata
+  * message-source: Fix typo
+  * provider: Remove unused parameter from docstring
+  * origin: Remove unused parameter from docstring
+  * contacts-provider: Overhaul documentation
+  * dbus: Document interface in a way that gtk-doc can use
+  * contacts-provider: Remove static from action name string
+  * call-selector-item: Codestyle
+  * ui-call-data: Add license header
+  * ui-call-data: Remove unused struct
+  * manager: Use ternary operator instead of if/else block
+  * best-match: Fix potential memory leak
+  * tests: dummy origin: Use correct origin
+  * dummy: origin: Use g_assert in non public functions
+  * call: Temporarily hold ref while setting new state
+  * dummy: origin: Switch to state notify signal
+  * mm: origin: Switch to state notify signal
+  * sip: origin: Switch to state notify signal
+  * tests: sip: Switch to state notify signal
+
+  [ Fabio Tomat ]
+  * Update Friulian translation
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Luna Jernberg ]
+  * Update Swedish Translation
+  * Update Swedish translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+
+  [ Jiri Grönroos ]
+  * Update Finnish translation
+
+  [ Christian Kirbach ]
+  * Update German translation
+
+  [ Fran Dieguez ]
+  * Update Galician translation
+
+  [ piotr-maker ]
+  * Add Polish translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+  * Update Romanian translation
+  * Update Romanian translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Vittorio Monti ]
+  * Update Italian translation
+  * Update Italian translation
+
+  [ Matej Urbančič ]
+  * Update Slovenian translation
+
+  [ Aleksandr Melman ]
+  * Add Russian translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Tue, 25 Jan 2022 13:55:36 +0100
+
+gnome-calls (42~alpha.0) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * po: Add missing files to POTFILES.in
+  * ci: Update from flatpak CI template
+  * flatpak: Update manifest
+  * main-window: Remove unused header
+  * Remove unused typedef
+  * call-window: Remove unused CALLS_WAYLAND ifdef
+  * ci: Grab submodules by setting GIT_SUBMODULE_STRATEGY
+  * po: Ignore subprojects
+  * ci: Complain about untranslated ui files
+  * Add libcall-ui as submodule
+  * application: Initialize libcall-ui
+  * call: Add API to query whether this call can do DTMF
+  * Introduce CallsUiCallData to feed CuiDisplay
+  * Switch from CallsCallDisplay to CuiCallDisplay
+  * Remove CallsCallDisplay
+  * ci: Use gcovr for coverage reports
+  * coverage: Exclude subprojects and generated dbus code
+  * meson: Don't build tests, examples or documentation for libcall-ui
+  * Update libcall-ui submodule
+  * call-data: Implement avatar property
+  * record-row: Use avatars in history
+  * po: Remove call display files
+  * Remove encryption indicator
+  * best-match: Rename best_match variable to matched_individual
+  * call-data: Fix assertion in notify handlers
+  * Update libcall-ui
+  * call-data: Notify on avatar changes
+  * README: Drop code coverage report
+  * README: Mark oFono backend as not actively developed
+  * README: Overhaul readme
+  * README: Add backend specific debugging information
+  * call: Get rid of tone_stop
+  * call: Get rid of unnecessary cast to int
+  * dummy: Add dummy send_dtmf_tone function
+  * util: Make dtmf tone checking function public
+  * tests: Add dtmf tone validity tests
+  * dbus: Set can-dtmf property
+  * dbus: Add API to send DTMF
+  * ci: Fix regex for reporting code coverage
+  * project: Post release version bump
+  * Update libcall-ui: Fix display showing number twice when not a contact
+  * record-row: Removed unused define
+  * call-window: codestyle
+  * call-window: Delay closing window
+  * flatpak: Poke hole to talk to callaudiod
+  * flatpak: Poke hole to talk to feedbackd
+  * ci: Drop pedantic metainfo validation job
+  * ci: Drop debian bookworm packaging job
+  * ci: Use PKG_ONLY variable to exclude flatpak job
+  * application: Codestyle
+  * history-box: Codestyle
+  * application: Chain up shutdown
+  * record-store: Get rid of unused code
+  * call: Rename property from "number" to "id"
+  * ringer: codestyle
+  * ringer: Refactor to keep track of ongoing calls
+  * ringer: Disconnect signal handlers on dispose
+  * ringer: Track ringer state
+  * ringer: Don't warn if feedback triggering got cancelled
+  * ringer: Make sure to reset feedback profile if not set to "quiet"
+  * ringer: Add debugging
+  * call: Add API to silence ringing
+  * ringer: Check if incoming call is silenced
+  * d/control: Add cmocka dependency
+  * flatpak: Add cmocka dependency
+  * tests: Add ringer tests
+  * ringer: Add is-quiet property and getter
+  * ringer: Restart ringer if quiet parameter changed
+  * test: ringer: Test quiet ringing
+  * call-window: Clear handle id when hiding call window
+  * call-window: Use g_clear_handle_id instead of emulating it
+  * dbus: Add method to silence ringing
+  * record-row: Codestyle
+  * tests: util: Codestyle
+  * util: Add API to query call icon names
+  * tests: util: Unit test call icon name function
+  * record-row: Use API to query call icon name
+  * record-row: Only create popover when needed
+  * Document and release 41.1
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+  * Update Swedish translation
+  * Update Swedish translation
+
+  [ Vittorio Monti ]
+  * po: Update Italian translation
+  * Update Italian translation
+
+  [ Jordi Mas i Hernandez ]
+  * Update Catalan translation
+
+  [ Guido Günther ]
+  * dbus: Expose path to avatar icon file if it exists
+
+  [ Dorota Czaplejewicz ]
+  * gitlab: Update bug template
+
+  [ Christopher Davis ]
+  * main-window: Remove unused placeholder text
+  * Remove history-header-bar.ui
+  * history-box: Use HdyStatusPage for empty state
+  * contacts-box: mimmic HdyStatusPage styling for contacts
+  * flatpak: Use builddir: true
+  * new-call-box: Clamp everything
+  * application: Opt in to libhandy dark style preference
+  * application: Check libhandy version at compilation
+  * style: Make error color white in both light and dark mode
+  * ui: Remove explicit can-focus
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+  * Update Romanian translation
+
+  [ Rafael Fontenelle ]
+  * Update Brazilian Portuguese translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Mon, 13 Dec 2021 05:32:22 +0100
+
+gnome-calls (41.1) byzantium; urgency=medium
+
+  [ Dušan Kazik ]
+  * Add Slovak translation
+  * Update Slovak translation
+  * Add Slovak translation
+  * Update Slovak translation
+  * Update Slovak translation
+
+  [ Vittorio Monti ]
+  * po: Update Italian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * application: Clarify that -l flag is to be used with numbers only
+  * application: Do not prepend country code when dialing
+  * record-row: Reword accessible name
+  * new-call-box: Clear entry after dialing
+  * sip: media: Fix gtk-doc transfer annotation
+  * sip: origin: Fix memory leak
+  * sip: Fix possible NULL pointer dereference
+  * sip: sdp: Honour per media connections
+  * sip: sdp: Hang up call when there are no common codecs
+  * contact-box: Do not hardcode length of match_fields[]
+  * number-query: Take country code into account
+  * best-match: codestyle
+  * best-match: Don't free unowned data
+  * network-watch: More descriptive warning
+  * network-watch: Only g_set_error if error is not NULL
+  * network-watch: Don't fail initialization when unable to fetch local IP
+  * sip: Do not fail if CallsNetworkWatch is unavailable
+  * meson: Bump to 0.56.0
+  * tests: Add gsettings schema directory to environment
+  * settings: Add GSettings bindings
+  * Simplify country code handling
+  * record-row: Right justify time
+  * sip: origin: Recreate handles when updating credentials
+  * ci: Temporarily allow warnings to fix CI build failure
+  * media-manager: Use G_BEGIN_DECLS and G_END_DECLS in header
+  * sip: Gather public IP from REGISTER response and use it in SDP
+  * record-row: Clarify "Call" for translators with a comment
+  * record-store: Prefer using g_date_time_new_now_utc()
+  * record-row: Take timezone into account for displaying in the UI
+  * i18n: notifier: Use comment to clarify if a name or number is meant
+  * i18n: main-window: Clarify "Recent" to mean the call history
+  * selector-item: Name label does not need to be translatable
+  * application: Reword description for the -p flag
+  * new-call-box: Clarify accessible name
+  * d/copyright: Update copyright
+  * metainfo: Add screenshots
+  * ci: Upgrade certificates
+  * ci: Use strict metadata validation, but allow it to fail
+  * ci: Run relaxed appstream validation during tests
+  * metainfo: "mimetypes" tag is deprecated
+  * metainfo: Add DBus service to "provides" tag
+  * metainfo: Remove "developer_name" tag
+  * metainfo: Add notification "kudo" tag
+  * metainfo: Simplify content rating
+  * metainfo: Add "requires" tag in favour of custom tags
+  * metainfo: Update summary
+  * metainfo: Update description
+  * metainfo: Replace deprecated GPL license identifier
+  * metainfo: Add "launchable" tag
+  * metainfo: Add "translation" tag
+  * metainfo: Add URL tag for translations
+  * ci: Use appstreamcli instead of appstream-util
+  * dummy-call: Simplify change_state()
+  * Let provider plugin decide whether to automatically hang up secondary calls
+  * screenshots: Remove shell chrome
+  * number-query: Fall back to string comparison if parsing EPhoneNumber fails
+  * call-window: Remove unnecessary code
+  * call-window: Improve readability of remove_call function
+  * sip: origin: Bail when trying to dial empty string
+  * sip: origin: Make sure "@host" is in the dial string
+  * Document and release 41.1
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+  * Update Persian translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+  * Update Romanian translation
+
+  [ Hugo Carvalho ]
+  * Update Portuguese translation
+
+  [ Jiri Groenroos ]
+  * Update Finnish translation
+  * Update Finnish translation
+
+  [ Goran Vidović ]
+  * Update Croatian translation
+
+  [ Matej Urbančič ]
+  * Add Slovenian translation
+
+  [ Pedro Luis Valadés ]
+  * Update Spanish translation
+
+  [ Luna Jernberg ]
+  * Update Swedish translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Sat, 30 Oct 2021 19:56:27 +0200
+
+gnome-calls (41.0) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * sip: provider: Skip creating credential directory on test
+  * sip: origin: Do not use CallsNetworkWatch during tests
+  * sip: origin: Bind sockets to NIC with default route
+  * meson: Post release bump
+
+  [ Nathan Follens ]
+  * Update Dutch translation
+
+  [ Goran Vidović ]
+  * Add Croatian translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Sat, 18 Sep 2021 17:25:43 +0200
+
+gnome-calls (41~rc) byzantium; urgency=medium
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Post-release version bump
+  * new-call-box: Reindent
+  * new-call-box: Press enter to place a call
+  * new-call-box: Hide empty results
+  * manager: Initialize g_auto variable to NULL
+  * flatpak: Update dependencies
+  * ci: Unbreak CI after Debian Bullseye release
+  * sip: Avoid g_error for non-fatal issues
+  * sip: provider: No need to print warning when no credentials file found
+  * sip: provider: Try to create folder for credentials
+  * sip: Avoid dereferencing a NULL pointer
+  * new-call-box: Always update the UI when the list of origins changes
+  * sip: origin: Bail when trying to go online but nua handle is not present
+  * account-widget: Actually use the selected protocol
+  * account-widget: Actually use the entered port
+  * sip: Make save_to_disk() public and use it when updating accounts
+  * origin: Fix the password when updating credentials
+  * account-widget: Fix apply button not becoming sensitive
+  * sip: origin: Include transport parameter in NUTAG_URL and friends
+  * sip: origin: Warn instead of asserting in update_nua() on nua stack
+  * Introduce CallsNetworkWatch to notify of network changes
+  * sip: origin: Recreate sofia handles on network change
+  * sip: origin: Handle nua_shutdown() timeout gracefully
+  * sip: origin: Destroy registration handle on deinit
+
+  [ Daniel Șerbănescu ]
+  * Update Romanian translation
+
+  [ Michael Oppliger ]
+  * Update German translation
+
+  [ Rafael Fontenelle ]
+  * Update Brazilian Portuguese translation
+
+  [ Fran Dieguez ]
+  * Add Galician translation
+
+  [ Andika Triwidada ]
+  * Update Indonesian translation
+
+  [ Quentin PAGÈS ]
+  * Add Occitan translation
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz-debian@fortysixandtwo.eu>  Thu, 02 Sep 2021 22:22:07 +0200
+
+gnome-calls (41~beta) byzantium; urgency=medium
+
+  [ Rafael Fontenelle ]
+  * doap: Add download and bug pages
+  * Update Brazilian Portuguese translation
+
+  [ Bruno Lopes da Silva ]
+  * Update Brazilian Portuguese translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * README: Update URLs
+  * metainfo: Update URLs
+  * metainfo: Update developers
+  * metainfo: Fix typo
+  * ci: Validate appstream metadata
+  * NEWS: Update with important information
+  * NEWS: Reword to be more precise
+  * HACKING: Fix style around signals
+  * Various codestyle fixes
+  * dir-locals: Treat more G_* macros as including a semicolon
+  * Remove CallsCredentials and adapt to changes
+  * account: Use explicit notify for account state property
+  * account: Add API to query account state
+  * account: Add address property
+  * manager: Add API to query loaded providers
+  * manager: Emit signal when loaded providers have changed
+  * manager: Temporarily hold a reference to provider being unloaded
+  * sip: provider: Use g_auto and GStrv
+  * sip: provider: Load credentials from GKeyFile
+  * sip: provider: Rename test environment variable
+  * sip: provider: Add API to remove origins
+  * sip: Introduce CallsSipAccountWidget
+  * account-provider: Repurpose to allow graphical credential editing
+  * sip: Implement CallsAccountProvider interface
+  * sip: account-widget: Emit "widget-edit-done" when done editting
+  * main-window: Add menu button
+  * Introduce CallsAccountOverview: A UI to allow managing VoIP accounts
+  * account-overview: Hook up available providers
+  * sip: provider: Add API to save credentials to GKeyFile
+  * sip: provider: Save accounts to disk
+  * sip: origin: Set and update name of origin
+  * sip: provider: Add argument to _add_origin() whether to store credentials
+  * debian: Add libsecret as a build dependency
+  * Introduce CallsSecretStore to store credentials
+  * sip: provider: Use the secret store to store credentials
+  * sip: provider: Update credentials on disk when removing origin
+  * sip: provider: Delete password from keyring when deleting account
+  * sip: provider: Retrieve password from keyring
+  * sip: provider: Don't store the password in the GKeyFile
+  * about: Update authors
+  * about: Update copyright
+  * main-window: Fix the action name for the about dialog
+  * secret-store: Work around bug in gnome-keyring preventing keyring unlocking
+  * sip: origin: Add protocol prefix if missing
+  * origin: Add "numeric-addresses" property
+  * new-call-box: Simplify HdyComboRow binding
+  * calls-new-call-box: Only show origin combo box if there is a choice
+  * new-call-box: Remove unused GtkListStore
+  * new-call-box: Remove unnecessary GtkBox
+  * new-call-box: Introduce numeric-input-only property
+  * new-call-box: Add entry for non-numeric inputs
+  * new-call-box: Set numeric input property based on selected origin
+  * new-call-box: Tweak the UI
+  * new-call-box: Add placeholder texts for text input fields
+  * meson: bump to 41.beta
+
+  [ Yuri Chornoivan ]
+  * Update Ukrainian translation
+  * Update Ukrainian translation
+
+  [ Anders Jonsson ]
+  * Update Swedish translation
+  * Update Swedish translation
+
+  [ Vittorio Monti ]
+  * po: Update Italian translation
+
+  [ Fabio Tomat ]
+  * Update Friulian translation
+
+  [ Mohammed Sadiq ]
+  * application: Fix handling commandline arguments
+  * history-box: Use content style for listbox
+  * sip-account-widget: Validate port value on change
+  * Add and use new logger
+
+  [ Guido Günther ]
+  * calls-notifier: Set log domain
+  * build: Allow glib 2.70
+  * notifier: Add notification category
+
+  [ Мирослав Николић ]
+  * Update Serbian translation
+
+  [ Marc Riera ]
+  * Update Catalan translation
+
+  [ Kristjan SCHMIDT ]
+  * Add Esperanto translation
+
+ -- Evangelos Ribeiro Tzaras <devrtz@fortysixandtwo.eu>  Sat, 14 Aug 2021 21:52:41 +0200
+
+gnome-calls (41~alpha) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * run: Run under gdb when CALLS_GDB is set to 1
+  * ringer: Follow coding style for G_LOG_DOMAIN
+  * debug: Add G_LOG_DOMAIN to every file using g_debug()
+  * run: Allow passing arguments to calls when running under gdb
+  * notifier: Explicitly handle unknown callers
+  * sip: origin: codestyle
+  * sip: origin: Remove unnecessary notify
+  * sip: origin: Handle unregistering (going offline)
+  * sip: origin: No need to explicitly clear nua handles
+  * meson: bump required version to 0.49.0
+  * meson: Fix typo in gnome.compile_schemas
+  * meson: Passing `-fPIE` explicitly is discouraged
+  * flatpak: Update gom to 0.4.0
+  * flatpak: Update e-d-s to 3.40
+  * flatpak: Update folks to 0.15
+  * flatpak: Update ModemManager to 1.16
+  * ci: Reenable flatpak builds
+  * doap: Remove Bob from maintainer list
+  * meson: bump minimum and maximum glib to 2.64 and 2.68
+  * meson: Disable deprecation warning for e-d-s
+  * util: Get rid of conditional compilation in calls_find_in_store()
+  * sip: provider: Keep provider alive while there are still origins
+  * application: Allow invoking with multiple `-p` arguments
+  * application: settings: Add autoload-plugins setting
+  * manager: Don't use peas_engine_prepend_search_path
+  * meson: Add postinstall script to compile schemas etc
+  * best-match: codestyle
+  * best-match: Preliminary handling of SIP addresses
+  * call-display: Ellipsize labels at the end
+  * doap: Add gnome user ids
+  * ci: Switch to Debian Bullseye images
+  * meson: Change homepage to GNOMEs gitlab
+  * docs: Change homepage to GNOMEs gitlab
+  * resources: Use /org/gnome prefix and adapt to changes
+  * schema: Use org.gnome prefix and adapt to changes
+  * DBus: Use org.gnome prefix and adapt to changes
+  * project: Use org.gnome prefix in app id and adapt to changes
+  * debian: Remove old desktop files on upgrade
+  * flatpak: Change calls URL
+  * meson: Remove wayland option
+  * d/copyright: Dropped wayland sources
+  * debian: Change URL of homepage
+  * doap: Change URL of homepage
+  * sip: origin: Explicitly include contact header for sofia > 1.13
+  * meson: Conform to GNOME versioning
+  * d/gbp.conf: Remove hook that bumps project version in meson.build
+  * metainfo: Update mimetypes
+  * Document and release 41.alpha
+
+  [ Luna Jernberg ]
+  * po: Update Swedish translation
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+
+  [ Vittorio Monti ]
+  * po: Update italian translation
+
+  [ Guido Günther ]
+  * dbus-manager: Fix typo in log-domain
+  * Drop layer-surface
+  * dbus: Add more DBus properties
+
+  [ Danial Behzadi ]
+  * Update Persian translation
+
+  [ Efstathios Iosifidis ]
+  * Update Greek translation
+  * Update Greek translation
+
+  [ Andika Triwidada ]
+  * Update Indonesian translation
+
+  [ Adrien Plazas ]
+  * flatpak: Bump libical to 3.0.10
+  * main-window: Make it a HdyApplicationWindow
+  * main-window: Fix the indentation
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Fri, 16 Jul 2021 11:55:08 +0200
+
+gnome-calls (0.3.4) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * manager: Set peas search path only once
+  * provider: whitespace and indentation
+  * cleanup: Fix calls_origin_get_name() related memory leaks
+  * mm: origin: Try using own number as the origin name
+  * account-provider: Add debugging in the public functions
+  * plugins: provider: Use CallsOrigin instead of derived types for GListStore
+  * util: Add simple API to query protocol
+  * test: Add util tests
+  * call: Introduce protocol property
+  * calls-record: Introduce the protocol property
+  * provider: Add API to query supported protocols
+  * origin: Add API to query supported protocols
+  * manager: support multiple providers
+  * application: Add CallsSettings class
+  * new-call-box: Honour auto-use-default-origins setting
+  * application: Don't add a provider if one is already present
+  * manager: Differentiate the NO_ORIGIN state
+  * test: manager: Use more appropriate `g_assert_*()` calls
+  * sip: provider: Don't warn when trying to add account multiple times
+  * tests: manager: Add multiple provider tests
+  * application: settings: Add country code setting
+  * manager: Update country code
+  * ci: disable flatpak build
+  * d/control: Add libxml2-utils
+  * meson: Compile schemas in build directory
+  * Add run script to the build directory
+  * Update README: Explain how to start calls without installing
+  * Initial DBus API
+  * display: codestyle
+  * display: Fix typo
+  * record-store: codestyle
+  * Fix old-style warnings all over the codebase
+  * Fix missing-declarations warnings all over the codebase
+  * sip: media-pipeline: Don't shadow props variable
+  * ofono: call: Don't shadow props variable
+  * mm: origin: Don't shadow props variable
+  * call-display: Add default case to switch statement
+  * record-store: Add default case to switch statements
+  * main-window: Add default case to switch statement
+  * meson: Use stricter compilation warnings and errors
+  * desktop-file: Register as sip and sips URI scheme handler
+  * run: Add plugin search directory
+  * README: Reword plugin search directory section to be more accurate
+  * dir-locals: Treat G_* macros as including a semicolon
+  * manager: Fix whitespace
+  * manager: codestyle
+  * sip: origin: Fix if condition in dispose()
+  * util: Make position argument in calls_find_store() optional
+  * test: manager: Expanded *has_provider() testing
+
+  [ Anders Jonsson ]
+  * po: Update Swedish translation
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+
+  [ Vittorio Monti ]
+  * po: Update Italian translation
+
+  [ Guido Günther ]
+  * Expose call objects on DBus
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Sat, 12 Jun 2021 17:21:31 +0200
+
+gnome-calls (0.3.3) byzantium; urgency=medium
+
+  [ Evangelos Ribeiro Tzaras ]
+  * d/control: bump required libhandy
+  * test: sip: Don't use DNS lookups
+  * sip: fix typos
+  * call-record: Get rid of macros
+  * codestyle: get rid of CALLS_SET_PTR_PROPERTY macro
+  * codestyle: align function prototypes in calls-origin header
+  * codestyle: new-call-box
+  * manager: g_assert in static functions
+  * Revert "sip: build: depend on config.h"
+  * build: separate version from the rest of the configuration data
+  * ci: Generate code coverage reports
+  * doc: Fix gtk-doc transfer annotations
+  * call: doc: Indicate ownership in docstrings
+  * manager: remove unused CallsProvider argument from functions
+  * manager: add debug messages when adding or removing origins
+  * README: Include code coverage badge
+  * test: sip: Connect to state-changed signal
+  * sip: origin: Fix nua_authenticate call
+  * sip: media-pipeline: Fix memory leak
+  * sip: media-pipeline: Fix memory leak in error path
+  * flatpak: change URL for boost
+  * sip: media-pipeline: Do not set the stream properties prematurely
+  * Add CallsCredentials class and use it in CallsSipProvider
+  * sip: origin: Use CallsCredentials and adapt to changes
+  * Add CallsAccountInterface
+  * sip: origin: Use CallsAccountState instead of SipAccountState
+  * sip: origin: Implement CallsAccountsInterface
+  * sip: provider: codestyle
+  * sip: provider: return origin in calls_sip_provider_add_origin()
+  * Add CallsAccountProviderInterface
+  * sip: provider: Implement CallsAccountProvider interface
+  * test: Add account tests
+
+  [ Mohammed Sadiq ]
+  * build: Avoid building files multiple times
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Wed, 19 May 2021 18:10:31 +0200
+
+gnome-calls (0.3.2) byzantium; urgency=medium
+
+  [ carlosgonz ]
+  * po: Update spanish translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * meson: bump version
+  * po: Add src/ui/contacts-box.ui to POTFILES.in
+  * d/gbp.conf: automatically bump project version
+  * new-call-box: make sure to call origin_count_changed_cb
+  * codestyle: remove whitespaces
+  * plugins: use g_autoptr for GError
+  * flatpak: remove libhandy as it is part of the SDK
+  * meson: bump required libhandy-1 version >1.1.90
+  * contact-row: remove deprecated function
+  * dummy: fix infinite ringtone
+  * ringer: use quiet profile for non-primary calls
+  * manager: remove unused function
+  * manager: hang up secondary calls
+  * ci: add -noreset to xvfb-run invocation for flatpak builds
+  * plugins: fix memory leaks with respect to items in GListStore
+  * ofono: Derive from CallsProvider
+  * test: Test loading provider plugins
+  * ofono: use g_bus_watch_name
+  * sip: Initial provider
+  * sip: Origin needs account credentials
+  * sip: sipify provider with sofia
+  * sip: Add media manager and sipify origin
+  * sip: initial call handling
+  * sip: origin: fix CallsSipHandles reference in sip_callback
+  * sip: origin: get address on incoming call
+  * sip: origin: fix direct connection case
+  * sip: call: rework call state changes
+  * sip: origin: emit message on DNS error
+  * sip: origin: do not use hardcoded ports for RTP
+  * sip: pipeline: bind sockets for RTP
+  * sip: origin: register with SIP server
+  * sip: go offline when disposing CallsSipOrigin
+  * sip: rework setting SDP
+  * sip: allow specifying local port and use IPv6
+  * sip: Use app name in the user agent
+  * sip: media: change default codec to PCMA
+  * sip: handle i_outbound 404 errors
+  * sip: media: improve SDP offer/answer handling
+  * sip: use ipv4 exclusively for now
+  * sip: improve connection handling by using relevant sofia tags
+  * application: open sip uri
+  * sip: use g_return_if_fail and friends only for public functions
+  * sip: slightly improved authentication
+  * sip: fix infinite ringtone loop
+  * sip-media: enable echo cancellation
+  * sip: do not auto load accounts when running tests
+  * test: Add basic SIP provider tests
+  * test: Test CallsSipOrigin
+  * sip: provider: use g_get_user_config_dir () for account config
+  * sip: provider: Fall back to reasonable values for local-port property
+  * sip: pipeline: clean up in finalize ()
+  * new-call-box: Connect signals only if origins non-NULL
+  * provider: Add API for loading and unloading provider plugins
+  * tests: use plugin load API
+  * test: test-plugins: Add SIP plugin
+  * sip: Allow controlling automatic account loading via environment
+  * contact-provider: remove trailing whitespaces
+  * ci: add -noreset to xvfb-run invocation
+  * call: g_return_if_fail: type check calls_call_get_contact ()
+  * contacts-provider: fix docstring
+  * best-match: g_return_if_fail if not GeeCollection
+  * origin: Add country-code property
+  * application: Use the country code
+  * best-match: Use the country code
+  * Add API to get SIM country code
+  * mm: Implement country-code property
+  * manager: set default origin
+  * best-match: Lookup contact if country code changed
+  * best-match: disconnect old signal handlers
+  * plugins: build as shared library instead of shared module
+  * sip: remove FOR_TESTING ifdef
+  * tests: don't special case tests needing FOR_TESTING define
+  * mm-origin: codestyle
+  * mm-origin: fix memory leak
+  * Introduce HACKING.md
+  * media-manager: codestyle
+  * sip: media-manager: remove unused function prototypes
+  * media: manager: support multiple codecs SDP wise
+  * sip: media: use number types for payload id and clock rate
+  * sip: call: rename setup local/remote connection functions
+  * sip: media: rework codec negotiation
+  * sip: media-pipeline: only create pipeline after codec negotiation
+  * sip: gst-rfc3551: query for plugin availability
+  * sip: gst-rfc3551: Add docstrings for public functions
+  * tests: Update year in SPDX header
+  * tests: Test SDP messages
+  * sip: media-manager: fix G_LOG_DOMAIN
+  * sip: media-manager: fix SDP message when there is no supported codec
+  * best-match: avoid using NULL phone number
+  * best-match: Don't set NULL phone numbers when updating country code
+  * meson: Fix project name in license header
+  * build: doc: deduplicate sources
+  * sip: build: depend on config.h
+  * ci: disable testing in flatpak
+  * sip: origin: make create_inbound a private function
+  * sip: origin: Remove hardcoded display name from contact header
+  * sip: origin: Remove unnecessary code
+  * sip: provider: Allow overriding SIP account config via environment
+  * sip: provider: use g_clear_pointer pattern instead of emulating it
+  * sip: origin: Allow using a local port of 0
+  * sip: pipeline: Only inform of unhandled bus massages when debugging
+  * sip: codestyle changes
+  * sip: provider: document public functions
+  * sip: call: Don't fail when hanging up on an incoming call
+  * plugins: make plugins shared modules again
+  * codestyle: application
+  * application: add --version flag
+  * debian: ran wrap-and-sort -ast
+  * d/control: Add gstreamer plugins for SIP calling tests
+  * sip: media-pipeline: Allow overriding audio elements from environment
+  * test: sip: use g_assert_cmpint for asserting enums
+  * test: Use dummy audio elements for Gstreamer pipelines
+  * test: Add calling tests
+  * d/gbp.conf: set multimaint-merge true
+
+  [ Pierre Michel Augustin ]
+  * po: Add Creole Haitian translation
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+  * po: Update Ukrainian translation
+
+  [ Mohammed Sadiq ]
+  * provider: Use GListModel to track origins
+  * application: Open only the first 'tel:' URI
+  * provider: Avoid private data
+  * provider: Rename a variable
+  * provider: Implement default methods
+  * Let calls-call be an abstract class
+
+  [ Guido Günther ]
+  * notifier: Fix compile warning
+  * manager: Allow one to add plugin dir via environment
+  * window: Don't unhibit with 0 cookie (Closes: #249)
+  * build: Move generated sources before source file list
+  * build: deduplicate sources
+  * provider: Fix gtk-doc transfer annotations
+  * calls: Fix gtk-doc transfer annotation
+
+  [ Jan Jasper de Kroon ]
+  * po: Add Dutch translation
+
+  [ Emin Tufan Çetin ]
+  * po: Update Turkish translation
+
+  [ JaroslavSvoboda ]
+  * Added Czech translation
+
+  [ Balázs Meskó ]
+  * po:Update Hungarian translation
+
+  [ Daniel Șerbănescu ]
+  * po: Update Romanian translation
+  * po: Update Romanian translation
+
+  [ anteater ]
+  * ofono: fix return of incorrect field
+  * ofono: ref self across async callback
+  * ofono: don't clear self->modem after constructing CallsOfonoOrigin
+  * ofono: track status in CallsOfonoProvider
+  * ofono: correct variant format confusion
+  * ofono: add calls-ofono-provider.c to POTFILES.skip
+
+  [ Anders Jonsson ]
+  * po: Update Swedish translation
+  * po: Update Swedish translation
+
+  [ scootergrisen ]
+  * po: Update Danish translation
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Thu, 22 Apr 2021 12:09:15 +0200
+
+gnome-calls (0.3.1) byzantium; urgency=medium
+
+  * application: Fix double free
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Tue, 16 Feb 2021 11:48:14 +0100
+
+gnome-calls (0.3.0) byzantium; urgency=medium
+
+  [ Timo Jyrinki ]
+  * po: Add Finnish translation from JRfi, refined by me.
+
+  [ Evangelos Ribeiro Tzaras ]
+  * desktop: Add Network main category
+  * manager: remove trailing whitespace
+  * manager: add has_active_call() and hang_up_all_calls()
+  * application: Hang up calls when closing the UI
+  * application: add copy-number action
+  * record-row: Allow copying number from context menu
+  * record-row: hide copy number menu item
+  * new-call-box: clear entry on longpress
+  * application: chain up to parents finalize
+  * application: Use g_autoptr and g_autofree
+  * application: Notify when opening URI/files fails
+  * ci: Build flatpak in packaging stage
+  * call-display: fix whitespace
+  * project: rename to gnome-calls
+  * record-store: Handle old and new database locations gracefully
+  * display: fix null pointer dereference
+  * code style: consistent whitespaces for g_autoptr
+  * application: use g_autoptr
+  * project: rename back to calls
+  * d/control: Add myself as maintainer
+  * Document changes and release 0.3.0
+
+  [ Eugenio Paolantonio (g7) ]
+  * ofono: call: ensure signals get disconnected on voice_call object destruction
+
+  [ Sebastian Krzyszkowiak ]
+  * gitlab-ci: Don't use global before_script for package jobs
+
+  [ Guido Günther ]
+  * gitlab-ci: Use byzantium instead of Debian bullseye
+
+  [ Mohammed Sadiq ]
+  * application: Simplify loading css
+  * application: Remove unused code
+  * resources: Use standard icon path
+  * Let calls-provider be an abstract class
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+  * po: Update Ukrainian translation
+
+  [ Julian Sparber ]
+  * application: disable dial action when making calls isn't possible
+  * ci: build packages only for byzantium
+  * ci: don't use global variables and definitions
+  * ci: drop bullseyeci packages
+  * flatpak: use master runtime
+  * flatpak: add libcanberra
+  * ci: build flatpak
+  * ci: write STDOUT for flatpak build to file
+  * Revert "ci: write STDOUT for flatpak build to file"
+  * remove CallsCallHolder and CallsCallData
+  * ContactsProvider: Add contacts provider
+  * Contacts: replace CallsContacts with CallsContactsProvider
+  * Revert "ui/main-window: Hide contacts pane"
+  * Contacts: Add contacts list
+  * BestMatch: Turn avatar into a property
+  * BestMatch: Move SearchView creation inside the class
+  * BestMatch: Allways return a name
+  * BestMatch: Simplify code for updating new best matching individual
+  * BestMatch: remove BestMatchView to reduce vala code
+  * BestMatch: add has-individual property
+  * CallsCall: Add method to optain matching contact
+  * CallsCallDisplay: Make sure that the contact infomation is updated
+  * CallsCallSelectorItem: Make sure that the contact infomation is updated
+  * CallManager: drop calls_manager_get_contact_name ()
+  * Remove unused CallsParty
+  * CallsCallRecordRow: Cleanup contact setup
+  * CallsCallDisplay: use HdyAvatar
+
+  [ Arnaud Ferraris ]
+  * call-display: update libcallaudio API calls
+  * src: meson.build: update libcallaudio dependency
+  * d/control: add version requirement on libcallaudio build dependency
+  * flatpak: update callaudiod version
+  * call-display: switch to default audio profile only if no other call
+
+  [ Sebastian Rasmussen ]
+  * po: Update Swedish translation
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Fri, 12 Feb 2021 10:24:38 +0100
+
+gnome-calls (0.3.0~rc1) byzantium; urgency=medium
+  * UNRELEASED
+
+  [ Evangelos Ribeiro Tzaras]
+  * rename project files to gnome-calls to be in sync
+    with Debian packaging
+
+ -- Evangelos Ribeiro Tzaras <evangelos.tzaras@puri.sm>  Thu, 28 Jan 2021 13:59:33 +0100
+
+calls (0.2.0) amber-phone; urgency=medium
+
+  [ Adrien Plazas ]
+  * style: Fix the CSS path to the HdyKeypad buttons
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * meson: bump calls to 0.1.9
+  * meson: allow internationalization of desktop files
+  * doc: meson: fix ofono path
+  * doc: meson: Use shared library for gtk-doc
+  * debian: Add dependencies and rules for building docs
+  * CI: build documentation
+  * debian: Move documentation to own package calls-doc
+  * data: Fix typo in desktop files
+  * call-window: inhibit idle during active call
+
+  [ Guido Günther ]
+  * po: Add calls-notifier.c
+  * gitlab-ci: Fail when C files are missing from POTFILES.in
+  * debian: Add desktop-file-utils
+  * data: Check desktop file in build dir
+  * d/control: Update description
+  * gitlab-template: Add Librem 5
+
+  [ Matthias Klumpp ]
+  * trivial: metainfo: style
+  * metainfo: Mark app as touch-input compatible
+
+  [ James Westman ]
+  * flatpak: Add callaudiod to flatpak
+
+  [ Daniel Abrecht ]
+  * Replace CallsOrigin getters with properties and add calls_origin_foreach_call method
+  * Don't localise property descriptions in calls-call and calls-origin properties
+
+  [ Andika Triwidada ]
+  * Added Indonesian translation
+
+  [ Sebastian Krzyszkowiak ]
+  * debian: Add maintscript to rename xdg autostart file
+
+ -- Sebastian Krzyszkowiak <sebastian.krzyszkowiak@puri.sm>  Wed, 06 Jan 2021 01:33:54 +0100
+
+calls (0.1.9) amber-phone; urgency=medium
+
+  [ Juliano de Souza Camargo ]
+  * po: Add Portuguese translation
+
+  [ Fabio Tomat ]
+  * po: Just fur for friulian locale
+
+  [ Adrien Plazas ]
+  * Port to libhandy 1
+  * main-window: Use HdyViewSwitcherTitle
+  * data: List compatible form-factors
+
+  [ Evangelos Ribeiro Tzaras ]
+  * docs: update URLs to source.puri.sm
+  * po: fix duplicate language teams
+
+  [ Sebastian Krzyszkowiak ]
+  * gitlab-ci: Use bullseye CI repo
+
+  [ Anders Jonsson ]
+  * po: Update Swedish translation
+
+  [ Arnaud Ferraris ]
+  * call-display: replace ugly hacks with libcallaudio calls
+  * application: initialize libcallaudio on startup
+  * ui: call-display: set speaker and mute buttons sensitive by default
+  * src: meson.build: remove librem5-hack option and depend on libcallaudio
+  * d/control: depend on callaudiod
+
+  [ Mohammed Sadiq ]
+  * Add calls-ussd interface
+  * mm-origin: Implement CallsUssd interface
+  * util: Add API to test for USSD command
+  * manager: Hook to ussd signals from provider
+  * main-window: Add dialog to handle USSD
+  * new-call-box: Handle USSD commands
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Bump max allowed glib version to 2.64
+
+ -- Sebastian Krzyszkowiak <sebastian.krzyszkowiak@puri.sm>  Wed, 04 Nov 2020 18:07:48 +0100
+
+calls (0.1.8) amber-phone; urgency=medium
+
+  [ Arnaud Ferraris ]
+  * ui: call-display: wrap toggle buttons' labels.
+    For some locales, the buttons' labels can be quite long, making the
+    window wider than the display.
+
+  [ Evangelos Ribeiro Tzaras ]
+  * src/calls-notifier.c: Add call-back button
+  * src/calls-call-window.c: Inhibit suspend during active call
+
+  [ Guido Günther ]
+  * po: Add Hungarian to LINGUAS
+  * call-record-row: Use g_autoptr for the GError
+  * calls-call-record-row: Ignore anonymous callers.
+    These have an empty string which leads to
+        Error parsing phone number `': Keine Telefonnumme
+  * po: Add Spanish to LINGUAS
+  * gitlab-ci: Allow one to only build a package
+  * main-window: Allow the in app notification to wrap.
+    Othewise we overflow the window. Center it too.
+  * calls-main-window: Bring back old error string when no modem is present.
+    Calls can't tell the difference between no SIM and no modem
+    atm. (Closes: #159, #152)
+  * doap: Add devrtz to list of maintainers.
+    He's been the most active contributor recently.
+  * doap: Fix sytnax.
+    Wrap each person within <maintainer/>
+
+  [ James Westman ]
+  * flatpak: Add feedbackd, dependencies to flatpak.
+    Added feedbackd to the Flatpak manifest, so that Calls builds again.
+    Fixes #164.
+
+  [ Daniel Șerbănescu ]
+  * po: Update Romanian translation
+
+  [ Tim Sabsch ]
+  * po: Add German translation
+
+  [ Marc Riera Irigoyen ]
+  * po: Add Catalan translation
+
+  [ scootergrisen ]
+  * po: Add Danish translation
+
+  [ Balázs Meskó ]
+  * po: Add Hungarian translation
+
+  [ Emin Tufan Çetin ]
+  * po: Update Turkish translation
+
+  [ Valéry Febvre ]
+  * po: Update French translation
+
+  [ Daniel Mustieles ]
+  * po: Add Spanish translation
+
+  [ Efstathios Iosifidis ]
+  * po: Add Greek translation
+
+  [ Thibault Martin ]
+  * po: Update French translation
+
+  [ Fabio Tomat ]
+  * po: Add friulian translations
+
+  [ Марко М. Костић (Marko M. Kostić) ]
+  * po: Add Serbian translation
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+
+ -- Guido Günther <agx@sigxcpu.org>  Fri, 18 Sep 2020 12:52:43 +0200
+
+calls (0.1.7) amber-phone; urgency=medium
+
+  [ Yuri Chornoivan ]
+  * po: Update Ukrainian translation
+
+  [ Evangelos Ribeiro Tzaras ]
+  * Make CallsContacts a singleton.
+  * Implement contact name lookup for call display
+
+  [ Emin Tufan Çetin ]
+  * po: Add Turkish translation
+
+  [ Guido Günther ]
+  * calls-call-record-row: Print 'Anonymous caller' on empty numbers.
+
+ -- Guido Günther <agx@sigxcpu.org>  Thu, 02 Jul 2020 12:25:23 +0200
+
+calls (0.1.6) amber-phone; urgency=medium
+
+  [ Guido Günther ]
+  * debian: Add gbp.conf.
+    This makes correct taging so much simpler
+  * po: Add plugins to POTFILES.skip.  They're not meant to be translated
+  * Drop translations from property names and descriptions.
+    They're never used anywhere. (Closes: #155, #121)
+  * po: Update pot file.
+  * calls-contacts: Document lookup_phone_number.
+    This makes sure we have clear ownership rules
+  * calls-call-record-row: Ref the returned contact
+    calls_contacts_lookup_phone_number is transfer-none
+  * build: Specifify glib versions.
+    This avoids deprecation warnings due to GTimeVal used in
+    libebook-contacts.h
+  * ringer: Make more functions static
+  * ringer: Use libfeedback.
+    This triggers e.g. haptic feeback as well and can later on be used
+    for LED feedback.
+    We can drop the audio theme setting completely since feedbackd picks up
+    the global GNOME setting.
+  * tests: Disable atk bridge.
+    Otherwise this can trigger test failures. Similar to what we
+    did in libhandy.
+  * Show notification on missed calls (Closes: #153)
+
+  [ Zander Brown ]
+  * po: Add British English translation
+
+  [ Antonio Pandolfo ]
+  * po: Add Italian translation
+
+  [ Daniel Șerbănescu ]
+  * po: Add Romanian translation
+
+  [ Valéry Febvre ]
+  * po: Add French translation
+
+  [ Mohammed Sadiq ]
+  * main-window: Don’t set program-name in about dialog
+    program-name will be retrieved with g_get_application_name().
+    Let’s not do it explicitly so that there is one less string
+    to translate
+  * call-display: Use real ellipsis.
+    See https://wiki.gnome.org/Design/OS/Typography
+
+  [ Rafael Fontenelle ]
+  * Add Brazilian Portuguese translation
+
+  [ Scott Anecito ]
+  * po: Add Japanese translation
+  * po: Add ja.po to LINGUAS
+
+  [ Yuri Chornoivan ]
+  * Use an ellipsis in translation for Ukrainian
+
+  [ Evangelos Ribeiro Tzaras ]
+  * record-store: Use g_autoptr(GError) to avoid having to g_error_free
+  * Implement delete call with context menu on longpress
+    (Closes: #154)
+
+ -- Guido Günther <agx@sigxcpu.org>  Thu, 11 Jun 2020 09:06:40 +0200
+
+calls (0.1.5) amber-phone; urgency=medium
+
+  [ Guido Günther ]
+  * Update POTFILES.in.  See: #146
+  * Build against Debian bullseye
+
+  [ Danial Behzadi ]
+  * Add Persian
+  * po: fa: Update some strings
+
+  [ David Heidelberg ]
+  * data: rename appdata to metainfo.  Appstream nowadays prefers
+    `.metainfo.xml`
+
+  [ Evangelos Ribeiro Tzaras ]
+  * data: Clarify metainfo copyright to be CC0-1.0.
+    Adust debian/copyright accordingly.
+  * Build L5 specific code in calls-call-display conditionally
+
+  [ Sebastian Rasmussen ]
+  * po: Add Swedish translation
+
+  [ Yuri Chornoivan ]
+  * po: Add Ukrainian translation
+
+ -- Guido Günther <agx@sigxcpu.org>  Mon, 18 May 2020 11:00:52 +0200
+
+calls (0.1.4) amber-phone; urgency=medium
+
+  [ Julian Sparber ]
+  * DummyPlugin: fix events emits for call-removed, origin-*
+  * MMPlugin: emit *-removed after removing object
+  * Add a CallsManager and move Provider handling to it
+  * Manager: add test
+  * Use CallsManager in MainWindow and NewCallBox
+  * CallWindow: use Manager
+  * Ringer: fix parent instance
+  * Ringer: Use Manager
+  * RecordStore: Use Manager
+  * Remove Enumerate and EnumerateParams class
+  * HistoryBox: remove new-call property
+  * MainWindow: show error message when making calls isn't possible
+  * Add HdyAvatar
+  * History: use HdyAvatar
+  * History: Make avatars 48px big
+
+ -- Julian Sparber <julian.sparber@puri.sm>  Tue, 31 Mar 2020 17:36:42 +0200
+
+calls (0.1.3) amber-phone; urgency=medium
+
+  [ Julian Sparber ]
+  * NewCallBox+CallDisplay: UI facelift
+  * Use correct parent class when chaining up overridden functions
+  * Flatpak: use always a space before :
+  * Flatpak: Fix flatpak manifest, remove java dep and update deps
+  * Add class for in-app notification
+  * MainWindow: use in-app notification for messages
+  * CallWindow: use in-app notification
+  * CallHistory: Use dial action for recall button
+  * CallHistory: Don't pass the CallsNewCallBox to the CallsHistory
+  * CallHistory: Add a frame to the call history
+  * CallHistory: Disable selecting/activating rows and ellipzise
+  * Add .gitignore
+  * Set Julian Sparber as maintainer
+
+  [ Bob Ham ]
+  * application: Add "--dial" command-line option
+
+  [ Daniel Abrecht ]
+  * Fix some lintian warnings regarding the debian/copyright file.
+  * Convert calls call getters to readonly properties
+  * Notify if number changes in mm plugin
+  * Reintroduce GParamSpec props arrays & replace g_object_notify with g_object_notify_by_pspec
+
+  [ tor sorensen ]
+  * Add license COPYING file for appropriate packaging.
+
+ -- Julian Sparber <julian.sparber@puri.sm>  Thu, 26 Mar 2020 10:25:00 +0100
+
+calls (0.1.2) amber-phone; urgency=medium
+
+  [ Guido Günther ]
+  * debian: Add superficial autopkgtest
+  * gitlab-ci: Specify stages
+  * gitlab-ci: Build package and run autopkgtest / lintian
+  * po: Update pofiles.in (Closes: #76)
+  * Add potfile
+
+  [ Mohammed Sadiq ]
+  * mm-provider: Fix a check to remove device
+
+  [ Bob Ham ]
+  * call-display: Only mute the microphone with the Mute button
+  * mm-call: Sanitise disconnect messages
+
+  [ Julian Sparber ]
+  * Replace HdyDialer with HdyKeypad and bump libhandy to 0.0.12
+
+ -- Bob Ham <bob.ham@puri.sm>  Mon, 27 Jan 2020 14:55:08 +0000
+
+calls (0.1.1) amber-phone; urgency=medium
+
+  [ Bob Ham ]
+  * ringer: Use the GTK sound theme
+  * Add phone number lookup using libfolks
+  * Use libfolks phone number lookup in call record display
+  * Add -Wno-error=deprecated-declarations to build arguments
+  * call-display: Add ugly, ugly hacks to enable speakerphone/mute buttons
+  * Add initial avatar support
+
+  [ Lubomir Rintel ]
+  * appdata.xml: fix a validation error
+
+ -- Bob Ham <bob.ham@puri.sm>  Tue, 10 Dec 2019 14:51:21 +0000
+
+calls (0.1.0) purple; urgency=medium
+
+  [ David Cordero ]
+  * sm.puri.Calls.json: Fix libhandy config option type
+
+  [ Mohammed Sadiq ]
+  * window: hide windows on delete
+  * new-call-box: Use null-terminated string to set as buffer text
+
+  [ Christopher Davis ]
+  * history-header-bar: Change "About" to "About Calls"
+
+  [ Tobias Bernard ]
+  * Minor: Change recent calls empty state label
+  * Switcher: symbolic icons, label capitalization
+
+  [ Bob Ham ]
+  * calls-call: Add inbound property
+  * plugins/mm: Implement inbound property
+  * plugins/dummy: Implement inbound property
+  * calls-dummy-provider: Create an inbound call on SIGUSR1
+  * Update UI to better reflect the design
+  * calls-call: Fix crash with null call state
+  * calls-main-window: Use HdyViewSwitcher and friends
+  * src: Remove extraneous classes, Calls{History,NewCall}HeaderBar
+  * Specify minimum libhandy version in meson and Debian packaging
+  * calls-call-display: Add a display of dial pad digits
+  * util: Fix off-by-one in calls_entry_append
+  * calls-mm-call: Map MM_CALL_STATE_UNKNOWN to CALLS_CALL_STATE_DIALING instead of 0
+  * calls-call: Add calls_call_get_inbound function
+  * calls-dummy-origin: Fix ordering of state change and call removal callbacks
+  * Record calls to an SQLite database via libgom
+  * Hook up Recent Calls list to database
+  * appdata: Fix application ID
+  * Support opening of tel: URIs
+  * calls-application: Add --daemon option to not display main window
+  * Start up in daemon mode when GNOME starts
+  * calls-new-call-box: Allow entering of "+" symbol
+  * Use GtkApplication::register-session property to register
+  * Display call window over the phosh lockscreen
+  * ui/main-window: Hide contacts pane
+  * Release calls 0.1.0
+
+  [ Julian Sparber ]
+  * flatpak: fix ModemManager
+  * docs: update depedencies instructions
+
+  [ David Boddie ]
+  * Override the input method for entry widgets
+
+ -- Bob Ham <bob.ham@puri.sm>  Wed, 18 Sep 2019 15:13:00 +0100
+
+calls (0.0.1) purple; urgency=low
+
+  * Initial release.
+
+ -- Bob Ham <rah@settrans.net>  Tue, 04 Dec 2018 11:42:21 +0100

@@ -1,0 +1,275 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <giomm/applaunchcontext.h>
+#include <giomm/asyncresult.h>
+#include <giomm/cancellable.h>
+
+#include <exception>
+
+#include <string>
+
+#include <glibmm/interface.h>
+#include <glibmm/object.h>
+#include <giomm/icon.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+_PINCLUDE(glibmm/private/object_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GAppInfoIface GAppInfoIface;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gio
+{
+
+
+class GIOMM_API File;
+
+/** Application information, to describe applications installed on the system,
+ * and launch them.
+ * See also AppLaunchContext.
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API AppInfo : public Glib::Interface
+{
+  _CLASS_INTERFACE(AppInfo, GAppInfo, G_APP_INFO, GAppInfoIface, , , GIOMM_API)
+
+public:
+  _WRAP_ENUM(CreateFlags, GAppInfoCreateFlags, NO_GTYPE, decl_prefix GIOMM_API)
+
+  static Glib::RefPtr<AppInfo> create_from_commandline(const std::string& commandline,
+                                                       const std::string& application_name,
+                                                       CreateFlags flags);
+
+  /**  Creates a duplicate of this AppInfo.
+   * @return A duplicate of this AppInfo.
+   * @newin{2,36}
+   */
+  Glib::RefPtr<AppInfo> create_duplicate() const;
+  _IGNORE(g_app_info_dup)
+
+  // Note that the implementation of equal() is virtual via equal_vfunc().
+  /** Checks if two AppInfo<!-- -->s are equal.
+   * @param other The other AppInfo.
+   * @return <tt>true</tt> if @a *this is equal to @a other, <tt>false</tt> otherwise.
+   */
+  _WRAP_METHOD(bool equal(const Glib::RefPtr<AppInfo>& other) const, g_app_info_equal)
+
+  _WRAP_METHOD(std::string get_id() const, g_app_info_get_id)
+  _WRAP_METHOD(std::string get_name() const, g_app_info_get_name)
+  _WRAP_METHOD(std::string get_display_name() const, g_app_info_get_display_name)
+  _WRAP_METHOD(std::string get_description() const, g_app_info_get_description)
+  _WRAP_METHOD(std::string get_executable() const, g_app_info_get_executable)
+  _WRAP_METHOD(std::string get_commandline() const, g_app_info_get_commandline)
+
+  _WRAP_METHOD(Glib::RefPtr<Icon> get_icon(), g_app_info_get_icon, refreturn)
+  _WRAP_METHOD(const Glib::RefPtr<const Icon> get_icon() const,
+               g_app_info_get_icon,
+               refreturn, constversion)
+
+#m4 _CONVERSION(`const std::vector< Glib::RefPtr<Gio::File> >&',`GList*',`Glib::ListHandler<Glib::RefPtr<Gio::File> >::vector_to_list($3).data ()')
+
+  /** Launches the application. This passes the @a file to the launched application
+   * as an argument, using the optional @a context to get information
+   * about the details of the launcher (like what screen it is on).
+   * On error, an exception will be thrown accordingly.
+   *
+   * Note that even if the launch is successful the application launched
+   * can fail to start if it runs into problems during startup. There is
+   * no way to detect this.
+   *
+   * Some URIs can be changed when passed through a GFile (for instance
+   * unsupported uris with strange formats like mailto:), so if you have
+   * a textual uri you want to pass in as argument, consider using
+   * launch_uris() instead.
+   *
+   * On UNIX, this function sets the @c GIO_LAUNCHED_DESKTOP_FILE
+   * environment variable with the path of the launched desktop file and
+   * @c GIO_LAUNCHED_DESKTOP_FILE_PID to the process
+   * id of the launched process. This can be used to ignore
+   * @c GIO_LAUNCHED_DESKTOP_FILE, should it be inherited
+   * by further processes. The @c DISPLAY and
+   * @c DESKTOP_STARTUP_ID environment variables are also
+   * set, based on information provided in @a context.
+   * @param file A File object.
+   * @param context An AppLaunchContext.
+   * @return <tt>true</tt> on successful launch, <tt>false</tt> otherwise.
+   *
+   * @newin{2,30}
+   */
+  bool launch(const Glib::RefPtr<Gio::File>& file, const Glib::RefPtr<AppLaunchContext>& context);
+
+  /** Launches the application. This passes the @a file to the launched application
+   * as an argument.
+   * On error, an exception will be thrown accordingly.
+   *
+   * Note that even if the launch is successful the application launched
+   * can fail to start if it runs into problems during startup. There is
+   * no way to detect this.
+   *
+   * Some URIs can be changed when passed through a GFile (for instance
+   * unsupported uris with strange formats like mailto:), so if you have
+   * a textual uri you want to pass in as argument, consider using
+   * launch_uris() instead.
+   *
+   * On UNIX, this function sets the @c GIO_LAUNCHED_DESKTOP_FILE
+   * environment variable with the path of the launched desktop file and
+   * @c GIO_LAUNCHED_DESKTOP_FILE_PID to the process
+   * id of the launched process. This can be used to ignore
+   * @c GIO_LAUNCHED_DESKTOP_FILE, should it be inherited
+   * by further processes. The @c DISPLAY and
+   * @c DESKTOP_STARTUP_ID environment variables are also
+   * set, based on information provided in @a context.
+   * @param file A File object.
+   * @return <tt>true</tt> on successful launch, <tt>false</tt> otherwise.
+   *
+   * @newin{2,30}
+   */
+  bool launch(const Glib::RefPtr<Gio::File>& file);
+
+  _WRAP_METHOD(bool launch(const std::vector< Glib::RefPtr<Gio::File> >& files,
+                           const Glib::RefPtr<AppLaunchContext>& context{?}),
+               g_app_info_launch,
+               errthrow)
+
+  _WRAP_METHOD(bool supports_uris() const, g_app_info_supports_uris)
+  _WRAP_METHOD(bool supports_files() const, g_app_info_supports_files)
+
+   #m4 _CONVERSION(`const std::vector<std::string>&',`GList*',`Glib::ListHandler<std::string>::vector_to_list($3).data()')
+
+  //TODO: I think we use Glib::ustring elsewhere for URIs:
+  // 2019-03-14 kjellahl: Glibmm is inconsistent; Glib::ustring in convert.hg,
+  // std::string in uriutils.hg.
+  // The reporter of libxml++ bug https://bugzilla.gnome.org/show_bug.cgi?id=790034
+  // proposes std::string.
+  _WRAP_METHOD(bool launch_uris(const std::vector<std::string>& uris,
+                                const Glib::RefPtr<AppLaunchContext>& context{?}),
+               g_app_info_launch_uris,
+               errthrow)
+
+  /** Launches the application. This passes the @a uri to the launched application
+   * as an arguments, using the optional @a context to get information
+   * about the details of the launcher (like what screen it is on).
+   * On error, an exception will be thrown accordingly.
+   *
+   * Note that even if the launch is successful the application launched
+   * can fail to start if it runs into problems during startup. There is
+   * no way to detect this.
+   * @param uri A URI to launch.
+   * @param context An AppLaunchContext.
+   * @return <tt>true</tt> on successful launch, <tt>false</tt> otherwise.
+   *
+   * @newin{2,30}
+   */
+  bool launch_uri(const std::string& uri, const Glib::RefPtr<AppLaunchContext>& context);
+
+  /** A launch_uri() convenience overload.
+   *
+   * @newin{2,30}
+   */
+  bool launch_uri(const std::string& uris);
+
+  _WRAP_METHOD(void launch_uris_async(const std::vector<std::string>& uris,
+    const Glib::RefPtr<AppLaunchContext>& context{.},
+    const SlotAsyncReady& slot{callback?},
+    const Glib::RefPtr<Cancellable>& cancellable{.} = {}),
+    g_app_info_launch_uris_async, slot_name slot, slot_callback giomm_SignalProxy_async_callback, newin "2,60")
+  _WRAP_METHOD(bool launch_uris_finish(const Glib::RefPtr<AsyncResult>& result),
+    g_app_info_launch_uris_finish, errthrow, newin "2,60")
+
+  _WRAP_METHOD(bool should_show() const, g_app_info_should_show)
+  // FIXME: use better terminology than delete/do_delete
+  _WRAP_METHOD(bool can_delete() const, g_app_info_can_delete)
+  _WRAP_METHOD(bool do_delete(), g_app_info_delete)
+
+  _WRAP_METHOD(bool set_as_default_for_type(const std::string& content_type),
+               g_app_info_set_as_default_for_type,
+               errthrow)
+  _WRAP_METHOD(bool set_as_default_for_extension(const std::string& extension),
+               g_app_info_set_as_default_for_extension,
+               errthrow)
+  _WRAP_METHOD(bool add_supports_type(const std::string& content_type),
+               g_app_info_add_supports_type,
+               errthrow)
+  _WRAP_METHOD(bool can_remove_supports_type() const, g_app_info_can_remove_supports_type)
+  _WRAP_METHOD(bool remove_supports_type(const std::string& content_type),
+               g_app_info_remove_supports_type,
+               errthrow)
+
+#m4 _CONVERSION(`const char**', `std::vector<Glib::ustring>', `Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_supported_types() const, g_app_info_get_supported_types)
+
+  _WRAP_METHOD(bool set_as_last_used_for_type(const std::string& content_type), g_app_info_set_as_last_used_for_type, errthrow)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<AppInfo>>',`Glib::ListHandler<Glib::RefPtr<AppInfo>, TypeTraits_AppInfo>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(static std::vector<Glib::RefPtr<AppInfo>> get_all(), g_app_info_get_all)
+
+  _WRAP_METHOD(static std::vector<Glib::RefPtr<AppInfo>> get_all_for_type(const std::string& content_type), g_app_info_get_all_for_type)
+  _WRAP_METHOD(static std::vector<Glib::RefPtr<AppInfo>> get_recommended_for_type(const std::string& content_type),
+    g_app_info_get_recommended_for_type, newin "2,76")
+  _WRAP_METHOD(static std::vector<Glib::RefPtr<AppInfo>> get_fallback_for_type(const std::string& content_type),
+    g_app_info_get_fallback_for_type, newin "2,76")
+
+  _WRAP_METHOD(static Glib::RefPtr<AppInfo> get_default_for_type(const std::string& content_type,
+    bool must_support_uris = true), g_app_info_get_default_for_type)
+  _WRAP_METHOD(static void get_default_for_type_async(const std::string& content_type, bool must_support_uris,
+    const SlotAsyncReady& slot{callback?}, const Glib::RefPtr<Cancellable>& cancellable{.} = {}),
+    g_app_info_get_default_for_type_async, slot_name slot, slot_callback giomm_SignalProxy_async_callback)
+  _WRAP_METHOD(static Glib::RefPtr<AppInfo> get_default_for_type_finish(const Glib::RefPtr<AsyncResult>& result),
+    g_app_info_get_default_for_type_finish, errthrow)
+
+  _WRAP_METHOD(static Glib::RefPtr<AppInfo> get_default_for_uri_scheme(const std::string& uri_scheme),
+    g_app_info_get_default_for_uri_scheme)
+  _WRAP_METHOD(static void get_default_for_uri_scheme_async(const std::string& content_type,
+    const SlotAsyncReady& slot{callback?}, const Glib::RefPtr<Cancellable>& cancellable{.} = {}),
+    g_app_info_get_default_for_uri_scheme_async, slot_name slot, slot_callback giomm_SignalProxy_async_callback)
+  _WRAP_METHOD(static Glib::RefPtr<AppInfo> get_default_for_uri_scheme_finish(const Glib::RefPtr<AsyncResult>& result),
+    g_app_info_get_default_for_uri_scheme_finish, errthrow)
+
+  _WRAP_METHOD(static void reset_type_associations(const std::string& content_type), g_app_info_reset_type_associations)
+  _WRAP_METHOD(static bool launch_default_for_uri(const std::string& uri, const Glib::RefPtr<AppLaunchContext>& context{?}), g_app_info_launch_default_for_uri, errthrow)
+
+  _WRAP_METHOD(static void launch_default_for_uri_async(const std::string& uri, const Glib::RefPtr<AppLaunchContext>& context{.?},
+    const SlotAsyncReady& slot{callback?}, const Glib::RefPtr<Cancellable>& cancellable{.?}),
+    g_app_info_launch_default_for_uri_async, slot_name slot, slot_callback giomm_SignalProxy_async_callback)
+  _WRAP_METHOD(static bool launch_default_for_uri_finish(const Glib::RefPtr<AsyncResult>& result), g_app_info_launch_default_for_uri_finish, errthrow)
+
+protected:
+  //_WRAP_VFUNC(Glib::RefPtr<AppInfo> dup(), "dup")
+  //_WRAP_VFUNC(bool equal(const Glib::RefPtr<AppInfo>& appinfo2), "equal")
+  //_WRAP_VFUNC(std::string get_id() const, "get_id")
+  //_WRAP_VFUNC(std::string get_name() const, "get_name")
+  //_WRAP_VFUNC(std::string get_description() const, "get_description")
+  //_WRAP_VFUNC(std::string get_executable() const, "get_executable")
+  //_WRAP_VFUNC(Glib::RefPtr<Icon> get_icon() const, "get_icon")
+  //_WRAP_VFUNC(bool launch(const std::vector<Gio::File>& filenames, const Glib::RefPtr<AppLaunchContext>& context, GError** error), "launch")
+  //_WRAP_VFUNC(bool supports_uris() const, "supports_uris")
+  //_WRAP_VFUNC(bool supports_files() const, "supports_files")
+  //_WRAP_VFUNC(bool launch_uris(const std::vector<std::string>& uris, const Glib::RefPtr<AppLaunchContext>& context, GError** error), "launch_uris")
+  //_WRAP_VFUNC(bool should_show() const, "should_show")
+  //_WRAP_VFUNC(bool set_as_default_for_type(const std::string& content_type, GError** error), "set_as_default_for_type")
+  //_WRAP_VFUNC(bool set_as_default_for_extension(const std::string& extension, GError** error), "set_as_default_for_extension")
+  //_WRAP_VFUNC(bool add_supports_type(const std::string& content_type, GError** error), "add_supports_type")
+  //_WRAP_VFUNC(bool can_remove_supports_type() const, "can_remove_supports_type")
+  //_WRAP_VFUNC(bool remove_supports_type(const std::string& content_type, GError** error), "remove_supports_type")
+};
+
+} // namespace Gio

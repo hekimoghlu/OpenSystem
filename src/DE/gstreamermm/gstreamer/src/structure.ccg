@@ -1,0 +1,146 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/value.h>
+#include <gstreamermm/miniobject.h>
+
+namespace
+{
+
+static Glib::ustring quark_to_ustring(GQuark quark)
+{
+ const gchar* pch = g_quark_to_string(quark);
+ Glib::ustring str;
+ if(pch)
+   str = pch;
+   
+ return str;
+}
+
+extern "C"
+{
+
+static gboolean
+Structure_Foreach_gstreamermm_callback(GQuark field_id, const GValue *value, void* data)
+{
+  Gst::Structure::SlotForeach* slot = static_cast<Gst::Structure::SlotForeach*>(data);
+
+  try
+  {
+    return (*slot)(quark_to_ustring(field_id), *reinterpret_cast<const Glib::ValueBase*>(value));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false;
+}
+
+static gboolean
+Structure_Map_gstreamermm_callback(GQuark field_id, GValue *value, void* data)
+{
+  Gst::Structure::SlotMap* slot = static_cast<Gst::Structure::SlotMap*>(data);
+
+  try
+  {
+    bool result = (*slot)(quark_to_ustring(field_id), *reinterpret_cast<Glib::ValueBase*>(value));
+    return result;
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false;
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+Structure::operator const void*() const
+{
+  return gobject_ ? GINT_TO_POINTER(1) : nullptr;
+}
+
+GstStructure* Structure::release() noexcept
+{
+  GstStructure *tmp = gobj();
+  gobject_ = nullptr;
+  return tmp;
+}
+
+void Structure::get_field(const Glib::ustring& name, Glib::ValueBase& value) const
+{
+  const GValue *val = gst_structure_get_value(gobj(), name.c_str());
+  value.init(val);
+}
+
+void Structure::set_field(const Glib::ustring& fieldname,
+  const Glib::ValueBase& value)
+{
+  gst_structure_set_value(gobj(), fieldname.c_str(), value.gobj());
+}
+
+void Structure::set_field(const Glib::ustring& fieldname, GType enumtype, int value)
+{
+  gst_structure_set(gobj(), fieldname.c_str(), enumtype, value, nullptr);
+}
+
+void Structure::set_field(const Glib::ustring& fieldname, const char* value)
+{
+  set_field<std::string>(fieldname, value);
+}
+
+void Structure::remove_field(const Glib::ustring& fieldname)
+{
+  gst_structure_remove_field(gobj(), fieldname.c_str());
+}
+
+bool Structure::get_field(const Glib::ustring& name, GType enum_type, int& value) const
+{
+  return gst_structure_get_enum(gobj(), name.c_str(), enum_type, &value);
+}
+
+bool Structure::foreach(const SlotForeach& slot)
+{
+  return gst_structure_foreach(gobj(), &Structure_Foreach_gstreamermm_callback, const_cast<SlotForeach*>(&slot));
+}
+
+bool Structure::map_in_place(const SlotMap& slot)
+{
+  return gst_structure_map_in_place(gobj(), &Structure_Map_gstreamermm_callback, const_cast<SlotMap*>(&slot));
+}
+
+Structure Structure::create_from_string(const Glib::ustring& the_string)
+{
+  return Structure(gst_structure_from_string(the_string.c_str(), nullptr));
+}
+
+bool Structure::fixate_nearest_fraction(const Glib::ustring& name, const Gst::Fraction& target)
+{
+  return gst_structure_fixate_field_nearest_fraction(gobj(), name.c_str(), target.num, target.denom);
+}
+
+} //namespace Gst

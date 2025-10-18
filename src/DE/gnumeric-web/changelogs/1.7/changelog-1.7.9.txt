@@ -1,0 +1,493 @@
+2007-04-21  Morten Welinder <terra@gnome.org>
+
+	* Release 1.7.9
+
+2007-04-20  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_update_history): New function,
+	extracted from workbook_dispose.
+	(workbook_dispose): Don't update file history here.
+
+	* src/gui-file.c (gui_file_read, gui_file_save_as, gui_file_save):
+	Call workbook_update_history on success.
+
+	* src/ssindex.c (ssindex): Avoid updating the recect-files list.
+
+2007-04-18  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (print_info_get_paper): Fix return types.
+
+	* src/commands.c (cmd_rename_sheet): Send errors to the command
+	context [==gui], not just stderr.
+
+2007-04-16  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_page): handle scaling
+	(compute_n_pages): new
+	(compute_scale_fit_to): rewrite to approximate best scaling factor
+	(compute_sheet_pages_add_sheet): avoid warning
+	(compute_sheet_pages_across_then_down): handle scaling
+
+2007-04-15  Morten Welinder  <terra@gnome.org>
+
+	* src/sort.c (gnm_sort_contents): Set locale around sorting, if
+	needed.
+	* src/wbcg-actions.c (sort_by_rows): Set NULL locale.
+	* configure.in: revert previous change.
+
+2007-04-15  Christophe Merlet  <redfox@redfoxcenter.org>
+
+	* configure.in: Added "oc" (Occitan) to ALL_LINGUAS.
+
+2007-04-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: fix schema for gtk-setting
+
+2007-04-10  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (advanced_clicked): Labels were flipped.  [#428225]
+
+2007-04-07  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* src/wbcg-actions.c (cb_help_docs): Use 'ghelp' rather than 'help'
+	  as the URI scheme when calling yelp. The 'ghelp' URI scheme is
+	  implemented directly in yelp, whereas 'help' causes yelp to search
+	  for a libvfs-help.so helper module which doesn't exist on my system
+	  anymore.
+
+2007-04-06  Pema Geyleg  <pema.geyleg@gmail.com>
+
+	* configure.in: Added 'dz' to ALL_LINGUAS.
+
+2007-04-05  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (PrintingInstance): add fields
+	(SheetPrintInfo): new struct
+	(printing_instance_delete): handle new fields
+	(compute_sheet_pages_add_sheet): new
+	(compute_pages): only set up the list of sheets to paginate
+	(gnm_paginate_cb): new callback
+	(gnm_begin_print_cb): don't paginate here
+	(gnm_print_sheet): hook up gnm_paginate_cb callback
+
+2007-04-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-so-filled.c (gnm_so_filled_draw_cairo): initialize obj
+
+2007-04-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-write.c (xml_write_print_info): free paper name string
+	* src/print-info.c (print_info_get_paper): create importable name for 
+	custom paper sizes.
+	* src/print-info.h (print_info_get_paper): change return type
+	
+2007-04-04  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Bumped goffice dependency to reflect that goffice trunk
+	is needed as building against goffice 0.3.7 now fails.
+
+2007-04-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: replace 
+	/schemas/apps/gnumeric/printsetup/printer-config with
+	/schemas/apps/gnumeric/printsetup/gtk-setting
+	* src/sheet.c (gnm_sheet_init): add new argument to 
+	print_info_new
+	* src/gnumeric-gconf.c (gnm_conf_init_print_settings): add argument
+	(gnm_gconf_init_printer_defaults): new
+	(gnm_conf_init_extras): use gnm_gconf_init_printer_defaults
+	(gnm_conf_init_essentials): move stuff to gnm_gconf_init_printer_defaults
+	(gnm_gconf_set_page_setup): new
+	(gnm_gconf_get_page_setup): new
+	(gnm_gconf_get_print_settings): new
+	(gnm_gconf_set_printer_config): deleted
+	* src/gnumeric-gconf.h (gnm_gconf_init_printer_defaults): new
+	(gnm_gconf_set_page_setup): new
+	(gnm_gconf_get_page_setup): new
+	* src/xml-sax-write.c (xml_write_print_info): use print_info_get_margins
+	* src/gnumeric-gconf-priv.h (PRINTSETUP_GCONF_PRINTER_CONFIG): deleted
+	* src/print.c (gnm_print_sheet): use gnm_gconf_[gs]et_print_settings
+	* src/xml-io.c (xml_print_info_fix_margins): deleted
+	(xml_read_print_margins): use print_info_set_margins
+	* src/print-info.c (print_hf_free): It is now normal to be called with NULL.
+	(print_info_free): drop unneeded items
+	(print_info_dup): ditto
+	(print_info_load_defaults): new
+	(print_info_new): add argument and defer initialization
+	(print_info_save): we may have to modify the pi by loading defaults
+	(print_info_get_margins): use GtkPageSetup
+	(print_info_set_margin_*): ditto
+	(print_info_set_paper): ditto
+	(print_info_set_margins): use gtk_page_setup_set_*
+	(print_info_[sg]et_paper_width): deleted
+	(print_info_[sg]et_paper_height): deleted
+	(print_info_make_config): deleted
+	(print_info_[gs]et_paper): use GtkPageSetup
+	(print_info_set_paper_width_height): new stub
+	(print_info_get_paper_width): new return type and use GtkPageSetup
+	(print_info_get_paper_height): ditto
+	* src/print-info.h (PrintMargins): move items to GtkPageSetup
+	(_PrintInformation): drop unneeded items
+	(print_info_new): add argument
+	(print_info_load_defaults): new
+	(print_info_make_config): deleted
+	(print_info_load_config): deleted
+	(print_info_get_paper_width): deleted
+	(print_info_get_paper_height): deleted
+	(print_info_set_paper_width_height): new
+	(print_info_get_paper_width): change return type
+	(print_info_get_paper_height): change return type
+	
+
+2007-04-02  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (gnm_search_replace_cell): Normalize strings before
+	matching.
+	(gnm_search_replace_value): Ditto.
+	(gnm_search_replace_comment): Ditto.
+
+2007-04-01  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnumeric-gconf.c (gnm_gconf_set_print_settings): new
+	(gnm_conf_init_print_settings): new
+	(gnm_gconf_set_print_settings_cb): new
+	(gnm_conf_init_extras): call gnm_conf_init_print_settings
+	* src/gnumeric-gconf.h (gnm_gconf_set_print_settings): new
+	(gnm_app_prefs): add print_settings field
+	* src/gnumeric-gconf-priv.h (PRINTSETUP_GCONF_GTKSETTING):
+	new key 
+	* src/print.c (gnm_print_sheet): save/restore printsettings
+
+2007-03-29  Pema Geyleg <pema.geyleg@gmail.com>
+
+	* configure.in: Added 'dz' to ALL_LINGUAS
+
+2007-03-29  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-style.c (sheet_style_set_col) : new.  placeholder to
+	  simplify future extensions when cols/rows have styles.
+	(sheet_style_set_row) : ditto.
+	(sheet_style_apply_col) : ditto.
+	(sheet_style_apply_row) : ditto.
+	(sheet_style_apply_pos) : new convenience.
+
+	* src/ranges.c (range_init_cols) : new.
+	(range_init_rows) : new.
+
+2007-03-29  Jody Goldberg <jody@gnome.org>
+
+	* component/gnumeric.c (go_gnm_component_class_init) : the print
+	  method is now gone.
+
+2007-03-29  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (set_money_format): New function to select an
+	appropriate money format for a given number.  Fixes rest of
+	#423603.
+
+2007-03-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* delete the "print" field from all sheet objects. We
+	are now using the draw_cairo method
+	* src/print-cell.c (gnm_print_make_rect_path): delete
+	(print_cell): delete
+	(print_rectangle): delete
+	(print_cell_background): delete
+	(print_merged_range): delete
+	(gnm_print_cell_range): delete
+	* src/sheet-object.c (sheet_object_print): delete
+	* src/print-cell.h (gnm_print_make_rect_path): delete
+	(gnm_print_cell_range): delete
+	* src/sheet-object.h (sheet_object_print): delete
+	* src/sheet-object-cell-comment.c (cell_comment_print): delete
+	* src/dialogs/dialog-printer-setup.c: comment out all currently 
+	  unused functions
+	(PrinterSetupStateNew): rename to PrinterSetupState
+	(printer_setup_state_new_new): rename to printer_setup_state_new
+	* src/dialogs/dialogs.h (dialog_printer_setup): does not depend on 
+	gnomeprint
+	* src/dialogs/Makefile.am: remove libgnomeprint condition
+	* src/style-font.h: remove libgnomeprint include
+	* src/xml-sax-read.c: comment out gnomeprint dependency
+	* src/xml-sax-write.c: ditto
+	* src/xml-io.c: ditto
+	* src/gnumeric-gconf.c (gnm_conf_init_extras): remove libgnomeprint 
+	dependency
+	* src/sheet-object-graph.c (gnm_sog_print): delete
+	* src/pattern.c (gnumeric_background_set_pc): delete
+	* src/pattern.h (gnumeric_background_set_pc): delete
+	* src/gnm-so-line.c (gnm_so_line_print): delete
+	* src/Makefile.am: remove libgnomeprint condition
+	* src/sheet-filter.c: remove "print" field
+	* src/validation.c: ditto
+	* src/sheet-object-image.c (gnm_soi_print): delete
+	* src/gnm-so-filled.c (make_rect): delete
+	(make_ellipse): delete
+	(gnm_so_filled_print): delete
+	(set_color): delete
+	* src/style-border.c (style_border_set_pc_dash): delete
+	(style_border_set_pc): delete
+	(print_hline): delete
+	(print_vline): delete
+	(gnm_style_borders_row_print): delete
+	(gnm_style_border_print_diag): delete
+	* src/style-border.h (style_border_set_pc_dash): delete
+	(style_border_set_pc): delete
+	(gnm_style_borders_row_print): delete
+	(gnm_style_border_print_diag): delete
+	* src/wbcg-actions.c: enable print commands
+	* src/print-info.c: comment out libgnomeprint dependencies
+	* src/print-info.h: ditto
+	* src/wbc-gtk.c: remove print menu disabling
+	* src/sheet-object-impl.h:  remove "print" field
+	* src/gnm-so-polygon.c (gnm_so_polygon_print): delete
+	* plugins/excel/ms-excel-read.c: comment out gnomeprint dependency
+	* configure.in: remove libgnomeprint tests
+	* component/gnumeric.c: comment out gnomeprint dependency
+
+2007-03-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c: uncomment (#if 0 ... #endif)
+	  currently unused code and gemove gnomeprint includes
+	(sheet_print_selection): deleted
+	(PrintingInstance): change wbcg to wbc
+	(compute_sheet_pages): adjust for wbcg -> wbc change
+	(gnm_print_sheet): ditto
+
+2007-03-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (PrintingInstance): add wbcg
+	(compute_sheet_pages): handle selection & printarea
+	(gnm_begin_print_cb): ditto
+	(print_sheet): deleted
+	* src/sheet.h (sheet_get_printarea): add arguments
+	* src/sheet.c (sheet_get_printarea): add arguments and ignore 
+	  printarea if requested
+
+2007-03-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/Makefile.am: removed regression.c
+	* src/func-builtin.c: use new names for range functions.
+	* src/rangefunc.c: changed names of functions, and use the versions in
+	goffice when available.
+	* src/rangefunc.h: ditto.
+	* src/regression.h: ditto.
+	* src/regression.c: removed obsolete.
+
+2007-03-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.h: add keys
+	(PrintRange): add further options
+	* src/print.c (PrintingInstance): add more fields
+	(compute_sheet_pages): add selection and ignore_printarea args & 
+	  clean up
+	(compute_pages): handle various print ranges
+	(PrintDialogState): deleted
+	(dialog_destroy): deleted
+	(sheet_print_real): deleted
+	(dialog_response): deleted
+	(gnm_begin_print_cb): discover print range
+	(widget_button_cb): new
+	(gnm_create_widget_cb): new signal handler
+	(gnm_custom_widget_apply_cb): new signal handler
+	(gnm_print_sheet): prepare custom widget to handle print ranges
+
+2007-03-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object.h (sheet_object_draw_cairo): add rtl argument 
+	* src/sheet-object.c (sheet_object_draw_cairo): add rtl argument 
+	* src/print.c (print_sheet_objects): clip to cell range and handle
+	rtl sheets
+	(print_page_cells): Rows are determining the height and cols the width!
+	(gnm_print_sheet): enable progress reporting
+	* component/gnumeric.c (go_gnm_component_draw): add rtl argument to
+	  sheet_object_draw_cairo
+
+2007-03-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style-border.c (gnm_style_border_print_diag_gtk): remove
+	  debug spew
+	* src/print.c (print_sheet_objects): use gtkprint
+	(print_page_cells): enable sheet object printing and prepare
+	  clipping region
+	(print_page): clipping should happen in print_page_cells
+	
+2007-03-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_background_gtk): Enable diagonal
+	  border
+	(print_merged_range_gtk): handle borders
+	(gnm_gtk_print_cell_range): ditto
+	* src/style-border.h (gnm_style_borders_row_print_gtk): new
+	(gnm_style_border_print_diag_gtk): new
+	* src/style-border.c (gnm_style_borders_row_print_gtk): new
+	(gnm_style_border_print_diag_gtk): new
+	(style_border_set_gtk_dash): new
+	(style_border_set_gtk): new
+	(print_hline_gtk): new
+	(print_vline_gtk): new
+	
+2007-03-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/pattern.h (gnumeric_background_set_gtk): new
+	* src/pattern.c (gnumeric_background_set_gtk): new
+	* src/print-cell.c (print_cell_gtk): fix vertical alignment
+	(print_rectangle_gtk): new
+	(print_cell_background_gtk): new
+	(print_merged_range_gtk): new
+	(gnm_gtk_print_cell_range): Enable merged and background printing.
+	
+2007-03-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_gtk): set up clipping
+	and some sort of rotated printing
+	* src/print.c (print_page): prepare for clipping of whole 
+	page (currently disabled since it involves a heavy
+	performance hit).
+
+2007-03-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_gtk): new
+	(gnm_gtk_print_cell_range): new
+	* src/print-cell.h (gnm_gtk_print_cell_range): new
+	* src/print.c (PrintingInstance): new struct type
+	(printing_instance_new) : new
+	(pi_free): new
+	(printing_instance_delete): new
+	(print_page_cells): Switch to GtkPrintContext & Cairo
+	(print_page): ditto
+	(compute_sheet_pages): ditto
+	(compute_pages): ditto
+	(compute_group): drop PrintJobInfo
+	(print_range_*_then_*): delete
+	(compute_sheet_pages_add_range): new
+	(compute_sheet_pages_across_then_down): new
+	(print_page_repeated_rows): disable temporarily
+	(print_page_repeated_cols): ditto
+	(gnm_begin_print_cb): new
+	(gnm_end_print_cb): new
+	(gnm_draw_page_cb): new
+	(gnm_print_sheet): use GtkPrintOperation
+	* src/print-info.h (_PrintInformation): add page_setup
+	(print_info_get_page_setup): new
+	(print_info_set_page_setup): new
+	* src/print-info.c (print_info_free): handle page_setup
+	(print_info_new): ditto
+	(print_info_dup): ditto
+	(print_info_get_page_setup): new
+	(print_info_set_page_setup): new
+	* gnumeric.spec.in: require gtk 2.10
+	* configure.in: require gtk 2.10
+
+2007-03-16  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/collect.c: made some functions public:
+	collect_floats_value_with_info, union_of_int_sets,
+	and strip_missing.
+	* src/collect.h: ditto.
+
+2007-03-15  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_history_get_list,
+	gnm_app_history_add): Base on GtkRecentManager.  Fixes #115112.
+	(gnm_app_create_opener_filter): New function.
+	(gnm_app_history_add): Take extra mimetype argument.  All callers
+	changed.
+	(gnm_app_history_get_list): Ignore local files that no longer
+	exist.
+
+	* src/gui-file.c (gui_file_open): Use
+	gnm_app_create_opener_filter.
+
+	* src/gnumeric-gconf.c: Remove functions related to file history.
+
+	* schemas/gnumeric-general.schemas.in: Remove entries related to
+	file history.
+
+	* configure.in: Require gtk+ 2.12.0
+
+2007-03-13  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (format_value_common): Ignore markup formats
+	here.  Fixes #417632
+
+	* src/gutils.c (cb_gnm_pango_attr_dump): Be smarter about enums.
+
+2007-03-08  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_new_default): Use gnm_style_set_format,
+	not gnm_style_set_format_text.
+	(gnm_style_set_format_text): Change comments to make it clear that
+	this takes an untranslated format string.
+
+	* src/wbcg-actions.c (apply_number_format): Take a format, not a
+	string.
+	(apply_number_format): New function taking an actual format.
+	(cb_format_as_general): Use go_format_general directly.
+	(cb_format_as_date): Use go_format_default_date directly.  Fix
+	swapped descriptors.
+	(cb_format_as_time): Use go_format_default_time directly.  Fix
+	swapped descriptors.
+	(cb_format_as_number, cb_format_as_percentage,
+	cb_format_as_scientific): Build a format here.
+	(cb_format_as_currency, cb_format_as_accounting): Ditto.  This
+	still relies on go_format_builtins, though.
+
+2007-03-07  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-view.c (sv_panes_insdel_colrow): Fix corrections for
+	row deletions before the top-left frozen corner.  Fixes #308562.
+
+2007-03-06  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-autofill.c (afm_teach_cell): Use
+	gnm_format_is_date_for_value correctly.  Fixes #414815.
+	(afa_teach_cell): Fix tests for n >= 2.
+
+2007-03-05  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (format_match_decimal_number): Require three
+	digits after the thousands separator.
+
+2007-03-04  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c (gnumeric_table) : patch logic.
+
+2007-03-04  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (gnm_expr_conventions_new_full) : Start
+	  homogenizing the structure so that parsing and formating use shared
+	  gunichar, rather than a semi-random collection of booleans on
+	  import and char * on export.
+	  - ::name_parser renamed ::input.name
+	  - ::unknown_function_handler replaced by ::input.func which is
+	      called for all functions not just unknown.
+	  - ::function_rewriter_hash deleted.  This was not 64bit clean
+	  - ::output_sheet_name_sep => a gunichar and renamed ::sheet_name_sep.
+	  - ::cell_ref_handler => ::output.cell_ref
+	  - ::range_ref_handler => ::output.range_ref
+	  - ::sheet_name_quote => ::output.sheet_name_quote
+
+	(cellref_as_string) : ditto.
+	(std_expr_name_handler) : ditto.
+	(std_func_map) : new.
+
+	* src/xml-sax-write.c (xml_io_conventions) : adapt to changes.
+	* src/xml-io.c (xml_io_conventions) : ditto.
+	* src/value.c (value_get_as_gstring) : ditto.
+	* src/expr.c (do_expr_as_string) : ditto.
+
+	* src/parser.y : s/SEPARATOR/ARG_SEP/
+	Remove the ARRAY_START_COMMA and ARRAY_START_BSLASH tokens
+	Remove the duplicate comma/bslash productions for arrays.
+	Use an 'in_array' flag in the state to allow the lexer to
+	differentiate an ARG_SEP from an ARRAY_COL_SEP and an ARRAY_ROW_SEP.
+
+	* src/sheet-object-graph.c (gnm_sog_get_object_target_list) : compiler
+	  warnings.
+
+	* src/func.c (gnm_func_placeholder_factory) : delete.
+
+2007-03-04  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Post-release bump.

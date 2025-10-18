@@ -1,0 +1,204 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+sub fonts_refresh {
+    $blurb = 'Refresh current fonts. This function always succeeds.';
+
+    $help = <<'HELP';
+This procedure retrieves all fonts currently in the user's font path
+and updates the font dialogs accordingly. Depending on the amount
+of fonts on the system, this can take considerable time.
+HELP
+
+    &neo_pdb_misc('2003');
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_data_factory_data_refresh (gimp->font_factory, context);
+  gimp_data_factory_data_wait (gimp->font_factory);
+}
+CODE
+    );
+}
+
+sub fonts_get_list {
+    $blurb = 'Retrieve the list of loaded fonts.';
+
+    $help = <<'HELP';
+This procedure returns a list of the fonts that are currently available.
+
+Each font returned can be used as input to [func@Gimp.context_set_font].
+HELP
+
+    &neo_pdb_misc('2003');
+
+    @inargs = (
+	{ name => 'filter', type => 'string', none_ok => 1,
+          desc => 'An optional regular expression used to filter the list' }
+    );
+
+    @outargs = (
+	{ name => 'font_list', type => 'fontarray',
+	  desc => 'The list of fonts' }
+    );
+
+    %invoke = (
+        headers => [ qw("core/gimpcontainer-filter.h") ],
+	code => <<'CODE'
+{
+  if (! gimp_data_factory_data_wait (gimp->font_factory))
+    success = FALSE;
+
+  if (success)
+    font_list = (GimpFont **) gimp_container_get_filtered_array (gimp_data_factory_get_container (gimp->font_factory),
+                                                                 filter);
+}
+CODE
+    );
+}
+
+# This PDB function is disabled for now, because I realized it is
+# redundant with fonts_get_list, except that it is an exact name search
+# and not a regexp (nor a substring) which might also easier of use.
+# Nevertheless it's easier to add later a PDB function than removing
+# one. So removing this for now.
+sub fonts_get_by_name {
+    $blurb = "Returns the fonts with the given name.";
+    $help  = "Returns the fonts with the given name. There may be more than one.";
+
+    &jehan_pdb_misc('2023', '3.0');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The name of the font' }
+    );
+
+    @outargs = (
+      { name => 'fonts', type => 'fontarray', non_empty => 0,
+        desc => 'The fonts with the given name' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GList *list;
+  gsize  num_fonts;
+  gint   i = 0;
+
+  list = gimp_pdb_get_resources (gimp, GIMP_TYPE_FONT, name, GIMP_PDB_DATA_ACCESS_READ, error);
+
+  if (list == NULL)
+    success = FALSE;
+
+  num_fonts = g_list_length (list);
+  fonts     = g_new0 (GimpFont *, num_fonts + 1);
+
+  for (GList *iter = list; i < num_fonts; i++, iter = g_list_next (iter))
+    fonts[i] = iter->data;
+
+  g_list_free (list);
+}
+CODE
+    );
+}
+
+sub fonts_get_custom_configs {
+    $blurb = 'Retrieve custom configs.';
+
+    $help = <<'HELP';
+This procedure returns custom FontConfig configs along with the fonts renaming config.
+HELP
+
+    &idriss_pdb_misc('2023', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+    );
+
+    @outargs = (
+	{ name => 'config', type => 'string',
+	  desc => 'config path' },
+	{ name => 'sysconfig', type => 'string',
+	  desc => 'sysconfig path' },
+	{ name => 'renaming_config', type => 'strv',
+	  desc => 'fonts renaming config' },
+	{ name => 'dirs', type => 'strv',
+	  desc => 'custom fonts directories' }
+
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (! gimp_data_factory_data_wait (gimp->font_factory))
+    success = FALSE;
+
+  if (success)
+    {
+      GList  *list                  = gimp_font_factory_get_custom_fonts_dirs (GIMP_FONT_FACTORY (gimp->font_factory));
+      GSList *fonts_renaming_config = gimp_font_factory_get_fonts_renaming_config (GIMP_FONT_FACTORY (gimp->font_factory));
+      guint   length                = g_list_length (list);
+      gint    i;
+
+
+      gimp_font_factory_get_custom_config_path (GIMP_FONT_FACTORY (gimp->font_factory),
+                                                &config,
+                                                &sysconfig);
+      config    = g_strdup (config);
+      sysconfig = g_strdup (sysconfig);
+
+      dirs = g_new0 (gchar *, length + 1);
+
+      for (i = 0; list; list = g_list_next (list), i++)
+        dirs[i] = g_file_get_path (list->data);
+
+      g_list_free_full (list, (GDestroyNotify) g_object_unref);
+
+      length = g_slist_length (fonts_renaming_config);
+
+      renaming_config = g_new0 (gchar *, length + 1);
+
+      for (i = 0; fonts_renaming_config; fonts_renaming_config = g_slist_next (fonts_renaming_config), i++)
+        renaming_config[i] = g_strdup (fonts_renaming_config->data);
+    }
+}
+CODE
+    );
+}
+
+@headers = qw("core/gimp.h"
+              "core/gimpcontainer.h"
+              "core/gimpdatafactory.h"
+              "text/gimpfont.h"
+              "text/gimpfontfactory.h");
+
+@procs = qw(fonts_refresh
+            fonts_get_custom_configs
+            fonts_get_list
+            );
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Fonts';
+$doc_title = 'gimpfonts';
+$doc_short_desc = 'Operations related to fonts.';
+$doc_long_desc = 'Operations related to fonts.';
+
+1;

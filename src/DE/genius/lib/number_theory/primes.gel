@@ -1,0 +1,134 @@
+# Primes and Primality
+
+# Some algorithms come from Bressoud, Factorization and Primality
+# Testing (see Genius bibliography FIXME: we don't have that yet)
+
+#####################################
+#### (Strong) Pseudoprime tests #####
+#####################################
+# FIXME: references and definitions!
+
+# The ``pseudoprime test'':
+# Returns true iff b^(n-1) == 1 (mod n).
+# FIXME: Should we take |n| if n is negative?
+# FIXME: is there a good name for an integer that is EITHER a pseudoprime OR a prime?
+SetHelp("PseudoprimeTest","number_theory","Pseudoprime test, true if and only if b^(n-1) == 1 (mod n)");
+function PseudoprimeTest(n,b) =
+ (
+  b^(|n|-1) == 1 mod |n|
+ )
+
+# An integer is said to be a PseudoPrime with base b iff it is:
+# odd, composite, and satisfies b^(n-1) == 1 (mod n).
+# We rearrange the order below to take advantage of lazy evaluation
+# (IsOdd and PseudoprimeTest are MUCH faster than IsPrime)
+function IsPseudoprime(n,b) =
+ (
+  IsOdd(n) and PseudoprimeTest(n,b) and not(IsPrime(n))
+ )
+SetHelp("IsPseudoprime","number_theory","If n is a pseudoprime base b but not a prime, that is if b^(n-1) == 1 mod n");
+
+function IsStrongPseudoprime(n,b) =
+ (
+  IsOdd(n) and gcd(n,b)==1 and StrongPseudoprimeTest(n,b) and not (IsPrime(n))
+ )
+SetHelp("IsStrongPseudoprime","number_theory","Test if n is a strong pseudoprime to base b but not a prime");
+
+#######################################
+############## Misc ###################
+#######################################
+
+SetHelp("LucasLehmer","number_theory","Test if Mp is a Mersenne prime using the Lucas-Lehmer test");
+function LucasLehmer(p) = (
+        if IsMatrix(p) then
+                return ApplyOverMatrix(p, LucasLehmer)
+	else if not IsPositiveInteger(p) then
+		(error("LucasLehmer: argument not an integer larger than 0");bailout);
+	if p==1 then return false
+	else if p==2 then return true;
+	S = 4;
+	n = 1;
+	Mp = (2^p) - 1;
+	while n<p-1 do (
+		S = ((S^2) - 2) % Mp;
+		increment n
+	);
+	S == 0
+);
+
+# See http://primes.utm.edu/mersenne/index.html
+# Or http://www.mersenne.org
+SetHelp("MersennePrimeExponents", "number_theory", "Vector with the known Mersenne prime exponents");
+MersennePrimeExponents = [2
+3
+5
+7
+13
+17
+19
+31
+61
+89
+107
+127
+521
+607
+1279
+2203
+2281
+3217
+4253
+4423
+9689
+9941
+11213
+19937
+21701
+23209
+44497
+86243
+110503
+132049
+216091
+756839
+859433
+1257787
+1398269
+2976221
+3021377
+6972593
+13466917
+20996011
+24036583
+25964951
+30402457
+32582657
+37156667
+42643801
+43112609
+57885161
+74207281
+77232917
+82589933
+136279841];
+
+# See http://www.mersenne.org
+SetHelp("IsMersennePrimeExponent","number_theory","Test if Mp is a Mersenne prime using a table");
+function IsMersennePrimeExponent(p) = (
+        if IsMatrix(p) then
+                return ApplyOverMatrix(p, IsMersennePrimeExponent)
+	else if not IsPositiveInteger(p) then
+		(error("IsMersennePrimeExponent: argument not an integer larger than 0");bailout);
+
+	# A prime
+	if IsIn (p, MersennePrimeExponents) then
+		return true;
+
+	# http://www.mersenne.org / GIMPS doublechecked everything up
+	# to 74 340 751 (on Jul 03, 2025)
+	if p < 74340751 then
+		return false;
+
+	error("IsMersennePrimeExponent: Number too large (known values up to: " + 74340751 + ")");
+	bailout
+);

@@ -1,0 +1,198 @@
+# FourierSeries
+# 
+function NumericalFourierSeriesFunction(f,L,N) =
+	(
+	local *;
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("NumericalFourierSeriesFunction: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("NumericalFourierSeriesFunction: argument L must be a positive real value");bailout)
+	else if not IsPositiveInteger(N) then
+		(error("NumericalFourierSeriesFunction: argument N must be a positive integer");bailout);
+
+	c = NumericalFourierSeriesCoefficients(f,L,N);
+
+	FourierSeriesFunction(c@(1),c@(2),L)
+)
+SetHelp("NumericalFourierSeriesFunction","calculus","Return a function which is the Fourier series of f with half-period L with coefficients up to N computed numerically");
+
+function NumericalFourierSineSeriesFunction(f,L,N) =
+	(
+	local *;
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("NumericalFourierSineSeriesFunction: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("NumericalFourierSineSeriesFunction: argument L must be a positive real value");bailout)
+	else if not IsPositiveInteger(N) then
+		(error("NumericalFourierSineSeriesFunction: argument N must be a positive integer");bailout);
+
+	b = NumericalFourierSineSeriesCoefficients(f,L,N);
+
+	FourierSeriesFunction(null,b,L)
+)
+SetHelp("NumericalFourierSineSeriesFunction","calculus","Return a function which is the Fourier sine series of f on [0,L] with coefficients up to N computed numerically");
+
+function NumericalFourierCosineSeriesFunction(f,L,N) =
+	(
+	local *;
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("NumericalFourierCosineSeriesFunction: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("NumericalFourierCosineSeriesFunction: argument L must be a positive real value");bailout)
+	else if not IsPositiveInteger(N) then
+		(error("NumericalFourierCosineSeriesFunction: argument N must be a positive integer");bailout);
+
+	a = NumericalFourierCosineSeriesCoefficients(f,L,N);
+
+	FourierSeriesFunction(a,null,L)
+)
+SetHelp("NumericalFourierCosineSeriesFunction","calculus","Return a function which is the Fourier cosine series of f on [0,L] with coefficients up to N computed numerically");
+
+function FourierSeriesFunction(a,b,L) =
+	(
+# check arguments
+	if not ((IsVector(a) or IsNull(a)) and (IsVector(b) or IsNull(b))) then
+		(error("FourierSeriesFunction: arguments a and b must be vectors");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("FourierSeriesFunction: argument L must be a positive real value");bailout);
+
+	`(x)[a,b,L] = (
+		if not IsNull(a) then (
+			val = a@(1)/2 + sum n = 2 to elements(a) do
+				a@(n) * cos(x*(n-1)*pi/L)
+		) else (
+			val = 0
+		);
+	
+		if not IsNull(b) then (
+			increment val by (sum n = 1 to elements(b) do
+					    b@(n) * sin(x*n*pi/L))
+		);
+	
+		val
+	)
+)
+SetHelp("FourierSeriesFunction","calculus","Return a function which is a Fourier series with the coefficients given by the vectors a (sines) and b (cosines).  Note that a@(1) is the constant coefficient!");
+
+function NumericalFourierSeriesCoefficients(f,L,N) =
+	(
+	local *;
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("NumericalFourierSeriesCoefficients: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("NumericalFourierSeriesCoefficients: argument L must be a positive real value");bailout)
+	else if not IsPositiveInteger(N) then
+		(error("NumericalFourierSeriesCoefficients: argument N must be a positive integer");bailout);
+
+	a = .;
+	b = .;
+
+	a@(1) = (1/L)*NumericalIntegral(f,-L,L);
+	for n = 1 to N do (
+		a@(n+1) = (1/L)*NumericalIntegral(`(x)[f,L,n]=(local *;(f call (x))*cos(x*n*pi/L)),-L,L);
+		b@(n) = (1/L)*NumericalIntegral(`(x)[f,L,n]=(local *;(f call (x))*sin(x*n*pi/L)),-L,L)
+	);
+	`[a,b]
+)
+SetHelp("NumericalFourierSeriesCoefficients","calculus","Numerically compute the coefficients for a Fourier series with half-period L up to the Nth coefficient.");
+
+function NumericalFourierSineSeriesCoefficients(f,L,N) =
+	(
+	local *;
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("NumericalFourierSineSeriesCoefficients: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("NumericalFourierSineSeriesCoefficients: argument L must be a positive real value");bailout)
+	else if not IsPositiveInteger(N) then
+		(error("NumericalFourierSineSeriesCoefficients: argument N must be a positive integer");bailout);
+
+	b = .;
+
+	for n = 1 to N do (
+		b@(n) = (2/L)*NumericalIntegral(`(x)[f,L,n]=(local *;(f call (x))*sin(x*n*pi/L)),0,L)
+	);
+	b
+)
+SetHelp("NumericalFourierSineSeriesCoefficients","calculus","Numerically compute the coefficients for a sine Fourier series for a function on [0,L] up to the Nth coefficient.");
+
+function NumericalFourierCosineSeriesCoefficients(f,L,N) =
+	(
+	local *;
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("NumericalFourierCosineSeriesCoefficients: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("NumericalFourierCosineSeriesCoefficients: argument L must be a positive real value");bailout)
+	else if not IsPositiveInteger(N) then
+		(error("NumericalFourierCosineSeriesCoefficients: argument N must be a positive integer");bailout);
+
+	a = .;
+
+	a@(1) = (2/L)*NumericalIntegral(f,0,L);
+	for n = 1 to N do (
+		a@(n+1) = (2/L)*NumericalIntegral(`(x)[f,L,n]=(local *;(f call (x))*cos(x*n*pi/L)),0,L)
+	);
+	a
+)
+SetHelp("NumericalFourierCosineSeriesCoefficients","calculus","Numerically compute the coefficients for a cosine Fourier series for a function on [0,L] up to the Nth coefficient.");
+
+function PeriodicExtension(f,a,b) =
+(
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("PeriodicExtension: argument f must be a function");bailout)
+	else if not (IsReal(a) and IsReal(b) and b > a) then
+		(error("PeriodicExtension: arguments a, b must be a real, b > a");bailout);
+
+	`(x)[f,a,b] = (
+		local *;
+		#This is pretty stupid, but simplest way to do this
+		while x > b do increment x by (a-b); #-(b-a)
+		while x < a do increment x by (b-a);
+		(f call (x))
+	)
+)
+SetHelp("PeriodicExtension","calculus","Return a function which is the periodic extension of f defined on the interval [a,b]");
+
+function EvenPeriodicExtension(f,L) =
+	(
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("EvenPeriodicExtension: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("EvenPeriodicExtension: argument L must be a positive real value");bailout);
+
+	`(x)[f,L] = (
+		local *;
+		#This is pretty stupid, but simplest way to do this
+		while x > L do increment x by -2*L;
+		while x < -L do increment x by 2*L;
+
+		if x >= 0 then (f call (x)) else (f call (-x))
+	)
+)
+SetHelp("EvenPeriodicExtension","calculus","Return a function which is the even periodic extension of f defined on the interval [0,L]");
+
+function OddPeriodicExtension(f,L) =
+(
+# check arguments
+	if not IsFunctionOrIdentifier(f) then
+		(error("OddPeriodicExtension: argument f must be a function");bailout)
+	else if not (IsReal(L) and L > 0) then
+		(error("OddPeriodicExtension: argument L must be a positive real value");bailout);
+
+	`(x)[f,L] = (
+		local *;
+		#This is pretty stupid, but simplest way to do this
+		while x > L do increment x by -2*L;
+		while x < -L do increment x by 2*L;
+
+		if x >= 0 then (f call (x)) else -(f call (-x))
+	)
+)
+SetHelp("OddPeriodicExtension","calculus","Return a function which is the odd periodic extension of f defined on the interval [0,L]");

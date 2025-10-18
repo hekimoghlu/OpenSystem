@@ -1,0 +1,197 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+
+namespace
+{
+
+extern "C"
+{
+
+static void TagList_foreach_gstreamermm_callback(const GstTagList*, const char *tag, void* data)
+{
+  Gst::TagList::SlotForeach& slot_foreach = *static_cast<Gst::TagList::SlotForeach*>(data);
+
+  try
+  {
+    slot_foreach(Glib::convert_const_gchar_ptr_to_ustring(tag));
+  }
+  catch (...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+// Make sure the order here is the same order as in Gst::Tag.
+static const char* const _tag_strings[] =
+{
+  GST_TAG_TITLE,
+  GST_TAG_TITLE_SORTNAME,
+  GST_TAG_ARTIST,
+  GST_TAG_ARTIST_SORTNAME,
+  GST_TAG_ALBUM,
+  GST_TAG_ALBUM_SORTNAME,
+  GST_TAG_DATE,
+  GST_TAG_GENRE,
+  GST_TAG_COMMENT,
+  GST_TAG_EXTENDED_COMMENT,
+  GST_TAG_TRACK_NUMBER,
+  GST_TAG_TRACK_COUNT,
+  GST_TAG_ALBUM_VOLUME_NUMBER,
+  GST_TAG_ALBUM_VOLUME_COUNT,
+  GST_TAG_LOCATION,
+  GST_TAG_DESCRIPTION,
+  GST_TAG_VERSION,
+  GST_TAG_ISRC,
+  GST_TAG_ORGANIZATION,
+  GST_TAG_COPYRIGHT,
+  GST_TAG_COPYRIGHT_URI,
+  GST_TAG_COMPOSER,
+  GST_TAG_CONTACT,
+  GST_TAG_LICENSE,
+  GST_TAG_LICENSE_URI,
+  GST_TAG_PERFORMER,
+  GST_TAG_DURATION,
+  GST_TAG_CODEC,
+  GST_TAG_VIDEO_CODEC,
+  GST_TAG_AUDIO_CODEC,
+  GST_TAG_BITRATE,
+  GST_TAG_NOMINAL_BITRATE,
+  GST_TAG_MINIMUM_BITRATE,
+  GST_TAG_MAXIMUM_BITRATE,
+  GST_TAG_SERIAL,
+  GST_TAG_ENCODER,
+  GST_TAG_ENCODER_VERSION,
+  GST_TAG_TRACK_GAIN,
+  GST_TAG_TRACK_PEAK,
+  GST_TAG_ALBUM_GAIN,
+  GST_TAG_ALBUM_PEAK,
+  GST_TAG_REFERENCE_LEVEL,
+  GST_TAG_LANGUAGE_CODE,
+  GST_TAG_IMAGE,
+  GST_TAG_PREVIEW_IMAGE,
+  GST_TAG_ATTACHMENT,
+  GST_TAG_BEATS_PER_MINUTE,
+  GST_TAG_KEYWORDS,
+  GST_TAG_GEO_LOCATION_NAME,
+  GST_TAG_GEO_LOCATION_LATITUDE,
+  GST_TAG_GEO_LOCATION_LONGITUDE,
+  GST_TAG_GEO_LOCATION_ELEVATION
+};
+
+const char* gstreamermm_get_stock_tag(Tag tag)
+{
+  return _tag_strings[tag];
+}
+
+TagList::operator bool() const
+{
+  return gobject_ != nullptr;
+}
+
+std::ostream& operator<<(std::ostream& stream, Tag tag)
+{
+  stream << _tag_strings[tag];
+  return stream;
+}
+
+void TagList::add_value(Tag tag, const Glib::ValueBase& value, TagMergeMode mode)
+{
+  add_value(_tag_strings[tag], value, mode);
+}
+
+void TagList::add_value(const Glib::ustring& tag, const Glib::ValueBase& value, TagMergeMode mode)
+{
+  gst_tag_list_add_value(gobj(), static_cast<GstTagMergeMode>(mode),
+                         tag.c_str(), value.gobj());
+}
+
+void TagList::add(Tag tag, const char* data, TagMergeMode mode)
+{
+  add(_tag_strings[tag], data, mode);
+}
+
+void TagList::add(const Glib::ustring& tag, const char* data, TagMergeMode mode)
+{
+  gst_tag_list_add(gobj(), static_cast<GstTagMergeMode>(mode), tag.c_str(), data,
+                   static_cast<void*>(0));
+}
+
+void TagList::add(Tag tag, const Glib::Date& date, TagMergeMode mode)
+{
+  add(_tag_strings[tag], date, mode);
+}
+
+void TagList::add(const Glib::ustring& tag, const Glib::Date& date, TagMergeMode mode)
+{
+  gst_tag_list_add(gobj(), static_cast<GstTagMergeMode>(mode), tag.c_str(), date.gobj(), nullptr);
+}
+
+void TagList::foreach(const SlotForeach& slot)
+{
+  gst_tag_list_foreach(gobj(), &TagList_foreach_gstreamermm_callback,
+                       const_cast<SlotForeach*>(&slot));
+}
+
+bool TagList::get_value(Tag tag, Glib::ValueBase& dest) const
+{
+  return get_value(_tag_strings[tag], dest);
+}
+
+bool TagList::get_value(const Glib::ustring& tag, Glib::ValueBase& dest) const
+{
+  GValue gst_value = G_VALUE_INIT;
+  if(gst_tag_list_copy_value(&gst_value, const_cast<GstTagList*>(gobj()), tag.c_str()))
+  {
+    g_value_copy(&gst_value, dest.gobj());
+    g_value_unset(&gst_value);
+    return true;
+  }
+  return false;
+}
+
+bool TagList::get_value(Tag tag, guint index, Glib::ValueBase& value) const
+{
+  return get_value(_tag_strings[tag], index, value);
+}
+
+bool TagList::get_value(const Glib::ustring& tag, guint index, Glib::ValueBase& value) const
+{
+  const GValue* gst_value =
+    gst_tag_list_get_value_index(const_cast<GstTagList*>(gobj()),
+    tag.c_str(), index);
+
+  if(gst_value)
+  {
+    g_value_copy(gst_value, value.gobj());
+    return true;
+  }
+
+  return false;
+}
+
+} // namespace Gst

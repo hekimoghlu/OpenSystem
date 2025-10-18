@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="CuiDemoWindow" parent="AdwApplicationWindow">
+    <property name="title" translatable="true">Call-UI Demo</property>
+    <property name="default-width">800</property>
+    <property name="default-height">576</property>
+    <property name="width-request">360</property>
+    <property name="height-request">294</property>
+    <child>
+      <object class="AdwBreakpoint">
+        <condition>max-width: 564px</condition>
+        <setter object="split_view" property="collapsed">True</setter>
+      </object>
+    </child>
+    <property name="content">
+      <object class="AdwNavigationSplitView" id="split_view">
+        <property name="min-sidebar-width">200</property>
+        <property name="sidebar">
+          <object class="AdwNavigationPage">
+            <property name="title" bind-source="CuiDemoWindow" bind-property="title" bind-flags="sync-create"/>
+            <property name="child">
+              <object class="AdwToolbarView">
+                <child type="top">
+                  <object class="AdwHeaderBar" id="header_bar">
+                    <child>
+                      <object class="GtkButton">
+                        <property name="tooltip-text">Switch between light and dark mode</property>
+                        <signal name="clicked" handler="theme_variant_button_clicked_cb" swapped="yes"/>
+                        <child>
+                          <object class="GtkImage" id="theme_variant_image"></object>
+                        </child>
+                        <style>
+                          <class name="flat"/>
+                          <class name="circular"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child type="end">
+                      <object class="GtkButton" id="incoming_call">
+                        <property name="valign">3</property>
+                        <property name="use-underline">true</property>
+                        <property name="tooltip-text">Start an incoming mock call</property>
+                        <signal name="clicked" handler="on_new_call_clicked" swapped="no"/>
+                        <style>
+                          <class name="image-button"/>
+                        </style>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">call-arrow-incoming-symbolic</property>
+                            <property name="icon-size">1</property>
+                          </object>
+                        </child>
+                        <style>
+                          <class name="flat"/>
+                          <class name="circular"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child type="end">
+                      <object class="GtkButton" id="outgoing_call">
+                        <property name="valign">3</property>
+                        <property name="use-underline">true</property>
+                        <property name="tooltip-text">Start an outgoing mock call</property>
+                        <signal name="clicked" handler="on_new_call_clicked" swapped="no"/>
+                        <style>
+                          <class name="image-button"/>
+                        </style>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">call-arrow-outgoing-symbolic</property>
+                            <property name="icon-size">1</property>
+                          </object>
+                        </child>
+                        <style>
+                          <class name="flat"/>
+                          <class name="circular"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <property name="content">
+                  <object class="GtkStackSidebar">
+                    <property name="stack">stack</property>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </property>
+        <property name="content">
+          <object class="AdwNavigationPage" id="content_page">
+            <property name="title" translatable="true">Content</property>
+            <property name="child">
+              <object class="AdwToolbarView">
+                <child type="top">
+                  <object class="AdwHeaderBar" id="default_header_bar">
+                    <property name="show-title">false</property>
+                  </object>
+                </child>
+                <property name="content">
+                  <object class="GtkStack" id="stack">
+                    <property name="vhomogeneous">false</property>
+                    <signal name="notify::visible-child" handler="notify_visible_child_cb" after="yes" swapped="yes"/>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">welcome</property>
+                        <property name="title" translatable="true">Welcome</property>
+                        <property name="child">
+                          <object class="AdwStatusPage">
+                            <property name="icon-name">call-ui-symbolic</property>
+                            <property name="title" translatable="true">Welcome to Call-UI Demo</property>
+                            <property name="description" translatable="true">This is a tour of the features the library has to offer.</property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">accept-call</property>
+                        <property name="title" translatable="true">Call Display</property>
+                        <property name="child">
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkBox" id="accept_call_box">
+                                <property name="orientation">1</property>
+                                <child>
+                                  <object class="CuiCallDisplay" id="call_display"></object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">dialpad</property>
+                        <property name="title" translatable="true">Dial Pad</property>
+                        <property name="child">
+                          <object class="GtkBox" id="dialpad_box">
+                            <property name="orientation">1</property>
+                            <child>
+                              <object class="AdwStatusPage">
+                                <property name="icon-name">input-dialpad-symbolic</property>
+                                <property name="title" translatable="true">Dial Pad</property>
+                                <property name="description" translatable="true">A simple dial pad to enter phone numbers.</property>
+                                <child>
+                                  <object class="CuiDialpad" id="dialpad">
+                                    <signal name="dialed" handler="on_dial" swapped="yes"/>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkStackPage">
+                        <property name="name">keypad</property>
+                        <property name="title" translatable="true">Key Pad</property>
+                        <property name="child">
+                          <object class="GtkBox" id="keypad_box">
+                            <property name="orientation">1</property>
+                            <child>
+                              <object class="AdwStatusPage">
+                                <property name="icon-name">input-dialpad-symbolic</property>
+                                <property name="title" translatable="true">Keypad</property>
+                                <property name="description" translatable="true">A number keypad.</property>
+                                <child>
+                                  <object class="AdwClamp">
+                                    <property name="maximum-size">300</property>
+                                    <property name="tightening-threshold">300</property>
+                                    <child>
+                                      <object class="GtkBox" id="box_keypad">
+                                        <property name="valign">3</property>
+                                        <property name="hexpand">true</property>
+                                        <property name="orientation">1</property>
+                                        <property name="spacing">12</property>
+                                        <child>
+                                          <object class="GtkListBox" id="keypad_listbox">
+                                            <property name="selection-mode">0</property>
+                                            <child>
+                                              <object class="AdwActionRow">
+                                                <property name="can-focus">true</property>
+                                                <property name="title" translatable="true">Show letters</property>
+                                                <property name="activatable-widget">keypad_letters_visible</property>
+                                                <child>
+                                                  <object class="GtkSwitch" id="keypad_letters_visible">
+                                                    <property name="focusable">true</property>
+                                                    <property name="valign">3</property>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="AdwActionRow">
+                                                <property name="can-focus">true</property>
+                                                <property name="title" translatable="true">Show symbols</property>
+                                                <property name="activatable-widget">keypad_symbols_visible</property>
+                                                <child>
+                                                  <object class="GtkSwitch" id="keypad_symbols_visible">
+                                                    <property name="focusable">true</property>
+                                                    <property name="valign">3</property>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                            <style>
+                                              <class name="content"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkEntry" id="entry_keypad">
+                                            <property name="focusable">true</property>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="CuiKeypad" id="keypad">
+                                            <property name="can-focus">False</property>
+                                            <property name="halign">center</property>
+                                            <property name="symbols-visible" bind-source="keypad_symbols_visible" bind-property="state" bind-flags="sync-create|bidirectional"/>
+                                            <property name="letters-visible" bind-source="keypad_letters_visible" bind-property="state" bind-flags="sync-create|bidirectional"/>
+                                            <property name="entry">entry_keypad</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </property>
+      </object>
+    </property>
+  </template>
+</interface>

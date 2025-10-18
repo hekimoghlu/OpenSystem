@@ -1,0 +1,61 @@
+# Numerical functions
+#FIXME: these need to be cleaned up!
+#Indeed, some of these should probably be built-in
+
+#just for somewhat of "source compatibility"
+SetHelp ("AbsoluteValue", "numeric", "Absolute value");
+function AbsoluteValue (x) = |x|
+SetHelpAlias ("AbsoluteValue", "abs")
+abs = AbsoluteValue
+
+SetHelp("Sign","numeric","Return the sign (-1,0,1)");
+function Sign (x) = (
+	if IsMatrix (x) then
+		return ApplyOverMatrix (x, Sign)
+	else if not IsValue (x) then
+		(error("Sign: argument not a value");bailout);
+	if IsComplex (x) then (
+		x / |x|
+	) else if x > 0 then (
+		1
+	) else if x < 0 then (
+		-1
+	) else 0
+);
+SetHelpAlias ("Sign", "sign")
+sign = Sign
+
+#-----
+
+SetHelp ("FractionalPart", "numeric", "Return the fractional part of a number")
+function FractionalPart(x) =
+(
+	if not IsValue(x) then
+		(error("FractionalPart: argument not a value");bailout)
+	else
+		x - IntegerPart (x)
+)
+
+# Chop replaces very small number with zero
+parameter ChopTolerance = 10.0^(-10);
+SetHelp ("ChopTolerance", "parameters", "Tolerance of the Chop function")
+
+SetHelp ("Chop", "numeric", "Replace very small number with zero")
+function Chop(x) =
+(
+	if not IsValue(x) then
+		(error("Chop: argument not a value");bailout)
+	else if |x| < ChopTolerance then
+		0
+	else
+		x
+)
+
+#-----
+# Mod (built-in)
+# FIXME: Mod with offset (m mod n offset d = something in [d,d+n-1])
+
+# IntergerQuotient w/offset (such that d <= m-r*n < d+n
+# IntegerDigits = (convert interger to its list of digits, base b, of length len)
+# IntegerExponent = (number of trailing zeros in base b expansion = heighest power
+#		of b that divides n)

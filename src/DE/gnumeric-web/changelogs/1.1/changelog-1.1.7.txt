@@ -1,0 +1,616 @@
+2002-08-12  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.7
+
+2002-08-12  Jody Goldberg <jody@gnome.org>
+
+	* src/formats.c : remove the 8 bit characters until the gettext
+	  infrasructure accepts them as utf8 without warning.
+
+2002-08-12  Jody Goldberg <jody@gnome.org>
+
+	* src/style-border.c (style_border_none_set_color) : Morten found the
+	  colour leak.  While we're here lets fix the the GC warnings.
+
+	* src/sheet-style.c (sheet_style_update_grid_color) : fix the leak
+	  here too.
+
+	* src/sheet-object-graphic.c : Add a quicky line based polygon object.
+
+2002-08-11  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_save_as) : Doh! order these correctly.
+
+	* src/sheet-object-cell-comment.c (cell_set_comment) : fix ref leak
+	  when adding a comment.
+
+	* src/expr-name.c (expr_name_remove) : tidy old cruft.
+	(expr_name_shutdown) : Use expr_name_list_destroy.
+	(expr_name_list_destroy) : make checking more anal.
+
+2002-08-11  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add the planperfect plugin
+
+	* src/mstyle.c : Add shrink to fit.
+	* src/xml-io.c (xml_write_style) : and here.
+	(xml_read_style) : And here.
+
+2002-08-09  Morten Welinder  <terra@diku.dk>
+
+	* src/search.c (match_is_word): Make utf8 safe.
+	(calculate_replacement): Ditto.
+	(search_match_string): Ditto.
+	(search_replace_string): Ditto.
+
+2002-08-09  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin-service.[ch]
+	(PluginServiceClass::get_description): New method
+	(PluginService): Added saved_description field
+	(plugin_service_general_get_description,
+	plugin_service_file_opener_get_description,
+	plugin_service_file_saver_get_description,
+	plugin_service_function_group_get_description,
+	plugin_service_plugin_loader_get_description,
+	plugin_service_ui_get_description):
+	Implementations of the new method
+	(plugin_service_get_description):
+	New, store generated strings in service->saved_description
+
+	* src/plugin.[ch]
+	(gnm_plugin_get_extra_info_list): Removed
+	(gnm_plugin_get_services): New
+
+	* src/plugin-loader.[ch]
+	(gnumeric_plugin_loader_get_extra_info_list,
+	GnumericPluginLoaderClass::get_extra_info_list): Removed
+
+	* src/plugin-loader-module.c
+	(gnumeric_plugin_loader_module_info_get_extra_info_list): Removed
+
+2002-08-09  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_list_destroy) : fix.
+
+2002-08-07  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/module-plugin-defs.h
+	(PLUGIN): New convenience macro for accessing the plugin object.
+	Define only if PLUGIN_ID is defined.
+	(GNUMERIC_MODULE_PLUGIN_GET_INFO): Removed
+
+2002-08-09  Jody Goldberg <jody@gnome.org>
+
+	* configure.in (int) : enable plan perfect.
+
+2002-08-09  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-component.c
+	(workbook_control_component_ctor_class) : set_sensitive is now in
+	command context.
+
+2002-08-09  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (sheet_deps_destroy) : clean names before deps
+	  so that we don't end up with stale deps in a name dep list.
+	(workbook_deps_destroy) : clear sheet names too.
+
+	* src/expr-name.c (expr_name_shutdown) : deactivate the builtins
+	  before freeing them.
+
+2002-06-28  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	MIME consistency improvements
+	* icons/gnome-application-vnd.lotus-1-2-3.png,
+	  icons/gnome-application-x-applix-spreadsheet.png,
+	  icons/gnome-application-x-generic-spreadsheet.png,
+	  icons/gnome-application-x-generic-spreadsheet.png: New (from mc and
+	  gnome-mime-data).
+	* icons/Makefile.am: Updated for new icons.
+	* gnumeric.keys.in: Added application/vnd.lotus-1-2-3,
+	  application/x-applix-spreadsheet, application/x-oleo,
+	  application/x-xbase
+	* gnumeric.mime: Changed application/x-applix to
+	  application/x-applix-spreadsheet to be consistent with the type
+	  elsewhere; added application/vnd.lotus-1-2-3 with extensions as per
+	  http://www.iana.org/assignments/media-types/application/vnd.lotus-1-2-3
+
+2002-06-02  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* debian/*: updated.
+	* src/cell.h: made declaration of cell_new a prototype.
+	* src/plugin.h: declare printf format attribute for plugin_message.
+	* src/print.c: removed duplicate declaration of print_debugging (which
+	  is already declared via libgnumeric.h .
+
+2002-08-08  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_shutdown) : fix
+
+2002-08-08  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_new_from_input) : its ok to have 0 sheets,
+	  this is not the place to display the error messages.
+
+	* src/expr-name.c (expr_name_init) : activate the builtins to help
+	  catch someone trying to unref them.
+
+	* gnumeric.desktop.in (Categories) : add encoding
+
+	* src/value.c (value_get_as_string) : quote strings in arrays
+
+2002-08-07  Jody Goldberg <jody@gnome.org>
+
+	* src/command-context.c (cmd_context_set_sensitive) : move here from
+	  workbook_control_set_sensitive.
+
+	* src/workbook-view.c (wb_view_save_as) : use it here.
+
+	* src/gui-file.c (gui_file_read) : rename it here.
+
+	* src/command-context-stderr.c (ccs_get_password) : new.
+	(ccs_set_sensitive) : new.
+	(ccs_class_init) : register them.
+
+2002-08-09  Hasbullah Bin Pit <sebol@ikhlas.com>
+
+	* configure.in: (ALL_LINGUAS) Added Malay (ms).
+
+2002-08-07  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin-service.c
+	s/g_strcasecmp/g_ascii_strcasecmp/
+
+2002-08-04  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/func.[ch]
+	(struct _FunctionDefinition): Added ref_notify
+	(fn_def_new): Get extra (optional) argument and copy it to ref_notify
+	(function_add_args, function_add_nodes, function_add_name_only):
+	Get extra arg and pass it to fn_def_new.
+	(func_ref): Call ->ref_notify on every change of refcount from 0 to 1
+	(func_unref): ... and from 1 to 0
+
+	* src/plugin-service.c:
+	(plugin_service_function_group_func_ref_notify): New,
+	call gnm_plugin_use_(un)ref when provided function is (de)referenced.
+	(plugin_service_function_group_activate): Removed FIXME, pass
+	extra argument to function_add_name_only.
+
+	* func-builtin.c
+	(func_builtin_init): Adjusted to function_add_* signature changes.
+
+2002-08-05  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* configure.in (AC_OUTPUT): added plugins/uihello/Makefile
+
+	* plugins/Makefile.am (SUBDIRS_EXAMPLES):
+	moved $(GNOME_GLOSSARY_DIR) and $(PYFUNC_DIR) here, added uihello
+
+2002-08-05  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin-service.h
+	(PluginServiceUICallbacks, GNM_PLUGIN_SERVICE_UI_TYPE,
+	GNM_PLUGIN_SERVICE_UI, GNM_IS_PLUGIN_SERVICE_UI): New
+
+	* src/plugin-service.c
+	(PluginServiceUIClass, struct _PluginServiceUI, plugin_service_ui_init,
+	plugin_service_ui_finalize, plugin_service_ui_read_xml, ui_verb_fn,
+	plugin_service_ui_activate, plugin_service_ui_deactivate,
+	plugin_service_ui_class_init): Implementation of the "ui" service.
+	(service_types): Added "ui".
+
+	* src/plugin-loader.h
+	(struct _GnumericPluginLoaderClass):
+	Added load_service_ui and load_service_ui methods.
+
+	* src/plugin-loader.c
+	(gnumeric_plugin_loader_unload_service_ui_real,
+	gnumeric_plugin_loader_class_init,
+	gnumeric_plugin_loader_load_service,
+	gnumeric_plugin_loader_unload_service): Added support for ui service
+
+	* plugin-loader-module.h
+	(ModulePluginUIVerbInfo): New
+
+	* src/plugin-loader-module.c
+	gnumeric_plugin_loader_module_class_init
+	ServiceLoaderDataUI
+	gnumeric_plugin_loader_module_func_exec_verb
+	gnumeric_plugin_loader_module_load_service_ui
+	gnumeric_plugin_loader_module_unload_service_ui
+
+	* src/workbook-control-gui-priv.h
+	(struct _WorkbookControlGUI): Added custom_ui_components field
+
+	* src/workbook-control-gui.h
+	(register_xml_ui, unregister_xml_ui): New
+
+	* src/workbook-control-gui.c
+	(struct _CustomXmlUI, registered_xml_uis,
+	wbcg_add_custom_ui, wbcg_remove_custom_ui,
+	add_ui_to_workbook_controls, remove_ui_from_workbook_controls,
+	register_xml_ui, unregister_xml_ui): New
+	(workbook_control_gui_init): Initialize wbcg->custom_ui_components
+	hash table, add all registered uis to the workbook control.
+	(wbcg_finalize): Destroy wbcg->custom_ui_components
+
+2002-08-06  Morten Welinder  <terra@diku.dk>
+
+	* src/gutils.c (gnumeric_strcase_equal): Make utf8 safe.
+	(gnumeric_strescape): Make utf8 safe.
+
+2002-08-06  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric.xml (</) : make control-p the print accelerator.
+
+	* src/item-edit.c (item_edit_destroy) : reset the cursor here.
+	(item_edit_event) : set the cursor to something clearer on entry.
+
+	* src/item-grid.c (item_grid_button_press) : Its crufty but given that
+	  we do a grab on button down we need to recognize the double click
+	  ourselves.
+	(cb_cursor_come_to_rest) : remove some debugging cruft.
+
+2002-08-06  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin.h: Put information about PLUGIN_ALWAYS_LOAD in the comment.
+
+	* src/plugin-service.c (plugin_service_activate):
+	Load before activating if PLUGIN_ALWAYS_LOAD is defined.
+
+	* src/plugin-loader.c
+	(gnumeric_plugin_loader_load_base, gnumeric_plugin_loader_unload_base):
+	Pass sensible level value to plugin_message().
+
+	* src/plugin.c
+	(plugin_info_read, plugins_init, plugins_shutdown): ditto
+
+2002-08-05  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* samples/fn-random.gnumeric: A sample file containing 10,000
+	random numbers of each distribution.
+
+2002-08-04  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (workbook_setup_edit_area) : no need to
+	  handle activate.  That is too late to do the cursor movement
+	  correctly.
+
+	* src/libgnumeric.c (gnm_shutdown) : don't leak the clipboard on exit.
+
+	* src/cell.c (cb_cell_pool_leak) : new.
+	(cell_shutdown) : use it.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=88057
+	* src/dependent.c (dependent_unlink) : unlink from the correct
+	  position if we are unlinking a cell but the caller passed in a NULL
+	  position.
+
+2002-08-04  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_new) : init as inactive.
+	(expr_name_add) : activate when the name is added.
+	(expr_name_create) : clarify the life cycle of the expression.
+	(expr_name_unref) : it should not be possible to destroy a name that
+	  is still in the lists.
+	(expr_name_unlink) : delete and merge into expr_name_remove.
+	(expr_name_list_destroy) : use remove.
+
+	* src/dependent.c (sheet_deps_destroy) : remove the names in the sheet.
+	(workbook_deps_destroy) : ditto.
+
+2002-08-04  Jon K Hellan  <hellan@acm.org>
+
+	* src/search.c: Include gutils.h.
+
+2002-08-04  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin.[ch]
+	(plugin_db_activate_plugin_list, plugin_db_deactivate_plugin_list):
+	Made public (for use by plugin manager).
+
+2002-08-03  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin.c
+	(gnm_plugin_force_mark_inactive, ghf_plugin_mark_inactive): Removed
+	(plugins_shutdown): Proper way of handling plugins marked for
+	deactivation.
+
+2002-07-31  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/gnumeric-gconf-priv.h: removed PLUGIN_GCONF_KNOWN
+
+	* src/gnumeric-gconf.[ch]
+	(gnm_gconf_get_known_plugins, gnm_gconf_set_known_plugins): removed
+
+	* src/gutils.h
+	(g_string_s]list_copy): added cast to GnmMapFunc
+	(GNM_[S]LIST_APPEND): new
+	(GNM_SIZEOF_ARRAY): cast to int, unsigned ints are evil
+
+	* src/plugin-loader.c
+	(gnumeric_plugin_loader_unload_service_general_real,
+	gnumeric_plugin_loader_unload_service_file_opener_real,
+	gnumeric_plugin_loader_unload_service_file_saver_real,
+	gnumeric_plugin_loader_unload_service_function_group_real,
+	gnumeric_plugin_loader_unload_service_plugin_loader_real):
+	made static
+
+	* src/plugin.[ch]
+	(struct _GnmPlugin): added saved_textdomain
+	(gnm_plugin_init): set saved_textdomain to NULL
+	(gnm_plugin_finalize): g_free it here
+	(gnm_plugin_get_config_prefix): removed
+	(gnm_plugin_get_textdomain): new
+
+2002-07-27  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/gutils.c:
+	Converted g_string_[s]list_copy to more general functions,
+	g_[s]list_map.
+
+	* src/gutils.h:
+	(g_[s]list_map): New
+	(g_[s]tring_list_copy): Converted to macro (using g_[s]list_map)
+	(g_list_to_vector, g_list_to_vector_custom, g_vector_free_custom,
+	g_slist_to_vector):
+	Removed
+	(GNM_[S]LIST_SORT): New members of GNM_[S]LIST_* family.
+	(GNM_SIZEOF_ARRAY): New macro
+
+	* src/error-info.h:
+	(GNM_INIT_RET_ERROR_INFO):
+	New macro, I plan to add some extra code here.
+
+	* src/plugin-service.[ch]
+	PluginService and PluginService* are GObjects now
+	(with three virtual methods: read_xml, activate, deactivate).
+	All implementation details are hidden. Every PluginService* exposes
+	only service-specific PluginService*Callbacks struct (returned by
+	plugin_service_get_cbs function) for use by plugin loaders.
+	Placed "id" attribute in PluginService struct instead of
+	duplicating it in other structs.
+	(plugin_service_{get,set,clear}_loader_data): Removed
+	s/plugin_service_read/plugin_service_new/
+
+	* src/plugin.c
+	Adjusted to plugin-service.h changes
+	(struct _GnmPlugin): Replace vectors with SLists.
+	(plugins_shutdown): Destroy all plugins (g_object_unref).
+	Use GNM_INIT_RET_ERROR_INFO everywhere.
+
+	* src/plugin-loader.c
+	(gnumeric_plugin_loader_unload_service_general_real,
+	gnumeric_plugin_loader_unload_service_file_opener_real,
+	gnumeric_plugin_loader_unload_service_file_saver_real,
+	gnumeric_plugin_loader_unload_service_function_group_real,
+	gnumeric_plugin_loader_unload_service_plugin_loader_real):
+	Set callbacks using plugin_service_get_cbs and PluginService*Callbacks
+	structs, instead of settings PluginService* fields directly (they are
+	private now).
+	(gnumeric_plugin_loader_load_service,
+	gnumeric_plugin_loader_unload_service)
+	Use RTTI to select (un)loading method.
+	(gnumeric_plugin_loader_set_attributes,
+	gnumeric_plugin_loader_load_base,
+	gnumeric_plugin_loader_unload_base):
+	Use GNM_INIT_RET_ERROR_INFO macro everywhere.
+
+	* src/plugin-loader-module.c
+	(gnumeric_plugin_loader_module_set_attributes,
+	gnumeric_plugin_loader_module_load_base,
+	gnumeric_plugin_loader_module_unload_base,
+	gnumeric_plugin_loader_module_info_get_extra_info_list,
+	gnumeric_plugin_loader_module_destroy,
+	gnumeric_plugin_loader_module_func_init,
+	gnumeric_plugin_loader_module_func_clean,
+	gnumeric_plugin_loader_module_load_service_general,
+	gnumeric_plugin_loader_module_func_file_probe,
+	gnumeric_plugin_loader_module_func_file_open,
+	gnumeric_plugin_loader_module_load_service_file_opener,
+	gnumeric_plugin_loader_module_func_file_save,
+	gnumeric_plugin_loader_module_load_service_file_saver,
+	gnumeric_plugin_loader_module_func_get_full_function_info,
+	gnumeric_plugin_loader_module_load_service_function_group,
+	gnumeric_plugin_loader_module_unload_service_function_group,
+	gnumeric_plugin_loader_module_func_get_loader_type,
+	gnumeric_plugin_loader_module_load_service_plugin_loader):
+	Use g_object data instead of plugin_service_[gs]et_loader_data.
+	Set callbacks using plugin_service_get_cbs and PluginService*Callbacks
+	structs, instead of settings PluginService* fields directly (they are
+	private now).
+	"has_probe" field has been removed, always get a pointer to 
+    *_file_probe pointer function if it's available.
+	Less assertions, use GNM_INIT_RET_ERROR_INFO macro everywhere.
+
+2002-07-22  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/gnumeric.h:
+	Added typedefs: GnmPlugin, PluginService, GnumericPluginLoader.
+
+	* src/gutils.h: New macros: GNM_LIST_FOREACH, GNM_LIST_PREPEND,
+	GNM_LIST_REMOVE, GNM_LIST_CONCAT, GNM_LIST_REVERSE,
+	GNM_SLIST_FOREACH, GNM_SLIST_PREPEND,
+	GNM_SLIST_REMOVE, GNM_SLIST_CONCAT, GNM_SLIST_REVERSE.
+
+	* src/gutils.c: Fixed typo in comment.
+
+	* src/plugin-loader-module.h: s/PluginInfo/GnmPlugin/
+
+	* src/plugin-loader-module.c:
+	(ServiceLoaderDataGeneral): Removed module_func_can_deactivate.
+	(gnumeric_plugin_loader_module_func_can_deactivate): Removed
+	(gnumeric_plugin_loader_module_set_attributes):
+	Adjusted to plugin-loader.c (read attributes from GHashTable).
+	s/..._load/..._load_base/
+	s/..._unload/..._unload_base/
+	Use new macros from gutils.h.
+
+	* src/plugin-loader.[ch]
+	s/..._load/..._load_base/
+	s/..._unload/..._unload_base/
+	s/is_loaded/is_base_loaded/
+	s/PluginInfo/GnmPlugin/
+	(GnumericPluginLoaderClass::set_attributes,
+	gnumeric_plugin_loader_set_attributes: Changed signature, read
+	attributes from GHashTable, not from two lists.
+	(gnumeric_plugin_loader_load_base): Ignore dependencies, now
+	GnmPlugin object is responsible for this.
+	(gnumeric_plugin_loader_unload_base): Ditto
+	(gnumeric_plugin_loader_load_service): Don't load base part of the
+	plugin, plugin takes care of this.
+
+	* src/plugin-service.[ch]:
+	s/PluginInfo/GnmPlugin/
+	(PluginServiceGeneral::plugin_func_can_deactivate,
+	plugin_service_can_deactivate,
+	plugin_service_*_can_deactivate,
+	plugin_services_data_new, plugin_services_data_free,
+	PluginServicesData, plugin_service_can_deactivate): Removed.
+	(plugin_service_plugin_loader_initialize): Use plugins_register_loader,
+	passing loader id as "plugin-id:loader-service-id".
+	(plugin_service_plugin_loader_cleanup): Ditto, plugins_unregister_loader.
+	Use new macros from gutils.h.
+
+	* src/plugin.[ch]
+	Cut down the number of public functions by 20.
+	Documented most public functions.
+	Made PluginInfo a GObject, renamed to GnmPlugin.
+	GnmPlugin sends signals on state change (active, loaded,
+	can_deactivate).
+	Removed _peek functions, no need for two types of getters.
+	Remember "plugin file state" only for plugins from previous Gnumeric
+	session (so that the list doesn't get bigger with every Gnumeric
+	version installing .../gnumeric/version/plugins/... directories).
+	Don't save known plugins separately, use the above list.
+	Store available plugins in hash table for faster lookups by id.
+	Ditto for loaders.
+	Removed strange *_init, *_shutdown functions, now everything is in
+	plugins_init and plugins_shutdown.
+	Automatically add plugin containing loader to the list of plugin
+	dependencies (it's easy because loader id is now:
+	plugin_id + ":" + service_id).
+	Detect cyclic dependencies during activation/deactivation.
+	Very simple method for determining whether plugin can be deactivated
+	- use "plugin usage counter" (increased by dependent plugins or plugin
+	services if something keeps references to plugin structures).
+	Validate plugin id, it may include only letters, digits and underscore.
+	Removed ugly enums/structs (PluginDependencyType,
+	PluginLoaderStaticInfo, PluginLoaderTypeInfo).
+	Other simplifications.
+	No new features.
+	Use new macros from gutils.h (it looks so much better).
+
+2002-08-04  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_set_scope) : handle the wb -> sheet
+	  transition too.
+	(expr_name_set_expr) : tweak the expr ref counting semantics to be
+	  more useful.  Just absorb it.
+
+	* src/dependent.c (cb_name_invalidate) : don't NULL the name's
+	  expression, rewrite it if necessary.
+
+2002-08-03  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc) : support NULL views.
+
+	* src/sheet.c (sheet_get_view) : support NULL.
+
+	* src/workbook-control-gui.c (wbcg_sheet_to_page_index) : allow
+	  unfocused controls.
+
+	* src/workbook.c (workbook_sheet_delete) : make sure nothing is
+	  focused on the deleted sheet.
+
+2002-08-03  Jon K Hellan  <hellan@acm.org>
+
+	* src/GNOME_Gnumeric.xml: Add Edit/Fill/Merge.
+	Change SheetReorder label to "Manage Sheets".
+
+	* src/workbook-control-gui.c (verbs): s/ToolsMERGE/ToolsMerge/
+
+2002-08-03  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (verbs, wbcg_menu_state_update):
+	Added Data/Filter/Show All.
+
+	* src/GNOME_Gnumeric.xml: Added `Risk simulation' tool.
+	Added Data/Filter/Show All.
+
+2002-08-02  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* samples/simulation.gnumeric: Sample file of simulation.
+	
+	* src/workbook-control-gui.c: Added `Risk simulation' tool.
+
+	* src/sheet.h: Added a round variable for risk simulation tool.
+
+2002-08-02  Jody Goldberg <jody@gnome.org>
+
+	* src/io-context.c (gnm_io_warning) : a simple placeholder.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=88933
+	* src/sheet-view.c (sv_attach_control) : no need to manually
+	  initialize things.  Use sv_init_sc.
+
+2002-08-01  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/stf.c
+	(stf_open_and_read): Use g_try_malloc
+	(stf_preparse, stf_read_workbook, stf_read_workbook_auto_csvtab):
+	s/free/g_free/
+
+2002-08-01  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-style.c (sheet_style_foreach) : new.
+
+	* src/mstyle.c (mstyle_equal_XL) : new.
+
+	* src/item-grid.c (item_grid_draw) : partially fix drawing for merged
+	  regions that have some cols/rows hidden.  It is impossible to do
+	  that from the gnumeric ui, but it can happen with importers, and
+	  will potentially happen with filters.
+
+	* src/item-cursor.c (item_cursor_selection_event) : bring up context
+	  menus on right button.
+
+2002-07-30  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (random_01): Fix path of random device!
+
+2002-07-30  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (ran_gamma_int): Fix incorrect underflow
+	assumptions.
+
+2002-07-28  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/func-buildin.c: Function description clean up.
+
+2002-07-26  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/sheet.h, src/workbook-control-gui-priv.h,
+	src/workbook-control-gui.c, src/tools/filter.c: Hide the
+	sensitivity of `Show All' if there are no filtered rows.
+
+	* src/workbook-control-gui.c: Added `Filter->Show All'.
+
+2002-07-25  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (dgeom, pgeom): Properly import using
+	tools/import-R.
+
+2002-07-22  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch] (dgeom, pgeom): Added.
+
+2002-07-21  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch] (random_gaussian_tail): Added.
+	
+2002-07-21  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch] (random_landau): Added.

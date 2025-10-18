@@ -1,0 +1,86 @@
+/* Copyright (C) 2006 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtkunixprint.h>
+#include <gdkmm/cairoutils.h>
+
+extern "C"
+{
+// This Signal Proxy allows the C++ coder to specify a sigc::slot instead of a static function.
+static void SignalProxy_Custom_gtk_callback(GtkPrintJob* print_job, gpointer data, const GError* gerror)
+{
+  const auto the_slot = static_cast<Gtk::PrintJob::SlotPrintJobComplete*>(data);
+
+  try
+  {
+    if (gerror)
+      Glib::Error::throw_exception(g_error_copy(gerror));
+
+    // Create a suitable C++ instance to pass to the C++ method;
+    auto job = Glib::wrap(print_job);
+    (*the_slot)(job);
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+static void SignalProxy_Custom_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::PrintJob::SlotPrintJobComplete*>(data);
+}
+} // extern "C"
+
+namespace Gtk
+{
+
+void PrintJob::send(const SlotPrintJobComplete& slot)
+{
+  // Create a copy of the slot. A pointer to this will be passed through the callback's data parameter.
+  // It will be deleted when SignalProxy_Custom_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotPrintJobComplete(slot);
+
+  gtk_print_job_send(gobj(), &SignalProxy_Custom_gtk_callback, slot_copy,
+   &SignalProxy_Custom_gtk_callback_destroy);
+}
+
+std::vector<PageRange> PrintJob::get_page_ranges() const
+{
+  int num_ranges (0);
+  const GtkPageRange* page_ranges =
+    gtk_print_job_get_page_ranges(const_cast<GtkPrintJob*>(gobj()), &num_ranges);
+
+  // We don't get a copy of page_ranges. Don't delete it.
+  return Glib::ArrayHandler<PageRange, PageRangeTraits>::array_to_vector(
+    page_ranges, num_ranges, Glib::OWNERSHIP_NONE);
+}
+
+void PrintJob::set_page_ranges(const std::vector<PageRange>& page_ranges)
+{
+  // gtk_print_job_set_page_ranges() will take ownership of c_ranges, and free it with g_free().
+  // This is unusual. ArrayHandler::vector_to_array() can't be used.
+  // It does not take a Glib::OwnershipType parameter.
+  GtkPageRange* c_ranges = g_new0(GtkPageRange, page_ranges.size());
+  for (std::size_t i = 0; i < page_ranges.size(); ++i)
+  {
+    c_ranges[i].start = page_ranges[i].start;
+    c_ranges[i].end = page_ranges[i].end;
+  }
+  gtk_print_job_set_page_ranges(gobj(), c_ranges, page_ranges.size());
+}
+
+} // namespace Gtk

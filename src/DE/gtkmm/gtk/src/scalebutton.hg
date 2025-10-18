@@ -1,0 +1,109 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <vector>
+
+#include <gtkmm/button.h>
+#include <gtkmm/adjustment.h>
+#include <gtkmm/orientable.h>
+#include <gtkmm/enums.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+//TODO: Derive from (and implement) AccessibleRange when we can break ABI.
+
+/** A button which pops up a scale widget.
+ *
+ * This kind of widget is commonly used for volume controls in multimedia
+ * applications, and there is a Gtk::VolumeButton subclass that is tailored
+ * for this use case.
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API ScaleButton
+ : public Widget,
+   public Orientable
+{
+  _CLASS_GTKOBJECT(ScaleButton, GtkScaleButton, GTK_SCALE_BUTTON, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Orientable)
+
+public:
+  //We custom-implement the constructor because gtk_scale_button_new() does more than just call g_object_new().
+  /** Creates a %ScaleButton, with a range between min and max, with a stepping of step.
+   *
+   * @param min The minimum value of the scale (usually 0).
+   * @param max The maximum value of the scale (usually 100).
+   * @param step The stepping of value when a scroll-wheel event, or up/down arrow event occurs (usually 2).
+   * @param icons A vector of icon names.
+   */
+  explicit ScaleButton(double min, double max, double step, const std::vector<Glib::ustring>& icons);
+  _IGNORE(gtk_scale_button_new)
+
+  //We add the constructor without icons because the C functions allows that to be NULL.
+  /** Creates a %ScaleButton, with a range between min and max, with a stepping of step.
+   *
+   * @param min The minimum value of the scale (usually 0).
+   * @param max The maximum value of the scale (usually 100).
+   * @param step The stepping of value when a scroll-wheel event, or up/down arrow event occurs (usually 2).
+   *
+   * @newin{3,16}
+   */
+  explicit ScaleButton(double min, double max, double step);
+
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char**',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data ()')
+  _WRAP_METHOD(void set_icons(const std::vector<Glib::ustring>& icons), gtk_scale_button_set_icons)
+  _WRAP_METHOD(double get_value() const, gtk_scale_button_get_value)
+  _WRAP_METHOD(void set_value(double value), gtk_scale_button_set_value)
+
+  _WRAP_METHOD(Glib::RefPtr<Adjustment>	get_adjustment(), gtk_scale_button_get_adjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_adjustment() const, gtk_scale_button_get_adjustment, refreturn, constversion)
+
+  _WRAP_METHOD(void set_adjustment(const Glib::RefPtr<Adjustment>& adjustment), gtk_scale_button_set_adjustment)
+
+  _WRAP_METHOD(Button* get_plus_button(), gtk_scale_button_get_plus_button)
+  _WRAP_METHOD(const Button* get_plus_button() const, gtk_scale_button_get_plus_button, constversion)
+
+  _WRAP_METHOD(Button* get_minus_button(), gtk_scale_button_get_minus_button)
+  _WRAP_METHOD(const Button* get_minus_button() const, gtk_scale_button_get_minus_button, constversion)
+
+  //TODO: Use a more specific return type?
+  // It's a Popover now, but that fact is not documented. Can change in the future? (Kjell 2017-03-08)
+  _WRAP_METHOD(Gtk::Widget* get_popup(), gtk_scale_button_get_popup)
+  _WRAP_METHOD(const Gtk::Widget* get_popup() const, gtk_scale_button_get_popup)
+
+  _WRAP_METHOD(bool get_active() const, gtk_scale_button_get_active)
+
+  _WRAP_METHOD(bool get_has_frame() const, gtk_scale_button_get_has_frame)
+  _WRAP_METHOD(void set_has_frame(bool has_frame = true), gtk_scale_button_set_has_frame)
+
+  _WRAP_SIGNAL(void value_changed(double value), "value_changed")
+
+  //Ignore key-binding signals:
+  _IGNORE_SIGNAL("popup")
+  _IGNORE_SIGNAL("popdown")
+
+  _WRAP_PROPERTY("value", double)
+  _WRAP_PROPERTY("adjustment", Glib::RefPtr<Adjustment>)
+  _WRAP_PROPERTY("icons", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("active", bool)
+  _WRAP_PROPERTY("has-frame", bool)
+};
+
+} // namespace Gtk

@@ -1,0 +1,62 @@
+/* Copyright (C) 2013 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/stack.h>
+//TODO: When we can break ABI: #include <gtkmm/orientable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+/** A controller for a %Gtk::Stack.
+ *
+ * It shows a row of buttons to switch between the various pages of
+ * the associated stack widget.
+ *
+ * All the content for the buttons comes from the child properties of
+ * the Gtk::Stack.
+ *
+ * It is possible to associate multiple %StackSwitcher widgets with
+ * the same stack widget.
+ *
+ * @ingroup Widgets
+ * @newin{3,10}
+ */
+class GTKMM_API StackSwitcher : public Widget //TODO: When we can break ABI: public Orientable
+{
+  _CLASS_GTKOBJECT(StackSwitcher, GtkStackSwitcher, GTK_STACK_SWITCHER, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  //TODO: When we can break ABI: _IMPLEMENTS_INTERFACE(Orientable)
+public:
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(void set_stack(Stack& stack), gtk_stack_switcher_set_stack)
+  /** Unsets the associated Stack.
+   * @see set_stack().
+   * @newin{3,16}
+   */
+  void unset_stack();
+
+  _WRAP_METHOD(Stack* get_stack(), gtk_stack_switcher_get_stack)
+  _WRAP_METHOD(const Stack* get_stack() const, gtk_stack_switcher_get_stack, constversion)
+
+  _WRAP_PROPERTY("stack", Stack*)
+
+  // There are no signals or vfuncs.
+};
+
+} // namespace Gtk

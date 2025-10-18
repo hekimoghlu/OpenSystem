@@ -1,0 +1,580 @@
+2002-09-30  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.9
+
+2002-09-29  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (gnm_1_0_rangeref_parse) : fix handling of error in
+	  3d ref.
+	(rangeref_parse) : ditto.
+
+2002-09-29  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (gnm_1_0_rangeref_parse) : fix.
+	(wbref_parse) : implement.
+
+2002-09-29  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (wbref_parse) : document and fix a bit.  still
+	  untested.
+	(rangeref_parse) : touch up a bit.
+	(gnm_1_0_rangeref_parse) : new, untested.
+
+	* src/parser.y (gnm_expr_parse_str) : add
+	  GNM_EXPR_PARSE_USE_OPENCALC_CONVENTIONS.  To hard code the
+	  seperators rather than extracting them from the locale.  Its quick
+	  and dirty, but will do the job for now.  Later it would be nice to
+	  abstract the parse state a bit more so that we don't need to
+	  re-initialize every time.
+	(yylex) : handle xml escaping for opencalc. 
+
+	* src/parse-util.c (row_parse) : fix.
+
+2002-09-27  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_create) : delete because it was hard
+	  coding which rangeref parser to use.
+
+2002-09-27  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y : remove bogus error message and fix the other message
+	  to be correct when faced with the wrong type of array seperator.
+
+2002-09-27  Jody Goldberg <jody@gnome.org>
+
+	* src/value.c (value_coerce_to_number) : new.
+
+2002-09-26  Lutz Müller <lutz@users.sourceforge.net>
+
+	* src/workbook.[c,h]: New signals: "sheet_added" and "sheet_deleted".
+
+2002-09-26  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook.c (workbook_sheet_reorder): new
+	(workbook_sheet_reorganize): extract reorder code into 
+	  workbook_sheet_reorder
+	* src/workbook.h (workbook_sheet_reorder): new
+
+2002-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_realize) : ok, the fix for
+	  loading multisheet workbooks breaks if you load them directly.
+	  Fix that.
+
+	* src/parser.y (build_set) : remove unneccessary deallocation.
+
+2002-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y : Make the error handling more consistent.
+
+	* src/expr.c (gnm_expr_list_as_string) : optimize.
+
+	* src/dependent.c (link_expr_dep) : place holder for intersection.  I
+	  think it is ok to palm all of this off until eval time (asusming we get
+	  eval time depends working)
+
+2002-09-26  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add openoffice
+	* plugins/Makefile.am (SUBDIRS) : add openoffice
+
+2002-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_realize) : grab focus for current
+	sheet.
+
+2002-09-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook.c (workbook_sheet_reorganize): add missing call 
+	  to post_sheet_index_change
+	
+2002-09-25  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_is_rangeref) : new.
+
+	* src/parser.y (yylex) : support space as the intersection operator.
+
+2002-09-25  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y : begin support for intersection and sets, still needs
+	  lots of work, but I don't want to get too out of sync.
+
+	* src/expr.c : handle intersection and sets.
+	* src/expr-name.c (name_refer_circular) : ditto.
+
+	* src/workbook.c (post_sheet_index_change) : don't emit the signal
+	  during destruction.
+
+2002-09-24  Lutz Müller <lutz@users.sourceforge.net>
+
+	* src/dialogs/dialog-sheet-order.c: Be aware of changes in the 
+	  sheet order.
+	* src/workbook.[c,h]: Provide a "sheet_order_changed" signal.
+	* src/workbook-control-gui.c: Remove debugging messages. Allow
+	  dropping the sheet anywhere in the workbook - reordering will still
+	  be done.
+
+2002-09-24  Morten Welinder  <terra@diku.dk>
+
+	* src/parser.y (yylex): Handle error constants.  (And fix utf8
+	strings.)
+
+2002-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_area_set_text) : we can test for as_array here.
+	  rather than in _redo.  Then make sure that array formulas are parsed
+	  relative to the top left of the target region rather than the
+	  edit_pos.
+
+	* src/parser.y (build_range_ctor) : finish error message so that
+	  things compile again.
+
+2002-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y : remove the rest of the CELLREF based productions.
+
+	* src/parse-util.h : do a bit of tidying
+	(col_parse) : make public.
+	(row_parse) : make public.
+	(cellpos_as_string) : rename from cell_pos_name.
+	(cellpos_parse) : renamed from parse_cell_name
+	(cellref_as_string) : rename from cellref_name
+	(cellref_parse) : rename from cellref_get
+	(parse_col_name) : delete duplicate
+	(gnm_expr_char_start_p) : renamed from gnumeric_char_start_expr_p.
+
+	* src/parse-util.c (rangeref_parse) : fix handling of non-3d
+	  inter-sheet refs.
+	(col_parse) : check for overflow.
+
+	* src/parser.y : remove sheet_ref RANGEREF production. RANGEREF
+	  already handles sheet references internally.
+
+2002-09-23  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_eval) : handle empties when implicit
+	  intersection is valid but accesses an empty cell.
+
+2002-09-23  Lutz Müller <lutz@users.sourceforge.net>
+
+	* src/workbook-control-gui.c: Implement reordering of sheets via
+	  drag & drop within workbooks.
+
+2002-09-23  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-view.c (sv_update) : see if there is a named expression that
+	  matches the selection.
+	* src/workbook-view.c (wb_view_selection_desc) : ditto.
+	* src/expr-name.c (sheet_names_check) : new.
+
+	* src/parse-util.c (cellref_a1_get) : add bound check for columns too.
+
+	* src/func.c (function_call_with_list) : silence some pointless
+	  warnings.
+	* src/workbook-control-gui.c (workbook_menu_edit) : fix cut-n-paste-o.
+	(cb_statusbox_focus) : Clear selection on focus out.  I'd like to
+	  select everything on focus in, but gtkentry is not thrilled with
+	  that.
+	* src/workbook-control-gui.c (workbook_setup_edit_area) : connect
+	  cb_status_box_focus.
+
+2002-09-22  Jon K Hellan  <hellan@acm.org>
+
+	* src/func.c (function_dump_defs): Re-enable function doc dumping.
+
+2002-09-22  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (col_parse) : doh!
+
+2002-09-20  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (context_menu_handler) : support clearing a
+	  link and contect to the link editor dialog to add or edit one.
+
+2002-09-20  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : extend the tests for graphing libraries.
+	  Enable the corba plugin if the tools are in place.
+
+2002-09-20  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric.xml : Use the stock jump-to icon
+	* src/workbook-control-gui.c : ditto
+
+2002-09-20  Jody Goldberg <jody@gnome.org>
+
+	* src/plugin-util.c (gnumeric_mmap_error_info) : delete.
+
+	* src/plugin-service.c (plugin_service_general_activate) : init error.
+	(plugin_service_general_deactivate) : ditto.
+	(gnum_plugin_file_opener_probe) : ditto.
+
+2002-09-20  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c : Add entries for insert hyperlink to
+	  toolbar and insert menu.
+	* src/GNOME_Gnumeric.xml : ditto.
+	* src/sheet-control-gui.c (scg_context_menu) : Use the new link icons.
+
+2002-09-20  Jody Goldberg <jody@gnome.org>
+
+	* src/print.c : revert to gnome-2-0 versions of gnome-print
+
+	* src/application.c (gnumeric_application_setup_icons) : Add jimmac's
+	  new hyperlink icons.
+	* src/pixmaps/Makefile.am : ditto.
+
+	* src/Makefile.am : remove the extra BONOBO libs that is now handled
+	  correctly in configure.
+
+	* configure.in : Prep for graphs
+	    --with-graphs defaults to guppi, but can also be gtkextra-2
+	    tidy up the compile/link line by being smarter, and merging in
+	    the bonobo specific libs earlier
+	    Enforce a gnome-2-0 limit on the printing libraries
+
+2002-09-19  Morten Welinder  <terra@diku.dk>
+
+	* src/dependent.c (micro_hash_remove): Plug leak.
+
+2002-09-17  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin-loader-module.c
+	(gnumeric_plugin_loader_module_unload_service_function_group,
+	gnumeric_plugin_loader_module_unload_service_ui): Removed.
+	(gnumeric_plugin_loader_module_load_service_*):
+	Set loader_data using g_object_set_data_full() so it gets destroyed
+	together with service.
+
+2002-09-17  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : remove idl dir as it starts to move to a plugin
+
+	* src/application.c (application_workbook_list_remove) : fix typo.
+
+2002-09-17  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c (gnumeric_application_class_init) : use
+	  NONE__POINTER rather than NONE_OBJECT so that we can remove the
+	  workbook during finalization.
+
+2002-09-17  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : conditionally enable guppi
+
+2002-09-17  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_init) : no need to handle bonobo ness here.
+	  we have signals now so things can be moved elsewhere.
+
+	* src/gnm-marshalers.list : add NONE:OBJECT
+
+	* src/bonobo-io.c : copy over remnants from workbook-private.
+	* src/workbook-private.[ch] : delete
+
+	* src/application.c (application_workbook_list_add) : emit signal.
+	(application_workbook_list_remove) : emit signal.
+	(application_workbook_list) : move workbook list into Application.
+	(application_workbook_foreach) : ditto.
+	(gnumeric_application_class_init) : add signals.
+
+2002-09-17  Jody Goldberg <jody@gnome.org>
+
+	* src/print.c (sheet_print) : tweak so that things compile again.
+
+2002-09-16  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook.c (workbook_sheet_name_strip_number): Make utf8
+	safe.
+
+	* src/parse-util.c (check_quoted): Fix traversal right after
+	backquote.
+	(unquote): Make terminal \\ case match check_quoted.
+
+2002-09-16  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.c (sheet_parse): Off by one bug.
+
+2002-09-16  Morten Welinder  <terra@diku.dk>
+
+	* src/bonobo-io.c (gnumeric_bonobo_read_from_stream): "Fix"
+	warnings.
+
+2002-09-16  Christian Neumair  <chris@gnome-de.org>
+
+	* src/dialogs/*.glade: Made most dialogs HIG compliant.
+
+2002-09-13  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_finalize) : detach the controls first.
+	  before we start destruction.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new) : use connect_object
+	  so that we only handle the destruction of the table while the
+	  control exists.
+
+	* src/workbook.c (workbook_detach_view) : remove the sheetviews
+	  associated with this workbookview.
+
+	* src/sheet-object.c (cb_sheet_object_remove) : don't unref,
+	  cmd_object_delete handles that.
+
+2002-09-13  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (function_call_with_list) : support implicit iteration.
+
+	* src/value-sheet.c (value_area_fetch_x_y) : catch value_empty too.
+
+	* src/parse-util.c (col_parse) : don't change accept the column unless
+	  at least 1 char was read.
+	(row_parse) : ditto.
+	(rangeref_parse) : off by 1 error when handling full ranges.
+
+	* src/dependent.h (cell_eval) : make this a macro.
+
+	* src/plugin-service.c (gnum_plugin_file_opener_probe) : silence a
+	  warning.
+
+	* src/expr.c (gnm_expr_eval) : rename from expr_eval_real and move the
+	  empty handling into.
+	(handle_empty) : here.
+	(gnm_expr_array_intersection) : delete.
+
+2002-09-11  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-graph.c (gnm_graph_new_view) : stub so that sheets with
+	  graphs don't crash.
+	(gnm_graph_update_bounds) : ditto.
+
+2002-09-11  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_eval) : move support for implicit intersection
+	  here.
+
+	* src/func.c (function_call_with_list) : merge the marshalling into
+	  here in preparation for supporting implicit iteration.  Fix handling
+	  of optional arguments.
+
+2002-09-11  Jody Goldberg <jody@gnome.org>
+
+	Patch from Jiri Jirat <Jiri.Jirat@systinet.com>
+	* gnumeric.xsd  : fix schema errors
+
+2002-09-11  Morten Welinder  <terra@diku.dk>
+
+	* src/plugin-service.c (plugin_service_ui_activate): Plug leak.
+
+	* src/workbook-control-gui.c (wbcg_finalize): Plug leak.
+
+	* src/main-application.c (main): Shut down bonoboui for leak
+	hunting.
+
+2002-09-10  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y (yylex) : parse full col/row references.
+	  eg 2:2 or B:C
+
+	* src/gui-clipboard.c (x_claim_clipboard) : offer content on both
+	  primary and clipboard.
+
+2002-09-10  Morten Welinder  <terra@diku.dk>
+
+	* src/commands.c (cmd_set_text): Make utf8 safe.
+	(cmd_area_set_text): Ditto.
+
+2002-09-10  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet-object-image.c: Delete duplicate macros.
+
+2002-09-10  Morten Welinder  <terra@diku.dk>
+
+	* src/expr.c: Avoid trailing comma in enum.
+	* src/gnumeric-canvas.h (gnm_canvas_handle_motion): Ditto.
+	* src/item-cursor.c: Ditto.
+	* src/item-edit.c: Ditto.
+	* src/item-grid.c: Ditto.
+	* src/preview-grid.c: Ditto.
+	* src/print.c: Ditto.
+	* src/sheet-object-graphic.c: Ditto.
+	* src/sheet.h (enum SheetClearFlags): Ditto.
+
+	* src/dialogs/dialog-search-replace.c (set_checked): Fix 92911.
+
+2002-09-09  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-gconf.c : slim things down and cache the results
+	  locally.
+
+	* src/gutils.c (g_unichar_strchr) : new.
+	(g_unichar_strstr_utf8) : new.
+	(g_unichar_strlen) : new.
+	(g_unichar_strncmp) : new.
+
+2002-09-09  Morten Welinder  <terra@diku.dk>
+
+	* src/item-edit.c (item_edit_destroy): Plug leak.
+
+2002-09-06  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-component.c
+	(workbook_control_component_init): wbcg no longer has editing,
+	editing_sheet or editing_cell members, so don't initialize them.
+
+2002-09-06  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c (style_font_new_simple) : provide smarter defaults in case
+	  of a screw up.
+
+	* src/gnumeric-gconf.c (gnm_gconf_get_zoom) : supply a smarter default
+	  for out of range values.
+
+2002-09-06  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_colrow_select) : don't do a start and a
+	  change.  Do a start or a change.  do not sheet_update for rangesel.
+
+	* src/parser.y : some utf8 fixes for escaped characters
+
+	* src/expr.c (do_expr_as_string) : rangeref_name -> rangeref_as_string
+	* src/parse-util.c (rangeref_parse) : new.
+	(parse_surrounding_ranges) : delete.
+
+2002-09-06  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-control-gui.c (setup_progress_bar): Use
+	gnumeric_inject_widget_into_bonoboui, thus plugging leak.
+
+	* src/gui-util.c (gnumeric_inject_widget_into_bonoboui): Plug
+	leak.
+
+2002-09-05  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_write_style) : fix writing styles now that links
+	  are always defined.
+
+2002-09-05  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y (yylex) : support 1/2 absolute row only refs.
+
+2002-09-04  Jody Goldberg <jody@gnome.org>
+
+	* src/item-edit.c (item_edit_draw) : fix leak.
+
+2002-09-04  Jody Goldberg <jody@gnome.org>
+
+	* schemas/Makefile.am : get the schemas translated
+
+2002-09-04  Jody Goldberg <jody@gnome.org>
+
+	* *.c : remove a pile of deprecated glib functions.
+
+	* src/xml-io.c (xml_probe) : fix test for extension .xml.gz  We only
+	  check the last extension.  So foo.xml.gz has extension .gz.
+	  Don't rip out quite so much of the sax handler.
+
+2002-09-04  Jody Goldberg <jody@gnome.org>
+
+	* src/cell-draw.c (cell_draw) : fix handling of multiline text.
+	* src/item-edit.c (item_edit_draw) : fix position of cursor line.
+
+2002-09-03  Jody Goldberg <jody@gnome.org>
+
+	* src/position.c (rangeref_name) : new.
+
+	* src/expr.c (do_expr_as_string) : Use rangeref_name.
+
+	* src/parser.y (sheetref) : support XL style 3d references
+	(cellref) : accept XL style 3d references in addition to applix format.
+	  Produce an error if an invalid combination is used.
+	    eg sheet1:sheet2!a1:sheet3!a1
+	  Prepare to support row only or col only references (A:C or 1:5)
+
+2002-09-02  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_range_bounding_box) : doh!
+
+	* src/mstyle.c (mstyle_new_default) : init the hyperlink to NULL.
+	(mstyle_set_hlink) : relax restrictions.
+
+	* src/sheet-control-gui.c (scg_context_menu) : implement the
+	  conditions on the hyperlink context menu items.
+
+	* src/sheet-style.c (sheet_style_region_contains_link) : new.
+	(cb_find_link) : new.
+
+2002-09-02  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (gnumeric_load_pixbuf) : new.
+
+2002-09-01  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-graph.c :  disable enough stuff so that it builds
+	  without bonobo.
+
+2002-08-31  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_add_custom_ui) : copy the domain.
+
+2002-08-30  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-graph.c : fix some warnings.
+
+2002-08-30  Morten Welinder  <terra@diku.dk>
+
+	* src/collect.c (string_range_function): Don't copy string.
+
+	* src/expr.c (expr_eval_real): Speed up concat operator a bit.
+
+2002-08-29  Morten Welinder  <terra@diku.dk>
+
+	* src/plugin-service.c (plugin_service_ui_activate): Plug leak.
+
+2002-08-29  Morten Welinder  <terra@diku.dk>
+
+	* src/gutils.c (gnm_mem_chunk_free): Plug a minor leak.
+
+2002-08-29  Morten Welinder  <terra@diku.dk>
+
+	* src/plugin.c (plugins_init): Plug leak.  Careful with
+	g_slist_reverse.
+	(plugins_shutdown): Ditto.
+
+2002-08-29  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump gal version req
+	* README : ditto.
+
+2002-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/print.c (print_range_down_then_right) : fix fence post error.
+	  repeated cols/rows are part of the region if they start _on_ the
+	  coordinate, not just before.
+
+2002-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_check_version) : fix failure test.
+	(xml_probe) : ensure we are at the start of the stream.
+
+2002-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (function_marshal_arg) : begin work to support implicit
+	  iteration.
+
+2002-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-canvas.c : begin tighening the include requirements.
+	* src/gui-file.c : ditto.
+	* src/sheet-object-graphic.c : ditto.
+	* src/sheet-object-widget.c : ditto.
+	* src/xml-io.c : ditto.
+
+	* src/gutils.c (gnm_extension_pointer) : move to libgsf.
+	(gnm_iconv_close) : ditto.
+
+2002-08-28  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : prep for inclusion of libegg code
+	  bump libgsf version req.
+	* src/Makefile.am : ditto.
+
+	* README : update.

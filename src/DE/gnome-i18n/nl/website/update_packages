@@ -1,0 +1,109 @@
+#!/bin/bash
+#The location of the statuspages. They NEED a trailing slash
+sourcelocation="http://l10n-status.gnome.org/"
+docslocation="http://kvota.net/"
+docspage="doc-l10n/by-languages.html"
+#Check the source
+if ! wget -q -O - $sourcelocation \
+| grep "index.html\">" > translation-status.tmp; then 
+	#Something went wrong...bail out
+	echo "Statuspage-location not available"
+	echo $sourcelocation
+	exit 1
+ fi
+echo -n "" > text/versions.text
+#We now have a loop for every gnomeversion which is in the statuspage
+for version in `cat translation-status.tmp | sed 's/.*index.html\">\(.*\)<\/a>.*/\1/'`; do
+	if ! echo "$version" | grep "gnome-1.4" >/dev/null ; then  echo $version >> text/versions.text ; fi
+	if ! wget -q -O - $sourcelocation$version/nl/index.html \
+	  | grep "class=\"package\"" | grep -A 10 "<td><font" \
+	  | sed 's/<.*\">//' |sed 's/<.*>//' > translation-status.$version.tmp; then
+	    echo "Couldn't find index-files for $version"
+		exit 1
+	fi
+	file="text/packages.$version.text"
+	# echo -n "text/packages.$version.text: "
+	date +"%Y-%m-%d %H:%M" > $file
+	echo $sourcelocation >> $file
+	# Now, get the spaces in front of the lines cleaned out.
+	mv translation-status.$version.tmp translation-status.$version.tmp.old
+	for x in `cat translation-status.$version.tmp.old`; do 
+		echo $x >> translation-status.$version.tmp
+	done
+	rm translation-status.$version.tmp.old
+	# Next part: We start another loop for each group
+	echo -n "" > "text/groups.$version.text"
+	for group in `cat translation-status.$version.tmp`; do 
+	if echo $group | grep [a-z]  >/dev/null; then
+		echo "$group" >> "text/groups.$version.text"
+		echo "<--$group-->" >> $file
+		if ! wget -q -O - $sourcelocation$version/nl/$group/index.html \
+		  | grep -A 2 "class=\"package\"" | grep -A 10 "<td><font" \
+		  | sed 's/href=\"..\/..\//href=\"/' \
+		  | sed 's/.*href=\"\(.*\)\">\(.*\)<\/a.*/\1\
+\2/' | sed 's/<.*\">//' |sed 's/<.*>//' > translation-status.$version.$group.tmp; then
+		    echo "Couldn't find index-files for $version of the $group group."
+			exit 1
+		fi
+		# Now, get the spaces in front of the lines cleaned out.
+		mv translation-status.$version.$group.tmp translation-status.$version.$group.tmp.old
+		for x in `cat translation-status.$version.$group.tmp.old`; do 
+			echo $x >> translation-status.$version.$group.tmp
+		done
+		rm translation-status.$version.$group.tmp.old
+		# Next part: We start another loop for each CVS-module
+		if [ -f translation-status.$version.$group.tmp ]; then
+			for line in `cat translation-status.$version.$group.tmp`; do 
+				echo "$line" >> $file
+			done
+		fi
+		echo "--" >> $file
+		echo "TOTAL" >> $file
+	else
+		echo $group >> $file
+	fi
+	done
+done
+
+#mv text/versions.text text/versions.text.old
+#cat text/versions.text.old | sort -r > text/versions.text
+#rm text/versions.text.old
+versie=`grep "important_branch" functions.php | sed 's/.*= "\(.*\)";/\1/'`
+lynx -source $sourcelocation$versie/top.html \
+| grep -B 1 Dutch | head -n 1 | sed 's/.*>\([0-9]\)<.*/\1/' > text/top10.text
+
+#Now, the documentation:
+file="text/packages.documentatie.text"
+echo "documentatie" >> text/versions.text
+echo "nl" > text/groups.documentatie.text
+echo "POT" >> text/groups.documentatie.text
+wget -q -O - $docslocation$docspage \
+| grep "<td" | sed -e 's/.*Language \(.*\)<\/a.*/TOTAL\n0\n0.0\n0\n0.0\n0\n0.0\n<--\1-->/' \
+| sed -e 's/.*<tr class.*href="\(.*\)">\(.*\)<\/a>.*/..\1\n\2/' \
+| sed -e 's/.*>\(.*\) (\(.*\))<\/a>.*/\1\/nl\n\2/' \
+| sed -e 's/.*<td>\(.*\)% (\(.*\))<.*/\2\n\1/' \
+| sed 's/.*div class.*/--/' > packages.documentatie.tmp
+
+date +"%Y-%m-%d %H:%M" > $file
+echo $docslocation >> $file
+line=""
+cat packages.documentatie.tmp | ( while ! [ "$line" == "<--nl-->" ] ; do
+	read line
+    done
+    echo $line
+    read line 
+    while ! echo $line | grep -q "<--" ; do
+	echo $line
+	read line
+	done) >> $file
+cat packages.documentatie.tmp | ( while ! [ "$line" == "<--POT-->" ] ; do
+	read line
+    done
+    echo $line
+    read line 
+    while ! echo $line | grep -q "<--" ; do
+	echo $line
+	read line
+	done) >> $file
+	
+rm *.tmp

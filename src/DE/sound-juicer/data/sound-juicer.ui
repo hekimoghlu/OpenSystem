@@ -1,0 +1,885 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="3.4"/>
+  <object class="GtkApplicationWindow" id="main_window">
+    <property name="width_request">500</property>
+    <property name="height_request">420</property>
+    <signal name="delete_event" handler="on_delete_event"/>
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="headerbar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="show_close_button">True</property>
+        <property name="title" translatable="yes">Sound Juicer</property>
+        <child>
+          <object class="GtkMenuButton" id="menu_button">
+            <property name="visible">True</property>
+            <property name="direction">none</property>
+            <property name="use-popover">True</property>
+            <property name="menu-model">popover-menu</property>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="icon_name">open-menu-symbolic</property>
+                <property name="icon_size">1</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox" id="vbox1">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkInfoBar" id="submit_bar">
+            <property name="can_focus">False</property>
+            <property name="no_show_all">True</property>
+            <signal name="response" handler="submit_bar_response_cb"/>
+            <child internal-child="action_area">
+              <object class="GtkButtonBox" id="infobar-action_area1">
+                <property name="can_focus">False</property>
+                <property name="layout_style">end</property>
+                <child>
+                  <object class="GtkBox" id="box1">
+                    <property name="visible">True</property>
+                    <property name="halign">center</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkButton" id="submit_bar_submit_button">
+                        <property name="label" translatable="yes">_Edit Album</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="action_name">app.submit-tracks</property>
+                        <property name="use_underline">True</property>
+                        <accessibility>
+                          <relation type="labelled-by" target="submit_label"/>
+                        </accessibility>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="submit_bar_reload_button">
+                        <property name="label" translatable="yes">_Reload Album</property>
+                        <property name="visible">False</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="action_name">app.re-read</property>
+                        <property name="use_underline">True</property>
+                        <accessibility>
+                          <relation type="labelled-by" target="submit_label"/>
+                        </accessibility>
+                      </object>
+                      <packing>
+                        <property name="position">1</property>
+                      </packing>
+                     </child>
+                     <child>
+                      <object class="GtkButton" id="submit_bar_close_button">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">False</property>
+                        <child>
+                          <object class="GtkImage" id="close_image">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="icon_name">window-close-symbolic</property>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <action-widgets>
+              <action-widget response="close">submit_bar_close_button</action-widget>
+            </action-widgets>
+            <child internal-child="content_area">
+              <object class="GtkBox" id="infobar-content_area1">
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">6</property>
+                <child>
+                  <object class="GtkLabel" id="submit_label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="valign">center</property>
+                    <property name="hexpand">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+          </object>
+          <packing>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="vbox2">
+            <property name="visible">True</property>
+            <property name="border_width">8</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkGrid" id="entry_grid">
+                <property name="visible">True</property>
+                <property name="column_spacing">12</property>
+                <child>
+                  <object class="GtkBox" id="hbox1">
+                    <property name="visible">True</property>
+                    <property name="margin-top">6</property>
+                    <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkEntry" id="genre_entry">
+                        <property name="visible">True</property>
+                        <property name="hexpand">True</property>
+                        <property name="can_focus">True</property>
+                        <signal name="activate" handler="on_activate_move_focus"/>
+                        <signal name="changed" handler="on_genre_edit_changed"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="label4">
+                        <property name="visible">True</property>
+                        <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">_Year:</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">year_entry</property>
+                        <accessibility>
+                          <relation type="label-for" target="year_entry"/>
+                        </accessibility>
+                        <attributes>
+                          <attribute name="weight" value="bold"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="year_entry">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="width_chars">4</property>
+                        <property name="max_width_chars">4</property>
+                        <signal name="activate" handler="on_activate_move_focus"/>
+                        <accessibility>
+                          <relation type="labelled-by" target="label4"/>
+                        </accessibility>
+                        <signal name="changed" handler="on_year_edit_changed"/>
+                      </object>
+                      <packing>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="label6">
+                        <property name="visible">True</property>
+                        <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">_Disc:</property>
+                        <property name="use_underline">True</property>
+                        <property name="mnemonic_widget">disc_number_entry</property>
+                        <accessibility>
+                          <relation type="label-for" target="disc_number_entry"/>
+                        </accessibility>
+                        <attributes>
+                          <attribute name="weight" value="bold"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="disc_number_entry">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="width_chars">2</property>
+                        <property name="max_width_chars">2</property>
+                        <signal name="activate" handler="on_activate_move_focus"/>
+                        <accessibility>
+                          <relation type="labelled-by" target="label6"/>
+                        </accessibility>
+                        <signal name="changed" handler="on_disc_number_edit_changed"/>
+                      </object>
+                      <packing>
+                        <property name="position">4</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label1">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">_Title:</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">title_entry</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="title_entry">
+                    <property name="visible">True</property>
+                    <property name="hexpand">True</property>
+                    <property name="can_focus">True</property>
+                    <signal name="activate" handler="on_activate_move_focus"/>
+                    <signal name="changed" handler="on_title_edit_changed" after="yes"/>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label2">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-top">6</property>
+                    <property name="label" translatable="yes">_Artist:</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">artist_entry</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="artist_entry">
+                    <property name="visible">True</property>
+                    <property name="margin-top">6</property>
+                    <property name="hexpand">True</property>
+                    <property name="can_focus">True</property>
+                    <signal name="activate" handler="on_activate_move_focus"/>
+                    <signal name="changed" handler="on_person_edit_changed" after="yes"/>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="composer_label">
+                    <property name="visible">False</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-top">6</property>
+                    <property name="label" translatable="yes">_Composer:</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">composer_entry</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="composer_entry">
+                    <property name="visible">False</property>
+                    <property name="margin-top">6</property>
+                    <property name="hexpand">True</property>
+                    <property name="can_focus">True</property>
+                    <signal name="activate" handler="on_activate_move_focus"/>
+                    <signal name="changed" handler="on_person_edit_changed" after="yes"/>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label31">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-top">6</property>
+                    <property name="label" translatable="yes">_Genre:</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">genre_entry</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="label3">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-top">9</property>
+                    <property name="label" translatable="yes">Duration:</property>
+                    <accessibility>
+                      <relation type="label-for" target="duration_label"/>
+                    </accessibility>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                    </attributes>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">4</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="duration_label">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-top">9</property>
+                    <accessibility>
+                      <relation type="labelled-by" target="label3"/>
+                    </accessibility>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">4</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="scrolledwindow1">
+                <property name="visible">True</property>
+                <property name="expand">True</property>
+                <property name="can_focus">True</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <object class="SjTreeView" id="track_listview">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="has_focus">True</property>
+                    <property name="rules_hint">True</property>
+                    <property name="enable_search">False</property>
+                    <child internal-child="accessible">
+                      <object class="AtkObject" id="track_listview-atkobject">
+                        <property name="AtkObject::accessible-name" translatable="yes">Tracks</property>
+                      </object>
+                    </child>
+                    <signal name="cursor_changed" handler="on_tracklist_row_selected"/>
+                    <signal name="row_activated" handler="on_tracklist_row_activate"/>
+                    <signal name="play_row" handler="on_tracklist_row_activate"/>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkBox" id="hbox10">
+                <property name="visible">True</property>
+                <property name="spacing">6</property>
+                <child>
+                  <object class="GtkButtonBox" id="hbuttonbox1">
+                    <property name="visible">True</property>
+                    <property name="spacing">6</property>
+                    <property name="layout_style">end</property>
+                    <child>
+                      <object class="GtkButton" id="play_button">
+                        <property name="label" translatable="yes">_Play</property>
+                        <property name="use-underline">True</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="can_default">True</property>
+                        <property name="receives_default">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="extract_button">
+                        <property name="label" translatable="yes">E_xtract</property>
+                        <property name="use-underline">True</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="can_default">True</property>
+                        <property name="receives_default">False</property>
+                        <signal name="clicked" handler="on_extract_activate"/>
+                      </object>
+                      <packing>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScale" id="seek_scale">
+                    <property name="hexpand">True</property>
+                    <property name="adjustment">seek_adjustment</property>
+                    <property name="can_focus">True</property>
+                    <property name="digits">0</property>
+                    <property name="draw_value">False</property>
+                    <child internal-child="accessible">
+                      <object class="AtkObject" id="seek_scale-atkobject">
+                        <property name="AtkObject::accessible-name" translatable="yes">Track Progress</property>
+                      </object>
+                    </child>
+                    <signal name="button_press_event" handler="on_seek_press"/>
+                    <signal name="key_press_event" handler="on_seek_press"/>
+                    <signal name="value_changed" handler="on_seek_moved"/>
+                    <signal name="button_release_event" handler="on_seek_release"/>
+                    <signal name="key_release_event" handler="on_seek_release"/>
+                  </object>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                    <object class="GtkAdjustment" id="seek_adjustment">
+                      <property name="value">0</property>
+                      <property name="lower">0</property>
+                      <property name="upper">1</property>
+                      <property name="step_increment">0.01</property>
+                      <property name="page_increment">0</property>
+                    </object>
+                </child>
+                <child>
+                  <object class="GtkVolumeButton" id="volume_button">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="has_tooltip">True</property>
+                    <property name="relief">none</property>
+                    <property name="focus_on_click">False</property>
+                    <property name="orientation">vertical</property>
+                    <property name="icons">audio-volume-muted
+audio-volume-high
+audio-volume-low
+audio-volume-medium</property>
+                    <signal name="value_changed" handler="on_volume_changed"/>
+                  </object>
+                  <packing>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="select_button">
+                    <property name="label">placeholder</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="receives_default">False</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="pack_type">end</property>
+                    <property name="position">3</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="position">2</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="hbox13">
+            <property name="height_request">22</property>
+            <property name="visible">True</property>
+            <child>
+              <object class="GtkProgressBar" id="progress_bar">
+                <property name="pulse_step">0.10000000149</property>
+                <property name="margin-top">2</property>
+                <property name="margin-bottom">2</property>
+                <property name="margin-left">14</property>
+                <property name="valign">center</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkStatusbar" id="status_bar">
+                <property name="visible">True</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="position">3</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkDialog" id="prefs_dialog">
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Preferences</property>
+    <property name="resizable">False</property>
+    <property name="type_hint">dialog</property>
+    <property name="modal">True</property>
+    <signal name="delete_event" handler="gtk_widget_hide_on_delete"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox4">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkGrid" id="prefs_grid">
+            <property name="visible">True</property>
+            <property name="border-width">7</property>
+            <property name="row-spacing">6</property>
+            <property name="column-spacing">12</property>
+            <child>
+              <object class="GtkLabel" id="label32">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="label" translatable="yes">Device</property>
+                <attributes>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="top_attach">0</property>
+                <property name="left_attach">0</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="cd_label">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-left">12</property>
+                <property name="label" translatable="yes">CD _drive:</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">cd_option</property>
+              </object>
+              <packing>
+                <property name="top-attach">1</property>
+                <property name="left-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBox" id="cd_option">
+                <property name="visible">True</property>
+                <property name="hexpand">True</property>
+                <child>
+                  <object class="GtkCellRendererText"/>
+                  <attributes>
+                    <attribute name="text">1</attribute>
+                  </attributes>
+                </child>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="check_eject">
+                <property name="label" translatable="yes">_Eject after extracting tracks</property>
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="use_underline">True</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="check_open">
+                <property name="label" translatable="yes">_Open music folder when finished</property>
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="use_underline">True</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label33">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-top">12</property>
+                <property name="label" translatable="yes">Music Folder</property>
+                <attributes>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">10</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="path_label">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-left">12</property>
+                <property name="label" translatable="yes">_Folder:</property>
+                <property name="use_underline">True</property>
+                <property name="wrap">True</property>
+                <property name="mnemonic_widget">path_chooser</property>
+              </object>
+              <packing>
+                <property name="top-attach">11</property>
+                <property name="left-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkFileChooserButton" id="path_chooser">
+                <property name="visible">True</property>
+                <property name="local_only">False</property>
+                <property name="hexpand">True</property>
+                <property name="action">select-folder</property>
+                <property name="title" translatable="yes">Select A Folder</property>
+                <signal name="file-set" handler="prefs_base_folder_changed"/>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">11</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label34">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-top">12</property>
+                <property name="label" translatable="yes">Track Names</property>
+                <attributes>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="top-attach">20</property>
+                <property name="left-attach">0</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="folder_label">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-left">12</property>
+                <property name="label" translatable="yes">Folder hie_rarchy:</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">path_option</property>
+              </object>
+              <packing>
+                <property name="top-attach">21</property>
+                <property name="left-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBox" id="path_option">
+                <property name="visible">True</property>
+                <property name="hexpand">True</property>
+                <property name="id-column">1</property>
+                <child>
+                  <object class="GtkCellRendererText" id="cellrenderertext2"/>
+                  <attributes>
+                    <attribute name="text">0</attribute>
+                  </attributes>
+                </child>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">21</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="file_label">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-left">12</property>
+                <property name="label" translatable="yes">File _name:</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">file_option</property>
+              </object>
+              <packing>
+                <property name="top-attach">22</property>
+                <property name="left-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBox" id="file_option">
+                <property name="visible">True</property>
+                <property name="hexpand">True</property>
+                <property name="id-column">1</property>
+                <child>
+                  <object class="GtkCellRendererText" id="cellrenderertext1"/>
+                  <attributes>
+                    <attribute name="text">0</attribute>
+                  </attributes>
+                </child>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">22</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="check_strip">
+                <property name="label" translatable="yes">_Strip special characters</property>
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="use_underline">True</property>
+                <property name="draw_indicator">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">23</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="path_example_label">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="use_markup">True</property>
+                <property name="ellipsize">end</property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="top-attach">24</property>
+                <property name="left-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="label35">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-top">12</property>
+                <property name="label" translatable="yes">Format</property>
+                <attributes>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="top-attach">30</property>
+                <property name="left-attach">0</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="profile_label">
+                <property name="visible">True</property>
+                <property name="halign">start</property>
+                <property name="margin-left">12</property>
+                <property name="label" translatable="yes">O_utput Format:</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">profile_option</property>
+              </object>
+              <packing>
+                <property name="top-attach">31</property>
+                <property name="left-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBox" id="profile_option">
+                <property name="visible">True</property>
+                <property name="hexpand">True</property>
+                <property name="id-column">0</property>
+                <child>
+                  <object class="GtkCellRendererText" id="cellrenderertext3"/>
+                  <attributes>
+                    <attribute name="text">1</attribute>
+                  </attributes>
+                </child>
+              </object>
+              <packing>
+                <property name="top-attach">31</property>
+                <property name="left-attach">1</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <menu id="popover-menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Re-read</attribute>
+        <attribute name="action">app.re-read</attribute>
+        <attribute name="accel">&lt;Primary&gt;r</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Duplicate</attribute>
+        <attribute name="action">app.duplicate</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Eject</attribute>
+        <attribute name="action">app.eject</attribute>
+        <attribute name="accel">&lt;Primary&gt;j</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Open MusicBrainz</attribute>
+        <attribute name="action">app.submit-tracks</attribute>
+        <attribute name="accel">&lt;Primary&gt;s</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Preferences</attribute>
+        <attribute name="action">app.preferences</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Shortcuts</attribute>
+        <attribute name="action">win.show-help-overlay</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Help</attribute>
+        <attribute name="action">app.help</attribute>
+        <attribute name="accel">F1</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">About Sound Juicer</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Quit</attribute>
+        <attribute name="action">app.quit</attribute>
+        <attribute name="accel">&lt;Primary&gt;q</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>

@@ -1,0 +1,73 @@
+/* Copyright (C) 2010 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/error.h>
+#include <glibmm/interface.h>
+#include <giomm/asyncresult.h>
+#include <giomm/cancellable.h>
+#include <giomm/proxyaddress.h>
+#include <giomm/iostream.h>
+//#include <giomm/error.h> //Because this is thrown by some of these methods.
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GProxyInterface GProxyInterface;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gio
+{
+
+
+/** Proxy - Interface for proxy handling.
+ * A Proxy handles connecting to a remote host via a given type of proxy
+ * server. It is implemented by the 'gio-proxy' extension point. The
+ * extensions are named after their proxy protocol name. As an example, a
+ * SOCKS5 proxy implementation can be retrieved with the name 'socks5' using
+ * the C API's function g_io_extension_point_get_extension_by_name().
+ *
+ * @ingroup NetworkIO
+ * @newin{2,28}
+ */
+class GIOMM_API Proxy : public Glib::Interface
+{
+  _CLASS_INTERFACE(Proxy, GProxy, G_PROXY, GProxyInterface, , , GIOMM_API)
+
+public:
+
+  _WRAP_METHOD(static Glib::RefPtr<Proxy> get_default_for_protocol(const Glib::ustring& protocol), g_proxy_get_default_for_protocol)
+
+  _WRAP_METHOD(Glib::RefPtr<IOStream> connect(const Glib::RefPtr<IOStream>& connection,
+    const Glib::RefPtr<const ProxyAddress>& proxy_address, const Glib::RefPtr<Cancellable>& cancellable), g_proxy_connect, errthrow)
+
+  /** An Asynchronous version of connect().
+   */
+  void connect_async(const Glib::RefPtr<IOStream>& connection, const Glib::RefPtr<const ProxyAddress>& proxy_address, const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable);
+
+  /** An Asynchronous version of connect().
+   */
+  void connect_async(const Glib::RefPtr<IOStream>& connection, const Glib::RefPtr<const ProxyAddress>& proxy_address, const SlotAsyncReady& slot);
+  _IGNORE(g_proxy_connect_async)
+
+  _WRAP_METHOD(Glib::RefPtr<IOStream> connect_finish(const Glib::RefPtr<AsyncResult>& result), g_proxy_connect_finish, errthrow)
+
+  _WRAP_METHOD(bool supports_hostname() const, g_proxy_supports_hostname)
+
+};
+
+
+} // namespace Gio

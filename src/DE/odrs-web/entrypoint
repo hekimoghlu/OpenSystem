@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+export FLASK_APP=odrs:app
+export SQLALCHEMY_TRACK_MODIFICATIONS=False
+
+flask db upgrade
+flask initdb
+
+while true; do python3 /opt/app-root/src/cron.py fsck ; sleep 43200 ; done &
+
+curl https://dl.flathub.org/repo/appstream/x86_64/appstream.xml.gz -o /tmp/appstream.xml.gz
+python /opt/app-root/src/cron.py appstream-import /tmp/appstream.xml.gz
+
+curl https://raw.githubusercontent.com/hughsie/badwords/master/badwords.csv -o /tmp/badwords.csv
+python /opt/app-root/src/cron.py taboo-import /tmp/badwords.csv
+
+while true; do
+  python /opt/app-root/src/cron.py ratings /tmp/ratings/ratings.json
+
+  cp /tmp/ratings/ratings.json /tmp/ratings/ratings.json.bak
+  gzip /tmp/ratings/ratings.json
+  mv /tmp/ratings/ratings.json.bak /tmp/ratings/ratings.json
+
+  brotli -k /tmp/ratings/ratings.json
+  python /opt/app-root/src/cdn-refresh.py || true
+
+  sleep 86400
+done &
+
+exec /usr/libexec/s2i/run

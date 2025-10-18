@@ -1,0 +1,176 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <vector>
+
+#include <gdkmm/applaunchcontext.h>
+#include <gdkmm/event.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+class GDKMM_API ListModel;
+}
+
+namespace Gdk
+{
+
+_CC_INCLUDE(gdk/gdk.h)
+
+class GDKMM_API Clipboard;
+class GDKMM_API DmabufFormats;
+class GDKMM_API Device;
+class GDKMM_API GLContext;
+class GDKMM_API Seat;
+class GDKMM_API Monitor;
+class GDKMM_API Surface;
+
+ /** Gdk::Display object's purpose is two fold:
+ *   To grab/ungrab keyboard focus and mouse pointer
+ *   To manage and provide information about the Gdk::Monitor(s) available for this Gdk::Display
+ *
+ * Gdk::Display objects are the GDK representation of the X Display which can be described as a workstation consisting
+ * of a keyboard a pointing device (such as a mouse) and one or more screens. It is used to open and keep track of
+ * various Gdk::Monitor objects currently instantiated by the application. It is also used to grab and release the keyboard
+ * and the mouse pointer.
+ */
+class GDKMM_API Display : public Glib::Object
+{
+  _CLASS_GOBJECT(Display,GdkDisplay,GDK_DISPLAY,Glib::Object,GObject, , , GDKMM_API)
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_METHOD(static Glib::RefPtr<Display> open(const Glib::ustring& display_name), gdk_display_open, refreturn)
+
+  _WRAP_METHOD(Glib::ustring get_name() const, gdk_display_get_name)
+
+  _WRAP_METHOD(bool device_is_grabbed(const Glib::RefPtr<const Gdk::Device>& device) const, gdk_display_device_is_grabbed)
+  _WRAP_METHOD(void beep(), gdk_display_beep)
+  _WRAP_METHOD(void sync(), gdk_display_sync)
+  _WRAP_METHOD(void close(), gdk_display_close)
+  _WRAP_METHOD(bool is_closed() const, gdk_display_is_closed)
+  _WRAP_METHOD(bool is_composited() const, gdk_display_is_composited)
+  _WRAP_METHOD(bool is_rgba() const, gdk_display_is_rgba)
+  _WRAP_METHOD(bool supports_shadow_width() const, gdk_display_supports_shadow_width)
+
+  _WRAP_METHOD(void put_event(const Glib::RefPtr<const Event>& event), gdk_display_put_event,
+    deprecated "This function is only useful in very special situations and should not be used by applications.")
+
+  _WRAP_METHOD(static Glib::RefPtr<Display> get_default(), gdk_display_get_default, refreturn)
+
+  _WRAP_METHOD(void flush(), gdk_display_flush)
+
+  _WRAP_METHOD(Glib::RefPtr<Clipboard> get_clipboard(), gdk_display_get_clipboard, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Clipboard> get_clipboard() const, gdk_display_get_clipboard, refreturn, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Clipboard> get_primary_clipboard(), gdk_display_get_primary_clipboard, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Clipboard> get_primary_clipboard() const, gdk_display_get_primary_clipboard, refreturn, constversion)
+
+  _WRAP_METHOD(bool supports_input_shapes() const, gdk_display_supports_input_shapes)
+
+  /** Checks that OpenGL is available for this display and ensures that it is
+   * properly initialized.
+   *
+   * When this fails, an exception will be thrown describing the error.
+   *
+   * Note that even if this function succeeds, creating a `Gdk::GLContext`
+   * may still fail.
+   *
+   * This function is idempotent. Calling it multiple times will just 
+   * return the same value or error.
+   *
+   * You never need to call this function, GDK will call it automatically
+   * as needed. But you can use it as a check when setting up code that
+   * might make use of OpenGL.
+   *
+   * @newin{4,4}
+   *
+   * @throws Glib::Error
+   */
+  _WRAP_METHOD(void prepare_gl(), gdk_display_prepare_gl, errthrow)
+
+  _WRAP_METHOD(Glib::RefPtr<GLContext> create_gl_context(), gdk_display_create_gl_context, errthrow)
+
+  _WRAP_METHOD(void notify_startup_complete(const Glib::ustring& startup_id),
+    gdk_display_notify_startup_complete, deprecated "Using Gdk::Toplevel::set_startup_id() is sufficient.")
+  _WRAP_METHOD(Glib::ustring get_startup_notification_id() const,
+    gdk_display_get_startup_notification_id, deprecated)
+
+#m4 _CONVERSION(`GdkAppLaunchContext*',`Glib::RefPtr<AppLaunchContext>', `Glib::wrap($3)')
+#m4 _CONVERSION(`GdkAppLaunchContext*',`Glib::RefPtr<const AppLaunchContext>', `Glib::wrap($3)')
+  _WRAP_METHOD(Glib::RefPtr<AppLaunchContext> get_app_launch_context(), gdk_display_get_app_launch_context, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const AppLaunchContext> get_app_launch_context() const, gdk_display_get_app_launch_context, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Seat> get_default_seat(), gdk_display_get_default_seat, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Seat> get_default_seat() const, gdk_display_get_default_seat, refreturn, constversion)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<Seat>>',`Glib::ListHandler<Glib::RefPtr<Seat>>::list_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Seat>> list_seats(), gdk_display_list_seats)
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<const Seat>>',`Glib::ListHandler<Glib::RefPtr<const Seat>>::list_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<const Seat>> list_seats() const, gdk_display_list_seats)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> get_monitors(), gdk_display_get_monitors, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_monitors() const, gdk_display_get_monitors, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Monitor> get_monitor_at_surface(const Glib::RefPtr<Surface>& surface), gdk_display_get_monitor_at_surface, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Monitor> get_monitor_at_surface(const Glib::RefPtr<Surface>& surface) const, gdk_display_get_monitor_at_surface, refreturn, constversion)
+
+  _IGNORE(gdk_display_translate_key)dnl// "This function should rarely be needed"
+
+  template <class ValueType>
+  bool get_setting(const Glib::ustring& name, ValueType& value) const;
+  _IGNORE(gdk_display_get_setting)
+
+  _WRAP_METHOD(Glib::RefPtr<DmabufFormats> get_dmabuf_formats(),
+    gdk_display_get_dmabuf_formats, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const DmabufFormats> get_dmabuf_formats() const,
+    gdk_display_get_dmabuf_formats, refreturn, constversion)
+
+  //We use no_default_handler because GdkDisplayClass is private.
+
+  _WRAP_SIGNAL(void closed(bool is_error), closed, no_default_handler)
+  _WRAP_SIGNAL(void opened(), opened, no_default_handler)
+
+#m4 _CONVERSION(`GdkSeat*',`const Glib::RefPtr<Seat>&', Glib::wrap($3, true))
+  _WRAP_SIGNAL(void seat_added(const Glib::RefPtr<Seat>& seat), "seat-added", no_default_handler)
+  _WRAP_SIGNAL(void seat_removed(const Glib::RefPtr<Seat>& seat), "seat-removed", no_default_handler)
+
+  _WRAP_SIGNAL(void setting_changed(const Glib::ustring& setting), "setting-changed", no_default_handler)
+
+  _WRAP_PROPERTY("composited", bool)
+  _WRAP_PROPERTY("rgba", bool)
+  _WRAP_PROPERTY("shadow-width", bool)
+  _WRAP_PROPERTY("input-shapes", bool)
+  _WRAP_PROPERTY("dmabuf-formats", Glib::RefPtr<DmabufFormats>)
+
+  // We don't wrap the vfuncs because GdkDisplayClass is private.
+};
+
+template <class ValueType>
+bool Display::get_setting(const Glib::ustring& name, ValueType& value) const
+{
+  Glib::Value<ValueType> glibmmvalue;
+  glibmmvalue.init(Glib::Value<ValueType>::value_type());
+
+  gboolean result = gdk_display_get_setting(const_cast<GdkDisplay*>(gobj()), name.c_str(), glibmmvalue.gobj());
+
+  value = glibmmvalue.get();
+  return result;
+}
+
+} // namespace Gdk

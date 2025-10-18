@@ -1,0 +1,123 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/bin.h>
+#include <gstreamermm/clock.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+_WRAP_ENUM(GstPipelineFlags, PipelineFlags)
+
+class Bus;
+
+/** A top-level bin with clocking and bus management functionality.
+ * A Gst::Pipeline is a special Gst::Bin used as the toplevel container for
+ * the filter graph.  The Gst::Pipeline will manage the selection and
+ * distribution of a global Gst::Clock as well as provide a Gst::Bus to the
+ * application. It will also implement a default behavour for managing seek
+ * events (see Gst::Element::seek()).
+ *
+ * create() is used to create a pipeline. when the pipeline is destroyed all
+ * its resources including all added Gst::Element objects are destroyed.
+ *
+ * Elements are added and removed from the pipeline using the Gst::Bin methods
+ * like Gst::Bin::add() and Gst::Bin::remove() (see Gst::Bin).
+ *
+ * Before changing the state of the Gst::Pipeline (see Gst::Element) a Gst::Bus
+ * can be retrieved with get_bus(). This bus can then be used to receive
+ * Gst::Message from the elements in the pipeline.
+ *
+ * By default, a Gst::Pipeline will automatically flush the pending Gst::Bus
+ * messages when going to the NULL state to ensure that no circular references
+ * exist when no messages are read from the Gst::Bus. This behaviour can be
+ * changed with set_auto_flush_bus().
+ *
+ * When the Gst::Pipeline performs the PAUSED to PLAYING state change it will
+ * select a clock for the elements. The clock selection algorithm will by
+ * default select a clock provided by an element that is most upstream (closest
+ * to the source). For live pipelines (ones that return
+ * Gst::STATE_CHANGE_NO_PREROLL from the Gst::Element::set_state() call) this
+ * will select the clock provided by the live source. For normal pipelines this
+ * will select a clock provided by the sinks (most likely the audio sink). If
+ * no element provides a clock, a default Gst::SystemClock is used.
+ *
+ * The clock selection can be controlled with the use_clock() method, which
+ * will enforce a given clock on the pipeline. With auto_clock() the default
+ * clock selection algorithm can be restored.
+ *
+ * A Gst::Pipeline maintains a stream time for the elements. The stream time is
+ * defined as the difference between the current clock time and the base time.
+ * When the pipeline goes to READY or a flushing seek is performed on it, the
+ * stream time is reset to 0. When the pipeline is set from PLAYING to PAUSED,
+ * the current clock time is sampled and used to configure the base time for
+ * the elements when the pipeline is set to PLAYING again.
+ *
+ * When sending a flushing seek event to a Gst::Pipeline (see
+ * Gst::Element::seek()), it will make sure that the pipeline is properly
+ * PAUSED and resumed as well as set the new stream time to 0 when the seek
+ * succeeded.
+ *
+ * Last reviewed on 2016-06-06 (1.8.0)
+ * @ingroup GstBaseClasses
+ */
+class Pipeline : public Bin 
+{
+  _CLASS_GOBJECT(Pipeline, GstPipeline, GST_PIPELINE, Bin, GstBin)
+
+protected:
+  _WRAP_CTOR(Pipeline(const Glib::ustring& name), gst_pipeline_new)
+  Pipeline();
+
+public:
+  /** Create a new pipeline with the given name.
+   *
+   * @param name Name of new pipeline.
+   * @return Newly created Gst::Pipeline. MT safe.
+   */
+  _WRAP_CREATE(const Glib::ustring& name)
+
+  /** Create a new pipeline with a unique generic name.
+   * @return Newly created Gst::Pipeline. MT safe.
+   */
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Bus> get_bus(), gst_pipeline_get_bus)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Bus> get_bus() const, gst_pipeline_get_bus, constversion)
+  _WRAP_METHOD(bool set_clock(const Glib::RefPtr<Gst::Clock>& clock), gst_pipeline_set_clock)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Clock> get_clock(), gst_pipeline_get_clock)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Clock> get_clock() const, gst_pipeline_get_clock, constversion)
+  _WRAP_METHOD(void use_clock(const Glib::RefPtr<Gst::Clock>& clock), gst_pipeline_use_clock)
+  _WRAP_METHOD(void auto_clock(), gst_pipeline_auto_clock)
+  _WRAP_METHOD(void set_auto_flush_bus(gboolean auto_flush = true), gst_pipeline_set_auto_flush_bus)
+  _WRAP_METHOD(bool get_auto_flush_bus() const, gst_pipeline_get_auto_flush_bus)
+  _WRAP_METHOD(void set_delay(ClockTime delay), gst_pipeline_set_delay)
+  _WRAP_METHOD(ClockTime get_delay() const, gst_pipeline_get_delay)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Clock> get_pipeline_clock(), gst_pipeline_get_pipeline_clock)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Clock> get_pipeline_clock() const, gst_pipeline_get_pipeline_clock, constversion)
+  _WRAP_METHOD(void set_latency(Gst::ClockTime latency), gst_pipeline_set_latency)
+  _WRAP_METHOD(Gst::ClockTime get_latency() const, gst_pipeline_get_latency)
+
+  _WRAP_PROPERTY("latency", guint64)
+  _WRAP_PROPERTY("auto-flush-bus", bool)
+  _WRAP_PROPERTY("delay", ClockTime)
+};
+
+} //namespace Gst

@@ -1,0 +1,53 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/error.h>
+#include <glibmm/utility.h>
+
+namespace Gio
+{
+
+namespace DBus
+{
+
+// We hand-code this because g_dbus_node_info_lookup_interface() doesn't
+// do this when it takes a nullptr.
+// See bug https://bugzilla.gnome.org/show_bug.cgi?id=646417
+Glib::RefPtr<InterfaceInfo>
+NodeInfo::lookup_interface()
+{
+  Glib::RefPtr<InterfaceInfo> retvalue;
+
+  if (!gobj() || !(gobj()->interfaces))
+    return retvalue;
+
+  retvalue = Glib::wrap(gobj()->interfaces[0]);
+
+  if (retvalue)
+    retvalue->reference(); // The function does not do a ref for us.
+
+  return retvalue;
+}
+
+Glib::RefPtr<const InterfaceInfo>
+NodeInfo::lookup_interface() const
+{
+  return const_cast<NodeInfo*>(this)->lookup_interface();
+}
+
+} // namespace DBus
+
+} // namespace Gio

@@ -1,0 +1,21 @@
+# Inputs: uri
+DELETE {
+  GRAPH tracker:FileSystem {
+    ?f a rdfs:Resource .
+  } .
+  GRAPH ?g {
+    ?f a rdfs:Resource .
+    ?ie a rdfs:Resource .
+  }
+} WHERE {
+  GRAPH tracker:FileSystem {
+    ?f a rdfs:Resource ;
+      nie:url ~uri
+    GRAPH ?g {
+      ?f a rdfs:Resource .
+      OPTIONAL {
+        ?ie nie:isStoredAs ?f
+      }
+    }
+  }
+}

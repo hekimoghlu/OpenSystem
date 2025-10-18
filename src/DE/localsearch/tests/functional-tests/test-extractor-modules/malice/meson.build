@@ -1,0 +1,6 @@
+subdir('dbus-access')
+subdir('exec')
+subdir('fs-read')
+subdir('fs-read-trunc')
+subdir('fs-write')
+subdir('net-access')

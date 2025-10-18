@@ -1,0 +1,185 @@
+2006-10-17  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.7.2
+
+2006-10-16  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (cb_workbook_debug_info): Use
+	workbook_share_expressions.
+
+	* src/workbook.c (workbook_share_expressions): New function.
+
+	* src/workbook-view.c (wb_view_new_from_input): Share expressions
+	after load.
+
+2006-10-16  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (relocate_cellrange) : Check for inversion from the
+	  destination position. (rinfo->pos.eval + offset).
+	  Fixes 350222.
+
+2006-10-16  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c : Fixes #361074
+	(bin_array_iter_a) : split out of the old bin_array_op, and handle the
+	  more complex iteration cases of different shaped arguments.  See
+	  samples/array.xls for details.
+	(bin_array_iter_b) : split from bin_array_op and handle the simple
+	  case of f(scalar,array).
+	(gnm_expr_eval) : adjust to new binary array iterator functions.
+
+2006-10-16  Jon K Hellan  <hellan@acm.org>
+
+	* src/main-application.c (main): Increase stack limit.
+
+2006-10-15  Jody Goldberg <jody@gnome.org>
+
+	* src/preview-grid.c (pg_fetch_cell) : renamed from pg_construct_cell.
+	  Now that we have a sheet to store things in the life cycle gets
+	  simpler.
+	(preview_grid_draw) : no need to destroy things so quickly now.
+	(pg_destruct_cell) : delete.
+
+2006-10-15  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (function_call_with_exprs) : I don't have a concrete
+	  example of where this would matter, but it seems like a better
+	  choice.  Iterating for every array function seems over the top.
+
+2006-10-15  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_cell_and_position) : minor cosmetc
+	  fix to export Row before Col to make the result more readable.
+
+2006-10-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (cellregion_to_string): Limit to non-empty
+	part of sheet.
+	(x_store_clipboard_if_needed): Call whenever workbook with
+	clipboard sheet is closed,
+
+2006-10-14  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_sheet_delete): Actually clear clipboard
+	references as the docs claim.  Fixes #323762.
+
+	* src/sheet-object.c (sheet_object_invalidate_sheet): New
+	function.
+
+	* src/clipboard.c (cellregion_invalidate_sheet): Invalidate the
+	sheet in sheet objects too.
+
+2006-10-13  Jody Goldberg <jody@gnome.org>
+
+	* po/POTFILES.in : translate the Hildon file (no actual text right now)
+	* po-functions/POTFILES.skip : There is no function text in the hildon
+	  file.
+
+2006-10-13  Jody Goldberg <jody@gnome.org>
+
+	* src/style-border.c (print_vline) : Respect RTL when rounding to
+	  pixel bounds. [#317662]
+	(style_borders_row_print) : and here.
+
+2006-10-11  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (cb_write_cell, xml_write_cells): Only last
+	change.  The explicit ordering was useful.
+
+	* src/expr.c (gnm_expr_hash): Renamed from ets_hash and adapted to
+	traverse the entire tree.
+	(gnm_expr_top_hash): New function.
+	(gnm_expr_sharer_new): Use gnm_expr_top_hash, not ets_hash.
+	(gnm_expr_sharer_share): Re-implement sharing.
+	(gnm_expr_top_equal): If we have different hash values,
+	short-circuit as false.
+
+2006-10-11  Valek Filippov  <frob@df.ru>
+
+	* schemas/gnumeric-general.schemas.in: 	Extend comment about 'Transition Keys' with Jody's explanation.
+	* schemas/gnumeric-dialogs.schemas.in:  Fixed typppo.
+
+2006-10-10  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_clipboard_invalidate_sheet): New
+	function.
+	* src/clipboard.c (cellregion_invalidate_sheet): New function.
+	* src/sheet.c (sheet_destroy): Use
+	gnm_app_clipboard_invalidate_sheet.  Fixes #323811 in a brutal
+	way.
+	(sheet_destroy): Make static.
+
+2006-10-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_claim_clipboard): Don't declare text or
+	html formats on clipboard for sheet objects. Fixes #308569.
+
+	* src/workbook-control-gui.c (wbcg_finalize,
+	wbcg_close_if_user_permits):  Move call of
+	x_store_clipboard_if_needed from finalize to
+	close_if_user_permits. This works around some lifecycle
+	issues. Fixes #321714, #342580.
+
+	* src/gui-clipboard.[ch] (x_store_clipboard_if_needed):
+	Make it take a workbook, not a wbcg. Should now be explicitly
+	called before workbook object is destroyed.
+
+2006-10-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): Fix hiding/unhiding of
+	toolbars broken by 2006-08-09 commit.
+
+	* src/clipboard.c (paste_cell): Transpose array formulas.
+	[#349288].  Make sure we do not end up sharing corners in the
+	non-transposed case.
+
+	* src/expr.c (gnm_expr_top_transpose): New function.
+
+2006-10-08  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (xml_read_clipboard_cell): Make sure the value gets
+	set to a non-NULL value.  Don't try to free a NULL value.
+
+	* src/cell.c (cell_set_expr_and_value): Set CELL_HAS_NEW_EXPR just
+	like cell_set_expr_internal.  Fixes #360672.
+
+2006-10-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-file.c (gui_file_open, gui_file_save_as): Explicitly
+	show the file format box, because go_gtk_file_sel_dialog no longer
+	calls gtk_wiget_show_all.
+
+	* src/gui-clipboard.c (x_clipboard_get_cb): Ignore SAVE_TARGETS.
+
+2006-10-06  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_store_clipboard_if_needed): Only store if
+	we own selection.
+
+2006-10-05  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (cb_max_cell_height): Optimize the non-string case.
+	Fixes #359392.
+	* src/mstyle.c (gnm_style_get_pango_height): New function.
+
+2006-10-04  Morten Welinder  <terra@gnome.org>
+
+	* src/preview-grid.c (pg_destruct_cell): Destroy cell properly.
+	(pg_construct_cell): Construct it properly.
+	(preview_grid_init): Create proper sheet object.
+
+	* src/dependent.c (handle_outgoing_references): Handle sheet
+	without workbook.
+
+2006-10-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gui-clipboard.c: (x_claim_clipboard): fixed one more detail.
+
+2006-10-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gui-clipboard.c: (x_claim_clipboard): check for imageable and
+	exportable indepentently.
+
+2006-10-03  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

@@ -1,0 +1,166 @@
+:root {
+  --headerbar-bg-oklch: 0.95 calc(c * 0.3) h;
+  --headerbar-backdrop-oklch: 0.9 calc(c * 0.25) h;
+  --headerbar-bell-oklch: 1 c h;
+  --system-accent: var(--accent-bg-color);
+}
+
+@keyframes bell {
+  50% {
+    background-color: oklch(from var(--accent-orange) var(--headerbar-bell-oklch));
+  }
+}
+
+kgx-tab .top-bar {
+  background-image: none;
+  background-color: var(--view-bg-color);
+  color: var(--view-fg-color);
+}
+
+.terminal-window.translucent {
+  background: transparent;
+}
+
+.terminal-window.root {
+  --headerbar-bg-color: oklch(from var(--accent-red) var(--headerbar-bg-oklch));
+  --headerbar-backdrop-color: oklch(from var(--accent-red) var(--headerbar-backdrop-oklch));
+}
+
+.terminal-window.remote {
+  --headerbar-bg-color: oklch(from var(--accent-purple) var(--headerbar-bg-oklch));
+  --headerbar-backdrop-color: oklch(from var(--accent-purple) var(--headerbar-backdrop-oklch));
+}
+
+.terminal-window.root .top-bar.raised,
+.terminal-window.remote .top-bar.raised {
+  --accent-bg-color: color-mix(in srgb, currentColor 75%, transparent);
+  --accent-color: oklab(from var(--accent-bg-color) var(--standalone-color-oklab));
+}
+
+.terminal-window.root .top-bar.raised popover,
+.terminal-window.remote .top-bar.raised popover {
+  --accent-bg-color: var(--system-accent);
+  --accent-color: oklab(from var(--accent-bg-color) var(--standalone-color-oklab));
+}
+
+.terminal-window.bell .top-bar.raised {
+  animation: bell 0.5s ease-out;
+}
+
+.terminal-window vte-terminal {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* Taken from nautilus */
+.floating-bar {
+  padding: 3px 8px;
+  background-color: var(--view-bg-color);
+  color: var(--view-fg-color);
+  box-shadow: inset 0 100px 0 0 color-mix(in srgb, currentColor 5%, transparent);
+  margin: 4px;
+  border-radius: 8px;
+}
+
+.floating-bar:backdrop {
+  opacity: 0.7;
+}
+
+kgx-empty {
+  background: var(--view-bg-color);
+  color: color-mix(in srgb, var(--view-fg-color) var(--dim-opacity), transparent);
+}
+
+.exit-info {
+  padding: 6px;
+  border-top: 2px solid var(--accent-bg-color);
+  background: oklch(from var(--accent-bg-color) l calc(c * 2) h / 20%);
+}
+
+.process-list row .header {
+  min-height: 0;
+}
+
+.process-list row .title {
+  font-family: monospace;
+}
+
+themeswitcher {
+  padding: 6px;
+}
+
+themeswitcher .check {
+  background: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  padding: 2px;
+  border-radius: 17px;
+  margin: 3px;
+}
+
+/* Adapted from https://gitlab.gnome.org/GNOME/gnome-text-editor/-/blob/bf8c0c249f06a0be69e65aed3b786ba02a9f999e/src/TextEditor.css#L51 */
+
+themeswitcher checkbutton {
+  outline-offset: 1px;
+  transition: none;
+}
+
+themeswitcher checkbutton radio {
+  -gtk-icon-source: none;
+  background: none;
+  padding: 12px;
+  min-height: 24px;
+  min-width: 24px;
+  border: none;
+  outline-color: currentColor;
+  transition: none;
+  box-shadow: inset 0 0 0 1px var(--border-color);
+
+  --light-bg: white;
+  --dark-bg: #1e1e1e;
+}
+
+themeswitcher checkbutton radio:checked {
+  box-shadow: inset 0 0 0 2px var(--accent-bg-color);
+}
+
+themeswitcher checkbutton.system radio {
+  background: linear-gradient(-45deg, var(--dark-bg) 49.99%, var(--light-bg) 50.01%);
+}
+
+themeswitcher checkbutton.light radio {
+  background-color: var(--light-bg);
+}
+
+themeswitcher checkbutton.dark radio {
+  background-color: var(--dark-bg);
+}
+
+.font-picker {
+  margin: 6px;
+}
+
+.font-picker .font-item {
+  margin: 6px;
+}
+
+/* Remove default adwaita style */
+kgx-tab:drop(active):focus,
+kgx-tab:drop(active) {
+  box-shadow: none;
+}
+
+/* Drag overlay */
+.drop-highlight {
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--accent-bg-color) 35%, transparent);
+  margin: 24px;
+}
+
+dialog.error-details textview {
+  background: none;
+  color: inherit;
+}
+
+.error-message {
+  font-size: 0.95em;
+}

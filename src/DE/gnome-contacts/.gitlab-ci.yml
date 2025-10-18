@@ -1,0 +1,55 @@
+include:
+  - project: 'GNOME/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+variables:
+  APP_ID: "org.gnome.Contacts.Devel"
+  BUNDLE: 'gnome-contacts.flatpak'
+  FLATPAK_MODULE: "gnome-contacts"
+  MANIFEST_PATH: 'build-aux/flatpak/org.gnome.Contacts.Devel.json'
+  RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+  TARBALL_ARTIFACT_PATH: ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+stages:
+  - review
+  - test
+  - deploy
+
+style-check:
+  stage: review
+  script:
+    - ./.gitlab/ci/style-check.sh
+  artifacts:
+    expire_in: 1 week
+    name: "style-check-junit-report"
+    when: always
+    reports:
+      junit: style-check-junit-report.xml
+    paths:
+      - "style-check-junit-report.xml"
+
+i18n:
+  stage: review
+  script:
+    - ./.gitlab/ci/check-potfiles.sh
+
+flatpak:
+  image: quay.io/gnome_infrastructure/gnome-runtime-images:gnome-master
+  extends: '.flatpak@x86_64'
+
+flatpak@aarch64:
+  extends: '.flatpak@aarch64'
+  allow_failure: true
+
+nightly:
+  extends: '.publish_nightly'
+  needs: [ 'flatpak' ]
+
+nightly aarch64:
+  extends: '.publish_nightly'
+  needs: ['flatpak@aarch64']
+  allow_failure: true

@@ -1,0 +1,173 @@
+# SPDX-FileCopyrightText: 2017 Florian Müllner
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+include:
+  - project: 'GNOME/citemplates'
+    files: 'templates/default-rules.yml'
+  - project: 'GNOME/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    file: 'templates/fedora.yml'
+    ref: '32afe5644697e503af18a736587c8619fa036a72'
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    file: 'templates/ci-fairy.yml'
+    ref: '32afe5644697e503af18a736587c8619fa036a72'
+
+stages:
+  - pre_review
+  - prepare
+  - review
+  - build
+  - deploy
+  - housekeeping
+
+variables:
+  MANIFEST_PATH: "build-aux/flatpak/org.gnome.Polari.json"
+
+.pipeline_guard: &pipeline_guard
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH =~ /^gnome-[0-9-]+$/'
+    - when: 'manual'
+
+.polari.fedora:
+  variables:
+    FDO_UPSTREAM_REPO: GNOME/polari
+    FDO_DISTRIBUTION_VERSION: 42
+    FDO_DISTRIBUTION_TAG: '2025-06-10.0'
+    FDO_DISTRIBUTION_PACKAGES: >
+      meson
+      gjs
+      git-core
+      npm
+    FDO_DISTRIBUTION_EXEC: |
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/World/javascript/gjs-ci-tools.git \
+        main
+
+.prereview_req: &prereview_req
+  needs:
+    - check_commit_log
+    - check-merge-request
+
+check_commit_log:
+  extends:
+    - .fdo.ci-fairy
+  stage: pre_review
+  script:
+    - if [[ x"$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" != "x" ]] ;
+      then
+        ci-fairy check-commits --junit-xml=commit-message-junit-report.xml ;
+      else
+        echo "Not a merge request" ;
+      fi
+  <<: *pipeline_guard
+  artifacts:
+    expire_in: 1 week
+    reports:
+      junit: commit-message-junit-report.xml
+
+check-merge-request:
+  extends:
+    - .fdo.ci-fairy
+  stage: pre_review
+  script:
+    - if [[ x"$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" != "x" ]] ;
+      then
+        ci-fairy check-merge-request --require-allow-collaboration --junit-xml=check-merge-request-report.xml ;
+      else
+        echo "Not a merge request" ;
+      fi
+  <<: *pipeline_guard
+  artifacts:
+    expire_in: 1 week
+    reports:
+      junit: check-merge-request-report.xml
+
+check-reuse:
+  stage: pre_review
+  image:
+    name: fsfe/reuse:latest
+    entrypoint: [""]
+  script:
+    - reuse lint
+
+build-fedora-container:
+  extends:
+    - .fdo.container-build@fedora@x86_64
+    - .polari.fedora
+  stage: prepare
+  <<: *prereview_req
+
+eslint:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .polari.fedora
+  stage: review
+  variables:
+    LINT_LOG: "eslint-report.xml"
+  needs:
+    - build-fedora-container
+  script:
+    - ./tools/run-eslint.sh --output-file "$LINT_LOG" --format junit --stdout
+  artifacts:
+    reports:
+      junit: "$LINT_LOG"
+
+js-check:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .polari.fedora
+  stage: review
+  needs:
+    - build-fedora-container
+  script:
+    - gjs-check-syntax
+
+.flatpak-template:
+  stage: build
+  <<: *prereview_req
+  variables:
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    FLATPAK_MODULE: "polari"
+    APP_ID: "org.gnome.Polari"
+    BUNDLE: "polari-git.flatpak"
+  extends: .flatpak
+
+flatpak-snapshot:
+  variables:
+    BRANCH: "snapshot"
+    CONFIG_OPTS: "-Dsnapshot=true --werror --warnlevel 2"
+  extends: .flatpak-template
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+flatpak:
+  extends: .flatpak-template
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH =~ /^gnome-[0-9-]+$/'
+    - if: '$CI_COMMIT_TAG'
+
+nightly:
+  extends: '.publish_nightly'
+  needs:
+    - flatpak
+
+check-flatpak-deps:
+  image:
+    name: ghcr.io/flathub/flatpak-external-data-checker
+    entrypoint: [""]
+  stage: housekeeping
+  <<: *prereview_req
+  script:
+    - "/app/flatpak-external-data-checker --check-outdated ${MANIFEST_PATH}"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $POLARI_SCHEDULED_JOB == "x-checker"'

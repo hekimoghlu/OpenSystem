@@ -1,0 +1,92 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/video/colorbalance.h>
+#include <glibmm/interface.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(ColorBalanceType, GstColorBalanceType, NO_GTYPE)
+
+class ColorBalanceChannel;
+
+/** An interface for adjusting color balance settings.
+ *
+ * This interface is implemented by elements which can perform some color balance
+ * operation on video frames they process. For example, modifying the brightness,
+ * contrast, hue or saturation.
+ *
+ * Example elements are 'xvimagesink' and 'colorbalance'.
+ *
+ * Last reviewed on 2016-05-16 (1.8.0)
+ *
+ * @ingroup GstInterfaces
+ */
+class ColorBalance : public Glib::Interface
+{
+  _CLASS_INTERFACE(ColorBalance, GstColorBalance, GST_COLOR_BALANCE, GstColorBalanceInterface)
+
+public:
+#m4 _CONVERSION(`const GList*', `Glib::ListHandle< Glib::RefPtr<Gst::ColorBalanceChannel> >', `$2(const_cast<GList*>($3), Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(Glib::ListHandle< Glib::RefPtr<Gst::ColorBalanceChannel> > list_channels(), gst_color_balance_list_channels)
+
+#m4 _CONVERSION(`const GList*', `Glib::ListHandle< Glib::RefPtr<const Gst::ColorBalanceChannel> >', `$2(const_cast<GList*>($3), Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(Glib::ListHandle< Glib::RefPtr<const Gst::ColorBalanceChannel> > list_channels() const, gst_color_balance_list_channels)
+
+  _WRAP_METHOD(int get_value(const Glib::RefPtr<const Gst::ColorBalanceChannel>& channel) const, gst_color_balance_get_value)
+  _WRAP_METHOD(void set_value(const Glib::RefPtr<Gst::ColorBalanceChannel>& channel, int value), gst_color_balance_set_value)
+  _WRAP_METHOD(void value_changed(const Glib::RefPtr<Gst::ColorBalanceChannel>& channel, int value), gst_color_balance_value_changed)
+  _WRAP_METHOD(Gst::ColorBalanceType get_balance_type() const, gst_color_balance_get_balance_type)
+
+#m4 _CONVERSION(`GstColorBalanceChannel*', `const Glib::RefPtr<Gst::ColorBalanceChannel>&', `Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void value_changed(const Glib::RefPtr<Gst::ColorBalanceChannel>& channel, int value), "value-changed")
+
+#m4 _CONVERSION(`Glib::ListHandle< Glib::RefPtr<Gst::ColorBalanceChannel> >', `const GList*', `($3).data()')
+
+  /** Lists the channels of the Gst::ColorBalance.
+   */
+  virtual Glib::ListHandle< Glib::RefPtr<Gst::ColorBalanceChannel> > list_channels_vfunc() const;
+
+  /** Sets the value of a Gst::ColorBalanceChannel of the Gst::ColorBalance.
+   */
+  _WRAP_VFUNC(void set_value(const Glib::RefPtr<Gst::ColorBalanceChannel>& channel, int value), "set_value")
+
+#m4 _CONVERSION(`GstColorBalanceChannel*', `const Glib::RefPtr<const Gst::ColorBalanceChannel>&', `Glib::wrap($3, true)')
+  /** Gets the value of a Gst::ColorBalanceChannel of the Gst::ColorBalance.
+   */
+  _WRAP_VFUNC(int get_value(const Glib::RefPtr<const Gst::ColorBalanceChannel>& channel) const, "get_value")
+
+  /** Gets the implementation type.
+   */
+  _WRAP_VFUNC(Gst::ColorBalanceType get_balance_type(), "get_balance_type")
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->list_channels = &list_channels_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static const GList* list_channels_vfunc_callback(GstColorBalance* self);
+  _POP()
+#m4end
+};
+
+} // namespace Gst

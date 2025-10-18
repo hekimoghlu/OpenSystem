@@ -1,0 +1,130 @@
+[Template]
+Name=empty-make
+Description=Create an empty project with Make build system
+Tags=Make;
+
+[Input name]
+Type=text
+Title=Project Name
+Subtitle=The name for your project which should not contain spaces
+Validate=^[-\\w0-9]+$
+
+[Input license]
+Type=license
+Title=License
+Default=GPL-3.0-or-later
+
+[Input language]
+Type=language
+Title=Language
+Choices=c;cpp;
+Default=c
+
+[Input git]
+Type=switch
+Title=Version Control
+Default=true
+
+
+```
+dirname = name
+exec_name = name
+```
+
+
+```{{dirname}}/Makefile
+all: {{exec_name}}
+
+
+{{if language.id == "c"}}
+WARNINGS = -Wall
+DEBUG = -ggdb -fno-omit-frame-pointer
+OPTIMIZE = -O2
+{{else if language.id == "cpp"}}
+WARNINGS = -Wall -Weffc++ -Wextra -Wsign-conversion -pedantic-errors
+DEBUG = -ggdb -fno-omit-frame-pointer
+OPTIMIZE = -O2
+STANDARD = -std=c++2a
+{{end}}
+
+{{if language.id == "c"}}
+{{exec_name}}: Makefile main.c
+	$(CC) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) main.c
+{{else if language.id == "cpp"}}
+{{exec_name}}: Makefile main.cpp
+	$(CXX) -o $@ $(WARNINGS) $(DEBUG) $(OPTIMIZE) $(STANDARD) main.cpp
+{{end}}
+
+clean:
+	rm -f {{exec_name}}
+
+install:
+	echo "Installing is not supported"
+
+run: {{exec_name}}
+	./{{exec_name}}
+```
+
+if language.id == "c"
+```{{dirname}}/main.c
+{{include "license.c"}}
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int
+main (int   argc,
+      char *argv[])
+{
+  printf ("Hello, World!\n");
+  return EXIT_SUCCESS;
+}
+```
+end
+
+if language.id == "cpp"
+```{{dirname}}/main.cpp
+{{include "license.cpp"}}
+
+#include <iostream>
+#include <cstdlib>
+
+int
+main ()
+{
+  std::cout << "Hello, World!\n";
+  return EXIT_SUCCESS;
+}
+```
+end
+
+```{{dirname}}/LICENSE
+{{license.text}}
+```
+
+```{{dirname}}/.foundry/.gitignore
+tmp/
+user/
+cache/
+```
+
+```{{dirname}}/.foundry/project/settings.keyfile
+[project]
+build-system='make'
+default-license='{{license.id}}'
+```
+
+if git
+{{dirname}}/.git/objects/
+{{dirname}}/.git/refs/heads/
+
+```{{dirname}}/.git/HEAD
+ref: refs/heads/main
+```
+
+```{{dirname}}/.gitignore
+*~
+*.swp
+{{exec_name}}
+```
+end

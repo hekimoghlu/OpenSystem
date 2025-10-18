@@ -1,0 +1,181 @@
+include:
+  - remote: 'https://gitlab.gnome.org/Infrastructure/freedesktop-ci-templates/-/raw/145b1bc7ef1702d2bd71584010d7113c6786a506/templates/fedora.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "build-release-tarball"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+stages:
+  - prepare
+  - build
+  - deploy
+
+variables:
+  FDO_UPSTREAM_REPO: gnome/gnome-keyring
+  TARBALL_ARTIFACT_PATH: "_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+.fedora.container.common:
+  variables:
+    # When branching a stable release, change 'main' to the
+    # release branch name to ensure that a new image will
+    # be created, tailored for the stable branch.
+    BRANCH_NAME: 'main'
+    CONTAINER_TAG: '2025-02-05.0'
+    FEDORA_VERSION: latest
+    # Derive FDO variables from this automatically.
+    # DO NOT edit, instead change the variables above
+    FDO_REPO_SUFFIX: '${BRANCH_NAME}'
+    FDO_DISTRIBUTION_TAG: '${CONTAINER_TAG}-fedora-${FEDORA_VERSION}'
+    FDO_DISTRIBUTION_VERSION: '${FEDORA_VERSION}'
+
+#############################################
+#          Create CI Docker Images          #
+#############################################
+
+# Temporarily set a dummy container build for the FDO GitLab migration, which is down
+.dummy-container-build:
+  script:
+    - echo Dummy container build
+
+
+# See also https://gitlab.gnome.org/Infrastructure/freedesktop-ci-templates
+build.container.fedora@x86_64:
+  extends:
+    # - '.fdo.container-build@fedora'
+    - .dummy-container-build
+    - '.fedora.container.common'
+  stage: prepare
+  variables:
+    # no need to pull the whole tree for rebuilding the image
+    GIT_STRATEGY: none
+    # Expiry sets fdo.expires on the image
+    FDO_EXPIRES_AFTER: 8w
+    FDO_DISTRIBUTION_PACKAGES: >-
+      dbus-x11
+      gcc
+      gcovr
+      gcr3-devel
+      git
+      glib2-devel
+      gnome-common
+      gtk-doc
+      lcov
+      libasan
+      libgcrypt-devel
+      libselinux-devel
+      libubsan
+      meson
+      ninja-build
+      openssh
+      p11-kit-devel
+      pam-devel
+      python
+      redhat-rpm-config
+      systemd
+      systemd-devel
+
+
+#############################################
+#               STAGE: BUILD                #
+#############################################
+
+.build:
+  stage: build
+  extends:
+    - '.fdo.suffixed-image@fedora'
+    - '.fedora.container.common'
+  before_script:
+    - dbus-uuidgen --ensure
+    - useradd user
+
+fedora:Werror:
+  extends: .build
+  script:
+    - mkdir _build
+    - chown user _build
+    - runuser -u user -- meson setup _build
+    - runuser -u user -- meson compile -C _build
+    - runuser -u user -- dbus-run-session -- meson test -C _build
+  artifacts:
+    reports:
+      junit: "_build/meson-logs/testlog.junit.xml"
+    name: "gkr-werror-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/meson-logs"
+      - $TARBALL_ARTIFACT_PATH
+
+fedora:asan:
+  extends: .build
+  tags:
+    - asan # LSAN needs CAP_SYS_PTRACE
+  script:
+    - mkdir _build
+    - chown user _build
+    - runuser -u user -- meson setup _build -Db_sanitize=address
+    - export G_SLICE=always-malloc G_DEBUG=gc-friendly ASAN_OPTIONS=abort_on_error=1:fast_unwind_on_malloc=0
+    - runuser -u user -- meson compile -C _build
+    - runuser -u user -- dbus-run-session -- meson test -C _build
+  allow_failure: true
+  artifacts:
+    reports:
+      junit: "_build/meson-logs/testlog.junit.xml"
+    name: "gkr-werror-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/meson-logs"
+
+fedora:ubsan:
+  extends: .build
+  script:
+    - mkdir _build
+    - chown user _build
+    - runuser -u user -- meson setup _build -Db_sanitize=undefined 
+    - runuser -u user -- meson compile -C _build
+    - runuser -u user -- dbus-run-session -- meson test -C _build
+  artifacts:
+    reports:
+      junit: "_build/meson-logs/testlog.junit.xml"
+    name: "gkr-ubsan-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/meson-logs"
+
+fedora:coverage:
+  extends: .build
+  script:
+    - mkdir _build
+    - chown user _build
+    - runuser -u user -- meson setup _build -Db_coverage=true
+    - runuser -u user -- meson compile -C _build
+    - runuser -u user -- dbus-run-session -- meson test -C _build
+    - runuser -u user -- ninja coverage-xml -C _build
+  coverage: '/^\s+lines.+:\s+([\d.]+\%)\s+/'
+  artifacts:
+    reports:
+      junit: "_build/meson-logs/testlog.junit.xml"
+      coverage_report:
+        coverage_format: cobertura
+        path: "_build/meson-logs/coverage.xml"
+    name: "gkr-coverage-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/meson-logs"
+
+#############################################
+#              STAGE: DEPLOY                #
+#############################################
+
+build-release-tarball:
+  extends: .build
+  stage: deploy
+  script:
+    - meson setup _build
+    - meson dist -C _build --no-tests
+  artifacts:
+    paths:
+      - $TARBALL_ARTIFACT_PATH

@@ -1,0 +1,291 @@
+include:
+  - remote: 'https://gitlab.gnome.org/Infrastructure/freedesktop-ci-templates/-/raw/145b1bc7ef1702d2bd71584010d7113c6786a506/templates/fedora.yml'
+  - remote: 'https://gitlab.gnome.org/Infrastructure/freedesktop-ci-templates/-/raw/145b1bc7ef1702d2bd71584010d7113c6786a506/templates/ubuntu.yml'
+  - remote: 'https://gitlab.gnome.org/Infrastructure/freedesktop-ci-templates/-/raw/145b1bc7ef1702d2bd71584010d7113c6786a506/templates/ci-fairy.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      job-stage: deploy
+      dist-job-name: "dist-xdg-desktop-portal-gnome-tarball"
+      tarball-artifact-path: $TARBALL_ARTIFACT_PATH
+  - component: gitlab.gnome.org/GNOME/citemplates/gnomeos-build-sysext@1.0
+
+stages:
+  - review
+  - prepare
+  - build
+  - deploy
+
+variables:
+  FDO_UPSTREAM_REPO: GNOME/xdg-desktop-portal-gnome
+  TARBALL_ARTIFACT_PATH: build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
+
+default:
+  interruptible: true
+
+workflow:
+  rules:
+    # Allow to switch from branch pipelines to MR pipelines seamlessly
+    # https://docs.gitlab.com/ee/ci/jobs/job_control.html#avoid-duplicate-pipelines
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Don't trigger a branch pipeline if there is an open MR
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+.skip-git-clone:
+  variables:
+    GIT_STRATEGY: none
+
+.only-merge-requests:
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^$/'
+      when: never
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+      when: on_success
+
+.pipeline-guard:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH =~ /^gnome-[0-9-]+$/'
+    # Avoid catchall `when: manual` rule which might
+    # cause duplicate pipelines to be triggered.
+    # https://docs.gitlab.com/ee/ci/jobs/job_control.html#avoid-duplicate-pipelines
+    #
+    # Also make it so pipelines without MR need to be started
+    # manually, since their state will most likely be WIP
+    - if: '$CI_COMMIT_BRANCH'
+      when: 'manual'
+
+repo-sanity:
+  extends:
+    - .fdo.ci-fairy
+  stage: review
+  variables:
+    GIT_DEPTH: "1"
+  script:
+    - >
+      if [[ -z "$CI_REGISTRY_IMAGE" ]] ;
+      then
+        .gitlab-ci/simple-junit-report.sh check-junit-report.xml \
+          repo-sanity "The container registry should be enabled in the project general settings panel at $CI_PROJECT_URL/edit" ;
+        exit 1 ;
+      fi
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - check-junit-report.xml
+    reports:
+      junit: check-junit-report.xml
+  rules:
+    - !reference [.only-merge-requests, rules]
+
+check-merge-request:
+  extends:
+    - .fdo.ci-fairy
+    - .skip-git-clone
+  stage: review
+  script:
+    ci-fairy check-merge-request --require-allow-collaboration --junit-xml=check-merge-request-report.xml
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - check-merge-request-report.xml
+    reports:
+      junit: check-merge-request-report.xml
+  rules:
+    - !reference [.only-merge-requests, rules]
+
+.container-common:
+  variables:
+    FDO_DISTRIBUTION_TAG: '2025-01-20.1'
+
+.fedora-container:
+  extends:
+    - .container-common
+  variables:
+    FDO_DISTRIBUTION_VERSION: 40
+    FDO_DISTRIBUTION_PACKAGES:
+      bubblewrap
+      fontconfig-devel
+      fuse3-devel
+      gcc
+      gettext-devel
+      git
+      glib2-devel
+      gnome-desktop4-devel
+      gsettings-desktop-schemas-devel
+      gstreamer1-plugins-base-devel
+      gstreamer1-plugins-good
+      gtk4-devel
+      json-glib-devel
+      libadwaita-devel
+      libseccomp-devel
+      libudev-devel
+      libxkbcommon-devel
+      meson
+      pipewire-devel
+      python3-pytest
+      python3-pytest-xdist
+      python3-dbusmock
+      python3-dbus
+      sassc
+      systemd-devel
+      umockdev-devel
+      wayland-devel
+      xkeyboard-config-devel
+      'dnf-command(builddep)'
+
+    FDO_DISTRIBUTION_EXEC: |
+      dnf builddep gtk4 -y
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://github.com/flatpak/xdg-desktop-portal.git \
+        1.19.1 .
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas.git \
+        master . 8df894aecbf6908c48c3da62434061bfa8dc46ea
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/GNOME/gtk.git \
+        4.17.3 .
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/GNOME/libadwaita.git \
+        1.7.alpha .
+
+.ubuntu-container:
+  extends:
+    - .container-common
+  variables:
+    FDO_DISTRIBUTION_VERSION: '23.10'
+    FDO_DISTRIBUTION_PACKAGES:
+      bubblewrap
+      ca-certificates
+      gcc
+      git
+      gsettings-desktop-schemas-dev
+      libfuse3-dev
+      libgtk-4-dev
+      libjson-glib-dev
+      libgstreamer-plugins-base1.0-dev
+      gstreamer1.0-plugins-good
+      libgstreamer-plugins-good1.0-dev
+      libpipewire-0.3-dev
+      libudev-dev
+      libumockdev-dev
+      libseccomp-dev
+      libsystemd-dev
+      libwayland-dev
+      libxkbcommon-dev
+      meson
+      python3-pytest
+      python3-pytest-xdist
+      python3-dbusmock
+      python3-dbus
+      sassc
+
+    FDO_DISTRIBUTION_EXEC: |
+      sed -i '/deb-src/s/^# //' /etc/apt/sources.list &&
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://github.com/flatpak/xdg-desktop-portal.git \
+        1.19.1 .
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas.git \
+        master . 8df894aecbf6908c48c3da62434061bfa8dc46ea
+
+      ./.gitlab-ci/install-meson-project.sh \
+        https://gitlab.gnome.org/GNOME/libadwaita.git \
+        1.7.alpha .
+
+prepare-fedora:
+  extends:
+    - .fdo.container-build@fedora
+    - .fedora-container
+    - .skip-git-clone
+  stage: prepare
+  rules:
+    - !reference [.pipeline-guard, rules]
+
+prepare-ubuntu:
+  extends:
+    - .fdo.container-build@ubuntu
+    - .ubuntu-container
+    - .skip-git-clone
+  stage: prepare
+  rules:
+    - !reference [.pipeline-guard, rules]
+  when: manual
+
+.build-common:
+  stage: build
+  script:
+    - meson setup --wrap-mode=nofallback --force-fallback-for=libgxdp _build .
+    - meson compile -C _build
+    - meson install -C _build
+
+build-fedora:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .fedora-container
+    - .build-common
+  needs:
+    - job: prepare-fedora
+      artifacts: false
+
+build-ubuntu:
+  extends:
+    - .fdo.distribution-image@ubuntu
+    - .ubuntu-container
+    - .build-common
+  needs:
+    - job: prepare-ubuntu
+      artifacts: false
+
+dist-xdg-desktop-portal-gnome:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .fedora-container
+  stage: deploy
+  needs:
+    - job: build-fedora
+      artifacts: false
+  script:
+    - meson setup --wrap-mode=nofallback build .
+    - meson dist -C build --include-subprojects
+  artifacts:
+    expire_in: 7 day
+    name: "xdg-desktop-portal-gnome-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - build/meson-private/dist-build/meson-logs
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/meson.build"
+        - meson/*
+      when: on_success
+    - if: '$GITLAB_USER_LOGIN == "marge-bot"'
+      when: on_success
+    - if: '$CI_MERGE_REQUEST_ASSIGNEES == "marge-bot"'
+      when: on_success
+
+dist-xdg-desktop-portal-gnome-tarball:
+  extends: dist-xdg-desktop-portal-gnome
+  artifacts:
+    expose_as: 'Get tarball here'
+    name: "${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - $TARBALL_ARTIFACT_PATH
+  rules:
+    - if: '$CI_COMMIT_TAG'

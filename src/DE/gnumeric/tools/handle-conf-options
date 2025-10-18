@@ -1,0 +1,750 @@
+#!/usr/bin/perl -w
+
+use strict;
+use XML::Parser;
+use Getopt::Long;
+
+my ($do_cfile,$do_hfile);
+my ($do_hkcu_reg,$do_reg);
+&GetOptions("cfile" => \$do_cfile,
+	    "hfile" => \$do_hfile,
+	    "hkcu-reg" => \$do_hkcu_reg,
+	    "reg" => \$do_reg);
+
+# -----------------------------------------------------------------------------
+
+my %typemap = ('b' => 'bool',
+	       's' => 'string',
+	       'i' => 'int',
+	       'd' => 'float',
+	       'as' => 'list:string');
+
+
+my @schemas = ();
+
+for my $filename (@ARGV) {
+    my $parser = new XML::Parser ('Style' => 'Tree');
+    my $tree = $parser->parsefile ($filename);
+
+    my $mode = $tree->[0];
+
+    if ($mode eq 'gconfschemafile') {
+	&walk_gconf_tree ([], [{},@$tree]);
+    } elsif ($mode eq 'schemalist') {
+	&walk_gsetting_tree ([], [{},@$tree]);
+    } else {
+	die "$0: Unknown type of xml [$mode].\n";
+    }
+}
+
+my $schema;
+sub walk_gconf_tree {
+    my ($parents,$contents) = @_;
+
+    if (ref ($contents) eq 'ARRAY') {
+	my @items = @$contents;
+	my $attrs = shift @items;
+
+	while (@items) {
+	    my $tag = shift @items;
+	    my $args = shift @items;
+
+	    if ($tag eq '0') {
+		# Text
+		if (@$parents > 2 && $parents->[-2] eq 'schema') {
+		    my $key = $parents->[-1];
+		    next if $key eq 'locale';
+		    $schema->{$key} = $args;
+		}
+		if (@$parents > 3 &&
+		    $parents->[-3] eq 'schema' &&
+		    $parents->[-2] eq 'locale') {
+		    my $key = $parents->[-1];
+		    next if $key ne 'default';
+		    $schema->{$key} = $args;
+		}
+	    } else {
+		$schema = {} if $tag eq 'schema';
+		if (@$parents > 1 && $parents->[-1] eq 'schema') {
+		    # This handles empty defaults.
+		    $schema->{$tag} = '';
+		}
+		&walk_gconf_tree ([@$parents,$tag],$args);
+		push @schemas, $schema if $tag eq 'schema';
+	    }
+	}
+    }
+}
+
+sub unquote_gschema_string {
+    my ($val) = @_;
+    die "$0: invalid string value: $val\n" unless
+	(length($val) >= 2 &&
+	 substr($val,0,1) eq substr($val,-1,1) &&
+	 $val =~ /^['"]/);
+    $val = substr ($val, 1, length ($val) - 2);
+    return $val;
+}
+
+sub unquote_gschema_string_list {
+    my ($val) = @_;
+    return undef if $val eq '[]';
+    die "$0: invalid string value: $val\n" unless
+	(length($val) >= 2 &&
+	 substr($val,0,1) eq '[' &&
+	 substr($val,-1,1) eq ']');
+    $val = substr ($val, 1, length ($val) - 2);
+    my $res = '';
+    while ($val =~ s/^'([^']*)'// or $val =~ s/^"([^']*)"//) {
+	$res .= $1;
+	last if $val eq '';
+	$val =~ s/^,//;
+	$res .= ',';
+    }
+
+    return "[$res]";
+}
+
+sub walk_gsetting_tree {
+    my ($parents,$contents) = @_;
+
+    if (ref ($contents) eq 'ARRAY') {
+	my @items = @$contents;
+	my $attrs = shift @items;
+
+	while (@items) {
+	    my $tag = shift @items;
+	    my $args = shift @items;
+
+	    if ($tag eq '0') {
+		# Text
+		if (@$parents > 2 && $parents->[-2] eq 'key') {
+		    my $key = $parents->[-1];
+		    my $val = $args;
+		    if ($key eq 'default' && $schema->{'type'} eq 'string') {
+			$val = &unquote_gschema_string ($val);
+		    } elsif ($key eq 'default' &&
+			     $schema->{'type'} eq 'list' &&
+			     $schema->{'list_type'} eq 'string') {
+			$val = &unquote_gschema_string_list ($val);
+		    }
+		    $schema->{$key} = $val;
+		}
+	    } else {
+		if ($tag eq 'key') {
+		    $schema = {};
+
+		    my $thisattrs = $args->[0];
+
+		    $schema->{'applyto'} =
+			$attrs->{'path'} . $thisattrs->{'name'};
+		    my $type = $typemap{$thisattrs->{'type'}};
+		    if ($type =~ /^list:(.*)$/) {
+			$schema->{'type'} = 'list';
+			$schema->{'list_type'} = $1;
+		    } else {
+			$schema->{'type'} = $type;
+		    }
+		}
+		if (@$parents > 1 && $parents->[-1] eq 'schema') {
+		    # This handles empty defaults.
+		    $schema->{$tag} = '';
+		}
+		&walk_gsetting_tree ([@$parents,$tag],$args);
+		push @schemas, $schema if $tag eq 'key';
+	    }
+	}
+    }
+}
+
+# -----------------------------------------------------------------------------
+
+my %extra_attributes =
+    ('/org/gnome/gnumeric/core/gui/editing/enter_moves_dir' => {
+	'gtype' => 'GO_TYPE_DIRECTION',
+	'default' => 'GO_DIRECTION_DOWN',  # Should match schema
+     },
+
+     '/org/gnome/gnumeric/printsetup/preferred-unit' => {
+	 'gtype' => 'GTK_TYPE_UNIT',
+	 'default' => 'GTK_UNIT_MM',  # Should match schema
+     },
+
+     '/apps/gnome-settings/gnumeric/toolbar_style' => {
+	 'noconfnode' => 1,
+	 'gtype' => 'GTK_TYPE_TOOLBAR_STYLE',
+	 'default' => 'GTK_TOOLBAR_ICONS',  # Should match schema
+     },
+
+     '/org/gnome/gnumeric/core/gui/editing/recalclag' => {
+	 'min' => -5000,
+	 'max' => 5000
+     },
+
+     '/org/gnome/gnumeric/core/gui/editing/autocomplete-min-chars' => {
+	 'min' => 1,
+	 'max' => 10
+     },
+
+     '/org/gnome/gnumeric/core/gui/toolbars/format-position' => {
+	 'gtype' => 'GTK_TYPE_POSITION',
+	 'min' => 0,
+	 'max' => 3,
+     },
+
+     '/org/gnome/gnumeric/core/gui/toolbars/object-position' => {
+	 'gtype' => 'GTK_TYPE_POSITION',
+	 'min' => 0,
+	 'max' => 3,
+     },
+
+     '/org/gnome/gnumeric/core/gui/toolbars/standard-position' => {
+	 'gtype' => 'GTK_TYPE_POSITION',
+	 'min' => 0,
+	 'max' => 3,
+     },
+
+     '/org/gnome/gnumeric/core/sort/dialog/max-initial-clauses' => {
+	 'min' => 0,
+	 'max' => 256,
+     },
+
+     '/org/gnome/gnumeric/core/workbook/n-cols' => {
+	 'min' => 'GNM_MIN_COLS',
+	 'max' => 'GNM_MAX_COLS',
+     },
+
+     '/org/gnome/gnumeric/core/workbook/n-rows' => {
+	 'min' => 'GNM_MIN_ROWS',
+	 'max' => 'GNM_MAX_ROWS',
+     },
+
+     '/org/gnome/gnumeric/core/workbook/n-sheet' => {
+	 'min' => 1,
+	 'max' => 64,
+     },
+
+     '/org/gnome/gnumeric/core/workbook/autosave_time' => {
+	 'min' => 0,
+	 'max' => '365 * 24 * 60 * 60',
+     },
+
+     '/org/gnome/gnumeric/core/xml/compression-level' => {
+	 'min' => 0,
+	 'max' => 9,
+     },
+
+     '/org/gnome/gnumeric/functionselector/num-of-recent' => {
+	 'min' => 0,
+	 'max' => 40,
+     },
+
+     '/org/gnome/gnumeric/printsetup/paper-orientation' => {
+	 'min' => 'GTK_PAGE_ORIENTATION_PORTRAIT',
+	 'max' => 'GTK_PAGE_ORIENTATION_REVERSE_LANDSCAPE',
+     },
+
+     '/org/gnome/gnumeric/printsetup/scale-height' => {
+	 'min' => 0,
+	 'max' => 100,
+     },
+
+     '/org/gnome/gnumeric/printsetup/scale-width' => {
+	 'min' => 0,
+	 'max' => 100,
+     },
+
+     '/org/gnome/gnumeric/undo/max_descriptor_width' => {
+	 'min' => 5,
+	 'max' => 256,
+     },
+
+     '/org/gnome/gnumeric/undo/maxnum' => {
+	 'min' => 0,
+	 'max' => 10000,
+     },
+
+     '/org/gnome/gnumeric/undo/size' => {
+	'min' => 1,
+	'max' => 1000000
+     },
+
+     '/org/gnome/gnumeric/core/defaultfont/size' => {
+	 'min' => 1,
+	 'max' => 100,
+     },
+
+     '/org/gnome/gnumeric/core/gui/screen/horizontaldpi' => {
+	 'min' => 10,
+	 'max' => 1000,
+     },
+
+     '/org/gnome/gnumeric/core/gui/screen/verticaldpi' => {
+	 'min' => 10,
+	 'max' => 1000,
+     },
+
+     '/org/gnome/gnumeric/core/gui/window/x' => {
+	 'min' => 0.1,
+	 'max' => 1,
+     },
+
+     '/org/gnome/gnumeric/core/gui/window/y' => {
+	 'min' => 0.1,
+	 'max' => 1,
+     },
+
+     '/org/gnome/gnumeric/core/gui/window/zoom' => {
+	 'min' => 0.1,
+	 'max' => 5,
+     },
+
+     '/org/gnome/gnumeric/printsetup/hf-font-size' => {
+	 'min' => 1,
+	 'max' => 100,
+     },
+
+     '/org/gnome/gnumeric/printsetup/margin-bottom' => {
+	 'min' => 0,
+	 'max' => 10000,
+     },
+
+     '/org/gnome/gnumeric/printsetup/margin-gtk-bottom' => {
+	 'min' => 0,
+	 'max' => 720,
+     },
+
+     '/org/gnome/gnumeric/printsetup/margin-gtk-left' => {
+	 'min' => 0,
+	 'max' => 720,
+     },
+
+     '/org/gnome/gnumeric/printsetup/margin-gtk-right' => {
+	 'min' => 0,
+	 'max' => 720,
+     },
+
+     '/org/gnome/gnumeric/printsetup/margin-gtk-top' => {
+	 'min' => 0,
+	 'max' => 720,
+     },
+
+     '/org/gnome/gnumeric/printsetup/margin-top' => {
+	 'min' => 0,
+	 'max' => 10000,
+     },
+
+     '/org/gnome/gnumeric/printsetup/scale-percentage-value' => {
+	 'min' => 1,
+	 'max' => 500,
+     },
+
+     '/org/gnome/gnumeric/searchreplace/scope' => {
+	 'min' => 0,
+	 'max' => 2,
+     },
+
+     '/org/gnome/gnumeric/searchreplace/error-behaviour' => {
+	 'min' => 0,
+	 'max' => 4,
+     },
+
+     '/org/gnome/gnumeric/searchreplace/regex' => {
+	 'min' => 0,
+	 'max' => 2,
+     },
+
+     '/org/gnome/gnumeric/stf/export/format' => {
+	'gtype' => 'GNM_STF_FORMAT_MODE_TYPE',
+	'default' => 'GNM_STF_FORMAT_AUTO',  # Should match schema
+     },
+
+     '/org/gnome/gnumeric/stf/export/quoting' => {
+	'gtype' => 'GSF_OUTPUT_CSV_QUOTING_MODE_TYPE',
+	'default' => 'GSF_OUTPUT_CSV_QUOTING_MODE_AUTO',  # Should match schema
+     },
+
+    );
+
+foreach my $key (keys %extra_attributes) {
+    my $newkey = $key;
+    if ($newkey eq '/apps/gnome-settings/gnumeric/toolbar_style') {
+	$newkey = '/org/gnome/gnumeric/toolbar-style';
+    } else {
+	$newkey = lc $newkey;
+	$newkey =~ s/_/-/g;
+    }
+    $extra_attributes{$newkey} = $extra_attributes{$key};
+}
+
+sub apply_extra_attributes {
+    foreach my $schema (@schemas) {
+	my $key = $schema->{'applyto'};
+	my $e = $extra_attributes{$key};
+	next unless $e;
+	foreach my $k (keys %$e) {
+	    $schema->{$k} = $e->{$k};
+	}
+    }
+}
+
+sub sort_schemas {
+    @schemas = sort { $a->{'applyto'} cmp $b->{'applyto'} } @schemas;
+}
+
+sub number_schemas {
+    my $i = 0;
+    foreach my $schema (@schemas) {
+	$schema->{'i'} = $i++;
+    }
+}
+
+# -----------------------------------------------------------------------------
+
+sub quote_c_string {
+    my ($s) = @_;
+
+    return "NULL" unless defined $s;
+
+    return '"' . join ('',
+		       map {
+			   s/([\\""])/\\$1/;
+			   s/\n/\\n/;
+			   $_;
+		       } (split (//, $s))) . '"';
+}
+
+sub create_hcfile {
+    &number_schemas ();
+    &apply_extra_attributes ();
+
+    my %type_to_ctype =
+	('bool' => 'gboolean',
+	 'int' => 'int',
+	 'float' => 'double',
+	 'string' => 'const char *',
+	 'list:string' => 'GSList *',
+	 'GO_TYPE_DIRECTION' => 'GODirection',
+	 'GTK_TYPE_UNIT' => 'GtkUnit',
+	 'GTK_TYPE_TOOLBAR_STYLE' => 'GtkToolbarStyle',
+	 'GTK_TYPE_POSITION' => 'GtkPositionType',
+	 'GNM_STF_FORMAT_MODE_TYPE' => 'GnmStfFormatMode',
+	 'GSF_OUTPUT_CSV_QUOTING_MODE_TYPE' => 'GsfOutputCsvQuotingMode',
+	);
+
+    my $cfile = "";
+    my $hfile = "";
+
+    my %dirs;
+
+    foreach my $schema (@schemas) {
+	my $i = $schema->{'i'};
+	my $key = $schema->{'applyto'};
+	my $type = $schema->{'type'};
+	$type .= ":" . $schema->{'list_type'} if $type eq 'list';
+	my $default = $schema->{'default'};
+	my $min = $schema->{'min'};
+	my $max = $schema->{'max'};
+	my $gtype = ($schema->{'gtype'} || '0');
+
+	my $ctype = $type_to_ctype{$gtype || $type};
+	my $ctypes = "$ctype "; $ctypes =~ s/\*\s/\*/;
+
+	my $var = $key;
+	$var =~ s{^/org/gnome/gnumeric/}{};
+	$var =~ s{^/apps/gnome-settings/gnumeric/}{};
+	$var =~ s{[^a-zA-Z0-9_]}{_}g;
+
+	my $watch_name = "watch_$var";
+
+	my $needs_conf = 0;
+	if ($key =~ s{/org/gnome/gnumeric/}{}) {
+	    my $dir = $key; $dir =~ s{/[^/]+$}{};
+	    $dirs{$dir} = 1;
+	    $needs_conf = 1;
+	    $needs_conf = 0 if $schema->{'noconfnode'};
+	}
+
+	my $get_conf_code = "";
+	if ($needs_conf) {
+	    my $id = "gnm_conf_get_${var}_node";
+
+	    $hfile .= "GOConfNode *$id (void);\n";
+
+	    $get_conf_code .= "/**\n";
+	    $get_conf_code .= " * $id:\n";
+	    $get_conf_code .= " *\n";
+	    $get_conf_code .= " * Returns: (transfer none): A #GOConfNode\n";
+	    $get_conf_code .= " */\n";
+	    $get_conf_code .= "GOConfNode *\n";
+	    $get_conf_code .= "$id (void)\n";
+	    $get_conf_code .= "{\n";
+	    $get_conf_code .= "\treturn get_watch_node (&$watch_name);\n";
+	    $get_conf_code .= "}\n\n";
+	}
+	$hfile .= "${ctypes}gnm_conf_get_$var (void);\n";
+	$hfile .= "void gnm_conf_set_$var (${ctypes}x);\n\n";
+
+	my $get_head = "$ctype\ngnm_conf_get_$var (void)";
+	my $set_head = "void\ngnm_conf_set_$var (${ctypes}x)";
+
+	my $short_desc = $schema->{'_summary'};
+	my $long_desc = $schema->{'_description'};
+
+	if ($type eq 'bool') {
+	    $default = uc $default;
+
+	    $cfile .= "static struct cb_watch_bool $watch_name = {\n";
+	    $cfile .= "\t0, \"$key\",\n";
+	    $cfile .= "\t" . &quote_c_string ($short_desc) . ",\n";
+	    $cfile .= "\t" . &quote_c_string ($long_desc) . ",\n";
+	    $cfile .= "\t$default,\n";
+	    $cfile .= "};\n\n";
+
+	    $cfile .= "$get_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_bool (&$watch_name);\n";
+	    $cfile .= "\treturn $watch_name.var;\n";
+	    $cfile .= "}\n\n";
+
+	    $cfile .= "$set_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_bool (&$watch_name);\n";
+	    $cfile .= "\tset_bool (&$watch_name, x);\n";
+	    $cfile .= "}\n\n";
+	} elsif ($type eq 'int' || $type eq 'float') {
+	    my $ltype = $type_to_ctype{$type};
+	    die "$0: No min for $key\n" unless defined $min;
+	    die "$0: No max for $key\n" unless defined $max;
+
+	    $cfile .= "static struct cb_watch_$ltype $watch_name = {\n";
+	    $cfile .= "\t0, \"$key\",\n";
+	    $cfile .= "\t" . &quote_c_string ($short_desc) . ",\n";
+	    $cfile .= "\t" . &quote_c_string ($long_desc) . ",\n";
+	    $cfile .= "\t$min, $max, $default,\n";
+	    $cfile .= "};\n\n";
+
+	    $cfile .= "$get_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_$ltype (&$watch_name);\n";
+	    $cfile .= "\treturn $watch_name.var;\n";
+	    $cfile .= "}\n\n";
+
+	    $cfile .= "void\n";
+	    $cfile .= "gnm_conf_set_$var ($ctype x)\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_$ltype (&$watch_name);\n";
+	    $cfile .= "\tset_$ltype (&$watch_name, x);\n";
+	    $cfile .= "}\n\n";
+	} elsif ($type eq 'string' && $gtype eq '0') {
+	    $cfile .= "static struct cb_watch_string $watch_name = {\n";
+	    $cfile .= "\t0, \"$key\",\n";
+	    $cfile .= "\t" . &quote_c_string ($short_desc) . ",\n";
+	    $cfile .= "\t" . &quote_c_string ($long_desc) . ",\n";
+	    $cfile .= "\t" . &quote_c_string ($default) . ",\n";
+	    $cfile .= "};\n\n";
+
+	    $cfile .= "$get_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_string (&$watch_name);\n";
+	    $cfile .= "\treturn $watch_name.var;\n";
+	    $cfile .= "}\n\n";
+
+	    $cfile .= "$set_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tg_return_if_fail (x != NULL);\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_string (&$watch_name);\n";
+	    $cfile .= "\tset_string (&$watch_name, x);\n";
+	    $cfile .= "}\n\n";
+	} elsif ($type eq 'string' && $gtype ne '0') {
+	    $cfile .= "static struct cb_watch_enum $watch_name = {\n";
+	    $cfile .= "\t0, \"$key\",\n";
+	    $cfile .= "\t" . &quote_c_string ($short_desc) . ",\n";
+	    $cfile .= "\t" . &quote_c_string ($long_desc) . ",\n";
+	    $cfile .= "\t$default,\n";
+	    $cfile .= "};\n\n";
+
+	    $cfile .= "$get_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_enum (&$watch_name, $gtype);\n";
+	    $cfile .= "\treturn $watch_name.var;\n";
+	    $cfile .= "}\n\n";
+
+	    $cfile .= "void\n";
+	    $cfile .= "gnm_conf_set_$var ($ctype x)\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_enum (&$watch_name, $gtype);\n";
+	    $cfile .= "\tset_enum (&$watch_name, x);\n";
+	    $cfile .= "}\n\n";
+	} elsif ($type eq 'list:string') {
+	    $cfile .= "static struct cb_watch_string_list $watch_name = {\n";
+	    $cfile .= "\t0, \"$key\",\n";
+	    $cfile .= "\t" . &quote_c_string ($short_desc) . ",\n";
+	    $cfile .= "\t" . &quote_c_string ($long_desc) . ",\n";
+	    $cfile .= "};\n\n";
+
+	    $cfile .= "/**\n * gnm_conf_get_$var:\n *\n";
+	    $cfile .= " * Returns: (element-type utf8) (transfer none):\n **/\n";
+	    $cfile .= "$get_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_string_list (&$watch_name);\n";
+	    $cfile .= "\treturn $watch_name.var;\n";
+	    $cfile .= "}\n\n";
+
+	    $cfile .= "/**\n * gnm_conf_set_$var:\n";
+	    $cfile .= " * \@x: (element-type utf8): list of strings\n *\n **/\n";
+	    $cfile .= "$set_head\n";
+	    $cfile .= "{\n";
+	    $cfile .= "\tif (!$watch_name.handler)\n";
+	    $cfile .= "\t\twatch_string_list (&$watch_name);\n";
+	    $cfile .= "\tset_string_list (&$watch_name, x);\n";
+	    $cfile .= "}\n\n";
+	} else {
+	    die "$0: Unhandled type $type\n";
+	}
+
+	$cfile .= $get_conf_code;
+    }
+
+    for my $dir (sort keys %dirs) {
+	my $var = $dir;
+	$var =~ s{[^a-zA-Z0-9_]}{_}g;
+
+	my $id = "gnm_conf_get_${var}_dir_node";
+
+	$hfile .= "GOConfNode *$id (void);\n";
+
+	$cfile .= "/**\n";
+	$cfile .= " * $id:\n";
+	$cfile .= " *\n";
+	$cfile .= " * Returns: (transfer none): A #GOConfNode\n";
+	$cfile .= " */\n";
+	$cfile .= "GOConfNode *\n";
+	$cfile .= "$id (void)\n";
+	$cfile .= "{\n";
+	$cfile .= "\treturn get_node (\"$dir\", NULL);\n";
+	$cfile .= "}\n\n";
+    }
+
+    $cfile =~ s/\n\n+$/\n/;
+    $hfile =~ s/\n\n+$/\n/;
+
+    print $hfile if $do_hfile;
+    print $cfile if $do_cfile;
+}
+
+# -----------------------------------------------------------------------------
+
+sub create_reg {
+    my ($prefix) = @_;
+
+    # --------------------
+    # Bizarre ordering of schemas.
+
+    my %dir_group;
+    my $i = 0;
+    my @groups;
+    foreach my $schema (@schemas) {
+	my $key = $schema->{'applyto'};
+	my $dir = $key; $dir =~ s{/[^/]+$}{};
+
+	my $group = $dir_group{$dir};
+	if (!defined $group) {
+	    $group = $dir_group{$dir} = $i++;
+	    push @groups, [];
+	}
+
+	# Unshift to reverse the order within the group for no reason other
+	# than matching old code.
+	unshift @{$groups[$group]}, $schema;
+    }
+    @schemas = ();
+    foreach (@groups) {
+	push @schemas, @$_;
+    }
+
+    # --------------------
+
+    print "REGEDIT4\n";
+
+    my %dirs;
+    foreach my $schema (@schemas) {
+	my $key = $schema->{'applyto'};
+	my $type = $schema->{'type'};
+	$type .= ":" . $schema->{'list_type'} if $type eq 'list';
+	my $default = $schema->{'default'};
+
+	# Outdated; keys now start with /org/
+	# next unless $key =~ s{^/apps/}{};
+
+	next unless $key =~ s{^/org/gnome/}{};
+
+	my $wkey = $prefix;
+	my @items = split ('/', $key);
+	my $var = pop @items;
+	foreach my $item (@items) {
+	    next if $item eq '';
+	    $wkey .= "\\$item";
+	    if (!exists $dirs{$wkey}) {
+		print "\n[$wkey]\n";
+		$dirs{$wkey} = 1;
+	    }
+	}
+
+	print "\"$var\"=";
+	if ($type eq 'bool') {
+	    printf "hex:0%d", ($default =~ /TRUE/i ? 1 : 0);
+	} elsif ($type eq 'int') {
+	    printf "dword:%08x", $default;
+	} elsif ($type eq 'float') {
+	    printf "\"%s\"", $default;
+	} elsif ($type eq 'string') {
+	    print &quote_c_string ($default);
+	} elsif ($type eq 'list:string') {
+	    print "hex(1):";
+	    $default = "" unless defined $default;
+	    if ($default =~ s{^\[(.*)\]$}{$1}) {
+		my $l = 7 + length ($var);
+		while ($default ne '') {
+		    if ($l > 40) {
+			print "\\\n";
+			$l = 0;
+		    }
+		    if ($default =~ m{^,}) {
+			print "0a,00,";
+			$l += 6;
+			$default = substr ($default, 1);
+		    } else {
+			my $c = ord (substr ($default, 0, 1));
+			printf("%02x,00,", $c);
+			$l += 6;
+			$default = substr ($default, 1);
+		    }
+		}
+		print "00,00";
+	    }
+	} else {
+	    die "$0: Unhandled type $type\n";
+	}
+
+	print "\n";
+    }
+
+    print "\n";
+}
+
+# -----------------------------------------------------------------------------
+
+&sort_schemas ();
+&create_hcfile () if $do_hfile || $do_cfile;
+&create_reg ("HKEY_USERS\\.DEFAULT\\Software") if $do_reg;
+&create_reg ("HKEY_CURRENT_USER\\Software") if $do_hkcu_reg;

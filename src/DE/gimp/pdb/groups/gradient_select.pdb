@@ -1,0 +1,133 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+
+sub gradients_popup {
+    $blurb = 'Invokes the Gimp gradients selection dialog.';
+    $help  = 'Opens a dialog letting a user choose a gradient.';
+
+    &andy_pdb_misc('1998');
+
+    @inargs = (
+      { name => 'gradient_callback', type => 'string', non_empty => 1,
+        desc => 'The callback PDB proc to call when user chooses a gradient' },
+      { name => 'popup_title', type => 'string',
+        desc => 'Title of the gradient selection dialog' },
+      { name => 'initial_gradient', type => 'gradient', none_ok => 1,
+        desc => 'The initial gradient choice' },
+      { name => 'parent_window', type => 'bytes', none_ok => 1,
+        desc => 'An optional parent window handle for the popup to be set transient to' }
+      );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *container = gimp_data_factory_get_container (gimp->gradient_factory);
+
+  /* Formerly, this procedure had another parameter:
+   * the sample size of the gradient's data passed in the changed callback.
+   * Now the sample size is determined by core, and in the future,
+   * the callback won't return a sample of the data at all.
+   */
+
+  if (gimp->no_interface ||
+      ! gimp_pdb_lookup_procedure (gimp->pdb, gradient_callback) ||
+      ! gimp_pdb_dialog_new (gimp, context, progress,
+                             gimp_container_get_child_type (container),
+                             parent_window, popup_title, gradient_callback,
+                             GIMP_OBJECT (initial_gradient), NULL))
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradients_close_popup {
+    $blurb = 'Close the gradient selection dialog.';
+    $help  = 'Closes an open gradient selection dialog.';
+
+    &andy_pdb_misc('1998');
+
+    @inargs = (
+      { name => 'gradient_callback', type => 'string', non_empty => 1,
+        desc => 'The name of the callback registered for this pop-up' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *container = gimp_data_factory_get_container (gimp->gradient_factory);
+
+  if (gimp->no_interface ||
+      ! gimp_pdb_lookup_procedure (gimp->pdb, gradient_callback) ||
+      ! gimp_pdb_dialog_close (gimp,
+                               gimp_container_get_child_type (container),
+                               gradient_callback))
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradients_set_popup {
+    $blurb = 'Sets the current gradient in a gradient selection dialog.';
+    $help  = $blurb;
+
+    &andy_pdb_misc('1998');
+
+    @inargs = (
+      { name => 'gradient_callback', type => 'string', non_empty => 1,
+        desc => 'The name of the callback registered for this pop-up' },
+      { name => 'gradient', type => 'gradient',
+        desc => 'The gradient to set as selected' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *container = gimp_data_factory_get_container (gimp->gradient_factory);
+
+  if (gimp->no_interface ||
+      ! gimp_pdb_lookup_procedure (gimp->pdb, gradient_callback) ||
+      ! gimp_pdb_dialog_set (gimp,
+                             gimp_container_get_child_type (container),
+                             gradient_callback, GIMP_OBJECT (gradient), NULL))
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+@headers = qw("core/gimp.h"
+              "core/gimpcontainer.h"
+              "core/gimpdatafactory.h"
+              "core/gimpgradient.h");
+
+@procs = qw(gradients_popup
+            gradients_close_popup
+            gradients_set_popup);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Gradient UI';
+$doc_title = 'gimpgradientselect';
+$doc_short_desc = 'Methods of a gradient chooser dialog';
+$doc_long_desc = 'A dialog letting a user choose a gradient.  Read more at gimpfontselect.';
+
+1;

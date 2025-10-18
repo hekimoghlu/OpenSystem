@@ -1,0 +1,177 @@
+# Several root-finding methods
+# The algorithms are described in:
+# Numerical Analysis, 5th edition
+# by Richard L. Burden and J. Douglas Faires
+# PWS Publishing Company, Boston, 1993.
+# Library of congress: QA 297 B84 1993
+
+# In the below, f indicates the function whose root we wish to find,
+# a,b indicate the left and right endpoints of the interval in which we
+# wish to find the solution, TOL is the tolerance -- to what precision
+# we want the answer, and N is the maximum number of iterations
+# (0 means infinite).
+
+# These methods all return two values:
+# success:boolean, last value:real, iteration:natural
+# success is true iff last value is within tolerance of a zero
+# last value is the last value computed
+# iteration is the number of iterations performed
+
+# Currently only works for real functions of a real variable
+
+# The Bisection Method, Section 2.1, Algorithm 2.1, pp. 41-42
+SetHelp ("FindRootBisection", "equation_solving",
+         "Find root of a function using the bisection method to within TOL tolerance in up to N iterations.  f(a) and f(b) must have opposite signs.")
+function FindRootBisection(f,a,b,TOL,N) =
+	(
+	local *;
+# check arguments
+## check types
+	if(not IsFunction(f)) then
+		(error("FindRootBisection: argument 1 must be a function");bailout)
+	else if(not IsReal(a) or not IsReal(b) or not IsReal(TOL)) then
+		(error("FindRootBisection: arguments 2, 3, 4 must be real values");bailout)
+	else if(not IsInteger(N)) then
+		(error("FindRootBisection: argument 5 must be an integer");bailout);
+## check bounds
+	if(a>b) then (error("FindRootBisection: argument 2 must be less than or equal to argument 3");bailout)
+	else if(Sign(f(a)) == Sign(f(b))) then (error("FindRootBisection: value of endpoints must have differing sign");bailout);
+
+# Start calculating
+	iteration:=1;
+        a:=float(a);
+        b:=float(b);
+	p:=a;
+	while((iteration <= N) or (N==0)) do
+	(
+	 diff=(b-a)/2;
+	 p=a+diff;
+	 if(Sign(f(p))==0 or diff<TOL) then (return [true,p,iteration]);
+	 increment iteration;
+	 if(Sign(f(a)) == Sign(f(p))) then (a:=p) else (b:=p)
+	);
+	[false,p,iteration]
+	)
+
+# The Secant Method, Section 2.3, Algorithm 2.4, p. 62
+#FIXME: doesn't work right, check this
+SetHelp ("FindRootSecant", "equation_solving",
+         "Find root of a function using the secant method to within TOL tolerance in up to N iterations.  f(a) and f(b) must have opposite signs.")
+function FindRootSecant(f,a,b,TOL,N) =
+	(
+	local *;
+# check arguments
+## check types
+	if(not IsFunction(f)) then
+		(error("FindRootSecant: argument 1 must be a function");bailout)
+	else if(not IsReal(a) or not IsReal(b) or not IsReal(TOL)) then
+		(error("FindRootSecant: arguments 2, 3, 4 must be real values");bailout)
+	else if(not IsInteger(N)) then
+		(error("FindRootSecant: argument 5 must be an integer");bailout);
+## check bounds
+	if(a>b) then (error("FindRootSecant: argument 2 must be less than or equal to argument 3");bailout)
+        else if(Sign(f(a)) == Sign(f(b))) then (error("FindRootSecant: value of endpoints must have differing sign");bailout);
+
+# Start calculating
+	iteration=2;
+        a:=float(a);
+        b:=float(b);
+	qa=f(a);
+	qb=f(b);
+	p=a;
+	while((iteration <= N) or (N==0)) do
+	(
+	 p=b-qb*(b-a)/(qb-qa);
+	 if(|p-b|<TOL) then (return [true,p,iteration]);
+	 increment iteration;
+	 a=b;
+	 qa=qb;
+         b=p;
+         qb=f(p)
+	);
+	[false,p,iteration]
+)
+
+# The Method of False Position, Section 2.3, Algorithm 2.5, p. 64
+SetHelp ("FindRootFalsePosition", "equation_solving",
+         "Find root of a function using the method of false position to within TOL tolerance in up to N iterations.  f(a) and f(b) must have opposite signs.")
+function FindRootFalsePosition(f,a,b,TOL,N) =
+	(
+	local *;
+# check arguments
+## check types
+	if(not IsFunction(f)) then
+		(error("FindRootFalsePosition: argument 1 must be a function");bailout)
+	else if(not IsReal(a) or not IsReal(b) or not IsReal(TOL)) then
+		(error("FindRootFalsePosition: arguments 2, 3, 4 must be real values");bailout)
+	else if(not IsInteger(N)) then
+		(error("FindRootFalsePosition: argument 5 must be an integer");bailout);
+## check bounds
+	if(a>b) then (error("FindRootFalsePosition: argument 2 must be less than or equal to argument 3");bailout)
+	else if(Sign(f(a)) == Sign(f(b))) then (error("FindRootFalsePosition: value of endpoints must have differing sign");bailout);
+
+# Start calculating
+	iteration=2;
+        a:=float(a);
+        b:=float(b);
+	qa=f(a);
+	qb=f(b);
+	p=a;
+	while((iteration <= N) or (N==0)) do
+	(
+	 p=b-qb*(b-a)/(qb-qa);
+	 if(|p-b|<TOL) then (return [true,p,iteration]);
+	 increment iteration;
+	 q=f(p);
+	 if(q*qb<0) then (a=b;qa=qb);
+         b=p;
+         qb=q
+	);
+	[false,p,iteration]
+)
+
+# FIXME: This doesn't work right
+# The M"uller's Method, Section 2.6, Algorithm 2.8, p. 88
+#FIXME: doesn't work right, check this
+SetHelp ("FindRootMullersMethod", "equation_solving",
+         "Find root of a function using the Muller's method")
+function FindRootMullersMethod(f,x0,x1,x2,TOL,N) =
+	(
+	local *;
+# check arguments
+## check types
+	if(not IsFunction(f)) then
+		(error("FindRootMullersMethod: argument 1 must be a function");bailout)
+	else if(not IsReal(x0) or not IsReal(x1) or not IsReal(x2) or not IsReal(TOL)) then
+		(error("FindRootMullersMethod: arguments 2, 3, 4, 5 must be real values");bailout)
+	else if(not IsInteger(N)) then
+		(error("FindRootMullersMethod: argument 6 must be an integer");bailout);
+
+# Start calculating
+	p=x1;
+	h1=x1-x0;
+	h2=x2-x1;
+	d1=(f(x1)-f(x0))/h1;
+	d2=(f(x2)-f(x1))/h2;
+	d=(d2-d1)/(h2+h1);
+	i=2;
+	while((i <= N) or (N==0)) do
+	(
+	b=d2+h2*d;
+	D=sqrt(b^2-4*f(x2)*d);	# This may use complex arithmatic
+	if (|b-D|<|b+d|) then (E=b+D) else (E=b-D);
+	h=-2*f(x2)/E;
+	p=x2+h;
+	if (|h|<TOL) then (return[true,p,iteration]);
+	x0=x1;
+	x1=x2;
+	x2=p;
+	h1=x1-x0;
+	h2=x2-x1;
+	d1=(f(x1)-f(x0))/h1;
+	d2=(f(x2)-f(x1))/h2;
+	d=(d2-d1)/(h2+h1);
+	increment i
+	);
+	[false,p,i]
+)

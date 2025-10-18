@@ -1,0 +1,839 @@
+<?xml version="1.0"?>
+<filterdescription>
+<partset>
+ <part name="sender">
+   <_title>Sender</_title>
+   <input type="optionlist" name="sender-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "From" ${sender})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "From" ${sender}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "From" ${sender})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "From" ${sender}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with "From" ${sender})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with "From" ${sender}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with "From" ${sender})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with "From" ${sender}))</code>
+    </option>
+   </input>
+   <input type="string" name="sender"/>
+ </part>
+
+ <!-- NOTE: Do not include Bcc addresses in this search until Camel
+            includes Bcc addresses in its summary database.  Otherwise
+            it kills our search performance by forcing entire messages
+            to be downloaded just to examine their Bcc headers. -->
+ <part name="to">
+   <_title>Recipients</_title>
+   <input type="optionlist" name="recipient-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(or (header-contains "To" ${recipient}) (header-contains "Cc" ${recipient}))</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (or (header-contains "To" ${recipient}) (header-contains "Cc" ${recipient})))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(or (header-matches "To" ${recipient}) (header-matches "Cc" ${recipient}))</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (or (header-matches "To" ${recipient}) (header-matches "Cc" ${recipient})))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(or (header-starts-with "To" ${recipient}) (header-starts-with "Cc" ${recipient}))</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (or (header-starts-with "To" ${recipient}) (header-starts-with "Cc" ${recipient})))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(or (header-ends-with "To" ${recipient}) (header-ends-with "Cc" ${recipient}))</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (or (header-ends-with "To" ${recipient}) (header-ends-with "Cc" ${recipient})))</code>
+    </option>
+   </input>
+   <input type="address" name="recipient"/>
+ </part>
+
+ <part name="toonly">
+   <_title>To</_title>
+   <input type="optionlist" name="recipient-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "To" ${recipient})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "To" ${recipient}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "To" ${recipient})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "To" ${recipient}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with "To" ${recipient})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with "To" ${recipient}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with "To" ${recipient})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with "To" ${recipient}))</code>
+    </option>
+    <option value="matches soundex">
+     <_title>sounds like</_title>
+     <code>(header-soundex "To" ${recipient})</code>
+    </option>
+    <option value="not match soundex">
+     <_title>does not sound like</_title>
+     <code>(not (header-soundex "To" ${recipient}))</code>
+    </option>
+   </input>
+   <input type="address" name="recipient"/>
+ </part>
+
+ <part name="cc">
+   <_title>CC</_title>
+   <input type="optionlist" name="recipient-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "Cc" ${recipient})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "Cc" ${recipient}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "Cc" ${recipient})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "Cc" ${recipient}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with "Cc" ${recipient})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with "Cc" ${recipient}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with "Cc" ${recipient})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with "Cc" ${recipient}))</code>
+    </option>
+    <option value="matches soundex">
+     <_title>sounds like</_title>
+     <code>(header-soundex "Cc" ${recipient})</code>
+    </option>
+    <option value="not match soundex">
+     <_title>does not sound like</_title>
+     <code>(not (header-soundex "Cc" ${recipient}))</code>
+    </option>
+   </input>
+   <input type="address" name="recipient"/>
+ </part>
+
+ <part name="bcc">
+   <_title>BCC</_title>
+   <input type="optionlist" name="recipient-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "Bcc" ${recipient})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "Bcc" ${recipient}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "Bcc" ${recipient})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "Bcc" ${recipient}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with "Bcc" ${recipient})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with "Bcc" ${recipient}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with "Bcc" ${recipient})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with "Bcc" ${recipient}))</code>
+    </option>
+    <option value="matches soundex">
+     <_title>sounds like</_title>
+     <code>(header-soundex "Bcc" ${recipient})</code>
+    </option>
+    <option value="not match soundex">
+     <_title>does not sound like</_title>
+     <code>(not (header-soundex "Bcc" ${recipient}))</code>
+    </option>
+   </input>
+   <input type="address" name="recipient"/>
+ </part>
+
+ <part name="senderto">
+   <_title>Sender or Recipients</_title>
+   <input type="optionlist" name="recipient-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(or (header-contains "From" ${recipient}) (header-contains "To" ${recipient}) (header-contains "Cc" ${recipient}))</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (or (header-contains "From" ${recipient}) (header-contains "To" ${recipient}) (header-contains "Cc" ${recipient})))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(or (header-matches "From" ${recipient}) (header-matches "To" ${recipient}) (header-matches "Cc" ${recipient}))</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (or (header-matches "From" ${recipient}) (header-matches "To" ${recipient}) (header-matches "Cc" ${recipient})))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(or (header-starts-with "From" ${recipient}) (header-starts-with "To" ${recipient}) (header-starts-with "Cc" ${recipient}))</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (or (header-starts-with "From" ${recipient}) (header-starts-with "To" ${recipient}) (header-starts-with "Cc" ${recipient})))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(or (header-ends-with "From" ${recipient}) (header-ends-with "To" ${recipient}) (header-ends-with "Cc" ${recipient}))</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (or (header-ends-with "From" ${recipient}) (header-ends-with "To" ${recipient}) (header-ends-with "Cc" ${recipient})))</code>
+    </option>
+   </input>
+   <input type="string" name="recipient"/>
+ </part>
+
+ <part name="subject">
+   <_title>Subject</_title>
+   <input type="optionlist" name="subject-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "Subject" ${subject})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "Subject" ${subject}))</code>
+    </option>
+    <option value="has-words">
+     <_title>has words</_title>
+     <code>(header-has-words "Subject" ${subject})</code>
+    </option>
+    <option value="not has-words">
+     <_title>does not have words</_title>
+     <code>(not (header-has-words "Subject" ${subject}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "Subject" ${subject})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "Subject" ${subject}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with "Subject" ${subject})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with "Subject" ${subject}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with "Subject" ${subject})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with "Subject" ${subject}))</code>
+    </option>
+   </input>
+   <input type="string" name="subject"/>
+ </part>
+
+ <part name="header">
+   <_title>Specific header</_title>
+   <input type="string" name="header-field"/>
+   <input type="optionlist" name="header-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains ${header-field} ${word})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains ${header-field} ${word}))</code>
+    </option>
+    <option value="has-words">
+     <_title>has words</_title>
+     <code>(header-has-words ${header-field} ${word})</code>
+    </option>
+    <option value="not has-words">
+     <_title>does not have words</_title>
+     <code>(not (header-has-words ${header-field} ${word}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches ${header-field} ${word})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches ${header-field} ${word}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with ${header-field} ${word})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with ${header-field} ${word}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with ${header-field} ${word})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with ${header-field} ${word}))</code>
+    </option>
+    <option value="exists">
+     <_title>exists</_title>
+     <code>(header-exists ${header-field})</code>
+    </option>
+    <option value="not exists">
+     <_title>does not exist</_title>
+     <code>(not (header-exists ${header-field}))</code>
+    </option>
+    <option value="matches soundex">
+     <_title>sounds like</_title>
+     <code>(header-soundex ${header-field} ${word})</code>
+    </option>
+    <option value="not match soundex">
+     <_title>does not sound like</_title>
+     <code>(not (header-soundex ${header-field} ${word}))</code>
+    </option>
+   </input>
+   <input type="string" name="word"/>
+ </part>
+
+ <part name="anyheader">
+   <_title>Any header</_title>
+   <input type="optionlist" name="header-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "" ${word})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "" ${word}))</code>
+    </option>
+    <option value="has-words">
+     <_title>has words</_title>
+     <code>(header-has-words "" ${word})</code>
+    </option>
+    <option value="not has-words">
+     <_title>does not have words</_title>
+     <code>(not (header-has-words "" ${word}))</code>
+    </option>
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "" ${word})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "" ${word}))</code>
+    </option>
+    <option value="starts with">
+     <_title>starts with</_title>
+     <code>(header-starts-with "" ${word})</code>
+    </option>
+    <option value="not starts with">
+     <_title>does not start with</_title>
+     <code>(not (header-starts-with "" ${word}))</code>
+    </option>
+    <option value="ends with">
+     <_title>ends with</_title>
+     <code>(header-ends-with "" ${word})</code>
+    </option>
+    <option value="not ends with">
+     <_title>does not end with</_title>
+     <code>(not (header-ends-with "" ${word}))</code>
+    </option>
+    <option value="matches soundex">
+     <_title>sounds like</_title>
+     <code>(header-soundex "" ${word})</code>
+    </option>
+    <option value="not match soundex">
+     <_title>does not sound like</_title>
+     <code>(not (header-soundex "" ${word}))</code>
+    </option>
+   </input>
+   <input type="string" name="word"/>
+ </part>
+
+ <part name="body">
+   <_title>Message Body</_title>
+   <input type="optionlist" name="body-type">
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(body-contains ${word})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (body-contains ${word}))</code>
+    </option>
+   </input>
+   <input type="string" name="word"/>
+ </part>
+ <part name="sexp">
+   <_title>Expression</_title>
+   <input type="code" name="code"/>
+ </part>
+
+ <part name="mail-free-form-exp">
+  <_title>Free Form Expression</_title>
+  <input type="string" name="ffe">
+    <code func="e_mail_free_form_exp_to_sexp"/>
+  </input>
+ </part>
+
+ <part name="sent-date">
+  <_title>Date sent</_title>
+  <input type="optionlist" name="date-spec-type">
+   <option value="is">
+    <_title>is</_title>
+    <code>(= (compare-date (get-sent-date) ${versus}) 0)</code>
+   </option>
+   <option value="is-not">
+    <_title>is not</_title>
+    <code>(not (= (compare-date (get-sent-date) ${versus}) 0))</code>
+   </option>
+   <option value="before">
+    <_title>is before</_title>
+    <code>(&lt; (compare-date (get-sent-date) ${versus}) 0)</code>
+   </option>
+   <option value="after">
+    <_title>is after</_title>
+    <code>(&gt; (compare-date (get-sent-date) ${versus}) 0)</code>
+   </option>
+  </input>    
+  <input type="datespec" name="versus"/>
+ </part>
+
+ <part name="recv-date">
+  <_title>Date received</_title>
+  <input type="optionlist" name="date-spec-type">
+   <option value="is">
+    <_title>is</_title>
+    <code>(= (compare-date (get-received-date) ${versus}) 0)</code>
+   </option>
+   <option value="is-not">
+    <_title>is not</_title>
+    <code>(not (= (compare-date (get-received-date) ${versus}) 0))</code>
+   </option>
+   <option value="before">
+    <_title>is before</_title>
+    <code>(&lt; (compare-date (get-received-date) ${versus}) 0)</code>
+   </option>
+   <option value="after">
+    <_title>is after</_title>
+    <code>(&gt; (compare-date (get-received-date) ${versus}) 0)</code>
+   </option>
+  </input>    
+  <input type="datespec" name="versus"/>
+ </part>
+
+ <part name="label">
+  <_title>Label</_title>
+  <input type="optionlist" name="label-type">
+   <option value="is">
+    <_title>is</_title>
+    <code func="e_mail_labels_get_filter_code"/>
+   </option>
+   <option value="is-not">
+    <_title>is not</_title>
+    <code func="e_mail_labels_get_filter_code"/>
+    </option>
+  </input>
+  <input type="optionlist" name="versus">
+    <dynamic func="e_mail_labels_get_filter_options"/>
+  </input>
+ </part>
+
+ <part name="score">
+  <_title>Score</_title>
+  <input type="optionlist" name="score-type">
+   <option value="is">
+    <_title>is</_title>
+    <code>(= (cast-int (user-tag "score")) ${versus})</code>
+   </option>
+   <option value="is-not">
+    <_title>is not</_title>
+    <code>(not (= (cast-int (user-tag "score")) ${versus}))</code>
+   </option>
+   <option value="greater-than">
+    <_title>is greater than</_title>
+    <code>(&gt; (cast-int (user-tag "score")) ${versus})</code>
+   </option>
+   <option value="less-than">
+    <_title>is less than</_title>
+    <code>(&lt; (cast-int (user-tag "score")) ${versus})</code>
+   </option>
+  </input>
+  <input type="score" name="versus"/>
+ </part>
+
+ <part name="size">
+  <_title>Size (kB)</_title>
+  <input type="optionlist" name="size-type">
+   <option value="greater-than">
+    <_title>is greater than</_title>
+    <code>(&gt; (get-size) ${versus})</code>
+   </option>
+   <option value="greater-than-or-equal">
+    <_title>is greater than or equal to</_title>
+    <code>(or (&gt; (get-size) ${versus}) (= (get-size) ${versus}))</code>
+   </option>
+   <option value="less-than-or-equal">
+    <_title>is less than or equal to</_title>
+    <code>(or (&lt; (get-size) ${versus}) (= (get-size) ${versus}))</code>
+   </option>
+   <option value="less-than">
+    <_title>is less than</_title>
+    <code>(&lt; (get-size) ${versus})</code>
+   </option>
+  </input>
+  <input type="integer" name="versus"/>
+ </part>
+
+ <part name="status">
+  <_title>Status</_title>
+  <input type="optionlist" name="match-type">
+   <option value="is">
+    <_title>is</_title>
+    <code>(system-flag ${flag})</code>
+   </option>
+   <option value="is not">
+    <_title>is not</_title>
+    <code>(not (system-flag ${flag}))</code>
+   </option>
+  </input>
+  <input type="optionlist" name="flag">
+   <option value="Answered">
+    <_title>Replied to</_title>
+   </option>
+   <option value="Deleted">
+    <_title>Deleted</_title>
+   </option>
+   <option value="Draft">
+    <_title>Draft</_title>
+   </option>
+   <option value="Flagged">
+    <_title>Important</_title>
+   </option>
+   <option value="Seen">
+    <_title>Read</_title>
+   </option>
+  </input>
+ </part>
+
+ <part name="follow-up">
+  <_title>Follow Up</_title>
+  <input type="optionlist" name="match-type">
+   <option value="is">
+    <_title>is Flagged</_title>
+    <code>(not (= (user-tag "follow-up") ""))</code>
+   </option>
+   <option value="is not">
+    <_title>is not Flagged</_title>
+    <code>(= (user-tag "follow-up") "")</code>
+   </option>
+   <option value="is completed">
+    <_title>is Completed</_title>
+    <code>(and (not (= (user-tag "follow-up") "")) (not (= (user-tag "completed-on") "")))</code>
+   </option>
+   <option value="is not completed">
+    <_title>is not Completed</_title>
+    <code>(and (not (= (user-tag "follow-up") "")) (= (user-tag "completed-on") ""))</code>
+   </option>
+  </input>
+ </part>
+
+ <part name="follow-up-due-by">
+  <_title>Follow Up Due By</_title>
+  <input type="optionlist" name="date-spec-type">
+   <option value="before">
+    <_title>is before</_title>
+    <code>(and (not (= (user-tag "follow-up") "")) (not (= (user-tag "due-by") "")) (&lt; (compare-date (make-time (user-tag "due-by")) ${versus}) 0))</code>
+   </option>
+   <option value="after">
+    <_title>is after</_title>
+    <code>(and (not (= (user-tag "follow-up") "")) (not (= (user-tag "due-by") "")) (&gt; (compare-date (make-time (user-tag "due-by")) ${versus}) 0))</code>
+   </option>
+   <option value="is">
+    <_title>is</_title>
+    <code>(and (not (= (user-tag "follow-up") "")) (not (= (user-tag "due-by") "")) (= (compare-date (make-time (user-tag "due-by")) ${versus}) 0))</code>
+   </option>
+   <option value="is-not">
+    <_title>is not</_title>
+    <code>(and (not (= (user-tag "follow-up") "")) (not (= (user-tag "due-by") "")) (not (= (compare-date (make-time (user-tag "due-by")) ${versus}) 0)))</code>
+   </option>
+  </input>
+  <input type="datespec" name="versus"/>
+ </part>
+
+ <part name="attachments">
+  <_title>Attachments</_title>
+  <input type="optionlist" name="match-type">
+   <option value="exist">
+    <_title>Exist</_title>
+    <code>(system-flag "Attachments")</code>
+   </option>
+   <option value="not exist">
+    <_title>Do Not Exist</_title>
+    <code>(not (system-flag "Attachments"))</code>
+   </option>
+   <option value="contain-icalendar">
+    <_title>Contain iCalendar Data</_title>
+    <code>(user-flag "$has_cal")</code>
+   </option>
+   <option value="not-contain-icalendar">
+    <_title>Do Not Contain iCalendar Data</_title>
+    <code>(not (user-flag "$has_cal"))</code>
+   </option>
+  </input>
+ </part>
+
+ <part name="notes">
+  <_title>Notes</_title>
+  <input type="optionlist" name="match-type">
+   <option value="exist">
+    <_title>Exist</_title>
+    <code>(user-flag "$has_note")</code>
+   </option>
+   <option value="not exist">
+    <_title>Do Not Exist</_title>
+    <code>(not (user-flag "$has_note"))</code>
+   </option>
+  </input>
+ </part>
+
+ <part name="mlist">
+  <_title>Mailing list</_title>
+   <input type="optionlist" name="mlist-type">
+    <option value="is">
+     <_title>is</_title>
+     <code>(header-matches "x-camel-mlist" ${mlist})</code>
+    </option>
+    <option value="is not">
+     <_title>is not</_title>
+     <code>(not (header-matches "x-camel-mlist" ${mlist}))</code>
+    </option>
+    <option value="contains">
+     <_title>contains</_title>
+     <code>(header-contains "x-camel-mlist" ${mlist})</code>
+    </option>
+    <option value="not contains">
+     <_title>does not contain</_title>
+     <code>(not (header-contains "x-camel-mlist" ${mlist}))</code>
+    </option>
+   </input>
+   <input type="string" name="mlist"/>
+ </part>
+
+ <part name="regex">
+  <_title>Regex Match</_title>
+  <input type="optionlist" name="match-type">
+   <option value="header">
+    <_title>Message Header</_title>
+    <code>(header-full-regex ${expression})</code>
+   </option>
+   <option value="body">
+    <_title>Message Body</_title>
+    <code>(body-regex ${expression})</code>
+   </option>
+  </input>
+  <input type="regex" name="expression"/>
+ </part>
+
+ <part name="addressbook">
+  <_title>Address book</_title>
+  <input type="optionlist" name="book">
+     <dynamic func="e_mail_addressbook_get_filter_options"/>
+  </input>
+  <input type="optionlist" name="compare-type">
+   <option value="contains-sender">
+    <_title>contains Sender</_title>
+    <code>(addressbook-contains ${book} "From")</code>
+   </option>
+   <option value="not-contains-sender">
+    <_title>does not contain Sender</_title>
+    <code>(not (addressbook-contains ${book} "From"))</code>
+   </option>
+  </input>
+ </part>
+
+ <part name="all">
+  <_title>Match All</_title>
+  <code>#t</code>
+ </part>
+
+</partset>
+
+  <ruleset>
+    <rule grouping="any" source="demand">
+      <_title>Subject or Addresses contains</_title>
+      <partset>
+        <part name="subject">
+          <value name="subject-type" type="option" value="contains"/>
+          <value name="subject" type="string"/>
+        </part>
+        <part name="sender">
+          <value name="sender-type" type="option" value="contains"/>
+          <value name="sender" type="string"/>
+        </part>
+        <part name="to">
+          <value name="recipient-type" type="option" value="contains"/>
+          <value name="recipient" type="address"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+    <rule grouping="any" source="demand">
+      <_title>Recipients contain</_title>
+      <partset>
+        <part name="to">
+          <value name="recipient-type" type="option" value="contains"/>
+          <value name="recipient" type="address"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+    <rule grouping="any" source="demand">
+      <_title>Message contains</_title>
+      <partset>
+        <part name="subject">
+          <value name="subject-type" type="option" value="contains"/>
+          <value name="subject" type="string"/>
+        </part>
+        <part name="sender">
+          <value name="sender-type" type="option" value="contains"/>
+          <value name="sender" type="string"/>
+        </part>
+        <part name="to">
+          <value name="recipient-type" type="option" value="contains"/>
+          <value name="recipient" type="address"/>
+        </part>
+        <part name="body">
+          <value name="body-type" type="option" value="contains"/>
+          <value name="word" type="string"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+    <rule grouping="any" source="demand">
+      <_title>Subject contains</_title>
+      <partset>
+        <part name="subject">
+          <value name="subject-type" type="option" value="contains"/>
+          <value name="subject" type="string"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+    <rule grouping="any" source="demand">
+      <_title>Sender contains</_title>
+      <partset>
+        <part name="sender">
+          <value name="sender-type" type="option" value="contains"/>
+          <value name="sender" type="string"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+    <rule grouping="any" source="demand">
+      <_title>Body contains</_title>
+      <partset>
+        <part name="body">
+          <value name="body-type" type="option" value="contains"/>
+          <value name="word" type="string"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+    <rule grouping="any" source="demand">
+      <_title>Free form expression</_title>
+      <partset>
+        <part name="mail-free-form-exp">
+          <value name="ffe" type="string"/>
+        </part>
+      </partset>
+      <sources/>
+    </rule>
+
+  </ruleset>
+</filterdescription>

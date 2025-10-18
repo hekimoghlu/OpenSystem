@@ -1,0 +1,65 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/video/navigation.h>
+#include <glibmm/interface.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(NavigationCommand, GstNavigationCommand)
+_WRAP_ENUM(NavigationEventType, GstNavigationEventType)
+_WRAP_ENUM(NavigationMessageType, GstNavigationMessageType)
+_WRAP_ENUM(NavigationQueryType, GstNavigationQueryType)
+
+class Structure;
+
+/** An interface for elements that provide navigation functionality.
+ * @ingroup GstInterfaces
+ *
+ * Last reviewed on 2016-06-06 (1.8.0)
+ */
+class Navigation : public Glib::Interface
+{
+  _CLASS_INTERFACE(Navigation, GstNavigation, GST_NAVIGATION, GstNavigationInterface)
+
+public:
+  _WRAP_METHOD(void send_event(Gst::Structure& structure), gst_navigation_send_event)
+  _WRAP_METHOD(void send_key_event(const Glib::ustring& event, const Glib::ustring& key), gst_navigation_send_key_event)
+  _WRAP_METHOD(void send_mouse_event(const Glib::ustring& event, int button, double x, double y), gst_navigation_send_mouse_event)
+  _WRAP_METHOD(void send_command(Gst::NavigationCommand command), gst_navigation_send_command)
+
+
+  /** Called when an event has been sent to the Gst::Navigation.
+   */
+  virtual void send_event_vfunc(Gst::Structure&& structure);
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->send_event = &send_event_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static void send_event_vfunc_callback(GstNavigation* self, GstStructure* structure);
+  _POP()
+#m4end
+};
+
+} // namespace Gst

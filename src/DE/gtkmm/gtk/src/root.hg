@@ -1,0 +1,79 @@
+/* Copyright (C) 2019 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <glibmm/interface.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+extern "C"
+{
+typedef struct _GtkRootInterface GtkRootInterface;
+}
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gdk
+{
+class GTKMM_API Display;
+class GTKMM_API Surface;
+}
+
+namespace Gtk
+{
+class GTKMM_API Widget;
+
+/** Interface for root widgets.
+ *
+ * %Gtk::Root is the interface implemented by all widgets that can act as a toplevel
+ * widget to a hierarchy of widgets. The root widget takes care of providing the
+ * connection to the windowing system and manages layout, drawing and event delivery
+ * for its widget hierarchy.
+ *
+ * The obvious example of a %Gtk::Root is Gtk::Window.
+ *
+ * @see Gtk::Window
+ * @newin{3,96}
+ */
+class GTKMM_API Root : public Glib::Interface
+{
+  _CLASS_INTERFACE(Root, GtkRoot, GTK_ROOT, GtkRootInterface, , , GTKMM_API)
+
+public:
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Display> get_display(), gtk_root_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Display> get_display() const, gtk_root_get_display, refreturn, constversion)
+
+  /** If @a focus is not the current focus widget, and is focusable, sets
+   * it as the focus widget for the root.
+   *
+   * To set the focus to a particular widget in the root, it is usually
+   * more convenient to use Gtk::Widget::grab_focus() instead of this function.
+   *
+   * @param focus Widget to be the new focus widget.
+   */
+  _WRAP_METHOD(void set_focus(Widget& focus), gtk_root_set_focus)
+
+  /** Unsets the focus widget for the root.
+   */
+  void unset_focus();
+
+  _WRAP_METHOD(Widget* get_focus(), gtk_root_get_focus)
+  _WRAP_METHOD(const Widget* get_focus() const, gtk_root_get_focus, constversion)
+};
+
+} // namespace Gtk

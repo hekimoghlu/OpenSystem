@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GsmOpenFiles" parent="AdwWindow">
+    <property name="width-request">360</property>
+    <property name="height-request">294</property>
+    <property name="default-width">575</property>
+    <property name="default-height">400</property>
+    <property name="destroy-with-parent">1</property>
+    <property name="content">
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <property name="title-widget">
+              <object class="AdwWindowTitle" id="window_title">
+                <property name="title" translatable="yes">Open Files</property>
+              </object>
+            </property>
+          </object>
+        </child>
+        <property name="content">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkColumnView" id="openfiles_view">
+                    <property name="model">
+                      <object class="GtkNoSelection">
+                        <property name="model">
+                          <object class="GtkSortListModel">
+                            <property name="model">
+                              <object class="GListStore" id="store"/>
+                            </property>
+                            <binding name="sorter">
+                              <lookup name="sorter">openfiles_view</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                      </object>
+                    </property>
+                    <child>
+                      <object class="GtkColumnViewColumn">
+                        <property name="title" translatable="yes" context="FD here means File Descriptor. Use a short translation if possible, and at most 2-3 characters">FD</property>
+                        <property name="resizable">True</property>
+                        <property name="sorter">
+                          <object class="GtkNumericSorter">
+                            <property name="expression">
+                              <lookup name="fd" type="GsmOpenFile"/>
+                            </property>
+                          </object>
+                        </property>
+                        <property name="factory">
+                          <object class="GtkBuilderListItemFactory">
+                            <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+<template class="GtkListItem">
+<property name="child">
+  <object class="GtkLabel">
+    <property name="xalign">0</property>
+    <binding name="label">
+      <lookup name="fd" type="GsmOpenFile">
+        <lookup name="item">GtkListItem</lookup>
+      </lookup>
+    </binding>
+  </object>
+</property>
+</template>
+</interface>
+                         ]]></property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkColumnViewColumn">
+                        <property name="title" translatable="yes">Type</property>
+                        <property name="resizable">True</property>
+                        <property name="sorter">
+                          <object class="GtkStringSorter">
+                            <property name="expression">
+                              <lookup name="type" type="GsmOpenFile"/>
+                            </property>
+                          </object>
+                        </property>
+                        <property name="factory">
+                          <object class="GtkBuilderListItemFactory">
+                            <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+<template class="GtkListItem">
+<property name="child">
+  <object class="GtkLabel">
+    <property name="xalign">0</property>
+    <binding name="label">
+      <lookup name="type" type="GsmOpenFile">
+        <lookup name="item">GtkListItem</lookup>
+      </lookup>
+    </binding>
+  </object>
+</property>
+</template>
+</interface>
+                         ]]></property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkColumnViewColumn">
+                        <property name="title" translatable="yes">Object</property>
+                        <property name="expand">True</property>
+                        <property name="resizable">True</property>
+                        <property name="sorter">
+                          <object class="GtkStringSorter">
+                            <property name="expression">
+                              <lookup name="object" type="GsmOpenFile"/>
+                            </property>
+                          </object>
+                        </property>
+                        <property name="factory">
+                          <object class="GtkBuilderListItemFactory">
+                            <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+<template class="GtkListItem">
+<property name="child">
+  <object class="GtkLabel">
+    <property name="xalign">0</property>
+    <binding name="label">
+      <lookup name="object" type="GsmOpenFile">
+        <lookup name="item">GtkListItem</lookup>
+      </lookup>
+    </binding>
+  </object>
+</property>
+</template>
+</interface>
+                         ]]></property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </property>
+    <child>
+      <object class="GtkShortcutController">
+        <property name="scope">managed</property>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">Escape</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <style>
+      <class name="view"/>
+    </style>
+  </template>
+</interface>

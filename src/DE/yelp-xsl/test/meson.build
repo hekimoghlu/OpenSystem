@@ -1,0 +1,2 @@
+subdir('colors')
+subdir('syntax')

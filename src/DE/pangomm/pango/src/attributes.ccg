@@ -1,0 +1,463 @@
+/* Copyright 2002 Free Software Foundation
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <pangomm/context.h>
+
+namespace Pango
+{
+
+Attribute::Attribute()
+:
+  gobject_(0)
+{}
+
+Attribute::Attribute(const Attribute& src)
+:
+  gobject_(src.gobject_ ? pango_attribute_copy(src.gobject_) : nullptr)
+{}
+
+Attribute::Attribute(PangoAttribute* castitem, bool take_copy)
+{
+  if(take_copy)
+  {
+    if(castitem)
+      gobject_ = pango_attribute_copy(castitem);
+    else
+      gobject_ = nullptr;
+  }
+  else
+  {
+    // It was given to us by a function which has already made a copy for us to keep.
+    gobject_ = castitem;
+  }
+}
+
+Attribute::~Attribute()
+{
+  if(gobject_)
+    pango_attribute_destroy(gobject_);
+  gobject_ = nullptr;
+}
+
+Attribute& Attribute::operator=(const Attribute& src)
+{
+  auto* const new_gobject = (src.gobject_ ? pango_attribute_copy(src.gobject_) : nullptr);
+
+  if(gobject_)
+    pango_attribute_destroy(gobject_);
+  gobject_ = new_gobject;
+
+  return *this;
+}
+
+AttrType Attribute::get_type() const
+{
+  return (AttrType) ((gobject_) ? gobj()->klass->type : PANGO_ATTR_INVALID);
+}
+
+AttrType Attribute::register_type(const Glib::ustring& name)
+{
+  return (AttrType)pango_attr_type_register(name.c_str());
+}
+
+Glib::ustring Attribute::get_type_name(AttrType type)
+{
+  return Glib::convert_const_gchar_ptr_to_ustring(pango_attr_type_get_name((PangoAttrType)type));
+}
+
+AttrString Attribute::create_attr_family(const Glib::ustring& family)
+{
+  return Glib::wrap((PangoAttrString*)pango_attr_family_new(family.c_str()));
+}
+
+AttrLanguage Attribute::create_attr_language(const Language& language)
+{
+  return Glib::wrap((PangoAttrLanguage*)pango_attr_language_new(const_cast<PangoLanguage*>(language.gobj())));
+}
+
+AttrColor Attribute::create_attr_foreground(guint16 red, guint16 green, guint16 blue)
+{
+  return Glib::wrap((PangoAttrColor*)pango_attr_foreground_new(red, green, blue));
+}
+
+AttrColor Attribute::create_attr_background(guint16 red, guint16 green, guint16 blue)
+{
+  return Glib::wrap((PangoAttrColor*)pango_attr_background_new(red, green, blue));
+}
+
+AttrInt Attribute::create_attr_foreground_alpha(guint16 alpha)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_foreground_alpha_new(alpha));
+}
+
+AttrInt Attribute::create_attr_background_alpha(guint16 alpha)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_background_alpha_new(alpha));
+}
+
+AttrInt Attribute::create_attr_size(int size)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_size_new(size));
+}
+
+AttrInt Attribute::create_attr_size_absolute(int size)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_size_new_absolute(size));
+}
+
+AttrInt Attribute::create_attr_style(Style style)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_style_new((PangoStyle)style));
+}
+
+AttrInt Attribute::create_attr_weight(Weight weight)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_weight_new((PangoWeight)weight));
+}
+
+AttrInt Attribute::create_attr_variant(Variant variant)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_variant_new((PangoVariant)variant));
+}
+
+AttrInt Attribute::create_attr_stretch(Stretch stretch)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_stretch_new((PangoStretch)stretch));
+}
+
+AttrFontDesc Attribute::create_attr_font_desc(const FontDescription& desc)
+{
+  return Glib::wrap((PangoAttrFontDesc*)pango_attr_font_desc_new(desc.gobj()));
+}
+
+AttrInt Attribute::create_attr_underline(Underline underline)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_underline_new((PangoUnderline)underline));
+}
+
+AttrColor Attribute::create_attr_underline_color(guint16 red, guint16 green, guint16 blue)
+{
+  return Glib::wrap((PangoAttrColor*)pango_attr_underline_color_new(red, green, blue));
+}
+
+AttrInt Attribute::create_attr_overline(Overline overline)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_overline_new((PangoOverline)overline));
+}
+
+AttrColor Attribute::create_attr_overline_color(guint16 red, guint16 green, guint16 blue)
+{
+  return Glib::wrap((PangoAttrColor*)pango_attr_overline_color_new(red, green, blue));
+}
+
+AttrInt Attribute::create_attr_strikethrough(bool strikethrough)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_strikethrough_new(strikethrough));
+}
+
+AttrColor Attribute::create_attr_strikethrough_color(guint16 red, guint16 green, guint16 blue)
+{
+  return Glib::wrap((PangoAttrColor*)pango_attr_strikethrough_color_new(red, green, blue));
+}
+
+AttrInt Attribute::create_attr_rise(int rise)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_rise_new(rise));
+}
+
+AttrInt Attribute::create_attr_baseline_shift(int shift)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_baseline_shift_new(shift));
+}
+
+AttrInt Attribute::create_attr_font_scale(FontScale scale)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_font_scale_new((PangoFontScale)scale));
+}
+
+AttrFloat Attribute::create_attr_scale(double scale_factor)
+{
+  return Glib::wrap((PangoAttrFloat*)pango_attr_scale_new(scale_factor));
+}
+
+AttrInt Attribute::create_attr_fallback(bool enable_fallback)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_fallback_new(enable_fallback));
+}
+
+AttrInt Attribute::create_attr_letter_spacing(int letter_spacing)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_letter_spacing_new(letter_spacing));
+}
+
+AttrShape Attribute::create_attr_shape(const Rectangle& ink_rect, const Rectangle& logical_rect)
+{
+  return Glib::wrap((PangoAttrShape*)pango_attr_shape_new(ink_rect.gobj(), logical_rect.gobj()));
+}
+
+AttrInt Attribute::create_attr_gravity(Gravity gravity)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_gravity_new((PangoGravity)gravity));
+}
+
+AttrInt Attribute::create_attr_gravity_hint(GravityHint hint)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_gravity_hint_new((PangoGravityHint)hint));
+}
+
+AttrString Attribute::create_attr_font_features(const Glib::ustring& features)
+{
+  return Glib::wrap((PangoAttrString*)pango_attr_font_features_new(features.c_str()));
+}
+
+AttrInt Attribute::create_attr_allow_breaks(bool allow_breaks)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_allow_breaks_new(allow_breaks));
+}
+
+AttrInt Attribute::create_attr_word()
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_word_new());
+}
+
+AttrInt Attribute::create_attr_sentence()
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_sentence_new());
+}
+
+AttrInt Attribute::create_attr_insert_hyphens(bool insert_hyphens)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_insert_hyphens_new(insert_hyphens));
+}
+
+AttrInt Attribute::create_attr_show(ShowFlags show)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_show_new((PangoShowFlags)show));
+}
+
+AttrFloat Attribute::create_attr_line_height(double factor)
+{
+  return Glib::wrap((PangoAttrFloat*)pango_attr_line_height_new(factor));
+}
+
+AttrInt Attribute::create_attr_line_height_absolute(int height)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_line_height_new_absolute(height));
+}
+
+AttrInt Attribute::create_attr_text_transform(TextTransform transform)
+{
+  return Glib::wrap((PangoAttrInt*)pango_attr_text_transform_new((PangoTextTransform)transform));
+}
+
+
+AttrString::AttrString()
+{}
+
+AttrString::AttrString(const AttrString& src)
+:
+  Attribute(src)
+{}
+
+AttrString::AttrString(PangoAttrString* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrString& AttrString::operator=(const AttrString& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+void AttrString::set_string(const Glib::ustring& str)
+{
+  g_free(gobj()->value);
+  gobj()->value = g_strdup(str.c_str());
+}
+
+
+AttrLanguage::AttrLanguage()
+{}
+
+AttrLanguage::AttrLanguage(const AttrLanguage& src)
+:
+  Attribute(src)
+{}
+
+AttrLanguage::AttrLanguage(PangoAttrLanguage* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrLanguage& AttrLanguage::operator=(const AttrLanguage& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+
+AttrColor::AttrColor()
+{}
+
+AttrColor::AttrColor(const AttrColor& src)
+:
+  Attribute(src)
+{}
+
+AttrColor::AttrColor(PangoAttrColor* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrColor& AttrColor::operator=(const AttrColor& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+
+AttrInt::AttrInt()
+{}
+
+AttrInt::AttrInt(const AttrInt& src)
+:
+  Attribute(src)
+{}
+
+AttrInt::AttrInt(PangoAttrInt* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrInt& AttrInt::operator=(const AttrInt& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+
+AttrFloat::AttrFloat()
+{}
+
+AttrFloat::AttrFloat(const AttrFloat& src)
+:
+  Attribute(src)
+{}
+
+AttrFloat::AttrFloat(PangoAttrFloat* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrFloat& AttrFloat::operator=(const AttrFloat& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+
+AttrFontDesc::AttrFontDesc()
+{}
+
+AttrFontDesc::AttrFontDesc(const AttrFontDesc& src)
+:
+  Attribute(src)
+{}
+
+AttrFontDesc::AttrFontDesc(PangoAttrFontDesc* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrFontDesc& AttrFontDesc::operator=(const AttrFontDesc& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+void AttrFontDesc::set_desc(const FontDescription& desc)
+{
+  pango_font_description_free(gobj()->desc);
+  gobj()->desc = pango_font_description_copy(desc.gobj());
+}
+
+
+AttrShape::AttrShape()
+{}
+
+AttrShape::AttrShape(const AttrShape& src)
+:
+  Attribute(src)
+{}
+
+AttrShape::AttrShape(PangoAttrShape* castitem, bool take_copy)
+:
+  Attribute((PangoAttribute*)castitem, take_copy)
+{}
+
+AttrShape& AttrShape::operator=(const AttrShape& src)
+{
+  Attribute::operator=(src);
+  return *this;
+}
+
+} //namespace Pango
+
+namespace Glib
+{
+
+Pango::Attribute wrap(PangoAttribute* object, bool take_copy)
+{
+  return Pango::Attribute(object, take_copy);
+}
+
+Pango::AttrString wrap(PangoAttrString* object, bool take_copy)
+{
+  return Pango::AttrString(object, take_copy);
+}
+
+Pango::AttrLanguage wrap(PangoAttrLanguage* object, bool take_copy)
+{
+  return Pango::AttrLanguage(object, take_copy);
+}
+
+Pango::AttrColor wrap(PangoAttrColor* object, bool take_copy)
+{
+  return Pango::AttrColor(object, take_copy);
+}
+
+Pango::AttrInt wrap(PangoAttrInt* object, bool take_copy)
+{
+  return Pango::AttrInt(object, take_copy);
+}
+
+Pango::AttrFloat wrap(PangoAttrFloat* object, bool take_copy)
+{
+  return Pango::AttrFloat(object, take_copy);
+}
+
+Pango::AttrFontDesc wrap(PangoAttrFontDesc* object, bool take_copy)
+{
+  return Pango::AttrFontDesc(object, take_copy);
+}
+
+Pango::AttrShape wrap(PangoAttrShape* object, bool take_copy)
+{
+  return Pango::AttrShape(object, take_copy);
+}
+
+} //namespace Glib

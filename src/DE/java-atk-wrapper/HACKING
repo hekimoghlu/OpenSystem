@@ -1,0 +1,161 @@
+Hacking Guide for Java ATK Wrapper
+==================================
+
+As a general rule, non-trivial maintainer-submitted patches should be posted to
+gnome-accessibility-devel for comment and informational purpose prior to commit.
+
+Patches are welcome and if there are any suggestions, please send comments
+directly to the current maintainer, Samuel Thibault samuel.thibault@ens-lyon.org
+and make sure to cc the gnome-accessibility-devel list too.
+
+To file a bug against java-atk-wrapper:
+
+1. go to <https://gitlab.gnome.org/GNOME/java-atk-wrapper/issues/new>
+2. select java-atk-wrapper from the component list
+3. file bug using a descriptive subject title
+4. Wait for maintainer to accept bug or upload a patch to your bug for review
+
+More information on Java ATK Wrapper can be found at:
+  <https://wiki.gnome.org/Accessibility/JavaAtkWrapper>
+
+
+Overall picture
+---------------
+
+We have two kinds of entry points into the java-atk-wrapper code:
+
+- events from the application
+- requests from the at-spi bus
+
+
+Events from the application come through the class specified in
+java's assistive_technologies variable, set to
+org.GNOME.Accessibility.AtkWrapper. We thus end up in
+wrapper/org/GNOME/Accessibility/AtkWrapper.java's methods such as
+AtkWrapper::windowActivated. This calls the C version from AtkWrapper.c,
+Java_org_GNOME_Accessibility_AtkWrapper_windowActivate, which emits a glib
+signal, caught by ATK to send the right message on the at-spi bus.
+
+Requests from the at-spi bus come from ATK calling our methods, for instance
+jaw_object_get_name, which calls the java version AtkObject::getAccessibleName
+which calls the java-provided AccessibleContext::getAccessibleName().
+
+
+Request from the at-spi bus have to be processed in a glib main loop. Since
+java may or may not be using a glib main loop, we have to run a glib loop in a
+separate thread, called the jaw thread.  Events from the application are thus
+processed from the application threads, and requests from the at-spi bus are
+processed from the jaw thread.  This brings concurrency issues, thus mutexes
+on hash tables etc.  Unfortunately we can not assume that the application is
+thread-safe: it might be using just one thread and not lock anything.  Even
+getAccessibleContext() calls may not be safe because they might involve table
+lookups etc. within the application.  This is why the java versions AtkObject::*
+take care of surrounding any Accessible* calls within an AtkUtil.invokeInSwing()
+wrapper, to delegate running the piece of code to the application thread, the
+EDT (Event Dispatch Thread).  Conversely, we can not emit glib signals etc. at
+random times, so AtkWrapper.c delegates this to the idle handler of the glib
+mamin loop.  We thus have some ping-pong of code execution between the two
+threads, to make sure it executes safely.
+
+In summary:
+- Java_org_GNOME_Accessibility_AtkWrapper_* are called from the application
+thread,
+- the corresponding *_handler are called in the jaw thread,
+- the jaw_* methods are called from the jaw thread,
+- the corresponding Atk* methods delegate some of their work to the EDT.
+
+
+Last but not least, three kinds of objects exist: the java-implemented
+Accessible*, the ATK-implemented C Atk*, and its Atk* java-ish counterpart.
+When an event comes from the application, the object at stake might not be
+known to ATK yet.  One has to use jaw_impl_get_instance to get the existing
+corresponding ATK C object, or create it, as well as the java-ish counterpart.
+When java gets rid of an Accessible* object, we need to release the Atk* C and
+java objects.  This is done by storing only weak references in the Atk* C and
+java objects, and get notified of GC passes; object_table_gc then goes through
+all Atk* C objects to check whether the weak references are still valid, and
+release them otherwise.  This however also means that when a request comes from
+the at-spi bus, the java object might not exist any more.  In Atk* methods, one
+thus have to acquire a global reference and check that it is valid before working
+on the java object and after that release the global reference.
+
+To get a JawImpl from an AccessibleContext, one can use jaw_impl_get_instance,
+but only from the application threads, since to properly create the C Atk*
+and java Atk* we need to call methods from the AccessibleContext. In the jaw
+thread, one can either use the quick jaw_impl_find_instance if we know that it
+is supposed to exist, or we can use jaw_impl_get_instance_from_jaw which
+triggers a call to jaw_impl_get_instance inside the Swing thread.
+
+
+References
+----------
+
+We keep global references:
+
+- A reference to java Atk* stored in the corresponding C Atk*
+- A weak reference to AccessibleContext stored in the corresponding C Atk* acc_context
+- For signal parameters stored in CallbackPara
+- A reference to the C Atk* for being stored in objectTable
+
+
+Methods Not Yet Fully Implemented
+---------------------------------
+
+Document Interface (not yet implemented):
+  get_current_page_number
+  get_page_count
+
+HyperlinkImpl:
+TODO Currently Not fully documented by ATK
+
+# NOTE: Window interface signals currently seems to be being handled in jawobject.c
+Object base class:
+  AtkFunction
+  implementor_ref_accessible
+  get_attributes
+
+
+Deprecated Methods Which Are Implemented
+----------------------------------------
+
+Table Interface:
+  get_column_at_index
+  get_row_at_index
+
+Text Interface:
+  get_text_at_offset     -   use get_string_at_offset instead
+                             NOTE: some legacy implementations
+                             need to default to get_text_at_offset
+
+
+Conventions for Writing Java ATK Wrapper Code
+---------------------------------------------
+
+Spaces instead of tabs.
+Four spaces per indent.
+
+JNI warning and error messages are in the form:
+
+  JAW_DEBUG_I("method calling instance: instance == NULL");
+
+These statements will only be emitted to jaw_log_file.txt if the environment
+variable JAW_DEBUG is set to 1. To use this setting type the following into the
+terminal or set it in ~/.bashrc:
+
+  export JAW_DEBUG=1
+
+More JAW_DEBUG level values are available (2: JAW_DEBUG_JNI, 3: JAW_DEBUG_C, 4: JAW_DEBUG_ALL)
+
+
+Other Things to Keep in Mind
+----------------------------
+
+The jint object is mapped to C's long which is always at least 32 bits), instead
+of of C's int (which could be 16 bits). The resource for glib types can be
+found at <https://developer.gnome.org/glib/stable/glib-Basic-Types.html>
+
+JAW_GET_* acquire a global reference on the obtained jobject (because local
+references are dropped when ), it needs to be released before returning in all
+code paths!
+
+TODO: probably we can safely use mere (non-weak) local references here?

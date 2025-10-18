@@ -1,0 +1,48 @@
+{% extends "default.html" %}
+{% block title %}Edit Moderator{% endblock %}
+
+{% block content %}
+
+<h1>Details of user ‘{{u.username}}’</h1>
+
+<form method="post" action="{{url_for('admin_user_modify_by_admin', moderator_id=u.moderator_id)}}">
+  <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+  <table>
+    <tr>
+      <td>Display Name:</td>
+      <td><input type="text" class="form-control" name="display_name" value="{{u.display_name}}" required></td>
+    </tr>
+    <tr>
+      <td>User Hash:</td>
+      <td><input type="text" class="form-control" name="user_hash" value="{{u.user_hash}}"></td>
+    </tr>
+    <tr>
+      <td>Languages Spoken<br/>(e.g. <code>en,fr,pl</code> or <code>*</code>):</td>
+      <td><input type="text" class="form-control" name="locales" value="{{u.locales}}" required></td>
+    </tr>
+    <tr>
+      <td>New Password<br/>(optional):</td>
+      <td><input type="password" class="form-control" name="password"></td>
+    </tr>
+{% if not current_user.is_admin or u.username == 'admin' %}
+     <input type="hidden" name="is_enabled" value="1"/>
+{% else %}
+    <tr>
+      <td>Parameters:</td>
+      <td>
+        <input class="checkbox" type="checkbox" name="is_enabled" value="1" {{ 'checked' if u.is_enabled }}>Account enabled</input>
+        <input class="checkbox" type="checkbox" name="is_admin" value="1" {{ 'checked' if u.is_admin }}>Is admin account</input>
+     </td>
+    </tr>
+{% endif %}
+  </table>
+  <button type="submit" class="btn btn-primary btn-large" class="submit">Modify</button>
+{% if u.username != 'admin' and current_user.is_admin %}
+  <form method="get" action="{{url_for('admin_moderate_delete', moderator_id=u.moderator_id)}}">
+    <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+{% endif %}
+    <button class="btn btn-danger btn-large">Delete</button>
+  </form>
+</form>
+
+{% endblock %}

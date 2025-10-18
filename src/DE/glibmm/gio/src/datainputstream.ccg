@@ -1,0 +1,174 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/error.h>
+#include <giomm/slot_async.h>
+
+namespace Gio
+{
+
+bool
+DataInputStream::read_line(std::string& line, const Glib::RefPtr<Cancellable>& cancellable)
+{
+  GError* gerror = nullptr;
+  char* c_line = g_data_input_stream_read_line(gobj(),
+    nullptr, // pass nullptr since we can easily determine the length from the returned std::string
+    Glib::unwrap(cancellable), &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  if (c_line)
+  {
+    line = c_line;
+    g_free(c_line);
+    return true;
+  }
+  // end of stream reached, return failure status
+  return false;
+}
+
+bool
+DataInputStream::read_line(std::string& line)
+{
+  GError* gerror = nullptr;
+  char* c_line = g_data_input_stream_read_line(gobj(),
+    nullptr, // pass nullptr since we can easily determine the length from the returned std::string
+    nullptr, &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  if (c_line)
+  {
+    line = c_line;
+    g_free(c_line);
+    return true;
+  }
+  // end of stream reached, return failure status
+  return false;
+}
+
+void
+DataInputStream::read_line_async(
+  const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable, int io_priority)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_data_input_stream_read_line_async(
+    gobj(), io_priority, Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+bool
+DataInputStream::read_line_finish(const Glib::RefPtr<AsyncResult>& result, std::string& data)
+{
+  GError* gerror = nullptr;
+  gsize size = 0;
+  gchar* buffer =
+    g_data_input_stream_read_line_finish(gobj(), Glib::unwrap(result), &size, &(gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  bool retval = false;
+  if (buffer && size)
+  {
+    retval = (buffer != nullptr);
+    data = std::string(buffer, size);
+    g_free(buffer);
+  }
+
+  return retval;
+}
+
+bool
+DataInputStream::read_upto(
+  std::string& data, const std::string& stop_chars, const Glib::RefPtr<Cancellable>& cancellable)
+{
+  GError* gerror = nullptr;
+  char* c_str = g_data_input_stream_read_upto(gobj(), stop_chars.c_str(), -1, /* null-terminated */
+    nullptr, // pass nullptr since we can easily determine the length from the returned std::string
+    Glib::unwrap(cancellable), &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  if (c_str)
+  {
+    data = c_str;
+    g_free(c_str);
+    return true;
+  }
+  // end of stream reached, return failure status
+  return false;
+}
+
+/** non-cancellable version of read_upto()
+ */
+bool
+DataInputStream::read_upto(std::string& data, const std::string& stop_chars)
+{
+  GError* gerror = nullptr;
+  char* c_str = g_data_input_stream_read_upto(gobj(), stop_chars.c_str(), -1, /* null-terminated */
+    nullptr, // pass nullptr since we can easily determine the length from the returned std::string
+    nullptr, &gerror);
+
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  if (c_str)
+  {
+    data = c_str;
+    g_free(c_str);
+    return true;
+  }
+
+  // end of stream reached, return failure status
+  return false;
+}
+
+void
+DataInputStream::read_upto_async(const std::string& stop_chars, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, int io_priority)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_data_input_stream_read_upto_async(gobj(), stop_chars.c_str(), -1, /* null-terminated */
+    io_priority, Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+bool
+DataInputStream::read_upto_finish(const Glib::RefPtr<AsyncResult>& result, std::string& data)
+{
+  GError* gerror = nullptr;
+  gsize size = 0;
+  gchar* buffer =
+    g_data_input_stream_read_upto_finish(gobj(), Glib::unwrap(result), &size, &(gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  bool retval = false;
+  if (buffer && size)
+  {
+    retval = (buffer != nullptr);
+    data = std::string(buffer, size);
+    g_free(buffer);
+  }
+
+  return retval;
+}
+
+} // namespace Gio

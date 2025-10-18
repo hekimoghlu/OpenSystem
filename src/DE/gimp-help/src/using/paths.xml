@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2007-04-04 alex falappa: fixed missing italian part
+  2007-03-24 lexa: merged path concept and path usage
+  2007-02-17 no rewritten by KoSt
+  2007-02-12 de translation of re-written part by ude
+  2007-01-11 fr modified by Pierre ; 1rst part re-written
+  2006-09-10 added norwegian translation by KoSt
+-->
+<sect1 id="gimp-using-paths">
+  <title>
+    <anchor id="gimp-concepts-paths" xreflabel="Paths"/>
+    <phrase condition="tag-is-required">Paths</phrase>
+  </title>
+
+  <indexterm>
+    <primary>Paths</primary>
+    <secondary>Using</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Image</primary>
+    <secondary>Paths</secondary>
+  </indexterm>
+
+  <para>
+    Paths are curves (known as Bézier-curves). To understand their concepts
+    and mechanism, look at the glossary
+    <link linkend="glossary-bezier-curve">Bézier-curve</link> or Wikipedia
+    <xref linkend="bibliography-online-wkpd-bezier"/>.
+    The Paths tool allows you to design complex shapes.
+    When designing a shape, you first use the
+    <link linkend="gimp-tool-path">Paths</link> tool in <acronym>GIMP</acronym>
+    to create a path. After that you usually stroke or fill the path.
+  </para>
+  <para>
+    In <acronym>GIMP</acronym>, the term <quote>Stroke path</quote> means to
+    apply a specific style to the path (color, width, pattern, etc).
+  </para>
+  <para>
+    A path can be used in several ways:
+  </para>
+  <itemizedlist>
+    <listitem>
+      <para>You can convert a closed path to a selection.</para>
+    </listitem>
+    <listitem>
+      <para>
+        Any path, open or closed, can be <emphasis>stroked</emphasis>;
+        that is, painted on the image in a variety of ways.
+      </para>
+    </listitem>
+    <listitem>
+      <para>
+        A path can be <emphasis>filled</emphasis> with a color or pattern.
+        If the path is not closed, it will try to figure out the shape and then
+        fill it. However, this will not work if the path is a straight line.
+      </para>
+    </listitem>
+  </itemizedlist>
+  <figure>
+    <title>Illustration of four different paths</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata fileref="images/using/path-examples.png" format="PNG"/>
+      </imageobject>
+      <caption>
+        <para>
+          Four examples of GIMP paths: one closed and polygonal; one open and
+          polygonal; one closed and curved; one with a mixture of straight and
+          curved segments.
+        </para>
+      </caption>
+    </mediaobject>
+  </figure>
+
+  <sect2 id="gimp-using-paths-creating">
+    <title>Path Creation</title>
+    <para>
+      Start by drawing the outline for your path; the outline
+      can be modified later (see the
+      <link linkend="gimp-tool-path">Paths</link> tool).
+      To start, select the Paths tool using one of the following methods:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          Use
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guimenuitem>Paths</guimenuitem>
+          </menuchoice>
+          from the menu.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Use the relevant icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata fileref="images/stock-icons/gimp-tool-path.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon> in toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>Use the <keycap>B</keycap> keyboard shortcut.</para>
+      </listitem>
+    </itemizedlist>
+    <para>
+      When the Paths tool is selected, the mouse cursor changes into a
+      crosshair with a curve by default. The actual shape depends on your
+      <link linkend="gimp-prefs-input-devices">mouse pointer mode setting</link>.
+      Make sure that the Paths <guilabel>Edit Mode</guilabel> in
+      <link linkend="gimp-tool-path">Tool Options</link> is set to
+      <guilabel>Design</guilabel>.
+    </para>
+    <para>
+      Left click in the image to create the first point of the path. Move
+      the mouse to a new point and left click to create another
+      point linked to the previous point. Although you can create as many
+      points as you desire, you only need two points to learn about Paths.
+    </para>
+    <para>
+      While adding points, the mouse cursor has a little <quote>+</quote>
+      next to the curve, which indicates that clicking will add a new
+      point.
+    </para>
+    <para>
+      When the mouse cursor is close to one of the path points, the
+      <quote>+</quote> changes into a cross with arrows; like the move tool.
+      You can then move the existing path point.
+    </para>
+    <para>
+      To close your path, go with the mouse on top of the point you want to
+      connect to, and then click that point. When you are done designing
+      your path, you can press <keycode>Enter</keycode>. This will turn the
+      path into a Selection. You can also keep adding more points, or start
+      changing the curves of the path.
+    </para>
+    <para>
+      To edit the curves of your path, move the mouse cursor close to a line
+      segment, left-click and drag the line segment. Two events occur.
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>The line segment bends and curves as it is pulled.</para>
+      </listitem>
+      <listitem>
+        <para>
+          Each line segment has two start points and end points marked by
+          little square rectangles, these are called handles.
+          A <quote>direction line</quote> now projects from each start point
+          for the line segment that was moved. This direction line usually has
+          a different color than the lines of the path.
+        </para>
+      </listitem>
+    </itemizedlist>
+    <para>
+      The curved line segment leaves an end point in the same direction that
+      the <quote>direction line</quote> leaves the start point. The length of
+      this line controls how far the line segment projects along the
+      <quote>direction line</quote> before curving towards the other path point.
+    </para>
+    <para>
+      The handle at the end of each <quote>direction line</quote> can be
+      dragged to change the direction and length of the curve. The handles
+      on the other end, where they connect to the path, can be used to move
+      the position of that path point.
+    </para>
+    <figure>
+      <title>Appearance of a path while it is manipulated</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/using/path-with-anchors.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            Appearance of a path while it is manipulated using the Paths tool.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      The path is comprised of two components with both straight and curved
+      segments. Black squares are anchor points, the open circle indicates
+      the selected anchor, and the two open squares are the handles associated
+      with the selected anchor.
+    </para>
+  </sect2>
+
+  <sect2 id="gimp-using-paths-properties">
+    <title>Path Properties</title>
+    <para>
+      Paths, like layers and channels, are components of an image. When an
+      image is saved in <acronym>GIMP</acronym>'s native XCF file format, any
+      paths it has are saved with it. The list of paths in an image can be
+      viewed and operated on using the
+      <link linkend="gimp-path-dialog">Paths Dialog</link>.
+      You can move a path from one image to another by copying and pasting
+      using the pop-up menu in the Paths dialog, or by dragging an icon from
+      the Paths dialog into the destination image window.
+    </para>
+    <para>
+      <acronym>GIMP</acronym> paths belong to a mathematical type called
+      <quote>Bezier paths</quote>. What this means in practical terms is that
+      they are defined by <emphasis>anchors</emphasis> and
+      <emphasis>handles</emphasis>. <quote>Anchors</quote> are points the path
+      goes through. <quote>Handles</quote> define the direction of a path when
+      it enters or leaves an anchor point: each anchor point has two handles
+      attached to it.
+    </para>
+    <para>
+      Paths can be very complex. If you create them by hand using the
+      <link linkend="gimp-tool-path">Paths</link> tool, they probably won't
+      contain more than a few dozen anchor points and usually a lot less than
+      that. However, if you create them by transforming a selection into a
+      path, or by transforming text into a path, the result can easily contain
+      hundreds or even thousands of anchor points.
+    </para>
+    <para>
+      A path may contain multiple <emphasis>components</emphasis>. A
+      <quote>component</quote> is a part of a path whose anchor points are all
+      connected to each other by path segments. The ability to have multiple
+      components in paths allows you to convert them into selections having
+      multiple disconnected parts.
+    </para>
+    <para>
+      Each component of a path can be either <emphasis>open</emphasis> or
+      <emphasis>closed</emphasis>: <quote>closed</quote> means that the last
+      anchor point is connected to the first anchor point.
+      If you transform a path into a selection, any open components are
+      automatically converted into closed components by connecting the last
+      anchor point to the first anchor point with a straight line.
+    </para>
+    <para>
+      Path segments can be either straight or curved. A path is called
+      <quote>polygonal</quote> if all of its segments are straight.
+      A new path segment is always created straight; the handles for the
+      anchor points are directly on top of the anchor points, yielding
+      handles of zero length, which produces straight-line segments.
+      Drag a handle away from an anchor point to cause a segment
+      to curve.
+    </para>
+    <para>
+      One nice thing about paths is that they use very few resources,
+      especially in comparison with images. Representing
+      a path in RAM requires storing only the coordinates of its anchors and
+      handles. Therefore, it is possible to have literally hundreds of paths in
+      an image without causing any significant stress to your system. Even a
+      path with thousands of segments consumes minimal resources in comparison
+      to a typical layer or channel.
+    </para>
+    <para>
+      Paths can be created and manipulated using the
+      <link linkend="gimp-tool-path">Paths tool</link>.
+    </para>
+  </sect2>
+
+  <sect2 id="gimp-using-paths-and-selections">
+    <title>Paths and Selections</title>
+    <para>
+      GIMP lets you transform the selection of an image into a path. It also
+      lets you transform paths into selections. For information about the
+      selection and how it works, see the
+      <link linkend="gimp-concepts-selection">Selection</link> section.
+    </para>
+    <para>
+      When you transform a selection into a path, the path closely follows the
+      <link linkend="glossary-marching-ants"><quote>marching ants</quote></link>.
+      Now, the selection is a two-dimensional entity, but a path is a
+      one-dimensional entity, so there is no way to transform the selection
+      into a path without losing information. In fact, any information about
+      partially selected areas (i.e., feathering) are lost when a
+      selection is turned into a path. If the path is transformed back into a
+      selection, the result is an all-or-none selection, similar to what is
+      obtained by executing <link linkend="gimp-selection-sharpen">Sharpen</link>
+      from the Select menu.
+    </para>
+  </sect2>
+
+  <sect2 id="gimp-using-paths-transforming">
+    <title>Transforming Paths</title>
+    <para>
+      Each of the <link linkend="gimp-tools-transform">Transform tools</link>
+      (Rotate, Scale, Perspective, etc) can be set
+      to act on a layer, selection, or path. Select the transform tool in the
+      toolbox, then select
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/stock-icons/gimp-layer.svg" contentwidth="16px"/>
+          </imageobject>
+        </inlinemediaobject>
+      </guiicon>
+      layer,
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/stock-icons/gimp-selection.svg" contentwidth="16px"/>
+          </imageobject>
+        </inlinemediaobject>
+      </guiicon>
+      selection, or
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/stock-icons/gimp-path.svg" contentwidth="16px"/>
+          </imageobject>
+        </inlinemediaobject>
+      </guiicon>
+      path for the
+      <guilabel>Transform</guilabel> option in the tool's Tool Options
+      dialog. This gives you a powerful set of
+      methods for altering the shapes of paths without affecting other
+      elements of the image.
+    </para>
+    <para>
+      By default a Transform tool, when it is set to affect paths, acts only on
+      the <emphasis>active path</emphasis> which is shown highlighted in the
+      <link linkend="gimp-path-dialog">Paths Dialog</link>. You can make a
+      transformation affect more than one path by selecting additional paths.
+      Selecting multiple paths is done by using the mouse and
+      <keycap>Shift</keycap> key, for adding a range of paths, or
+      <keycap>Ctrl</keycap> key, for adding or removing the clicked path.
+    </para>
+  </sect2>
+
+  <sect2 id="gimp-using-paths-stroking">
+    <title>Stroking a Path</title>
+    <figure>
+      <title>Stroking paths</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/using/path-stroking-examples.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            The four paths from the top illustration, each stroked in a
+            different way.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      Paths do not alter the appearance of the image pixel data unless
+      they are <emphasis>stroked</emphasis>, using
+      <menuchoice>
+        <guimenu>Edit</guimenu>
+        <guimenuitem>Stroke Paths…</guimenuitem>
+      </menuchoice>
+      from the main menu or the
+      <link linkend="gimp-path-dialog">Paths Dialog</link> right-click menu,
+      or the <quote>Stroke Path</quote> button in the Tool Options dialog for
+      the <link linkend="gimp-tool-path">Paths</link> tool.
+    </para>
+    <para>
+      Choosing <quote>Stroke Path</quote> by any of these means brings up a
+      dialog that allows you to control the way the stroking is done. You
+      can choose from a wide variety of line styles, or you can stroke with
+      any of the Paint tools, including unusual ones such as the Clone tool,
+      Smudge tool, Eraser, etc.
+    </para>
+    <figure>
+      <title>The <guilabel>Stroke Path</guilabel> dialog</title>
+      <mediaobject>
+        <imageobject>
+          <!--changed 2009-08-28: don't use 2 screenshots for the same dialog
+              (OLD: images/dialogs/gimp-path-stroke.png)-->
+          <imagedata format="PNG"
+            fileref="images/menus/edit/stroke-path.png"/>
+        </imageobject>
+        <caption>
+        <para>See <xref linkend="gimp-path-stroke"/> for more information.</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      You can further increase the range of stroking effects by stroking a
+      path multiple times, or by using lines or brushes of different widths.
+      The possibilities for getting interesting effects in this way are almost
+      unlimited.
+    </para>
+  </sect2>
+
+  <sect2 id="gimp-using-paths-and-text">
+    <title>Paths and Text</title>
+    <figure>
+      <title>Text converted to a path</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="images/using/path-from-text.png" format="PNG"/>
+        </imageobject>
+        <caption>
+          <para>
+            Text converted to a path and then transformed using the
+            Perspective tool.
+          </para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/using/path-text-stroked.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            The path shown above, stroked with a fuzzy brush and then
+            gradient-mapped using the Gradient Map filter with the
+            <quote>Yellow Contrast</quote> gradient.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      A text item created using the <link linkend="gimp-tool-text">Text</link>
+      tool can be transformed into a path using the
+      <link linkend="gimp-text-tool-text-to-path">Text to Path</link> command
+      in the context menu of the Text tool. This can be useful for several
+      purposes, including:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          Stroking the path, which gives you many possibilities for fancy
+          text.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          More importantly, transforming the text. Converting text into a
+          path, then transforming the path, and finally either stroking the
+          path or converting it to a selection and filling it, often leads to
+          much higher-quality results than rendering the text as a layer and
+          transforming the pixel data.
+        </para>
+      </listitem>
+    </itemizedlist>
+    <para>
+      You can also wrap text along an existing path using the
+      <link linkend="gimp-text-tool-text-along-path">Text along Path</link>
+      command.
+    </para>
+  </sect2>
+
+  <sect2 id="gimp-using-paths-and-svg">
+    <title>Paths and <acronym>SVG</acronym> files</title>
+    <para>
+      <acronym>SVG</acronym>, standing for <quote>Scalable Vector
+      Graphics</quote>, is a popular file format for
+      <emphasis>vector graphics</emphasis>, in which graphical elements are
+      represented in a resolution-independent format, in contrast to
+      <emphasis>raster graphics</emphasis>; in which graphical elements are
+      represented as arrays of pixels. GIMP is mainly a raster graphics
+      program, but paths are vector entities.
+    </para>
+    <para>
+      Fortunately, paths are represented in <acronym>SVG</acronym> files in
+      almost exactly the same way they are represented in GIMP. This
+      compatibility makes it possible to store GIMP paths as
+      <acronym>SVG</acronym> files without losing any information. You can
+      access this capability in the
+      <link linkend="gimp-path-dialog">Paths Dialog</link>.
+    </para>
+    <para>
+      It also means that GIMP can create paths from
+      <acronym>SVG</acronym> files saved in other programs, such as
+      <application>Inkscape</application>,
+      a popular open-source vector graphics application. This is nice
+      because dedicated vector editing programs have much more powerful
+      path-manipulation tools than GIMP does. You can import a path from an
+      <acronym>SVG</acronym> file using the Paths dialog.
+    </para>
+    <para>
+      The <acronym>SVG</acronym>
+      format handles many other graphical elements than just paths: among
+      other things, it handles figures such as squares, rectangles, circles,
+      ellipses, regular polygons, etc. GIMP cannot do anything with these
+      entities, but it can load them as paths.
+    </para>
+    <note>
+      <para>
+        Creating paths is not the only thing GIMP can do with
+        <acronym>SVG</acronym> files. It can also open
+        <acronym>SVG</acronym> files as GIMP images, in the usual way.
+      </para>
+    </note>
+  </sect2>
+</sect1>

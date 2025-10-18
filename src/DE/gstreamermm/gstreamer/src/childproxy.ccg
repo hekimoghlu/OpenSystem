@@ -1,0 +1,53 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/object.h>
+
+namespace Gst
+{
+
+bool ChildProxy::lookup(const Glib::ustring& name, Glib::RefPtr<Glib::Object>& target,
+  GParamSpec*& pspec)
+{
+  GObject* g_object = nullptr;
+  bool const result = gst_child_proxy_lookup(gobj(),
+    name.c_str(), &g_object, &pspec);
+  target = Glib::wrap(g_object);
+  return result;
+}
+
+Glib::RefPtr<Gst::ChildProxy> ChildProxy::get_proxy_property(const Glib::ustring& name, Glib::ValueBase& value)
+{
+  gst_child_proxy_get_property(const_cast<GstChildProxy*>(gobj()), name.c_str(), value.gobj());
+  return Glib::wrap(gobj(), true);
+}
+
+Glib::RefPtr<const Gst::ChildProxy> ChildProxy::get_proxy_property(const Glib::ustring& name, Glib::ValueBase& value) const
+{
+  gst_child_proxy_get_property(const_cast<GstChildProxy*>(gobj()), name.c_str(), value.gobj());
+  return Glib::wrap(const_cast<GstChildProxy*>(gobj()), true);
+}
+
+Glib::RefPtr<Gst::ChildProxy> ChildProxy::set_proxy_property(const Glib::ustring& name, const Glib::ValueBase& value)
+{
+  gst_child_proxy_set_property(const_cast<GstChildProxy*>(gobj()), name.c_str(), value.gobj());
+  return Glib::wrap(gobj(), true);
+}
+
+} //namespace Gst

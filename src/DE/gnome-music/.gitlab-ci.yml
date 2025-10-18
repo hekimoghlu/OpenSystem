@@ -1,0 +1,55 @@
+include:
+  - project: 'GNOME/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+stages:
+  - check
+  - build-flatpak
+  - deploy
+
+variables:
+  APP_ID: "org.gnome.Music.Devel"
+  FLATPAK_MODULE: "gnome-music"
+  MANIFEST_PATH: "org.gnome.Music.json"
+  RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+  BUNDLE: "gnome-music-dev.flatpak"
+  GIT_SUBMODULE_STRATEGY: normal
+  TARBALL_ARTIFACT_PATH: ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+flatpak:
+    extends: .flatpak@x86_64
+    stage: build-flatpak
+
+flatpak-aarch64:
+    extends: .flatpak@aarch64
+    stage: build-flatpak
+
+nightly:
+    extends: .publish_nightly
+    dependencies:
+        - flatpak
+
+nightly-aarch64:
+    extends: .publish_nightly
+    needs:
+        - flatpak-aarch64
+    dependencies:
+        - flatpak-aarch64
+
+flake8:
+  stage: check
+  image: registry.fedoraproject.org/fedora:latest
+  script:
+    - dnf install -y python3-flake8
+    - flake8 --ignore E402,W503 --show-source gnomemusic/
+
+mypy:
+  stage: check
+  image: registry.fedoraproject.org/fedora:latest
+  script:
+    - dnf install -y python3-mypy
+    - mypy --ignore-missing-imports --disallow-incomplete-defs gnomemusic

@@ -1,0 +1,5 @@
+subdir('exit')
+subdir('no-data')
+subdir('no-error')
+subdir('stall')
+subdir('wrong-sparql')

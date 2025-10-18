@@ -1,0 +1,90 @@
+/* Copyright (C) 2020 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/buildable.h>
+#include <giomm/listmodel.h>
+#include <gtk/gtk.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+
+/** A list model for strings.
+ *
+ * %Gtk::StringList is a list model that wraps an array of strings.
+ *
+ * The items in the model are of type Gtk::StringObject.
+ *
+ * %Gtk::StringList is well-suited for any place where you would
+ * typically use a vector or array of Glib::ustring, but need a list model.
+ *
+ * @par %Gtk::StringList as Gtk::Buildable
+ * The %Gtk::StringList implementation of the Gtk::Buildable interface
+ * supports adding items directly using the \<items\> element and
+ * specifying \<item\> elements for each item. Each \<item\> element
+ * supports the regular translation attributes “translatable”,
+ * “context” and “comments”.
+ *
+ * @par
+ * Here is a UI definition fragment specifying a %Gtk::StringList
+ * ~~~{.xml}
+ * <object class="GtkStringList">
+ *   <items>
+ *     <item translatable="yes">Factory</item>
+ *     <item translatable="yes">Home</item>
+ *     <item translatable="yes">Subway</item>
+ *   </items>
+ * </object>
+ * ~~~
+ *
+ * @see Gio::ListModel
+ * @ingroup ListView
+ * @newin{3,98}
+ */
+class GTKMM_API StringList : public Glib::Object, public Gio::ListModel, public Buildable
+{
+  _CLASS_GOBJECT(StringList, GtkStringList, GTK_STRING_LIST, Glib::Object, GObject, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Gio::ListModel)
+  _IMPLEMENTS_INTERFACE(Buildable)
+  _DO_NOT_DERIVE_GTYPE dnl// GtkStringList is a final type
+  _ABI_AS_WITH_DERIVED_GTYPE dnl// Remove when we can break ABI
+  _STRUCT_NOT_HIDDEN
+
+protected:
+  explicit StringList(const std::vector<Glib::ustring>& strings);
+
+public:
+  /** Creates a new %StringList with the given @a strings.
+   *
+   * @param strings The strings to put in the model. Since 4.10 this parameter
+   *                has a default value.
+   * @return A new %Gtk::StringList.
+   */
+  _WRAP_CREATE(const std::vector<Glib::ustring>& strings = {})
+
+  _WRAP_METHOD(void append(const Glib::ustring& string), gtk_string_list_append)
+  _IGNORE(gtk_string_list_take)
+  _WRAP_METHOD(void remove(guint position), gtk_string_list_remove)
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char*-const*',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data()')
+  _WRAP_METHOD(void splice(guint position, guint n_removals, const std::vector<Glib::ustring>& additions),
+    gtk_string_list_splice)
+  _WRAP_METHOD(Glib::ustring get_string(guint position) const, gtk_string_list_get_string)
+  _WRAP_METHOD(guint find(const Glib::ustring& string) const, gtk_string_list_find)
+};
+
+} // namespace Gtk

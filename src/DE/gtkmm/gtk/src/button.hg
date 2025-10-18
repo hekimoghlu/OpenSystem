@@ -1,0 +1,120 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/actionable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** A widget that creates a signal when clicked on.
+ *
+ * This widget is generally used with a signal handler that is called when the button is pressed.
+ * It can hold any valid child widget.  The most commonly used child is the Gtk::Label.
+ *
+ * The Button widget looks like this:
+ * @image html button2.png
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Button
+  : public Widget,
+    public Actionable
+{
+  _CLASS_GTKOBJECT(Button, GtkButton, GTK_BUTTON, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Actionable)
+public:
+
+  /** Create an empty button.
+   * With an empty button, you can Gtk::Container::add() a widget
+   * such as a Gtk::Image or Gtk::Box.
+   *
+   * If you just wish to add a Gtk::Label,
+   * you may want to
+   * use the Gtk::Button(const Glib::ustring& label) ctor
+   * directly instead.
+   */
+  _CTOR_DEFAULT
+
+  /** Simple Push Button with label.
+   * Create a button with the given label inside. You won't be able
+   * to add a widget in this button since it already has a Gtk::Label in it.
+   */
+  explicit Button(const Glib::ustring& label, bool mnemonic = false);
+
+  //We don't wrap gtk_button_new_from_icon_name() to avoid a clash with the label constructor.
+  //But set_icon_name() and set_image_from_icon_name() are replacements.
+  _IGNORE(gtk_button_new_from_icon_name)
+
+  _WRAP_METHOD(void set_has_frame(bool has_frame = true), gtk_button_set_has_frame)
+  _WRAP_METHOD(bool get_has_frame() const, gtk_button_get_has_frame)
+
+  _WRAP_METHOD(void set_label(const Glib::ustring& label), gtk_button_set_label)
+  _WRAP_METHOD(Glib::ustring get_label() const, gtk_button_get_label)
+  _WRAP_METHOD(void set_use_underline(bool use_underline = true), gtk_button_set_use_underline)
+  _WRAP_METHOD(bool get_use_underline() const, gtk_button_get_use_underline)
+
+  _WRAP_METHOD(void set_icon_name(const Glib::ustring& icon_name), gtk_button_set_icon_name)
+  _WRAP_METHOD(Glib::ustring get_icon_name() const, gtk_button_get_icon_name)
+
+  /** Sets the image to an icon from the current icon theme.
+   * If the icon name isn't known, a "broken image" icon will be
+   * displayed instead. If the current icon theme is changed, the icon
+   * will be updated appropriately.
+   *
+   * This is a convenience wrapper around Gtk::Image::set_from_icon_name() and
+   * Gtk::Image::property_use_fallback(). With the default values of @a size
+   * and @a use_fallback, it's identical to set_icon_name().
+   *
+   * @param icon_name An icon name.
+   * @param size An icon size.
+   * @param use_fallback Whether the icon displayed in the Gtk::Image will use
+   *        standard icon names fallback. See also Gtk::IconLookupFlags::GENERIC_FALLBACK.
+   *
+   * @newin{3,12}
+   */
+  void set_image_from_icon_name(const Glib::ustring& icon_name,
+    IconSize size = IconSize::INHERIT, bool use_fallback = false);
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_button_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_button_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_button_get_child, constversion)
+
+  _WRAP_METHOD(void set_can_shrink(bool can_shrink = true), gtk_button_set_can_shrink)
+  _WRAP_METHOD(bool get_can_shrink() const, gtk_button_get_can_shrink)
+
+  _WRAP_SIGNAL(void clicked(), "clicked")
+  _IGNORE_SIGNAL("activate") // Action signal
+
+  _WRAP_PROPERTY("label", Glib::ustring)
+  _WRAP_PROPERTY("has-frame", bool)
+  _WRAP_PROPERTY("use-underline", bool)
+  _WRAP_PROPERTY("icon-name", Glib::ustring)
+  _WRAP_PROPERTY("child", Widget*)
+  _WRAP_PROPERTY("can-shrink", bool)
+};
+
+/*! A Gtk::Button example.
+ * Example 1: @link book/buttons/button/buttons.h @endlink
+ * Example 2: @link book/buttons/button/buttons.cc @endlink
+ * Example 3: @link book/buttons/button/main.cc @endlink
+ */
+
+} // namespace Gtk

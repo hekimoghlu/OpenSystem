@@ -1,0 +1,65 @@
+/* Copyright (C) 2012 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/converter.h>
+#include <giomm/initable.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+/** CharsetConverter - Convert between charsets.
+ * CharsetConverter is an implementation of Converter based on GIConv.
+ * @newin{2,34}
+ */
+class GIOMM_API CharsetConverter
+: public Glib::Object, public Converter, public Initable
+{
+  _CLASS_GOBJECT(CharsetConverter, GCharsetConverter, G_CHARSET_CONVERTER, Glib::Object, GObject, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(Converter)
+  _IMPLEMENTS_INTERFACE(Initable)
+
+protected:
+  // Handwritten to ignore the final GError** parameter in the *_new() function.
+  // But it can throw, due to its call to Initable::init().
+  explicit CharsetConverter(const Glib::ustring& to_charset, const Glib::ustring& from_charset);
+  _IGNORE(g_charset_converter_new)
+
+public:
+  /** Creates a new CharsetConverter.
+   *
+   * @newin{2,24}
+   *
+   * @param to_charset Destination charset.
+   * @param from_charset Source charset.
+   * @return A new CharsetConverter, or <tt>nullptr</tt> on error.
+   * @throw Gio::Error
+   */
+  _WRAP_CREATE(const Glib::ustring& to_charset, const Glib::ustring& from_charset)
+
+  _WRAP_METHOD(void set_use_fallback(bool use_fallback), g_charset_converter_set_use_fallback)
+  _WRAP_METHOD(bool get_use_fallback() const, g_charset_converter_get_use_fallback)
+  _WRAP_METHOD(guint get_num_fallbacks() const, g_charset_converter_get_num_fallbacks)
+
+  _WRAP_PROPERTY("from-charset", Glib::ustring)
+  _WRAP_PROPERTY("to-charset", Glib::ustring)
+  _WRAP_PROPERTY("use-fallback", bool)
+};
+
+} // namespace Gio

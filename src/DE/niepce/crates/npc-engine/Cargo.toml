@@ -1,0 +1,47 @@
+[package]
+name = "npc-engine"
+version = "0.1.0"
+authors = ["Hubert Figuière <hub@figuiere.net>"]
+edition = "2024"
+description = "The Niepce engine. Internal crate."
+license = "GPL-3.0"
+rust-version = "1.85"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-channel = "2.5.0"
+cachedir = "0.3.0"
+chrono = "0.4.23"
+exempi2 = "0.3.0"
+gettext-rs = { version = "^0.7.0", features = [ "gettext-system" ] }
+humanize-bytes = "1.0.6"
+lazy_static = "^1.2.0"
+libc = "0.2.39"
+lrcat-extractor = "0.5"
+maplit = "1.0.2"
+md-5 = "^0.10"
+num-derive = "0.4.2"
+num-traits = "0.2.18"
+# Must be in sync with lrcat-extractor
+rusqlite = { version = "0.37.0", features = ["functions", "backup", "bundled"] }
+thiserror = "*"
+
+npc-fwk = { path = "../npc-fwk" }
+
+# optional dependpencies
+clap = { version = "4.5.1", optional = true }
+toml = { version = "0.8", optional = true }
+serde = { version = "*", optional = true }
+serde_derive = { version = "^1.0", optional = true }
+
+[dev-dependencies]
+clap = { version = "4.0.19", features = [ "derive" ] }
+tempfile = "3.4.0"
+
+[[bin]]
+name = "importlr"
+required-features = ["binaries"]
+
+[features]
+binaries = ["clap", "toml", "serde", "serde_derive"]

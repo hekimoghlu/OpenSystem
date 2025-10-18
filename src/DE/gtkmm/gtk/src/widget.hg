@@ -1,0 +1,835 @@
+/* Copyright (C) 2002, 2003 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <optional>
+#include <vector>
+
+#include <cairomm/region.h>
+#include <gdkmm/clipboard.h>
+#include <gdkmm/cursor.h>
+#include <gdkmm/display.h>
+#include <gdkmm/graphene_rect.h>
+#include <gdkmm/rectangle.h>
+#include <gdkmm/rgba.h>
+#include <giomm/actiongroup.h>
+#include <gtkmm/accessible.h>
+#include <gtkmm/buildable.h>
+#include <gtkmm/constrainttarget.h>
+#include <gtkmm/enums.h>
+#include <gtkmm/object.h>
+#include <gtkmm/requisition.h>
+#include <gtkmm/stylecontext.h>
+#include <pangomm/context.h>
+#include <pangomm/layout.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/object_p.h)
+
+namespace Gio
+{
+class GTKMM_API ListModel;
+}
+
+namespace Gdk
+{
+class GTKMM_API FrameClock;
+class GTKMM_API Paintable;
+}
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+
+class GTKMM_API Adjustment;
+class GTKMM_API Window;
+class GTKMM_API Root;
+class GTKMM_API Native;
+class GTKMM_API EventController;
+class GTKMM_API LayoutManager;
+class GTKMM_API Settings;
+class GTKMM_API Snapshot;
+class GTKMM_API Tooltip;
+
+// Gtk::Allocation is a typedef of Gdk::Rectangle because GtkAllocation is
+// a typedef of GdkRectangle.
+typedef Gdk::Rectangle Allocation;
+
+/** @defgroup Widgets Widgets
+ */
+
+/** @defgroup Containers Container Widgets
+ * These widgets can be used to group other widgets together.
+ */
+
+//TODO: Deal with the GtkObject->GObject change:
+/** Abstract %Widget (Base class for all widgets)
+ *
+ * As the base class of all widgets this contains all of the properties
+ * and methods common to all widgets. It manages the widget lifecycle, layout,
+ * states and style. It is an abstract class that cannot be instantiated.
+ *
+ * An important part of widgets are events that can be trapped by adding
+ * event controllers with add_controller(). Those are events coming directly
+ * from GDK. By using event controllers you can trap everything a widget
+ * can ever do. The @ref Gestures group lists the event controller classes.
+ *
+ * Most widgets are added as children to a container widget, such as a
+ * Box, Grid or Window. A child widget can be managed or non-managed.
+ * A managed widget is created with the Gtk::make_managed() template function.
+ * Such a widget is deleted when its parent container is deleted.
+ * By default widgets are non-managed. This is fine for widgets declared
+ * as data members of a class. They are not deleted when their parent is
+ * deleted, but when the containing class instance is deleted.
+ * Memory management of widgets is described in more detail in the
+ * [Memory management](https://gnome.pages.gitlab.gnome.org/gtkmm-documentation/chapter-memory.html#sec-memory-widgets)
+ * chapter in the <em>Programming with gtkmm</em> book.
+ */
+class GTKMM_API Widget
+: public Object,
+  public Accessible,
+  public Buildable,
+  public ConstraintTarget
+{
+  _CLASS_GTKOBJECT(Widget,GtkWidget,GTK_WIDGET,Object,GObject,,,GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Accessible)
+  _IMPLEMENTS_INTERFACE(Buildable)
+  _IMPLEMENTS_INTERFACE(ConstraintTarget)
+
+  _IGNORE(gtk_widget_paintable_new)
+
+public:
+  _CUSTOM_DTOR
+  _DOCUMENT_DTOR(Destroys the widget. Except: if the widget has a parent, only the C++ wrapper is destroyed, not the C instance;
+                 please see the “Memory management” chapter in the <em>Programming with gtkmm</em> book as linked in the intro.)
+
+  /** Converts this widget to a reference counted Gtk::ConstraintTarget.
+   * Useful in calls to Gtk::Constraint::create().
+   */
+  Glib::RefPtr<ConstraintTarget> make_refptr_constrainttarget();
+
+  /** Converts this widget to a reference counted Gtk::ConstraintTarget.
+   */
+  Glib::RefPtr<const ConstraintTarget> make_refptr_constrainttarget() const;
+
+  _WRAP_METHOD(void show(), gtk_widget_show, deprecated "Use set_visible() instead.")
+  _WRAP_METHOD(void hide(), gtk_widget_hide, deprecated "Use set_visible() instead.")
+
+/* QUEUE DRAWS */
+
+  _WRAP_METHOD(void queue_draw(), gtk_widget_queue_draw)
+  _WRAP_METHOD(void queue_resize(), gtk_widget_queue_resize)
+  _WRAP_METHOD(void queue_allocate(), gtk_widget_queue_allocate)
+
+  _WRAP_METHOD(void size_allocate(const Allocation& allocation, int baseline), gtk_widget_size_allocate)
+
+  _WRAP_METHOD(SizeRequestMode get_request_mode() const, gtk_widget_get_request_mode)
+
+  /** Structure holding the minimum and natural sizes of a widget, in some type.
+   * @newin{4,14}
+   */
+  template <typename T> struct MinimumNatural final { T minimum, natural; };
+
+  _WRAP_METHOD(void measure(Orientation orientation, int for_size, int& minimum, int& natural,
+    int& minimum_baseline, int& natural_baseline) const, gtk_widget_measure)
+  /** Structure returned by the non-output-parameter overload of measure().
+   * @newin{4,14}
+   */
+  struct Measurements final { MinimumNatural<int> sizes, baselines; };
+  /** Like the other overload of measure() but returns a structure holding the sizes/baselines instead of using output parameters.
+   * @newin{4,14}
+   */
+  [[nodiscard]] Measurements measure(Orientation orientation, int for_size = -1) const;
+
+  _WRAP_METHOD(void get_preferred_size(Requisition& minimum_size, Requisition& natural_size) const, gtk_widget_get_preferred_size)
+  /** Structure returned by the non-output-parameter overload of get_preferred_size().
+   * @newin{4,14}
+   */
+  using PreferredSize = MinimumNatural<Requisition>;
+  /** Like the other overload of get_preferred_size() but returns a structure holding the sizes instead of using output parameters.
+   * @newin{4,14}
+   */
+  [[nodiscard]] PreferredSize get_preferred_size() const;
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_widget_set_layout_manager)
+  void set_layout_manager(const Glib::RefPtr<LayoutManager>& layout_manager);
+  /** Undoes the effect of a previous call to set_layout_manager().
+   */
+  void unset_layout_manager();
+  _WRAP_METHOD(Glib::RefPtr<LayoutManager> get_layout_manager(),
+    gtk_widget_get_layout_manager, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const LayoutManager> get_layout_manager() const,
+    gtk_widget_get_layout_manager, refreturn, constversion)
+
+  _WRAP_METHOD(bool mnemonic_activate(bool group_cycling), gtk_widget_mnemonic_activate)
+
+  /** For widgets that can be “activated” (buttons, menu items, etc.)
+   * this function activates them.
+   *
+   * The activation will emit the signal set using
+   * gtk_widget_class_set_activate_signal() during class initialization.
+   *
+   * Activation is what happens when you press Enter on a widget during
+   * key navigation.
+   *
+   * If you wish to handle the activation keybinding yourself, it is
+   * recommended to use gtk_widget_class_add_shortcut() with an action
+   * created with Gtk::SignalAction::create().
+   *
+   * @return <tt>true</tt> if the widget was activatable, else <tt>false</tt>.
+   */
+  _WRAP_METHOD(bool activate(), gtk_widget_activate)
+
+  _WRAP_METHOD(void set_can_focus(bool can_focus = true), gtk_widget_set_can_focus)
+  _WRAP_METHOD(bool get_can_focus() const, gtk_widget_get_can_focus)
+  _WRAP_METHOD(void set_focusable(bool focusable = true), gtk_widget_set_focusable)
+  _WRAP_METHOD(bool get_focusable() const, gtk_widget_get_focusable)
+  _WRAP_METHOD(bool has_focus() const, gtk_widget_has_focus)
+
+  _WRAP_METHOD(bool is_focus() const, gtk_widget_is_focus)
+  _WRAP_METHOD(bool has_visible_focus() const, gtk_widget_has_visible_focus)
+  _WRAP_METHOD(bool grab_focus(), gtk_widget_grab_focus)
+  _WRAP_METHOD(void set_focus_on_click(bool focus_on_click = true), gtk_widget_set_focus_on_click)
+  _WRAP_METHOD(bool get_focus_on_click() const, gtk_widget_get_focus_on_click)
+  _WRAP_METHOD(void set_can_target(bool can_target = true), gtk_widget_set_can_target)
+  _WRAP_METHOD(bool get_can_target() const, gtk_widget_get_can_target)
+  _WRAP_METHOD(bool has_default() const, gtk_widget_has_default)
+  _WRAP_METHOD(void set_receives_default(bool receives_default = true), gtk_widget_set_receives_default)
+  _WRAP_METHOD(bool get_receives_default() const, gtk_widget_get_receives_default)
+
+  _WRAP_METHOD(void set_name(const Glib::ustring& name), gtk_widget_set_name)
+  void unset_name();
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_widget_get_name)
+
+  _WRAP_METHOD(void set_state_flags(StateFlags flags, bool clear = true), gtk_widget_set_state_flags)
+  _WRAP_METHOD(void unset_state_flags(StateFlags flags), gtk_widget_unset_state_flags)
+  _WRAP_METHOD(StateFlags get_state_flags() const, gtk_widget_get_state_flags)
+
+  _WRAP_METHOD(void set_sensitive(bool sensitive = true), gtk_widget_set_sensitive)
+  _WRAP_METHOD(bool get_sensitive() const, gtk_widget_get_sensitive)
+  _WRAP_METHOD(bool is_sensitive() const, gtk_widget_is_sensitive)
+  _WRAP_METHOD(void set_visible(bool visible = true), gtk_widget_set_visible)
+  _WRAP_METHOD(bool get_visible() const, gtk_widget_get_visible)
+  _WRAP_METHOD(bool is_visible() const, gtk_widget_is_visible)
+  _WRAP_METHOD(bool is_drawable() const, gtk_widget_is_drawable)
+  _WRAP_METHOD(bool get_realized() const, gtk_widget_get_realized)
+  _WRAP_METHOD(bool get_mapped() const, gtk_widget_get_mapped)
+
+  _WRAP_METHOD(void set_child_visible(bool visible = true), gtk_widget_set_child_visible)
+  _WRAP_METHOD(bool get_child_visible() const, gtk_widget_get_child_visible)
+
+  _WRAP_METHOD(int get_allocated_width() const, gtk_widget_get_allocated_width,
+    deprecated "Use get_width() instead.")
+  _WRAP_METHOD(int get_allocated_height() const, gtk_widget_get_allocated_height,
+    deprecated "Use get_height() instead.")
+  _WRAP_METHOD(int get_allocated_baseline() const, gtk_widget_get_allocated_baseline,
+    deprecated "Use get_baseline() instead.")
+
+_DEPRECATE_IFDEF_START
+  /** Retrieves the widget’s location.
+   * Note, when implementing a layout container: a widget’s allocation will be its “adjusted” allocation,
+   * that is, the widget’s parent container typically calls size_allocate() with an allocation,
+   * and that allocation is then adjusted (to handle margin and alignment for example) before
+   * assignment to the widget. get_allocation() returns the adjusted allocation that was actually
+   * assigned to the widget. The adjusted allocation is guaranteed to be completely contained
+   * within the size_allocate() allocation, however.
+   *
+   * So a layout container is guaranteed that its children stay inside the assigned bounds, but not that
+   * they have exactly the bounds the container assigned.
+   *
+   * @deprecated 4.12: Use compute_bounds() or get_width() instead.
+   *
+   * @return The widget’s allocated area.
+   */
+   Allocation get_allocation() const;
+_DEPRECATE_IFDEF_END
+  _IGNORE(gtk_widget_get_allocation)
+
+  /** Computes the bounds for the widget in the coordinate space of @a target.
+   *
+   * The bounds of widget are (the bounding box of) the region that it is
+   * expected to draw in.
+   *
+   * If the operation is successful, a std::optional<Gdk::Graphene::Rect>
+   * that contains a value is returned. If the widget has no bounds or the
+   * bounds cannot be expressed in @a target's coordinate space (for example
+   * if both widgets are in different windows), the returned std::optional
+   * is empty.
+   *
+   * It is valid for the widget and @a target to be the same widget.
+   *
+   * @newin{4,12}
+   *
+   * @param target The `Gtk::Widget`.
+   * @return A std::optional<Gdk::Graphene::Rect>, containing a value if the
+   *         bounds could be computed.
+   */
+  std::optional<Gdk::Graphene::Rect> compute_bounds(const Widget& target) const;
+  _IGNORE(gtk_widget_compute_bounds)
+
+  /** Translates the given @a point in the widget's coordinates to coordinates
+   * relative to @a target’s coordinate system.
+   *
+   * In order to perform this operation, both widgets must share a
+   * common ancestor.
+   *
+   * @newin{4,12}
+   *
+   * @param target The `Gtk::Widget` to transform into.
+   * @param point A point in the widget's coordinate system.
+   * @return A std::optional<Gdk::Graphene::Point>, containing a value if the
+   *         point could be determined.
+   */
+  std::optional<Gdk::Graphene::Point> compute_point(
+    const Widget& target, const Gdk::Graphene::Point& point) const;
+  _IGNORE(gtk_widget_compute_point)
+
+  _WRAP_METHOD(int get_width() const, gtk_widget_get_width)
+  _WRAP_METHOD(int get_height() const, gtk_widget_get_height)
+  _WRAP_METHOD(int get_baseline() const, gtk_widget_get_baseline)
+  _WRAP_METHOD(int get_size(Orientation orientation) const, gtk_widget_get_size)
+
+  _WRAP_METHOD(Widget* get_parent(), gtk_widget_get_parent)
+  _WRAP_METHOD(const Widget* get_parent() const, gtk_widget_get_parent, constversion)
+
+  _WRAP_METHOD(Root* get_root(), gtk_widget_get_root)
+  _WRAP_METHOD(const Root* get_root() const, gtk_widget_get_root, constversion)
+
+  _WRAP_METHOD(Native* get_native(), gtk_widget_get_native)
+  _WRAP_METHOD(const Native* get_native() const, gtk_widget_get_native, constversion)
+
+  _WRAP_METHOD(bool child_focus(DirectionType direction), gtk_widget_child_focus)
+
+  _WRAP_METHOD(bool keynav_failed(DirectionType direction), gtk_widget_keynav_failed)
+  _WRAP_METHOD(void error_bell(), gtk_widget_error_bell)
+
+  _WRAP_METHOD(void set_size_request(int width = -1, int  height = -1), gtk_widget_set_size_request)
+  _WRAP_METHOD(void get_size_request(int& width, int& height) const, gtk_widget_get_size_request)
+  /** Like the other overload of get_size_request() but returns a structure holding the sizes instead of using output parameters.
+   * @newin{4,14}
+   */
+  [[nodiscard]] Requisition get_size_request() const;
+
+  _WRAP_METHOD(void set_opacity(double opacity), gtk_widget_set_opacity)
+  _WRAP_METHOD(double get_opacity() const, gtk_widget_get_opacity)
+
+  _WRAP_METHOD(void set_overflow(Overflow overflow), gtk_widget_set_overflow, newin "3,96")
+  _WRAP_METHOD(Overflow get_overflow() const, gtk_widget_get_overflow, newin "3,96")
+
+  _WRAP_METHOD(Widget* get_ancestor(GType widget_type), gtk_widget_get_ancestor)
+  _WRAP_METHOD(const Widget* get_ancestor(GType widget_type) const, gtk_widget_get_ancestor, constversion)
+
+  _WRAP_METHOD(int get_scale_factor() const, gtk_widget_get_scale_factor)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Display> get_display(), gtk_widget_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Display> get_display() const, gtk_widget_get_display, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Settings> get_settings(), gtk_widget_get_settings, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Clipboard> get_clipboard(), gtk_widget_get_clipboard, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Clipboard> get_clipboard() const, gtk_widget_get_clipboard, refreturn, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Clipboard> get_primary_clipboard(), gtk_widget_get_primary_clipboard, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Clipboard> get_primary_clipboard() const, gtk_widget_get_primary_clipboard, refreturn, constversion)
+
+  _WRAP_METHOD(bool get_hexpand() const, gtk_widget_get_hexpand)
+  _WRAP_METHOD(void set_hexpand(bool expand = true), gtk_widget_set_hexpand)
+  _WRAP_METHOD(bool get_hexpand_set() const, gtk_widget_get_hexpand_set)
+  _WRAP_METHOD(void set_hexpand_set(bool set = true), gtk_widget_set_hexpand_set)
+  _WRAP_METHOD(bool get_vexpand() const, gtk_widget_get_vexpand)
+  _WRAP_METHOD(void set_vexpand(bool expand = true), gtk_widget_set_vexpand)
+  _WRAP_METHOD(bool get_vexpand_set() const, gtk_widget_get_vexpand_set)
+  _WRAP_METHOD(void set_vexpand_set(bool set = true), gtk_widget_set_vexpand_set)
+  _WRAP_METHOD(bool compute_expand(Orientation orientation), gtk_widget_compute_expand)
+
+  /** Sets whether the widget would like any available extra space in both directions.
+   *
+   * @see set_hexpand() for more detail.
+   * @param expand Whether to expand in horizontal and vertical direction.
+   */
+  void set_expand(bool expand = true);
+
+  _WRAP_METHOD(Align get_halign() const, gtk_widget_get_halign)
+  _WRAP_METHOD(void set_halign(Align align), gtk_widget_set_halign)
+  _WRAP_METHOD(Align get_valign() const, gtk_widget_get_valign)
+  _WRAP_METHOD(void set_valign(Align align), gtk_widget_set_valign)
+  _WRAP_METHOD(int get_margin_start() const, gtk_widget_get_margin_start)
+  _WRAP_METHOD(void set_margin_start(int margin), gtk_widget_set_margin_start)
+  _WRAP_METHOD(int get_margin_end() const, gtk_widget_get_margin_end)
+  _WRAP_METHOD(void set_margin_end(int margin), gtk_widget_set_margin_end)
+  _WRAP_METHOD(int get_margin_top() const, gtk_widget_get_margin_top)
+  _WRAP_METHOD(void set_margin_top(int margin), gtk_widget_set_margin_top)
+  _WRAP_METHOD(int get_margin_bottom() const, gtk_widget_get_margin_bottom)
+  _WRAP_METHOD(void set_margin_bottom(int margin), gtk_widget_set_margin_bottom)
+
+  /** Set all 4 margins to the same value.
+   * @param margin The start, end, top, and bottom margin.
+   */
+  void set_margin(int margin);
+
+  _WRAP_METHOD(bool is_ancestor(Widget &ancestor) const, gtk_widget_is_ancestor)
+
+  _WRAP_METHOD(bool translate_coordinates(Widget& dest_widget,
+               double src_x, double src_y,
+               double& dest_x, double& dest_y), gtk_widget_translate_coordinates,
+               deprecated "Use compute_point() instead")
+
+  _WRAP_METHOD(bool contains(double x, double y) const, gtk_widget_contains)
+  _WRAP_METHOD(Widget* pick(double x, double y, PickFlags flags = PickFlags::DEFAULT), gtk_widget_pick)
+  _WRAP_METHOD(const Widget* pick(double x, double y, PickFlags flags = PickFlags::DEFAULT) const, gtk_widget_pick, constversion)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_widget_add_controller)
+  void add_controller(const Glib::RefPtr<EventController>& controller);
+  _WRAP_METHOD(void remove_controller(const Glib::RefPtr<EventController>& controller), gtk_widget_remove_controller)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::Context> create_pango_context(), gtk_widget_create_pango_context)
+  _WRAP_METHOD(Glib::RefPtr<Pango::Context> get_pango_context(), gtk_widget_get_pango_context, refreturn)
+
+  _WRAP_METHOD(void set_font_options(const Cairo::FontOptions& options), gtk_widget_set_font_options,
+    deprecated "There is no replacement.")
+_DEPRECATE_IFDEF_START
+  /** Undoes the effect of previous calls to set_font_options().
+   *
+   * @newin{3,20}
+   * @deprecated 4.16: There is no replacement.
+   */
+  void unset_font_options();
+_DEPRECATE_IFDEF_END
+  // This returns a const, so we assume that we must copy it:
+#m4 _CONVERSION(`const cairo_font_options_t*', `Cairo::FontOptions', `Cairo::FontOptions(const_cast<cairo_font_options_t*>($3), false /* take_ownership */)')
+  _WRAP_METHOD(Cairo::FontOptions get_font_options() const, gtk_widget_get_font_options,
+    deprecated "There is no replacement.")
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::Layout> create_pango_layout(const Glib::ustring& text), gtk_widget_create_pango_layout)
+
+/* Directionality of Text */
+
+  _WRAP_METHOD(void set_direction(TextDirection dir), gtk_widget_set_direction)
+  _WRAP_METHOD(TextDirection get_direction() const, gtk_widget_get_direction)
+
+  _WRAP_METHOD(static void set_default_direction(TextDirection dir), gtk_widget_set_default_direction)
+  _WRAP_METHOD(static TextDirection get_default_direction(), gtk_widget_get_default_direction)
+
+  _WRAP_METHOD(void set_cursor(const Glib::RefPtr<Gdk::Cursor>& cursor), gtk_widget_set_cursor)
+
+  /** Sets a named cursor to be shown when pointer devices point towards the widget.
+   *
+   * This is a utility function that creates a cursor and then sets it on the widget.
+   *
+   * If the @a name is an empty string, the widget will use the cursor specified via CSS
+   * or the parent widget. If neither specifies a cursor, the default cursor
+   * will be shown. This is the default behavior.
+   *
+   * @newin{3,94}
+   *
+   * @param name The name of the cursor, or an empty string to use the default cursor.
+   */
+  _WRAP_METHOD(void set_cursor(const Glib::ustring& name{NULL} = {}), gtk_widget_set_cursor_from_name)
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Cursor> get_cursor(), gtk_widget_get_cursor, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Cursor> get_cursor() const, gtk_widget_get_cursor, refreturn, constversion)
+
+#m4 _CONVERSION(`GList*',`std::vector<Widget*>',`Glib::ListHandler<Widget*>::list_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+ _WRAP_METHOD(std::vector<Widget*> list_mnemonic_labels(), gtk_widget_list_mnemonic_labels)
+#m4 _CONVERSION(`GList*',`std::vector<const Widget*>',`Glib::ListHandler<const Widget*>::list_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+ _WRAP_METHOD(std::vector<const Widget*> list_mnemonic_labels() const, gtk_widget_list_mnemonic_labels)
+ _WRAP_METHOD(void add_mnemonic_label(Widget& label), gtk_widget_add_mnemonic_label)
+ _WRAP_METHOD(void remove_mnemonic_label(Widget& label), gtk_widget_remove_mnemonic_label)
+
+  _WRAP_METHOD(bool drag_check_threshold(int start_x, int start_y, int current_x, int current_y), gtk_drag_check_threshold)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::FrameClock> get_frame_clock(), gtk_widget_get_frame_clock, refreturn, newin "3,24")
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::FrameClock> get_frame_clock()const, gtk_widget_get_frame_clock, refreturn, constversion, newin "3,24")
+
+  //Used when implementing containers:
+  _WRAP_METHOD(void set_parent(Widget& parent), gtk_widget_set_parent)
+  _WRAP_METHOD(void unparent(), gtk_widget_unparent)
+
+  //TODO: When exactly do we need to custom containers need to call map() on the child widgets?
+  //Most containers that derive from GtkContainer do not need to, but GtkNotebook does.
+  _WRAP_METHOD(void map(), gtk_widget_map)
+  _WRAP_METHOD(void unmap(), gtk_widget_unmap)
+
+  // Gtk+ 2.12 tooltip API
+  _WRAP_METHOD(void trigger_tooltip_query(), gtk_widget_trigger_tooltip_query)
+  _WRAP_METHOD(void set_tooltip_text(const Glib::ustring& text), gtk_widget_set_tooltip_text)
+  _WRAP_METHOD(Glib::ustring get_tooltip_text() const, gtk_widget_get_tooltip_text)
+  _WRAP_METHOD(void set_tooltip_markup(const Glib::ustring& markup), gtk_widget_set_tooltip_markup)
+  _WRAP_METHOD(Glib::ustring get_tooltip_markup() const, gtk_widget_get_tooltip_markup)
+  _WRAP_METHOD(void set_has_tooltip(bool has_tooltip = TRUE), gtk_widget_set_has_tooltip)
+  _WRAP_METHOD(bool get_has_tooltip() const, gtk_widget_get_has_tooltip)
+
+  _WRAP_METHOD(bool in_destruction() const, gtk_widget_in_destruction)
+
+  _WRAP_METHOD(Glib::RefPtr<StyleContext> get_style_context(), gtk_widget_get_style_context, refreturn,
+    deprecated "Style contexts will be removed in GTK 5.")
+  _WRAP_METHOD(Glib::RefPtr<const StyleContext> get_style_context() const, gtk_widget_get_style_context, refreturn, constversion,
+    deprecated "Style contexts will be removed in GTK 5.")
+
+  /** Callback type for adding a function to update animations. See add_tick_callback().
+   *
+   * For instance:
+   * @code
+   * bool on_tick(const Glib::RefPtr<Gdk::FrameClock>& frame_clock);
+   * @endcode
+   *
+   * @param frame_clock The frame clock for the widget (same as calling get_frame_clock()).
+   * @return <tt>true</tt> if the tick callback should continue to be called,
+   *         <tt>false</tt> if the tick callback should be removed.
+   *
+   * @newin{3,24}
+   */
+  using SlotTick = sigc::slot<bool(const Glib::RefPtr<Gdk::FrameClock>&)>;
+
+  /** Queues an animation frame update and adds a callback to be called
+   * before each frame.
+   *
+   * Until the tick callback is removed, it will be
+   * called frequently (usually at the frame rate of the output device
+   * or as quickly as the application can be repainted, whichever is
+   * slower). For this reason, is most suitable for handling graphics
+   * that change every frame or every few frames. The tick callback does
+   * not automatically imply a relayout or repaint. If you want a
+   * repaint or relayout, and aren’t changing widget properties that
+   * would trigger that (for example, changing the text of a Gtk::Label),
+   * then you will have to call queue_resize() or queue_draw_area() yourself.
+   *
+   * Gdk::FrameClock::get_frame_time() should generally be used for timing
+   * continuous animations and
+   * Gdk::FrameTimings::get_predicted_presentation_time() if you are
+   * trying to display isolated frames at particular times.
+   *
+   * This is a more convenient alternative to connecting directly to the
+   * Gdk::FrameClock::signal_update() signal of Gdk::FrameClock, since you don't
+   * have to worry about when a Gdk::FrameClock is assigned to a widget.
+   *
+   * @newin{3,24}
+   *
+   * @param slot Slot to call for updating animations.
+   * @return An id for the connection of this callback. Remove the callback
+   *         by passing it to remove_tick_callback().
+   */
+  guint add_tick_callback(const SlotTick& slot);
+  _IGNORE(gtk_widget_add_tick_callback)
+
+  _WRAP_METHOD(void remove_tick_callback(guint id), gtk_widget_remove_tick_callback, newin "3,24")
+
+  //This is mostly only needed by the class itself, so it could be protected,
+  //but it is sometimes helpful to call it from outside:
+  _WRAP_METHOD(void insert_action_group(const Glib::ustring& name, const Glib::RefPtr<Gio::ActionGroup>& group), gtk_widget_insert_action_group)
+
+  /** Removes a group from the widget.
+   * See insert_action_group().
+   *
+   * @param name The prefix for actions.
+   *
+   * @newin{3,10}
+   */
+  void remove_action_group(const Glib::ustring& name);
+
+  /** Looks up the action in the action groups associated
+   * with the widget and its ancestors, and activates it.
+   *
+   * If the action is in an action group added with
+   * insert_action_group(), the @a name is
+   * expected to be prefixed with the prefix that was
+   * used when the group was inserted.
+   *
+   * The arguments must match the action's expected parameter
+   * type, as returned by Gio::Action::get_parameter_type().
+   *
+   * @param name The name of the action to activate.
+   * @param args Parameters to use, or an empty (invalid) Glib::VariantBase
+   *             if the action does not expect parameters.
+   * @return <tt>true</tt> if the action was activated, <tt>false</tt> if the
+   *         action does not exist.
+   */
+  _WRAP_METHOD(bool activate_action(const Glib::ustring& name, const Glib::VariantBase& args = {}), gtk_widget_activate_action_variant)
+  _IGNORE(gtk_widget_activate_action)
+  _WRAP_METHOD(void activate_default(), gtk_widget_activate_default)
+
+  _WRAP_METHOD(void set_font_map(const Glib::RefPtr<Pango::FontMap>& font_map), gtk_widget_set_font_map)
+  _WRAP_METHOD(Glib::RefPtr<Pango::FontMap> get_font_map(), gtk_widget_get_font_map, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::FontMap> get_font_map() const, gtk_widget_get_font_map, refreturn, constversion)
+
+  _WRAP_METHOD(Widget* get_first_child(), gtk_widget_get_first_child)
+  _WRAP_METHOD(const Widget* get_first_child() const, gtk_widget_get_first_child, constversion)
+  _WRAP_METHOD(Widget* get_last_child(), gtk_widget_get_last_child)
+  _WRAP_METHOD(const Widget* get_last_child() const, gtk_widget_get_last_child, constversion)
+  _WRAP_METHOD(Widget* get_next_sibling(), gtk_widget_get_next_sibling)
+  _WRAP_METHOD(const Widget* get_next_sibling() const, gtk_widget_get_next_sibling, constversion)
+  _WRAP_METHOD(Widget* get_prev_sibling(), gtk_widget_get_prev_sibling)
+  _WRAP_METHOD(const Widget* get_prev_sibling() const, gtk_widget_get_prev_sibling, constversion)
+
+  /** Gets a vector of the widgetʼs current children, from first child to last.
+   * Unlike observe_children(), this does not incur extra bookkeeping to track
+   * children, update or emit signal when they change, etc. – so it is faster.
+   * @return A new vector of current children, in order of first child to last.
+   * @newin{4,14}
+   */
+  [[nodiscard]] std::vector<Widget*> get_children();
+  /// @copydoc get_children()
+  [[nodiscard]] std::vector<const Widget*> get_children() const;
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> observe_children(), gtk_widget_observe_children)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> observe_children() const, gtk_widget_observe_children, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> observe_controllers(), gtk_widget_observe_controllers)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> observe_controllers() const, gtk_widget_observe_controllers, constversion)
+
+  /** Inserts the %Widget into the child widget list of @a parent after @a previous_sibling.
+   *
+   * After calling this function, get_prev_sibling() will return @a previous_sibling.
+   *
+   * If @a parent is already set as the parent widget of the %Widget, this function can also be used
+   * to reorder the %Widget in the child widget list of @a parent.
+   *
+   * @param parent The parent Gtk::Widget to insert the %Widget into.
+   * @param previous_sibling The new previous sibling of the %Widget.
+   */
+  _WRAP_METHOD(void insert_after(Widget& parent, const Widget& previous_sibling), gtk_widget_insert_after)
+
+  /** Inserts the %Widget into the child widget list of @a parent before @a next_sibling.
+   *
+   * After calling this function, get_next_sibling() will return @a next_sibling.
+   *
+   * If @a parent is already set as the parent widget of the %Widget, this function can also be used
+   * to reorder the %Widget in the child widget list of @a parent.
+   *
+   * @param parent The parent Gtk::Widget to insert the %Widget into.
+   * @param next_sibling The new next sibling of the %Widget.
+   */
+  _WRAP_METHOD(void insert_before(Widget& parent, const Widget& next_sibling), gtk_widget_insert_before)
+
+  /** Inserts the %Widget at the beginning of the child widget list of @a parent.
+   *
+   * After calling this function, get_prev_sibling() will return <tt>nullptr</tt>.
+   *
+   * If @a parent is already set as the parent of the %Widget, this function can also be used
+   * to reorder the %Widget in the child widget list of @a parent.
+   *
+   * @param parent The parent Gtk::Widget to insert the %Widget into.
+   */
+  void insert_at_start(Widget& parent);
+
+  /** Inserts the %Widget at the end of the child widget list of @a parent.
+   *
+   * After calling this function, get_next_sibling() will return <tt>nullptr</tt>.
+   *
+   * If @a parent is already set as the parent of the %Widget, this function can also be used
+   * to reorder the %Widget in the child widget list of @a parent.
+   *
+   * @param parent The parent Gtk::Widget to insert the %Widget into.
+   */
+  void insert_at_end(Widget& parent);
+
+  _WRAP_METHOD(void snapshot_child(Widget& child, const Glib::RefPtr<Gtk::Snapshot>& snapshot), gtk_widget_snapshot_child)
+
+  _WRAP_METHOD(bool should_layout() const, gtk_widget_should_layout)
+
+  _WRAP_METHOD(Glib::ustring get_css_name() const, gtk_widget_get_css_name)
+  _WRAP_METHOD(void add_css_class(const Glib::ustring& css_class), gtk_widget_add_css_class)
+  _WRAP_METHOD(void remove_css_class(const Glib::ustring& css_class), gtk_widget_remove_css_class)
+  _WRAP_METHOD(bool has_css_class(const Glib::ustring& css_class) const, gtk_widget_has_css_class)
+
+#m4 _CONVERSION(`char**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_css_classes() const, gtk_widget_get_css_classes)
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char**',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data ()')
+  _WRAP_METHOD(void set_css_classes(const std::vector<Glib::ustring>& classes), gtk_widget_set_css_classes)
+
+  /** Gets the current foreground color for the widget's CSS style.
+   *
+   * This function should only be used in snapshot implementations
+   * that need to do custom drawing with the foreground color.
+   *
+   * @newin{4,10}
+   *
+   * @return The widget's foreground color.
+   */
+  Gdk::RGBA get_color() const;
+  _IGNORE(gtk_widget_get_color)
+
+  _WRAP_METHOD(void set_limit_events(bool limit_events = true), gtk_widget_set_limit_events)
+  _WRAP_METHOD(bool get_limit_events() const, gtk_widget_get_limit_events)
+
+// signals
+
+  _WRAP_SIGNAL(void show(),"show")
+  _WRAP_SIGNAL(void hide(),"hide", custom_c_callback)
+
+  /// Emitted on mapping of a widget to the screen.
+  //- See {flags.mapped}.
+  _WRAP_SIGNAL(void map(),"map")
+
+  //- See {flags.mapped}.
+  _WRAP_SIGNAL(void unmap(),"unmap")
+
+  /// Emitted on realization of a widget.
+  //- See {flags.realized}.  This is also responsible for
+  //- setting {flags.realized} when it is done.  Therefore,
+  //- when overriding the impl method, you should call the
+  //- default realize method.
+  _WRAP_SIGNAL(void realize(),"realize")
+
+  //- See {flags.realized}.  This should not be called by the user.
+  //_WRAP(meth|sig|impl,void unrealize_(),gtk_widget_unrealize,"unrealize")
+  _WRAP_SIGNAL(void unrealize(),"unrealize")
+
+  _WRAP_SIGNAL(void state_flags_changed(Gtk::StateFlags previous_state_flags), "state-flags-changed")
+
+  _WRAP_SIGNAL(void direction_changed(TextDirection direction), "direction_changed")
+
+  _WRAP_SIGNAL(bool mnemonic_activate(bool group_cycling), "mnemonic_activate")
+
+  /** Emitted during the dispose phase.
+   *
+   * You need to connect to this signal only if you are implementing a widget, which
+   * 1. is a direct descendant of %Gtk::Widget,
+   * 2. contains other widgets (is a container widget), and
+   * 3. shall work well as a managed object.
+   *
+   * The children of the object need to be unparented *both* from the handler
+   * of this signal *and* from the destructor. Reason: when your class is used
+   * as a managed object, then the C++ destructor is called too late, but when
+   * your class is managed via the standard C++ manner, then this signal is not
+   * emitted at all.
+   *
+   * When your class inherits from a container widget, such as Gtk::Box, you
+   * do not need to handle this signal. When your widget does not have child
+   * widgets, then you also do not need to handle this signal.
+   *
+   * This signal is emitted by %Gtk::Widget during the dispose phase of object
+   * destruction. See the <a href="https://docs.gtk.org/gobject/concepts.html#reference-count">
+   * Reference count</a> section in the GObject concepts documentation
+   * for the specification of the dispose and the finalize phases of object
+   * destruction. After dispose, the object is not supposed to hold any reference
+   * to other member objects.
+   *
+   * Dispose may be called multiple times, so your implementation of this
+   * signal must tolerate that.
+   */
+  _WRAP_SIGNAL(void destroy(), "destroy", no_default_handler, newin "4,8")
+
+#m4begin
+dnl// Hook in special code to catch explicit uses of gtk_object_destroy() by
+dnl// GTK+ code, e.g. when receiving the GDK_DELETE event.  For details, look
+dnl// at Gtk::Widget_Class::dispose_vfunc_callback() in widget.ccg.
+dnl
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+    reinterpret_cast<GObjectClass*>(klass)->dispose = &Widget_dispose_vfunc_c_callback;
+    Widget_dispose_vfunc_funcptr = &dispose_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+    static void dispose_vfunc_callback(GObject* self);
+  _POP()
+#m4end
+
+  _IGNORE_SIGNAL("move-focus")dnl // Action signal
+
+  //Keybinding signals:
+  _IGNORE_SIGNAL("keynav_failed")
+
+#m4 _CONVERSION(`GtkTooltip*',`const Glib::RefPtr<Tooltip>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(bool query_tooltip(int x, int y, bool keyboard_tooltip, const Glib::RefPtr<Tooltip>& tooltip), "query_tooltip")
+
+// properties
+
+  _WRAP_PROPERTY("name", Glib::ustring)
+  _WRAP_PROPERTY("parent", Widget*)
+  _WRAP_PROPERTY("root", Root*)
+  _WRAP_PROPERTY("width_request", int)
+  _WRAP_PROPERTY("height_request", int)
+  _WRAP_PROPERTY("visible", bool)
+  _WRAP_PROPERTY("sensitive", bool)
+  _WRAP_PROPERTY("can_focus", bool)
+  _WRAP_PROPERTY("has_focus", bool)
+  _WRAP_PROPERTY("can_target", bool)
+  _WRAP_PROPERTY("focus_on_click", bool)
+  _WRAP_PROPERTY("focusable", bool)
+  _WRAP_PROPERTY("has_default", bool)
+  _WRAP_PROPERTY("receives_default", bool)
+  _WRAP_PROPERTY("cursor", Glib::RefPtr<Gdk::Cursor>)
+  _WRAP_PROPERTY("has_tooltip", bool)
+  _WRAP_PROPERTY("tooltip_markup", Glib::ustring)
+  _WRAP_PROPERTY("tooltip_text", Glib::ustring)
+
+  _WRAP_PROPERTY("halign", Align)
+  _WRAP_PROPERTY("valign", Align)
+  _WRAP_PROPERTY("margin-start", int)
+  _WRAP_PROPERTY("margin-end", int)
+  _WRAP_PROPERTY("margin-top", int)
+  _WRAP_PROPERTY("margin-bottom", int)
+  _WRAP_PROPERTY("hexpand", bool)
+  _WRAP_PROPERTY("hexpand-set", bool)
+  _WRAP_PROPERTY("vexpand", bool)
+  _WRAP_PROPERTY("vexpand-set", bool)
+  _WRAP_PROPERTY("opacity", double)
+  _WRAP_PROPERTY("overflow", Overflow, newin "3,96")
+  _WRAP_PROPERTY("scale-factor", int)
+  _WRAP_PROPERTY("css-name", Glib::ustring)
+  _WRAP_PROPERTY("css-classes", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("layout-manager", Glib::RefPtr<LayoutManager>)
+  _WRAP_PROPERTY("limit-events", bool)
+
+// vfuncs
+
+protected:
+  _WRAP_VFUNC(void root(), root)
+  _WRAP_VFUNC(void unroot(), unroot)
+  _WRAP_VFUNC(void size_allocate(int width, int height, int baseline), size_allocate)
+  _WRAP_VFUNC(SizeRequestMode get_request_mode() const, get_request_mode)
+  _WRAP_VFUNC(void measure(Orientation orientation, int for_size, int& minimum, int& natural,
+    int& minimum_baseline, int& natural_baseline) const, measure, custom_vfunc_callback)
+  _WRAP_VFUNC(bool grab_focus(), grab_focus)
+  /** Sets the focused child of widget.
+   *
+   * @param child The child widget.
+   */
+  _WRAP_VFUNC(void set_focus_child(Widget* child), set_focus_child)
+
+  _WRAP_VFUNC(void compute_expand(bool& hexpand_p, bool& vexpand_p), compute_expand,
+    custom_vfunc_callback, custom_vfunc)
+  _WRAP_VFUNC(bool contains(double x, double y) const, contains)
+
+#m4 _CONVERSION(`GtkSnapshot*',`const Glib::RefPtr<Gtk::Snapshot>&',`Glib::wrap_gtk_snapshot($3, true)')
+  _WRAP_VFUNC(void snapshot(const Glib::RefPtr<Gtk::Snapshot>& snapshot), snapshot)
+
+  /* TODO: Some vfuncs are in GTK4 but not gtkmm4, & so cannot add until gtkmm5:
+   * css_changed
+   * focus
+   * system_setting_changed
+  */
+
+protected:
+  _CTOR_DEFAULT()
+
+  _WRAP_METHOD(void realize(), gtk_widget_realize)
+  _WRAP_METHOD(void unrealize(), gtk_widget_unrealize)
+
+  void realize_if_needed();
+
+  _WRAP_METHOD(void set_focus_child(Widget& child), gtk_widget_set_focus_child)
+  /** Unsets the focus child of the widget.
+   *
+   * The previous focus child will be unset.
+   *
+   * This function is only suitable for widget implementations.
+   */
+  void unset_focus_child();
+
+  _WRAP_METHOD(Widget* get_focus_child(), gtk_widget_get_focus_child)
+  _WRAP_METHOD(const Widget* get_focus_child() const, gtk_widget_get_focus_child, constversion)
+};
+
+} // namespace Gtk

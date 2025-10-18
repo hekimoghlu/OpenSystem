@@ -1,0 +1,186 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+sub unit_get_data {
+    $blurb = "Returns the various data pertaining to a given unit ID.";
+
+    $help = <<'HELP';
+This procedure returns all properties making up an unit.
+It is only meant for internal usage to query non built-in units and it
+is a programming error to use it directly, in particular for any of the built-in units.
+HELP
+
+    &jehan_pdb_misc('2023');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'unit_id', type => 'int32',
+	  desc => "The unit's integer ID" }
+    );
+
+    @outargs = (
+	{ name => 'name', type => 'string',
+	  desc => "The unit's name" },
+	{ name => 'factor', type => 'double',
+	  desc => "The unit's factor" },
+	{ name => 'digits', type => 'int32',
+	  desc => "The unit's number of digits" },
+	{ name => 'symbol', type => 'string',
+	  desc => "The unit's symbol" },
+	{ name => 'abbreviation', type => 'string',
+	  desc => "The unit's abbreviation" },
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (unit_id >= 0)
+    {
+      GimpUnit *unit = gimp_unit_get_by_id (unit_id);
+
+      if (unit != NULL)
+        {
+          name         = g_strdup (gimp_unit_get_name (unit));
+          factor       = gimp_unit_get_factor (unit);
+          digits       = gimp_unit_get_digits (unit);
+          symbol       = g_strdup (gimp_unit_get_symbol (unit));
+          abbreviation = g_strdup (gimp_unit_get_abbreviation (unit));
+        }
+    }
+}
+CODE
+    );
+}
+
+sub unit_new {
+    $blurb = "Creates a new unit.";
+
+    $help = <<'HELP';
+This procedure creates a new unit and returns it. Note that the new unit
+will have it's deletion flag set to TRUE, so you will have to set it
+to FALSE with gimp_unit_set_deletion_flag() to make it persistent.
+HELP
+
+    &mitch_pdb_misc('1999');
+
+    @inargs = (
+	{ name => 'name', type => 'string', non_empty => 1,
+	  desc => "The new unit's name" },
+	{ name => 'factor', type => 'double',
+	  desc => "The new unit's factor" },
+	{ name => 'digits', type => 'int32',
+	  desc => "The new unit's digits" },
+	{ name => 'symbol', type => 'string', non_empty => 1,
+	  desc => "The new unit's symbol" },
+	{ name => 'abbreviation', type => 'string', non_empty => 1,
+	  desc => "The new unit's abbreviation" },
+    );
+
+    @outargs = (
+	{ name => 'unit', type => 'unit',
+	  desc => "The new unit" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  unit = _gimp_unit_new (gimp, name, factor, digits,
+                         symbol, abbreviation);
+}
+CODE
+    );
+}
+
+sub unit_get_deletion_flag {
+    $blurb = "Returns the deletion flag of the unit.";
+
+    $help = <<'HELP';
+This procedure returns the deletion flag of the unit. If this value is TRUE the
+unit's definition will not be saved in the user's unitrc file on gimp exit.
+HELP
+
+    &mitch_pdb_misc('1999');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'unit', type => 'unit',
+	  desc => "The unit" }
+    );
+
+    @outargs = (
+	{ name => 'deletion_flag', type => 'boolean',
+	  desc => "The unit's deletion flag" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  deletion_flag = gimp_unit_get_deletion_flag (unit);
+}
+CODE
+    );
+}
+
+sub unit_set_deletion_flag {
+    $blurb = 'Sets the deletion flag of a unit.';
+
+    $help = <<'HELP';
+This procedure sets the unit's deletion flag. If the deletion flag of a unit is
+TRUE on gimp exit, this unit's definition will not be saved in the user's
+unitrc.
+HELP
+
+    &mitch_pdb_misc('1999');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'unit', type => 'unit',
+	  desc => "The unit" },
+	{ name => 'deletion_flag', type => 'boolean',
+	  desc => 'The new deletion flag of the unit' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_unit_set_deletion_flag (unit, deletion_flag);
+}
+CODE
+    );
+}
+
+@headers = qw("libgimpbase/gimpbase.h"
+              "core/gimp.h"
+              "core/gimpunit.h");
+
+@procs = qw(unit_new
+            unit_get_data
+            unit_get_deletion_flag
+            unit_set_deletion_flag);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Units';
+$doc_title = 'gimpunit';
+$doc_short_desc = 'Operations on units.';
+$doc_long_desc = 'Provides operations on units, a collection of predefined units and functions to create new units.';
+
+1;

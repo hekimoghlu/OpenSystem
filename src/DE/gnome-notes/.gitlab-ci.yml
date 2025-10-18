@@ -1,0 +1,31 @@
+include: 'https://gitlab.gnome.org/GNOME/citemplates/raw/master/flatpak/flatpak_ci_initiative.yml'
+
+variables:
+  GIT_SUBMODULE_STRATEGY: 'normal'
+
+stages:
+  - 'source_check'
+  - 'flatpak'
+  - 'deploy'
+
+codespell:
+  when: on_success
+  stage: 'source_check'
+  image: "docker.io/bilelmoussaoui/codespell"
+  script: codespell -S "*.png,*.po,*.svg,.git,NEWS,AUTHORS,LINGUAS" -f --builtin "code,clear" --ignore-words-list="stdio" --skip="./src/contrib"
+
+flatpak:master:
+    extends: '.flatpak'
+    stage: 'flatpak'
+    variables:
+        MANIFEST_PATH: "build-aux/flatpak/org.gnome.Notes.json"
+        RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+        FLATPAK_MODULE: "gnome-notes"
+        APP_ID: "org.gnome.Notes.Devel"
+        BUNDLE: "org.gnome.Notes.Devel.flatpak"
+
+
+flatpak:nightly:
+    extends: '.publish_nightly'
+    dependencies:
+        - 'flatpak:master'

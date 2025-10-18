@@ -1,0 +1,214 @@
+<?xml version="1.0"?>
+<interface>
+  <template class="SeahorseGpgmeSignDialog" parent="GtkApplicationWindow">
+    <property name="title" bind-source="window_title" bind-property="title" bind-flags="sync-create|bidirectional" />
+
+    <child>
+      <object class='GtkShortcutController'>
+        <child>
+          <object class='GtkShortcut'>
+            <property name='trigger'>Escape</property>
+            <property name='action'>action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+        <property name="show-title-buttons">False</property>
+
+        <child>
+          <object class="GtkButton">
+            <property name="label" translatable="yes">_Cancel</property>
+            <property name="use-underline">True</property>
+            <property name="action-name">window.close</property>
+          </object>
+        </child>
+
+        <property name="title-widget">
+          <object class="AdwWindowTitle" id="window_title">
+            <property name="title" translatable="yes">Sign Key</property>
+          </object>
+        </property>
+
+        <child type="end">
+          <object class="GtkButton">
+            <property name="label" translatable="yes">_Sign</property>
+            <property name="use-underline">True</property>
+            <property name="action-name">sign</property>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwPreferencesPage">
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">By signing you indicate your trust that this key belongs to:</property>
+            <child>
+              <object class="GtkLabel" id="to_sign_name_label">
+                <property name="yalign">0</property>
+                <property name="label" translatable="yes">Key Name</property>
+                <property name="use_markup">True</property>
+                <property name="justify">center</property>
+                <attributes>
+                 <attribute name="style" value="italic"/>
+                </attributes>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">How carefully have you checked this key?</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">6</property>
+                <property name="margin-start">12</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkCheckButton" id="sign_choice_not">
+                        <property name="label" translatable="yes">_Not at all</property>
+                        <property name="active">True</property>
+                        <property name="use-underline">True</property>
+                        <signal name="toggled" handler="on_gpgme_sign_choice_toggled"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="sign_choice_casual">
+                        <property name="label" translatable="yes">_Casually</property>
+                        <property name="use-underline">True</property>
+                        <property name="group">sign_choice_not</property>
+                        <signal name="toggled" handler="on_gpgme_sign_choice_toggled"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="sign_choice_careful">
+                        <property name="label" translatable="yes">_Very Carefully</property>
+                        <property name="use-underline">True</property>
+                        <property name="group">sign_choice_not</property>
+                        <signal name="toggled" handler="on_gpgme_sign_choice_toggled"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkLabel" id="sign_display_not">
+                        <property name="xalign">0</property>
+                        <property name="yalign">0</property>
+                        <property name="label" translatable="yes">&lt;i&gt;Not at all:&lt;/i&gt; means you believe the key is owned by the person who claims to own it, but you could not or did not verify this to be a fact.</property>
+                        <property name="use_markup">True</property>
+                        <property name="justify">fill</property>
+                        <property name="wrap">True</property>
+                        <property name="max_width_chars">75</property>
+                        <property name="selectable">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="sign_display_casual">
+                        <property name="xalign">0</property>
+                        <property name="yalign">0</property>
+                        <property name="label" translatable="yes">&lt;i&gt;Casually:&lt;/i&gt; means you have done a casual verification that the key is owned by the person who claims to own it. For example, you could read the key fingerprint to the owner over the phone.</property>
+                        <property name="use_markup">True</property>
+                        <property name="justify">fill</property>
+                        <property name="wrap">True</property>
+                        <property name="max_width_chars">75</property>
+                        <property name="selectable">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="sign_display_careful">
+                        <property name="spacing">6</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkLabel" id="label7">
+                            <property name="xalign">0</property>
+                            <property name="yalign">0</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Very Carefully:&lt;/i&gt; Select this only if you are absolutely sure that this key is genuine.</property>
+                            <property name="use_markup">True</property>
+                            <property name="justify">fill</property>
+                            <property name="wrap">True</property>
+                            <property name="max_width_chars">75</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="label12">
+                            <property name="xalign">0</property>
+                            <property name="yalign">0</property>
+                            <property name="label" translatable="yes">You could use a hard to forge photo identification (such as a passport) to personally check that the name on the key is correct. You should have also used email to check that the email address belongs to the owner.</property>
+                            <property name="use_markup">True</property>
+                            <property name="justify">fill</property>
+                            <property name="wrap">True</property>
+                            <property name="max_width_chars">75</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">How others will see this signature</property>
+            <child>
+              <object class="AdwActionRow">
+                <property name="title" translatable="yes">_Others may not see this signature</property>
+                <property name="use-underline">True</property>
+                <property name="tooltip-text" translatable="yes">If signature is local to the key ring and won't be exported with the key</property>
+                <child type="suffix">
+                  <object class="GtkSwitch" id="sign_option_local">
+                    <property name="tooltip-text" translatable="yes">If signature is local to the key ring and won't be exported with the key</property>
+                    <property name="valign">center</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow">
+                <property name="title" translatable="yes">I can _revoke this signature at a later date.</property>
+                <property name="tooltip-text" translatable="yes">If signature can be revoked</property>
+                <property name="use-underline">True</property>
+                <child type="suffix">
+                  <object class="GtkSwitch" id="sign_option_revocable">
+                    <property name="tooltip-text" translatable="yes">If signature can be revoked</property>
+                    <property name="active">True</property>
+                    <property name="valign">center</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup" id="signer_frame">
+            <child>
+              <object class="AdwComboRow" id="signer_row">
+                <property name="title" translatable="yes">_Sign key as</property>
+                <property name="use-underline">True</property>
+                <property name="expression">
+                  <lookup type="SeahorseGpgmeKey" name="label"/>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

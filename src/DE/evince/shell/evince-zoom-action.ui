@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="EvZoomAction" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="tooltip-text" translatable="yes">Select or set the zoom level of the document</property>
+    <child>
+      <object class="GtkEntry" id="entry">
+        <style>
+          <class name="tnum" />
+        </style>
+        <property name="secondary-icon-name">pan-down-symbolic</property>
+        <property name="vexpand">True</property>
+        <property name="xalign">1.0</property>
+        <property name="max-width-chars">0</property>
+        <property name="visible">True</property>
+        <signal name="icon-press" handler="entry_icon_press_cb" />
+        <signal name="activate" handler="entry_activated_cb" />
+        <child>
+          <object class="GtkEventControllerFocus">
+            <signal name="leave" handler="ev_zoom_action_update_zoom_level" swapped="yes" />
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkPopoverMenu" id="popup">
+        <property name="position">bottom</property>
+        <property name="menu-model">menu</property>
+      </object>
+    </child>
+  </template>
+
+  <menu id="menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Fit Pa_ge</attribute>
+        <attribute name="action">win.sizing-mode</attribute>
+        <attribute name="target">fit-page</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Fit _Width</attribute>
+        <attribute name="action">win.sizing-mode</attribute>
+        <attribute name="target">fit-width</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Automatic</attribute>
+        <attribute name="action">win.sizing-mode</attribute>
+        <attribute name="target">automatic</attribute>
+      </item>
+    </section>
+    <section />
+  </menu>
+</interface>

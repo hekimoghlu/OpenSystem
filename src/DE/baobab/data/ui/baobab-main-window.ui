@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <menu id="primarymenu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Scan Folder…</attribute>
+        <attribute name="action">win.scan-folder</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Clear Recent List</attribute>
+        <attribute name="action">win.clear-recent</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Preferences</attribute>
+        <attribute name="action">win.show-preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Keyboard _Shortcuts</attribute>
+        <attribute name="action">win.show-help-overlay</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Help</attribute>
+        <attribute name="action">win.help</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_About Disk Usage Analyzer</attribute>
+        <attribute name="action">win.about</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="BaobabWindow" parent="AdwApplicationWindow">
+    <property name="title" translatable="yes">Disk Usage Analyzer</property>
+    <property name="icon_name">org.gnome.baobab</property>
+    <property name="height-request">294</property>
+    <child>
+      <object class="AdwToastOverlay" id="toast_overlay">
+        <property name="child">
+          <object class="AdwNavigationView" id="nav_view">
+            <child>
+              <object class="AdwNavigationPage" id="home_page">
+                <property name="tag">home</property>
+                <property name="title" translatable="yes">Devices &amp; Locations</property>
+                <property name="child">
+                  <object class="AdwToolbarView">
+                    <child type="top">
+                      <object class="AdwHeaderBar">
+                        <child type="end">
+                          <object class="GtkMenuButton" id="menu_button">
+                            <property name="menu_model">primarymenu</property>
+                            <property name="icon_name">open-menu-symbolic</property>
+                            <property name="primary">true</property>
+                            <property name="tooltip_text" translatable="yes">Main Menu</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <property name="content">
+                      <object class="BaobabLocationList" id="location_list"/>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwNavigationPage" id="result_page">
+                <property name="tag">results</property>
+                <property name="title" translatable="yes">Results</property>
+                <signal name="hidden" handler="results_hidden" />
+                <property name="child">
+                  <object class="AdwToolbarView">
+                    <property name="top-bar-style">raised</property>
+                    <child type="top">
+                      <object class="AdwHeaderBar">
+                        <property name="title-widget">
+                          <object class="BaobabPathbar" id="pathbar">
+                            <property name="valign">center</property>
+                            <property name="width_request">700</property>
+                            <style>
+                              <class name="pathbar" />
+                            </style>
+                          </object>
+                        </property>
+                        <child type="end">
+                          <object class="GtkButton" id="reload_button">
+                            <property name="action_name">win.reload</property>
+                            <property name="icon_name">view-refresh-symbolic</property>
+                            <property name="tooltip_text" translatable="yes">Rescan Current Location</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <property name="content">
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="AdwBanner" id="banner">
+                            <property name="title" translatable="yes">Files may take more space than shown</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwOverlaySplitView">
+                            <property name="max-sidebar-width">99999</property>
+                            <property name="sidebar-width-fraction">0.5</property>
+                            <property name="sidebar">
+                              <object class="GtkBox">
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="orientation">vertical</property>
+                                    <property name="hexpand">True</property>
+                                    <child>
+                                      <object class="BaobabFolderDisplay" id="folder_display"/>
+                                    </child>
+                                    <child>
+                                      <object class="GtkScrolledWindow" id="scrolled_window">
+                                        <property name="vexpand">True</property>
+                                        <property name="hscrollbar-policy">never</property>
+                                        <child>
+                                          <object class="GtkColumnView" id="columnview">
+                                            <property name="hexpand">True</property>
+                                            <property name="reorderable">False</property>
+                                            <property name="single-click-activate">True</property>
+                                            <signal name="activate" handler="columnview_activate"/>
+                                            <property name="model">
+                                              <object class="GtkSingleSelection" id="columnview_selection">
+                                                <property name="model">
+                                                  <object class="GtkSortListModel" id="columnview_sort_model">
+                                                    <binding name="sorter">
+                                                      <lookup name="sorter">folder_display</lookup>
+                                                    </binding>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </property>
+                                            <child>
+                                              <object class="GtkPopoverMenu" id="treeview_popover_menu">
+                                                <property name="position">bottom</property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkColumnViewColumn" id="folder_column">
+                                                <property name="title" translatable="yes">Folder</property>
+                                                <property name="expand">True</property>
+                                                <property name="factory">
+                                                  <object class="GtkSignalListItemFactory">
+                                                    <signal name="setup" handler="folder_cell_setup"/>
+                                                    <signal name="bind" handler="folder_cell_bind"/>
+                                                    <signal name="unbind" handler="folder_cell_unbind"/>
+                                                    <signal name="teardown" handler="folder_cell_teardown"/>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkColumnViewColumn" id="size_column">
+                                                <property name="title" translatable="yes">Size</property>
+                                                <property name="factory">
+                                                  <object class="GtkSignalListItemFactory">
+                                                    <signal name="setup" handler="size_cell_setup"/>
+                                                    <signal name="bind" handler="size_cell_bind"/>
+                                                    <signal name="unbind" handler="size_cell_unbind"/>
+                                                    <signal name="teardown" handler="size_cell_teardown"/>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkColumnViewColumn" id="contents_column">
+                                                <property name="title" translatable="yes">Contents</property>
+                                                <property name="factory">
+                                                  <object class="GtkSignalListItemFactory">
+                                                    <signal name="setup" handler="contents_cell_setup"/>
+                                                    <signal name="bind" handler="contents_cell_bind"/>
+                                                    <signal name="unbind" handler="contents_cell_unbind"/>
+                                                    <signal name="teardown" handler="contents_cell_teardown"/>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkColumnViewColumn" id="time_modified_column">
+                                                <property name="title" translatable="yes">Modified</property>
+                                                <property name="factory">
+                                                  <object class="GtkSignalListItemFactory">
+                                                    <signal name="setup" handler="time_modified_cell_setup"/>
+                                                    <signal name="bind" handler="time_modified_cell_bind"/>
+                                                    <signal name="unbind" handler="time_modified_cell_unbind"/>
+                                                    <signal name="teardown" handler="time_modified_cell_teardown"/>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkGestureClick" id="treeview_right_click_gesture">
+                                                <property name="button">3</property>
+                                                <signal name="pressed" handler="treeview_right_click_gesture_pressed"/>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="GtkShortcutController">
+                                                <property name="propagation-phase">capture</property>
+                                                <child>
+                                                  <object class="GtkShortcut">
+                                                    <property name="trigger">Menu</property>
+                                                    <property name="action">action(win.show-treeview-popover)</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkShortcut">
+                                                    <property name="trigger">Right</property>
+                                                    <property name="action">action(win.treeview-expand-row)</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkShortcut">
+                                                    <property name="trigger">Left</property>
+                                                    <property name="action">action(win.treeview-collapse-row)</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkShortcut">
+                                                    <property name="trigger">&lt;Alt&gt;Up</property>
+                                                    <property name="action">action(win.treeview-go-up)</property>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <style>
+                                          <class name="undershoot-top"/>
+                                        </style>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSeparator">
+                                    <property name="orientation">vertical</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                            <property name="content">
+                              <object class="AdwBreakpointBin">
+                                <property name="width-request">360</property>
+                                <property name="height-request">246</property>
+                                <property name="child">
+                                  <object class="AdwToolbarView">
+                                    <property name="content">
+                                      <object class="GtkStack" id="spinner_stack">
+                                        <child>
+                                          <object class="AdwViewStack" id="chart_stack">
+                                            <child>
+                                              <object class="AdwViewStackPage">
+                                                <property name="name">rings</property>
+                                                <property name="title" translatable="yes">_Rings Chart</property>
+                                                <property name="icon_name">view-ringschart-symbolic</property>
+                                                <property name="use-underline">True</property>
+                                                <property name="child">
+                                                  <object class="BaobabRingschart" id="rings_chart">
+                                                    <property name="hexpand">True</property>
+                                                    <property name="vexpand">True</property>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                            <child>
+                                              <object class="AdwViewStackPage">
+                                                <property name="name">treemap</property>
+                                                <property name="title" translatable="yes">_Treemap Chart</property>
+                                                <property name="icon_name">view-treemap-symbolic</property>
+                                                <property name="use-underline">True</property>
+                                                <property name="child">
+                                                  <object class="BaobabTreemap" id="treemap_chart">
+                                                    <property name="hexpand">True</property>
+                                                    <property name="vexpand">True</property>
+                                                  </object>
+                                                </property>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="AdwSpinner" id="spinner"/>
+                                        </child>
+                                      </object>
+                                    </property>
+                                    <child type="bottom">
+                                      <object class="GtkActionBar" id="chart_action_bar">
+                                        <property name="height-request">48</property>
+                                        <child type="center">
+                                          <object class="AdwViewSwitcher" id="chart_stack_switcher">
+                                            <property name="stack">chart_stack</property>
+                                            <property name="policy">wide</property>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </property>
+                                <child>
+                                  <object class="AdwBreakpoint">
+                                    <condition>max-width: 500sp</condition>
+                                    <setter object="chart_stack_switcher" property="policy">narrow</setter>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <style>
+              <class name="contents" />
+            </style>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkEventControllerFocus" id="focus_controller" />
+    </child>
+    <child>
+      <object class="GtkDropTarget" id="drop_target">
+        <property name="actions">copy</property>
+      </object>
+    </child>
+  </template>
+</interface>

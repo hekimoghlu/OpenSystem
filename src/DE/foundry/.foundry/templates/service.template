@@ -1,0 +1,86 @@
+[Template]
+Name=service
+Description=Create a new Foundry service
+
+[Input Namespace]
+Type=Text
+Title=Namespace
+Validate=^\w+$
+Default=Plugin
+
+[Input Class]
+Type=Text
+Title=Class Name
+Validate=^\w+$
+Default=Service
+
+[Input fileprefix]
+Type=Text
+Title=File Name
+Subtitle=The name for files excluding the suffix
+Default=plugin-service
+
+```{{fileprefix}}.h
+{{include "license.h"}}
+
+#pragma once
+
+{{if Namespace == "Foundry"}}
+#include "foundry-service.h"
+{{else}}
+#include <foundry.h>
+{{end}}
+
+G_BEGIN_DECLS
+
+#define {{Namespace.mangle().upper()}}_TYPE_{{Class.mangle().upper()}} ({{Namespace.mangle()}}_{{Class.mangle()}}_get_type())
+
+G_DECLARE_FINAL_TYPE ({{Namespace}}{{Class}}, {{Namespace.mangle()}}_{{Class.mangle()}}, {{Namespace.mangle().upper()}}, {{Class.mangle().upper()}}, FoundryService)
+
+G_END_DECLS
+```
+
+```{{fileprefix}}.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include "{{fileprefix}}.h"
+
+struct _{{Namespace}}{{Class}}
+{
+  FoundryService parent_instance;
+};
+
+G_DEFINE_FINAL_TYPE ({{Namespace}}{{Class}}, {{Namespace.mangle()}}_{{Class.mangle()}}, FOUNDRY_TYPE_SERVICE)
+
+static DexFuture *
+{{Namespace.mangle()}}_{{Class.mangle()}}_start (FoundryService *service)
+{
+  g_assert ({{Namespace.mangle().upper()}}_IS_{{Class.mangle().upper()}} (service));
+
+  return dex_future_new_true ();
+}
+
+static DexFuture *
+{{Namespace.mangle()}}_{{Class.mangle()}}_stop (FoundryService *service)
+{
+  g_assert ({{Namespace.mangle().upper()}}_IS_{{Class.mangle().upper()}} (service));
+
+  return dex_future_new_true ();
+}
+
+static void
+{{Namespace.mangle()}}_{{Class.mangle()}}_class_init ({{Namespace}}{{Class}}Class *klass)
+{
+  FoundryServiceClass *service_class = FOUNDRY_SERVICE_CLASS (klass);
+
+  service_class->start = {{Namespace.mangle()}}_{{Class.mangle()}}_start;
+  service_class->stop = {{Namespace.mangle()}}_{{Class.mangle()}}_stop;
+}
+
+static void
+{{Namespace.mangle()}}_{{Class.mangle()}}_init ({{Namespace}}{{Class}} *self)
+{
+}
+```

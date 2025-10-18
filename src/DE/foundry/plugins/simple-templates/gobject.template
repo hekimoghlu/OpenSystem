@@ -1,0 +1,188 @@
+[Template]
+Name=gobject
+Description=Create a new GObject in C
+
+[Input Basename]
+Type=Text
+Title=File Name
+Subtitle=The name for files excluding the suffix
+Default=my-object
+
+[Input Namespace]
+Type=Text
+Title=Namespace
+Validate=^\w+$
+Default=My
+
+[Input Class]
+Type=Text
+Title=Class Name
+Validate=^\w+$
+Default=Object
+
+[Input ParentType]
+Type=Text
+Title=Parent Type
+Validate=^\w+$
+Default=GObject
+
+[Input Properties]
+Type=Switch
+Title=Use Properties
+Subtitle=Enable if you intend to use properties with the object
+Default=true
+
+[Input Signals]
+Type=Switch
+Title=Use Signals
+Subtitle=Enable if you intend to use signals with the object
+Default=false
+
+[Input Final]
+Type=Switch
+Title=Final Type
+Subtitle=If the class should be “final” meaning you cannot subclass it.
+Default=true
+
+
+```
+require GLib
+```
+
+
+```{{Basename}}.h
+{{include "license.h"}}
+
+#pragma once
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+#define {{Namespace.mangle().upper()}}_TYPE_{{Class.mangle().upper()}} ({{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_get_type())
+
+{{if Final}}
+G_DECLARE_FINAL_TYPE ({{Namespace}}{{Class}}, {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}, {{Namespace.mangle().upper()}}, {{Class.mangle().upper()}}, {{ParentType}})
+
+{{Namespace}}{{Class}} *{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_new (void);
+{{else}}
+G_DECLARE_DERIVABLE_TYPE ({{Namespace}}{{Class}}, {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}, {{Namespace.mangle().upper()}}, {{Class.mangle().upper()}}, {{ParentType}})
+
+struct _{{Namespace}}{{Class}}Class
+{
+  {{ParentType}}Class parent_class;
+};
+{{end}}
+
+G_END_DECLS
+```
+
+
+```{{Basename}}.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include "{{Basename}}.h"
+
+{{if Final}}
+struct _{{Namespace}}{{Class}}
+{
+  {{ParentType}} parent_instance;
+};
+
+G_DEFINE_FINAL_TYPE ({{Namespace}}{{Class}}, {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}, {{GLib.strjoinv("_TYPE_", GLib.strsplit(ParentType.mangle(), "_", i32(2))).upper()}})
+{{else}}
+typedef struct
+{
+  gpointer first_field;
+} {{Namespace}}{{Class}}Private;
+
+G_DEFINE_TYPE_WITH_PRIVATE ({{Namespace}}{{Class}}, {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}, {{GLib.strjoinv("_TYPE_", GLib.strsplit(ParentType.mangle(), "_", i32(2))).upper()}})
+{{end}}
+{{if Properties}}
+
+enum {
+  PROP_0,
+  N_PROPS
+};
+{{end}}
+{{if Signals}}
+
+enum {
+  N_SIGNALS
+};
+{{end}}
+
+{{if Properties}}
+static GParamSpec *properties[N_PROPS];
+{{end}}
+{{if Signals}}
+static guint signals[N_SIGNALS];
+{{end}}
+
+static void
+{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_finalize (GObject *object)
+{
+  G_OBJECT_CLASS ({{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_parent_class)->finalize (object);
+}
+{{if Properties}}
+
+static void
+{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_get_property (GObject    *object,
+{{Namespace.mangle().space()}} {{Class.mangle().space()}}               guint       prop_id,
+{{Namespace.mangle().space()}} {{Class.mangle().space()}}               GValue     *value,
+{{Namespace.mangle().space()}} {{Class.mangle().space()}}               GParamSpec *pspec)
+{
+  {{Namespace}}{{Class}} *self = {{Namespace.mangle().upper()}}_{{Class.mangle().upper()}} (object);
+
+  switch (prop_id)
+    {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    }
+}
+
+static void
+{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_set_property (GObject      *object,
+{{Namespace.mangle().space()}} {{Class.mangle().space()}}               guint         prop_id,
+{{Namespace.mangle().space()}} {{Class.mangle().space()}}               const GValue *value,
+{{Namespace.mangle().space()}} {{Class.mangle().space()}}               GParamSpec   *pspec)
+{
+  {{Namespace}}{{Class}} *self = {{Namespace.mangle().upper()}}_{{Class.mangle().upper()}} (object);
+
+  switch (prop_id)
+    {
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+    }
+}
+{{end}}
+
+static void
+{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_class_init ({{Namespace}}{{Class}}Class *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize = {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_finalize;
+{{if Properties}}
+  object_class->get_property = {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_get_property;
+  object_class->set_property = {{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_set_property;
+
+  g_object_class_install_properties (object_class, N_PROPS, properties);
+{{end}}
+}
+
+static void
+{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_init ({{Namespace}}{{Class}} *self)
+{
+}
+{{if Final}}
+
+{{Namespace}}{{Class}} *
+{{Namespace.mangle().lower()}}_{{Class.mangle().lower()}}_new (void)
+{
+  return g_object_new ({{Namespace.mangle().upper()}}_TYPE_{{Class.mangle().upper()}}, NULL);
+}
+{{end}}
+```

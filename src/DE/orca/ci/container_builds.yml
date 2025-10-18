@@ -1,0 +1,60 @@
+# The following includes are for the CI templates that are used as a
+# base to construct our container images.  They need to be updated periodically, but
+# not frequently, by pointing them to a more recent commit.
+include:
+  - remote: "https://gitlab.gnome.org/Infrastructure/freedesktop-ci-templates/-/raw/3cd5fdf6dcfbef9a75514256d210db5178bd9c2a/templates/opensuse.yml"
+
+variables:
+  # When branching change the suffix to avoid conflicts with images
+  # from the main branch
+  BASE_TAG: "2025-06-18.5-main"
+  FDO_UPSTREAM_REPO: "gnome/orca"
+
+.orca_opensuse_tumbleweed_x86_64:
+  variables:
+    FDO_DISTRIBUTION_VERSION: "tumbleweed"
+    FDO_DISTRIBUTION_TAG: "x86_64-${BASE_TAG}"
+
+opensuse-container@x86_64:
+  extends:
+    - .orca_opensuse_tumbleweed_x86_64
+    - .fdo.container-build@opensuse@x86_64
+  stage: "container-build"
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: >-
+      dbus-1
+      dbus-1-devel
+      gcc
+      gettext
+      gettext-tools
+      git
+      glib2-devel
+      gobject-introspection-devel
+      gsettings-desktop-schemas
+      gstreamer-devel
+      gtk3-devel
+      itstool
+      libei-devel
+      libtool
+      libXi-devel
+      libXtst-devel
+      libxkbcommon-devel
+      libxml2-devel
+      libX11-devel
+      meson
+      ninja
+      python3
+      python3-brlapi
+      python3-dasbus
+      python3-gobject-devel
+      python3-louis
+      python3-lxml
+      python3-pip
+      python3-psutil
+      python3-simplejson
+      python3-speechd
+      xvfb-run
+      yelp-devel
+      yelp-tools
+    FDO_DISTRIBUTION_EXEC: >-
+      bash ci/install-python-tools.sh

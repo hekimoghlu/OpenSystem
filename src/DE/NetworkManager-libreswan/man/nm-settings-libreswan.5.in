@@ -1,0 +1,214 @@
+.\" nm-settings-libreswan(5) manual page
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public Licence along
+.\" with this manual; if not, write to the Free Software Foundation, Inc.,
+.\" 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+.\"
+.\" Copyright (C) 2018,2025 Red Hat, Inc.
+.\"
+.TH NM-SETTINGS-LIBRESWAN "5" "7 Apr 2025"
+
+.SH NAME
+nm\-setting\-libreswan \- NetworkManager Libreswan plugin supported options
+
+.SH DESCRIPTION
+.PP
+NetworkManager is based on the concept of connection profiles made up of settings
+containing the network configuration (see
+\fBnm-settings\fR(5)
+for details).
+The data and secret keys belonging to the vpn setting take dictionaries of key/value
+pairs which depends on the specific VPN plugin. Here the list of the allowed key/value pairs
+for the NetworkManager Libreswan plugin.
+
+.SH VPN.DATA
+.PP
+Many key/value pairs in the \fBvpn.data\fR property are passed unchanged to the Libreswan service.
+The configuration is first validated by the NetworkManager plugin, which will also add some extra Libreswan
+parameters and defaults as needed. There are some key/value pairs used for the plugin configuration only,
+e.g., the flags used to manage the secrets needed by the connection.
+Here the full list of the allowed parameters:
+.TP
+.I "right"
+contains the address of the remote VPN endpoint. Corresponds to the Libreswan parameter of the same name.
+Always Required.
+.TP
+.I "rightid"
+specifies the remote identifier to be used during IKE negotiation. Corresponds to the Libreswan
+parameter of the same name.
+.TP
+.I "rightrsasigkey"
+specifies the remote's public key for RSA authentication.
+When the 'leftcert' key is defined a default value of "%cert" is assumed.
+.TP
+.I "authby"
+How the two security gateways should authenticate each other. Corresponds to the
+Libreswan parameter of the same name.
+.TP
+.I "left"
+contains the local address that should be used during IKE negotiation. If not specified, the value
+"%defaultroute" is assumed. Corresponds to the Libreswan parameter of the same name.
+.TP
+.I "leftid"
+specifies the local identifier to be used during IKE negotiation. When this property is specified and the
+IKEv1 protocol is used the key exchange will be performed in aggressive mode.
+Corresponds to the Libreswan parameter of the same name.
+.TP
+.I "leftrsasigkey"
+specifies the local public key for RSA authentication. The key should be already installed in the *swan NSS database.
+When the 'leftcert' key is defined a default value of "%cert" is assumed.
+.TP
+.I "leftcert"
+this defines the certificate nickname of your certificate in the NSS database.
+The certificate should be already installed in the NSS database.
+.TP
+.I "leftxauthusername" or "leftusername"
+the username to be used during XAUTH authentication. If not specified, the
+current user will be implicitly assumed. Corresponds to the Libreswan parameter
+of the same name.
+.TP
+.I "dhgroup"
+ignored.
+.TP
+.I "pfsgroup"
+ignored.
+.TP
+.I "dpdtimeout"
+the length of time that we will idle without hearing back from our peer. After
+this period has elapsed with no response and no traffic, we will declare the
+peer dead, and remove the SA. Set value bigger than dpddelay to enable. If
+dpdtimeout is set, dpddelay also needs to be set. Must be a number optionally
+followed by a time unit: 's' (seconds), 'm' (minutes), 'h' (hours) or 'd'
+(days); if the unit is not specified, it defaults to seconds. Corresponds to the
+Libreswan parameter of the same name.
+.TP
+.I "dpddelay"
+the delay between Dead Peer Detection (IKEv1 RFC 3706) or IKEv2 Liveness
+keepalives that are sent for this connection. Must be a number optionally
+followed by a time unit: 's' (seconds), 'm' (minutes), 'h' (hours) or 'd'
+(days); if the unit is not specified, it defaults to seconds. Corresponds to the
+Libreswan parameter of the same name.
+.TP
+.I "dpdaction"
+When a DPD enabled peer is declared dead, what action should be taken.  "hold"
+(default) means the eroute will be put into %hold status, while "clear" means
+the eroute and SA will both be cleared. "restart" means that ALL SAs to the dead
+peer will be renegotiated. Corresponds to the Libreswan parameter of the same name.
+.TP
+.I "ike"
+allowed ciphers to be negotiated to establish the IKE SAs. Corresponds to the
+Libreswan parameter of the same name. Default value depends on Libreswan but for
+IKEv1 aggressive negotiation: in that case the default is forced to 'aes256-sha1;modp1536'.
+.TP
+.I "esp"
+allowed ciphers for establishing phase2 SAs. Matches the Libreswan
+parameter of the same name. Default value depends on Libreswan but for IKEv1 aggressive
+negotiation: in that case the default is forced to 'aes256-sha1'.
+.TP
+.I "ikelifetime"
+how long the phase1 SA of a connection should last. Matches the Libreswan
+parameter of the same name. Default value is '24h'.
+.TP
+.I "salifetime"
+how long the phase2 SA of a connection should last. Matches the Libreswan
+parameter of the same name. Default value is '24h'.
+.TP
+.I "vendor"
+when equals 'Cisco', the 'cisco-unity=yes' will be passed to Libreswan, to allow
+ending the CISCO_UNITY payload to the peer. The option is ignored otherwise.
+.TP
+.I "rightsubnet"
+the destination subnet that should be reached through the VPN. If omitted, will
+be filled with '0.0.0.0/0'. Matches the Libreswan parameter of the same name.
+.TP
+.I "ikev2"
+use IKEv2 negotiation. Allowed values are: 'permit', 'no'/'never', 'yes'/'propose' and 'insist'.
+Matches the Libreswan parameter of the same name.
+.TP
+.I "narrowing"
+only effective in IKEv2 negotiation. Allowed values are: 'yes' and 'no'.
+Matches the Libreswan parameter of the same name.
+.TP
+.I "rekey"
+Allowed values are: 'yes' and 'no'.
+Defaults to 'yes'.
+Matches the Libreswan parameter of the same name.
+.TP
+.I "fragmentation"
+Allowed values are: 'yes' and 'no'.
+Matches the Libreswan parameter of the same name.
+.TP
+.I "mobike"
+Allowed values are: 'yes' and 'no'.
+Matches the Libreswan parameter of the same name.
+.TP
+.I "ipsec-interface"
+If set, create or use an existing virtual interface ipsecXXX for "Routing based
+VPNs" (as opposed to "Policy based VPNs"). Valid options are 'yes', 'no' or a
+number. When using a number, the IPsec interface created and/or used will use
+that number as part of the interface name. Corresponds to the Libreswan
+parameter of the same name.
+.TP
+.I "pskinputmodes"
+where the 'pskvalue' can be retrieved. Used internally by the plugin. Allowed values are: 'unused', 'save', 'ask'.
+.TP
+.I "nm-auto-defaults"
+Allowed values are: 'yes' and 'no'.
+This options indicates that the VPN plugin should not substitute default values for keys that are not
+present in \fBvpn.data\fR or alter the values for the keys that are specified. Malformed values will be
+rejected for security reasons, but other than that the user is responsible for ensuring the configuration
+will work. This is mainly useful when connections are created with a management tool like \fBnmstatectl\fR(8).
+.TP
+.I "xauthpasswordinputmodes"
+where the 'xauthpassword' can be retrieved. Used internally by the plugin. Allowed values are: 'unused', 'save', 'ask'.
+.TP
+.I "pskvalue-flags"
+how to handle the 'pskvalue' secret. See the "Secret flag type" section at
+\fBnm-settings\fR(5)
+for details.
+.TP
+.I "xauthpassword-flags"
+how to handle the 'xauthpassword' secret. See the "Secret flag type" section at
+\fBnm-settings\fR(5)
+for details.
+.TP
+.I "leftsendcert"
+This option configures when Libreswan will send X.509 certificates to the
+remote host. Example values are: 'yes', 'always', 'no', 'never', 'sendifasked'.
+NetworkManager-libreswan does not validate this option but merely pass to
+Libreswan daemon. Please check Libreswan document for detail.
+.TP
+.I "rightca"
+This option specifies the authorized Certificate Authority (CA) that signed
+the certificate of the remote host.
+
+.SH VPN.SECRETS
+.PP
+The \fBvpn.secrets\fR property holds the secrets stored in the connection (if any).
+The allowed keys are:
+.TP
+.I "pskvalue"
+if specified, its value is configured in the Libreswan secret file for the authentication
+of the connection.
+.TP
+.I "xauthpassword"
+if specified, its value is provided to Libreswan during XAUTH authentication.
+
+.SH SEE ALSO
+.BR NetworkManager(8),
+.BR nm\-settings(5).

@@ -1,0 +1,429 @@
+.de URL
+\\$2 \(laURL: \\$1 \(ra\\$3
+..
+.if \n[.g] .mso www.tmac
+.TH SSCONVERT 1 "2020-04-19" "gnumeric" "GNOME"
+.SH NAME
+ssconvert \- a command line spreadsheet format converter
+
+.SH SYNOPSIS
+\fBssconvert\fR [\fIOPTIONS\fR] \fIinfile\fR \fIoutfile\fR
+.P
+\fBssconvert\fR [\fIOPTIONS\fR] \fB\-\-merge\-to\fR \fIoutfile\fR \fIinfile1\fR \fIinfile2\fR \fB...\fR
+
+.SH DESCRIPTION
+\fBssconvert\fR is a command line utility to convert spreadsheet files
+between various spreadsheet file formats. It is a companion utility to
+\fBGnumeric\fR, the powerful spreadsheet program created by the GNOME
+project.
+
+\fBssconvert\fR accepts either file names or URIs as \fIinfile\fR
+\fIoutfile\fR. The special URIs \fIfd://0\fR and \fIfd://1\fR can be
+used for standard input and standard output respectively.
+
+.SH OPTIONS
+This program follows the usual GNU command line syntax, with single
+letter options starting with a single dash (`-') and longer options
+starting with two dashes (`--').
+
+.SS "Main options"
+.TP
+.B \-\-recalc
+Recalculate all cells before writing the result.
+.TP
+.B \-\-set \fICELL=CONTENTS\fR
+Set the value of \fICELL\fR to \fICONTENTS\fR.  To
+put an expression in a cell, add an extra =, for example \-\-set "A11==A10+1".
+This option may be repeated as many times as needed.  The workbook will be
+recalculated after all cells have been set, provided that the workbook is
+set for automatic recalculation.  If not, recalculation can be forced
+with \-\-recalc.
+.TP
+.B \-v, \-\-verbose
+Be slightly more verbose about what is going on.
+.TP
+.B \-\-list\-exporters
+List the available exporters (file formats that can be written).
+.TP
+.B \-T, \-\-export\-type=\fIID\fR
+Specify which exporter to use; see below for a list. This is only
+necessary when the right format does not follow from the output file
+name.  The list of available export formats can be generated using the
+\-\-list\-exporters option.  However, when image export is requested
+using the \-\-export\-graphs option, the list of image formats should be
+consulted instead.  That list can be generated using the
+\-\-list\-image\-formats option.
+.TP
+.B \-O, \-\-export\-options=\fIoptionsstring\fR
+Specify parameters for the chosen exporter.
+\fIoptionsstring\fR is a list of \fIparameter\fR=\fIvalue\fR pairs, separated
+by spaces.
+The parameter names and values allowed are specific to the exporter and are
+documented below. Multiple parameters can be specified
+.TP
+.B \-\-export\-graphs
+Export the graphs (or charts) inside the input spreadsheet to
+numbered image files (SVG by default).  The list of available image
+formats can be printed with \-\-list\-image-formats
+.TP
+.B \-\-list\-importers
+List the available importers (file formats that can be read).
+.B \-I, \-\-import\-type=\fIID\fR
+Specify which importer to use; see below for a list. This is only
+necessary when the right format does not follow from the input file
+name.
+.TP
+.B \-\-list\-image\-formats
+List the available image formats for graph export
+.TP
+.B \-E, \-\-import\-encoding=\fISTRING\fR
+Specify an encoding for imported content.
+.TP
+.B \-M, \-\-merge\-to=\fIFILENAME\fR
+Merge a collection of workbooks into one.  Sheet size will expand
+to the largest in all the workbooks.  Names in the scope of
+individual workbooks will end up in the scope of the merged
+workbook.  The merge will be aborted if there are name conflicts.
+.TP
+.B \-S, \-\-export\-file\-per\-sheet
+Export a file for each sheet if the exporter only supports one sheet at a
+time.  The output filename is treated as a template in which sheet number
+is substituted for %n, sheet name is substituted for %s, and sheet object
+name is substituted for %o in case of graph export.  If there are no
+substitutions, a default of ".%n" is added.
+
+.SS "Help options"
+.TP
+.B \-\-version
+Display ssconvert's version.
+.TP
+.B \-h, \-\-help, \-\-usage
+Display a brief usage message.
+.TP
+.B \-\-help\-all
+Show all help options.
+.TP
+.B \-\-help\-libspreadsheet
+Show Gnumeric options.
+
+.SH LIST OF IMPORTER/EXPORTER IDS
+The following IDs can be can be used both for import (reading) and export
+(writing).
+.TP
+.B Gnumeric_XmlIO:sax
+Gnumeric's XML file format (*.gnumeric)
+.TP
+.B Gnumeric_OpenCalc:openoffice
+.URL "http://en.wikipedia.org/wiki/OpenDocument" "OpenDocument"
+or
+.URL "http://en.wikipedia.org/wiki/OpenOffice.org_Calc" "OpenOffice Calc"
+(*.sxc, *.ods) format.
+As an exporter, this is ODF/OpenOffice without foreign elements (*.ods).
+.TP
+.B Gnumeric_dif:dif
+.URL "http://en.wikipedia.org/wiki/Data_Interchange_Format" "Data Interchange Format"
+(*.dif)
+.TP
+.B Gnumeric_paradox:paradox
+.URL "http://en.wikipedia.org/wiki/Paradox_%28database%29" "Paradox database"
+or primary index file (*.db, *.px)
+.TP
+.B Gnumeric_stf:stf_assistant
+Text (configurable)
+.TP
+.B Gnumeric_sylk:sylk
+.URL "http://en.wikipedia.org/wiki/Multiplan" "MultiPlan"
+.URL "http://en.wikipedia.org/wiki/SYmbolic_LinK_%28SYLK%29" "Symbolic Link (SYLK)"
+(*.slk)
+.TP
+.B Gnumeric_Excel:xlsx
+Microsoft Excel (tm) 2007 ("Office Open XML",
+.URL "http://en.wikipedia.org/wiki/XLSX" "OOXML"
+) format
+
+.SH LIST OF IMPORTANT IMPORTER IDS
+.TP
+.B Gnumeric_stf:stf_csvtab
+Comma or tab separated values (CSV/TSV) (*.csv)
+.TP
+.B Gnumeric_html:html
+HTML (*.html, *.htm)
+.TP
+.B Gnumeric_Excel:excel
+Microsoft Excel (tm) (*.xls)
+.TP
+.B Gnumeric_Excel:excel_xml
+Microsoft Excel (tm) 2003 SpreadsheetML
+
+.SH LIST OF OTHER IMPORTER IDS
+.TP
+.B Gnumeric_QPro:qpro
+.URL "http://en.wikipedia.org/wiki/Quattro_Pro" "Quattro Pro"
+(*.wb1, *.wb2, *.wb3)
+.TP
+.B Gnumeric_applix:applix
+Applix (*.as)
+.TP
+.B Gnumeric_lotus:lotus
+.URL "http://en.wikipedia.org/wiki/Lotus_1-2-3" "Lotus 1-2-3"
+(*.wk1, *.wks, *.123)
+.TP
+.B Gnumeric_mps:mps
+.URL "http://en.wikipedia.org/wiki/MPS_%28format%29" "MPS (Mathematical Programming System) format"
+Linear programming and mixed integer programming file format (*.mps)
+.TP
+.B Gnumeric_oleo:oleo
+.URL "http://en.wikipedia.org/wiki/GNU_Oleo" "GNU Oleo"
+(*.oleo)
+.TP
+.B Gnumeric_plan_perfect:pln
+PlanPerfect Format (PLN)
+.TP
+.B Gnumeric_psiconv:psiconv
+Psion (*.psisheet)
+.TP
+.B Gnumeric_sc:sc
+SC/xspread
+.TP
+.B Gnumeric_xbase:xbase
+.URL "http://en.wikipedia.org/wiki/XBase" "xBase"
+(*.dbf) file format
+
+.SH LIST OF IMPORTANT EXPORTER IDS
+.TP
+.B Gnumeric_OpenCalc:odf
+ODF/OpenOffice with foreign elements (*.ods)
+.TP
+.B Gnumeric_glpk:glpk
+GLPK Linear Program Solver
+.TP
+.B Gnumeric_html:html40
+HTML 4.0 (*.html)
+.TP
+.B Gnumeric_html:html40frag
+HTML (*.html) fragment
+.TP
+.B Gnumeric_html:xhtml
+XHTML (*.html)
+.TP
+.B Gnumeric_html:xhtml_range
+XHTML range - for export to clipboard
+.TP
+.B Gnumeric_pdf:pdf_assistant
+Portable Document Format (*.PDF)
+.TP
+.B Gnumeric_stf:stf_csv
+Comma separated values (CSV)
+.TP
+.B Gnumeric_Excel:excel_dsf
+Microsoft Excel (tm) 97/2000/XP & 5.0/95
+
+.SH LIST OF OTHER EXPORTER IDS
+.TP
+.B Gnumeric_Excel:excel_biff7
+Microsoft Excel (tm) 5.0/95
+.TP
+.B Gnumeric_Excel:excel_biff8
+Microsoft S Excel (tm) 97/2000/XP
+.TP
+.B Gnumeric_GnomeGlossary:po
+Gnome Glossary PO file format
+.TP
+.B Gnumeric_html:html32
+HTML 3.2 (*.html)
+.TP
+.B Gnumeric_html:latex
+LaTeX 2e (*.tex)
+.TP
+.B Gnumeric_html:latex_table
+LaTeX 2e (*.tex) table fragment
+.TP
+.B Gnumeric_html:roff
+.URL "http://en.wikipedia.org/wiki/Troff" "TROFF"
+(*.me) format.
+.TP
+.B Gnumeric_lpsolve:lpsolve
+.URL "http://sourceforge.net/projects/lpsolve/" "LPSolve"
+Mixed Integer Linear Programming (MILP) solver
+
+.SH OPTIONS FOR THE PORTABLE DOCUMENT FORMAT (*.pdf) EXPORTER
+
+.TP
+.B sheet
+Name of the workbook sheet to operate on.
+You can specify several sheets by repeating this option.
+This is ignored if the \fBobject\fR option is given.
+
+.TP
+.B active-sheet
+Select the active sheet to operate on.  The value for this option is
+irrelevant, but the equal sign is mandatory.
+
+.TP
+.B object
+Name of the sheet object to print. If this option is given any \fBsheet\fR option is ignored.
+Only the first \fBobject\fR given is exported.
+
+.TP
+.B paper
+Paper size. Valid values include "\fBA4\fR" for ISO A4 and
+"\fBna_letter_8.5x11in\fR" for US Letter. If an individual graph is specified through the
+\fBobject\fR option, then a paper size of "\fBfit\fR" reduces the size of the paper to the
+size of the graph.
+.\" FIXME Is there a convenient way to list all valid paper sizes?
+.\" It looks like at least the values from plugins/excel/ms-excel-read.c's
+.\" paper_size_table[] are supported.
+
+.SH OPTIONS FOR THE CONFIGURABLE TEXT (*.txt) EXPORTER
+.\" Cf. "g_object_class_install_property" calls in src/stf-export.c
+
+.TP
+.B sheet
+Name of the workbook sheet to operate on.
+You can specify several sheets by repeating this option.
+
+.TP
+.B active-sheet
+Select the active sheet to operate on.  The value for this option is
+irrelevant, but the equal sign is mandatory.
+
+.TP
+.B eol
+End Of Line convention; how lines are terminated.
+"\fBunix\fR" for linefeed,
+"\fBmac\fR" for carriage return;
+"\fBwindows\fR" for carriage return plus linefeed.
+
+.TP
+.B charset
+The character encoding of the output. Defaults to UTF-8.
+
+.TP
+.B locale
+The locale to use for number and date formatting.
+Defaults to the current locale as reported by \fBlocale\fR(1).
+Consult \fBlocale \-a\fR output for acceptable values.
+
+.TP
+.B quote
+The character or string used for quoting fields. Defaults to "\fB\\"\fR"
+(quotation mark / double quote).
+
+.TP
+.B separator
+The string used to separate fields. Defaults to space.
+
+.TP
+.B format
+How cells should be formatted.
+Acceptable values:
+"\fBautomatic\fR" (apply automatic formatting; default),
+"\fBraw\fR" (output data raw, unformatted), or
+"\fBpreserve\fR" (preserve the formatting from the source document).
+
+This deals with the difference between a cell's contents and the way those
+contents are formatted.
+
+Consider a cell in a Gnumeric input document that was
+input as "4/19/73" in a US locale, with a format set to "d-mmm-yyyy" and
+thus formatted as "19-Apr-1973".
+
+With the default \fBformat\fR setting of "\fBautomatic\fR" it will be output
+as "1973/04/19". With "\fBpreserve\fR", the formatting will be preserved and
+it will be output as "19-Apr-1973". With "\fBraw\fR" it will be output as
+"26773" (Gnumeric's internal representation: days since an epoch).
+
+.TP
+.B transliterate-mode
+How to handle unrepresentable characters, i.e., characters that cannot be
+represented in the chosen output character set.
+Acceptable values:
+"\fBtransliterate\fR", or
+"\fBescape\fR".
+The former will rewrite characters that cannot be represented in the output
+character set into an approximation with one or more characters that can.
+See iconv(1) for more details.
+The default is "\fBescape\fR" which will replace an unrepresentable character
+with an escape sequence identifying the unicode code point.
+
+.TP
+.B quoting-mode
+When does data need to be quoted?
+"\fBnever\fR",
+"\fBauto\fR" (puts quotes where needed), or
+"\fBalways\fR". Defaults to "\fBauto\fR".
+
+.TP
+.B quoting-on-whitespace
+Controls whether initial or terminal whitespace forces quoting. Defaults to
+\fBTRUE\fR.
+
+
+.\".SH EXIT STATUS
+.\".SH RETURN VALUE
+.\".SH ERRORS
+.\".SH ENVIRONMENT
+.\".SH FILES
+.\".SH VERSIONS
+.\".SH CONFORMING TO
+.\".SH NOTES
+.\".SH BUGS
+.\".SH USAGE
+.SH EXAMPLE
+To convert the Gnumeric file \fIfoo.gnumeric\fR to a Microsoft Excel(TM)
+format file
+\fIfoo.xls\fR:
+.PP
+\fBssconvert\fR \fIfoo.gnumeric\fR \fIfoo.xls\fR
+.PP
+The export format can be specified explicitly, to override the default
+(which is based on the file extension):
+.PP
+\fBssconvert\fR \fB\-\-export\-type=\fRGnumeric_stf:stf_csv\fR \fIfoo.xls\fR
+\fIfoo.txt\fR
+.PP
+To convert an Excel format file \fIstatfuns.xls\fR to a text file,
+specifying the semicolon as the separator character:
+.PP
+\fBssconvert\fR \fB-O 'separator=; format=raw'\fR \fIsamples/excel/statfuns.xls\fR \fIstatfuns.txt\fR
+.PP
+To export the charts from the input file \fIinput.gnumeric\fR to numbered
+SVG files:
+.PP
+\fBssconvert\fR \fB\-\-export\-graphs\fR \fIinput.gnumeric\fR \fI'output.%n.svg'\fR
+.PP
+To export the charts from the input file \fIinput.gnumeric\fR to numbered
+PNG files:
+.PP
+\fBssconvert\fR \fB\-\-export\-type=png\fR \fB\-\-export\-graphs\fR \fIinput.gnumeric\fR \fI'output.%n.png'\fR
+.PP
+
+.SH LICENSE
+
+\fBssconvert\fR is licensed under the terms of the General Public
+License (GPL), version 2 or 3. For information on this license look at the
+source code that came with the software or see the
+.URL "http://www.gnu.org" "GNU project page" .
+
+.SH COPYRIGHT
+
+The copyright on the \fBGnumeric\fR software and source code is held
+by the individual authors as is documented in the source code.
+
+.SH AUTHOR
+
+\fBssconvert\fR's primary author is Jody Goldberg <jody@gnome.org>;
+\fBssconvert\fR builds on the \fBGnumeric\fR codebase.
+
+The initial version of this manpage was written by J.H.M. Dassen (Ray)
+<jdassen@debian.org>.
+
+.SH SEE ALSO
+.BR gnumeric(1),
+.BR ssdiff(1),
+.BR ssgrep(1),
+.BR ssindex(1)
+
+.URL "http://www.gnome.org/projects/gnumeric/" "The Gnumeric Homepage" .
+
+.URL "http://www.gnome.org/" "The GNOME project page" .

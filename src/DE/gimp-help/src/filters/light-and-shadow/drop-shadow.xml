@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  20019-01-09 j.h Create
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-filter-drop-shadow">
+  <title>Drop Shadow</title>
+
+  <indexterm>
+    <primary>Filters</primary>
+    <secondary>Drop Shadow</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Drop Shadow</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Example for the <quote>Drop Shadow</quote> filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/taj_orig.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/light-taj-drop-shadow.jpg"/>
+        </imageobject>
+        <caption>
+          <para>
+            Using the GEGL <quote>Drop Shadow</quote>
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      With this GEGL filter you can add a drop-shadow to an image, a selection or
+      a text. You may choose the color, position, and size of the shadow.
+    </para>
+   </sect3>
+
+  <sect3>
+    <title>Activating the Filter</title>
+    <para>
+      This filter is found in the main menu under
+      <menuchoice>
+        <guimenu>Filters</guimenu>
+        <guisubmenu>Light and Shadow</guisubmenu>
+        <guimenuitem>Drop Shadow…</guimenuitem>
+      </menuchoice>.
+    </para>
+    <para>
+      It is available if your image holds an Alpha channel
+      (see <xref linkend="gimp-layer-alpha-add"/>).
+      Otherwise, it is disabled.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title><quote>Drop Shadow</quote> filter options</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/light-and-shadow/drop-shadow-dialog.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Presets</term>
+        <term><quote>Input Type</quote></term>
+        <term>Clipping</term>
+        <term>Blending Options</term>
+        <term>Preview</term>
+        <term>Merge filter</term>
+        <term>Split view</term>
+        <listitem>
+          <xi:include href="../about-common-features.xml"/>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>X</term>
+        <term>Y</term>
+        <listitem>
+          <para>
+            The layer containing the drop shadow will be moved horizontally
+            by X pixels, vertically by Y pixels. So, X and Y offset
+            determine where the shadow will be placed in relation to the
+            image. High values make the imaginary source of light look like
+            it's far away in horizontal or vertical direction, and low
+            values will make it look closer to the image.
+          </para>
+          <para>
+            The offsets may be negative, leading to a shadow on the left of
+            the selection if offset X &lt; 0, or above the selection if offset
+            Y &lt; 0.
+          </para>
+          <para>
+            Out of sheer curiosity, you can see the drop shadow layer
+            clearly by setting blur radius to 0 and moving the drop shadow
+            with X and Y.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Blur radius</term>
+        <listitem>
+          <para>
+            After creating the shadow, a
+            <link linkend="gimp-filter-gaussian-blur">Gaussian blur</link> with
+            the specified radius is applied to the shadow layer, resulting in the
+            realistic appearance of the drop shadow.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Grow shape</term>
+        <listitem>
+          <para>
+            You can choose the shape that will be used to expand or contract
+            the shadow. The choices should be self explanatory:
+            <guilabel>Circle</guilabel> (default), <guilabel>Square</guilabel>,
+            or <guilabel>Diamond</guilabel>.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Grow radius</term>
+        <listitem>
+          <para>
+            The distance to expand the shadow before blurring. A negative
+            value will contract the shadow instead.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Color</term>
+        <listitem>
+          <para>
+            You can choose the color of the shadow here. Just click on the
+            color swatch, and select a color when the color selector pops up,
+            or use the eye-dropper to pick a color from the image.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Opacity</term>
+        <listitem>
+          <para>
+            Shadow opacity. It defaults to 0.500, but
+            you may select any other value from 0 (full transparency) to 2.00
+            (full opacity) here.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>Using Drop Shadow Filter</title>
+    <para>
+      This GEGL Drop Shadow filter is surprising: if you apply the filter
+      directly to the image as you do with the legacy filter, you get nothing,
+      unless you have transparent areas in your image.
+    </para>
+    <para>
+      <emphasis role="bold">To get the same result as the legacy
+      filter</emphasis>:
+      <orderedlist>
+        <listitem>
+          <para>
+            Open your original image.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Open a new image, a little bigger than your original image, filled
+            with <emphasis>transparency</emphasis>.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Copy your original image and paste it into the new image. A floating
+            selection is created in the Layers dialog.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Anchor the floating selection.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Select <menuchoice><guimenu>Layer</guimenu><guimenuitem>Crop Layers to Content</guimenuitem></menuchoice>.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Select <menuchoice><guimenu>Layer</guimenu><guimenuitem>Layer Boundary
+            Size…</guimenuitem></menuchoice>: set layer size to the same size than
+            your image and filled with transparency; click on the
+            <guibutton>Center</guibutton> button. Then click on the
+            <guibutton>Resize</guibutton> button.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Open the Drop Shadow dialog: the drop shadow is displayed in the
+            on-canvas preview. You can change the default options values.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Eventually, add a new layer, with the same size as the image and
+            filled with the color you want to give to the background. Move this
+            layer to the bottom of the layer stack.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Click on the <guibutton>OK</guibutton> to apply filter.
+          </para>
+        </listitem>
+      </orderedlist>
+    </para>
+    <para>
+      <emphasis role="bold">Applying filter to a selection</emphasis>:
+      <orderedlist>
+        <listitem>
+          <para>
+            Open your original image.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Open a new image, the same size as your original image, filled
+            with <emphasis>transparency</emphasis>.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Create the selection
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Copy the selection and paste it into the new image. A floating
+            selection is created in the Layers dialog.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Anchor the floating selection.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Select <menuchoice><guimenu>Layer</guimenu><guimenuitem>Crop Layers to Content</guimenuitem></menuchoice>.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Select <menuchoice><guimenu>Layer</guimenu><guimenuitem>Layer to
+            Image Size</guimenuitem></menuchoice> (with transparency).
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Open the Drop Shadow dialog: the drop shadow is displayed in the
+            on-canvas preview. You can change the default options values.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Eventually, add a new layer, with the same size as the image and
+            filled with the color you want to give to the background. Move this
+            layer to the bottom of the layer stack.
+          </para>
+          <para>
+            You can also use your original image as background: undo the
+            selection, copy the image and paste it as new layer in the new image.
+            Move the new layer to the bottom of the layer stack.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Click on the <guibutton>OK</guibutton> to apply filter.
+          </para>
+        </listitem>
+      </orderedlist>
+    </para>
+
+    <para>
+      <emphasis role="bold">Applying filter to a text</emphasis>:
+    </para>
+    <para>
+      The procedure is more simple to create a drop shadow for a text: create
+      the text and apply the Drop Shadow filter directly.
+    </para>
+  </sect3>
+</sect2>

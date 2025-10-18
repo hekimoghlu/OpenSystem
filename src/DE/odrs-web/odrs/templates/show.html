@@ -1,0 +1,128 @@
+{% extends "default.html" %}
+{% block title %}Review #{{r.review_id}}{% endblock %}
+
+{% block content %}
+
+<form class="form" name="myform" action="{{url_for('admin_modify', review_id=r.review_id)}}" method="POST">
+<input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+
+<div class="card">
+  <div class="card-body">
+    <h1 class="card-title">
+      {{r.component.app_id}}
+      <a class="btn pull-right" href="{{url_for('.admin_show_app', app_id=r.component.app_id)}}">All</a>
+    </h1>
+{% for taboo in matched_taboos %}
+    <div class="alert alert-{{taboo.color}}" role="alert">
+      Contains taboo <strong>{{taboo.value}}</strong> which is {{taboo.description}}
+    </div>
+{% endfor %}
+    <table class="table card-text table-borderless table-condensed">
+      <tr class="row">
+        <th class="col col-md-2">Rating</th>
+        <td class="col col-md-7">
+          {{format_rating(r.rating)}}
+          ({{r.karma_up}}&uarr;, {{r.karma_down}}&darr;)
+        </td>
+         <td class="col-md-1">
+{% if current_user.user.user_hash and not vote_exists %}
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_vote', review_id=r.review_id, val_str='up')}}">Vote &uarr;</a>
+{% endif %}
+        </td>
+         <td class="col-md-1">
+{% if current_user.user.user_hash and not vote_exists %}
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_vote', review_id=r.review_id, val_str='down')}}">Vote &darr;</a>
+{% endif %}
+        </td>
+      </tr>
+{% if r.reported > 0 %}
+      <tr class="row">
+        <th class="col">Reported</th>
+        <td class="col">
+          {{r.reported}}
+        <td class="col" colspan="2">
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_unreport', review_id=r.review_id)}}">Unreport</a>
+        </td>
+      </tr>
+{% endif %}
+      <tr class="row">
+        <th class="col">Created</th>
+        <td class="col">
+          {{r.date_created}}
+{% if r.date_deleted %}
+          ({{r.date_deleted}})
+{% endif %}
+        </td>
+        <td class="col" colspan="2">
+{% if r.date_deleted %}
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_unremove', review_id=r.review_id)}}">Unremove</a>
+{% endif %}
+        </td>
+      </tr>
+{% if r.user_display %}
+      <tr class="row">
+        <th class="col">User Display</th>
+        <td class="col">
+          <input type="text" class="form-control" rows="1" name="user_display" value="{{r.user_display}}"/>
+        </td>
+        <td class="col">
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_anonify', review_id=r.review_id)}}">Anonify</a>
+        </td>
+        <td class="col">
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_show_user', user_hash=r.user.user_hash)}}">Show All</a>
+        </td>
+      </tr>
+{% endif %}
+      <tr class="row">
+        <th class="col">Locale</th>
+        <td class="col">
+          <input type="text" class="form-control" rows="1" name="locale" value="{{r.locale}}"/>
+        </td>
+        <td class="col">
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_show_lang', locale=r.locale)}}">All</a>
+        </td>
+        <td class="col">
+          <a class="btn btn-action btn-block" href="{{url_for('.admin_englishify', review_id=r.review_id)}}">Englishify</a>
+        </td>
+      </tr>
+      <tr class="row">
+        <th class="col">Version</th>
+        <td class="col" colspan="3">
+          <input type="text" class="form-control" rows="1" name="version" value="{{r.version}}"/>
+        </td>
+        <td class="col"></td>
+      </tr>
+      <tr class="row">
+        <th class="col">Distro</th>
+        <td class="col" colspan="3">
+          <input type="text" class="form-control" rows="1" name="distro" value="{{r.distro}}"/>
+        </td>
+        <td class="col"></td>
+      </tr>
+      <tr class="row">
+        <th class="col">Summary</th>
+        <td class="col" colspan="3">
+          <input type="text" class="form-control" rows="1" name="summary" value="{{r.summary}}"/>
+        </td>
+        <td class="col"></td>
+      </tr>
+      <tr class="row">
+        <th class="col">Description</th>
+        <td class="col" colspan="3">
+          <textarea class="form-control" rows="4" name="description">{{r.description}}</textarea>
+          <span class="help-block"><em>
+            This should start with a capital letter and each sentence should end with a full stop.
+            Please remove any incorrect content, and correct spelling, and grammar where required.
+          </em></span>
+        </td>
+      </tr>
+    </table>
+    <button class="card-link btn btn-action" type="submit">Modify</button>
+    <a class="card-link btn btn-danger pull-right" href="{{url_for('.admin_user_ban', user_hash=r.user.user_hash)}}">Ban &amp; Delete {{r.user.reviews|length}} Review</a>
+    <a class="card-link btn btn-warning pull-right" href="{{url_for('.admin_delete_force', review_id=r.review_id)}}">Remove Forever</a>
+  </div>
+</div>
+
+</form>
+
+{% endblock %}

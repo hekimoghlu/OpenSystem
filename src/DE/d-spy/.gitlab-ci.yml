@@ -1,0 +1,36 @@
+include:
+  - project: "gnome/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak@x86_64"
+
+.flatpak_vars:
+  variables:
+    MANIFEST_PATH: "org.gnome.dspy.devel.json"
+    FLATPAK_MODULE: "d-spy"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.dspy.devel"
+  extends: ".flatpak"
+
+flatpak@x86_64:
+  extends:
+    - '.flatpak_vars'
+    - '.flatpak@x86_64'
+  variables:
+    BUNDLE: "org.gnome.dspy.devel-x86_64.flatpak"
+
+flatpak@aarch64:
+  extends:
+    - '.flatpak_vars'
+    - '.flatpak@aarch64'
+  variables:
+    BUNDLE: "org.gnome.dspy.devel-aarch64.flatpak"
+
+nightly@x86_64:
+  extends: ".publish_nightly"
+  needs: ["flatpak@x86_64"]
+
+nightly@aarch64:
+  extends: ".publish_nightly"
+  needs: ["flatpak@aarch64"]

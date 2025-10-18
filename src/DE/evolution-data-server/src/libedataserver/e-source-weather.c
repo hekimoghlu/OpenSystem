@@ -1,0 +1,225 @@
+/*
+ * e-source-weather.c
+ *
+ * This library is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#include "evolution-data-server-config.h"
+
+#include "e-data-server-util.h"
+#include "e-source-enumtypes.h"
+#include "e-source-weather.h"
+
+struct _ESourceWeatherPrivate {
+	ESourceWeatherUnits units;
+	gchar *location;
+};
+
+enum {
+	PROP_0,
+	PROP_LOCATION,
+	PROP_UNITS,
+	N_PROPS
+};
+
+static GParamSpec *properties[N_PROPS] = { NULL, };
+
+G_DEFINE_TYPE_WITH_PRIVATE (
+	ESourceWeather,
+	e_source_weather,
+	E_TYPE_SOURCE_EXTENSION)
+
+static void
+source_weather_set_property (GObject *object,
+                             guint property_id,
+                             const GValue *value,
+                             GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_LOCATION:
+			e_source_weather_set_location (
+				E_SOURCE_WEATHER (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_UNITS:
+			e_source_weather_set_units (
+				E_SOURCE_WEATHER (object),
+				g_value_get_enum (value));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+source_weather_get_property (GObject *object,
+                             guint property_id,
+                             GValue *value,
+                             GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_LOCATION:
+			g_value_take_string (
+				value,
+				e_source_weather_dup_location (
+				E_SOURCE_WEATHER (object)));
+			return;
+
+		case PROP_UNITS:
+			g_value_set_enum (
+				value,
+				e_source_weather_get_units (
+				E_SOURCE_WEATHER (object)));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+source_weather_finalize (GObject *object)
+{
+	ESourceWeatherPrivate *priv;
+
+	priv = E_SOURCE_WEATHER (object)->priv;
+
+	g_free (priv->location);
+
+	/* Chain up to parent's finalize() method. */
+	G_OBJECT_CLASS (e_source_weather_parent_class)->finalize (object);
+}
+
+static void
+e_source_weather_class_init (ESourceWeatherClass *class)
+{
+	GObjectClass *object_class;
+	ESourceExtensionClass *extension_class;
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->set_property = source_weather_set_property;
+	object_class->get_property = source_weather_get_property;
+	object_class->finalize = source_weather_finalize;
+
+	extension_class = E_SOURCE_EXTENSION_CLASS (class);
+	extension_class->name = E_SOURCE_EXTENSION_WEATHER_BACKEND;
+
+	/**
+	 * ESourceWeather:location
+	 *
+	 * Weather location code
+	 **/
+	properties[PROP_LOCATION] =
+		g_param_spec_string (
+			"location",
+			NULL, NULL,
+			NULL,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWeather:units
+	 *
+	 * Fahrenheit, Centigrade or Kelvin units
+	 **/
+	properties[PROP_UNITS] =
+		g_param_spec_enum (
+			"units",
+			NULL, NULL,
+			E_TYPE_SOURCE_WEATHER_UNITS,
+			E_SOURCE_WEATHER_UNITS_CENTIGRADE,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			E_SOURCE_PARAM_SETTING);
+
+	g_object_class_install_properties (object_class, N_PROPS, properties);
+}
+
+static void
+e_source_weather_init (ESourceWeather *extension)
+{
+	extension->priv = e_source_weather_get_instance_private (extension);
+}
+
+const gchar *
+e_source_weather_get_location (ESourceWeather *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEATHER (extension), NULL);
+
+	return extension->priv->location;
+}
+
+gchar *
+e_source_weather_dup_location (ESourceWeather *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEATHER (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_weather_get_location (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+void
+e_source_weather_set_location (ESourceWeather *extension,
+                               const gchar *location)
+{
+	g_return_if_fail (E_IS_SOURCE_WEATHER (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->location, location) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->location);
+	extension->priv->location = e_util_strdup_strip (location);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_LOCATION]);
+}
+
+ESourceWeatherUnits
+e_source_weather_get_units (ESourceWeather *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEATHER (extension), 0);
+
+	return extension->priv->units;
+}
+
+void
+e_source_weather_set_units (ESourceWeather *extension,
+                            ESourceWeatherUnits units)
+{
+	g_return_if_fail (E_IS_SOURCE_WEATHER (extension));
+
+	if (extension->priv->units == units)
+		return;
+
+	extension->priv->units = units;
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_UNITS]);
+}

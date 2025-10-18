@@ -1,0 +1,77 @@
+/* Copyright 2022 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gdkmm/slot_async.h>
+#include <gtkmm/window.h>
+
+namespace
+{
+template <typename CppType, typename CType = typename CppType::BaseObjectType>
+std::vector<Glib::RefPtr<CppType>> listmodel_to_vector(GListModel* listmodel)
+{
+  if (!listmodel)
+    return {};
+  std::vector<Glib::RefPtr<CppType>> result;
+  const guint n_items = g_list_model_get_n_items(listmodel);
+  for (guint pos = 0; pos < n_items; ++pos)
+    // g_list_model_get_object() gives us a reference.
+    result.push_back(Glib::wrap((CType*)g_list_model_get_object(listmodel, pos)));
+  // The caller had a reference that's no longer needed.
+  g_object_unref(listmodel);
+  return result;
+}
+} // anonymous namespace
+
+namespace Gtk
+{
+std::tuple<Glib::RefPtr<Gio::File>, Glib::ustring> FileDialog::open_text_file_finish(
+  const Glib::RefPtr<Gio::AsyncResult>& result)
+{
+  const char* encoding = nullptr;
+  GError* gerror = nullptr;
+  auto file = Glib::wrap(gtk_file_dialog_open_text_file_finish(gobj(),
+    Glib::unwrap(result), &encoding, &gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  return {file, Glib::convert_const_gchar_ptr_to_ustring(encoding)};
+}
+
+std::tuple<std::vector<Glib::RefPtr<Gio::File>>, Glib::ustring>
+FileDialog::open_multiple_text_files_finish(const Glib::RefPtr<Gio::AsyncResult>& result)
+{
+  const char* encoding = nullptr;
+  GError* gerror = nullptr;
+  auto files = listmodel_to_vector<Gio::File>(gtk_file_dialog_open_multiple_text_files_finish(
+    gobj(), Glib::unwrap(result), &encoding, &gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  return {files, Glib::convert_const_gchar_ptr_to_ustring(encoding)};
+}
+
+std::tuple<Glib::RefPtr<Gio::File>, Glib::ustring, Glib::ustring>
+FileDialog::save_text_file_finish(const Glib::RefPtr<Gio::AsyncResult>& result)
+{
+  const char* encoding = nullptr;
+  const char* line_ending = nullptr;
+  GError* gerror = nullptr;
+  auto file = Glib::wrap(gtk_file_dialog_save_text_file_finish(gobj(),
+    Glib::unwrap(result), &encoding, &line_ending, &gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  return {file, Glib::convert_const_gchar_ptr_to_ustring(encoding),
+          Glib::convert_const_gchar_ptr_to_ustring(line_ending)};
+}
+} // namespace Gtk

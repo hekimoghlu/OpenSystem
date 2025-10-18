@@ -1,0 +1,457 @@
+2006-11-19  Morten Welinder <terra@gnome.org>
+
+	* Release 1.7.3
+
+2006-11-19  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object.c (sheet_object_class_init): Objects class are
+	not interactive by default.
+
+	* src/sheet-object-widget.c (SOW_MAKE_TYPE): Widgets classes are
+	interactive.
+
+	* src/gnumeric-pane.c (cb_sheet_object_canvas_event): All mouse
+	buttons select non-interactive objects.  Fixes #376866.
+
+2006-11-18  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_def_get_arg_name): Avoid allocating like
+	nuts.  Prepare for the day when format_get_arg_sep might return
+	non-ASCII.
+
+2006-11-18  Djihed Afifi <djihed@gmail.com> 
+
+	* configure.in: Added Arabic Translation.
+
+2006-11-17  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_load_if_stub): New function.
+
+2006-11-16  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_call_with_exprs): Drop the argc and argv
+	arguments.  They now follow from the eval info.  All callers
+	changed.
+
+2006-11-16  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_cell_set_text): Use gnm_cell_get_format so
+	current format gets handled properly even if it derives from the
+	value.
+
+	* src/workbook-edit.c (wbcg_edit_finish): Use gnm_cell_get_format
+	here too.
+
+	* src/number-match.c (format_match_datetime): Properly handle
+	"2005/12" and "12/2005".  (Year got set to current year.)
+	Add new presume_date argument and do not allow "1-10" and "1.10"
+	unless that new argument is true.
+
+2006-11-15  Jody Goldberg <jody@gnome.org>
+
+	Fix check buttons.
+	* src/gnumeric-pane.c (cb_sheet_object_widget_canvas_event) : do not
+	  bring up an editor on double click for widgets.  Simple clicks are
+	  too easy to confuse.  Use right click only.
+	(cb_sheet_object_canvas_event) : Return FALSE on enter to allow
+	  checkbox handlers to set things up.
+	(cb_sheet_object_canvas_event) : Only change selection on right-button
+	  press.
+
+2006-11-12  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (cellregion_to_string) : support only exporting
+	  visible content.
+
+2006-11-11  Jody Goldberg <jody@gnome.org>
+
+	* src/stf-parse.c (stf_parse_region) : adjust to signature change.
+	* src/xml-io.c (xml_read_clipboard_cell) : ditto.
+	* src/xml-sax-write.c (cb_xml_write_cell_region_cells) : adapt to move
+	  from list to hash of cells.
+
+	* src/clipboard.c (cb_paste_cell) : new. split from ...
+	(clipboard_paste_region) : here.  For the move from a list of cells to
+	  a hash table.
+	(gnm_cell_copy_new) : insert the copy in here rather than forcing
+	  callers to handle it.
+	(cb_clipboard_prepend_cell) :
+	(clipboard_copy_range) : store the col/row states too.  Not used yet.
+	(cellregion_new) : col/row states and cells in a hash.
+	(cellregion_unref) : free the col/row states if they exist.
+	(cellregion_get_content) : new.
+	(cb_invalidate_cellcopy) : split from ...
+	(cellregion_invalidate_sheet) : here.
+	(cellregion_to_string) : move here from gui-clipboard and use the new
+	  hash based layout to avoid the intermediate matrix allocation.
+	(gnm_cell_copy_free) : tidy up and name this.
+	(gnm_cell_copy_new) : assign the copy to a region on creation.
+
+	* src/colrow.c : Make ColRowState and ColRowRLEState public for use in
+	  the clipboard.
+
+2006-11-11  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c : Move the icons from here.
+	* src/wbc-gtk.c (wbc_gtk_setup_icons) : to here.
+	(wbc_gtk_setup_pixmaps) : here.
+	(wbc_gtk_class_init) : and here.
+
+2006-11-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-gui.c (scg_wbcg): Rename from scg_get_wbcg.
+	(scg_wbc, scg_sheet, scg_view): New functions.  Use a few hundred
+	places to avoid casts.
+	(scg_class_init): Install ->mode_edit handler(!)
+
+2006-11-13  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_autosave_cancel): Make static.
+	(wbcg_autosave_activate, wbcg_set_autosave_time,
+	wbcg_set_property, wbcg_get_property): New functions.
+	(wbcg_autosave_set): Remove.
+	(wbcg_finalize): Cancel autosave timer.
+	(workbook_control_gui_class_init): Install autosave-time and
+	autosave-prompt properties.
+
+	* src/workbook-control-gui-priv.h (WorkbookControlGUI): Remove
+	redundant autosave member.  Change autosave_minutes to
+	autosave_time and make it seconds-based.
+
+	* src/workbook.c (workbook_dispose): Use
+	wb_view_detach_from_workbook.
+	(workbook_detach_view, workbook_attach_view): Don't set wbv->wb
+	here.  Set in caller.
+
+	* src/workbook-view.c (workbook_view_class_init): Install new
+	property: auto-expr-text.
+	(wb_view_get_property, wb_view_set_property,
+	wb_view_auto_expr_text): Handle auto-expr-text.
+	(wb_view_detach_from_workbook): New function.
+	(wb_view_finalize): Use wb_view_detach_from_workbook.
+
+	* src/workbook-control-priv.h (WorkbookControlClass): Remove
+	auto_expr_value member.
+
+	* src/workbook-control-gui.c (wbcg_auto_expr_text_changed): New
+	function hooked up to WorkbookView::auto-expr-text.
+	(wbcg_auto_expr_value): Removed.
+
+2006-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (cb_auto_expr_changed): Control
+	auto-expression via wbv properties.
+	(cb_auto_expr_precision_toggled): Ditto.
+
+	* src/workbook-view.h (WorkbookView): Replace auto_expr with more
+	sane auto_expr_func member.
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc): Remove
+	always-TRUE second argument.  All callers changed.  Adjust to
+	WorkbookView changes.
+	(wb_view_auto_expr): Remove.
+	(wb_view_auto_expr_precision): Make static.
+	(workbook_view_class_init): Install properties for
+	auto-expressions.
+
+2006-11-12  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/application.c: (gnm_app_history_add): return if max length is 0
+	(avoids a critical).
+	* src/gnm-graph-window.c: (gnm_graph_window_set_graph): set horizontal
+	and vertical resolutions.
+
+2006-11-11  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_format_feedback): Drop always-TRUE
+	second argument.  All callers changed.
+
+	* */*.[ch]: Grand rename for cell identifiers and a few more.
+
+2006-11-11  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_scroll_wheel) : renamed from
+	  wbcg_scroll_wheel_support_cb and make static.
+
+2006-11-11  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml.in : Remove inc/dec indent from the menu.
+	  They do not belong there.  Remove them from the accel list too, gtk
+	  silently invalidates accels for Tab.  Handle them manually.
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : here.  Use the
+	  new functions from ...
+	* src/workbook-cmd-format.c (workbook_cmd_inc_indent) : here.  That
+	  are transfered from ...
+	* src/wbcg-actions.c : here.
+
+2006-11-10  Morten Welinder  <terra@gnome.org>
+
+	* gnumeric.desktop.in: Set component to General.  Bug-buddy
+	insists on that, even if I don't agree.  Fixes #348829.
+
+	* src/style-conditions.c (gnm_style_conditions_eval): Fix
+	pointer-int screwup.
+
+2006-11-08  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c  : Add new accelerators.
+	    <control><alt>Tab : inc indent
+	    <control><alt><shift>Tab : dec indent.
+	    <shift><alt>Right : group
+	    <shift><alt>Left : ungroup
+
+	* src/GNOME_Gnumeric-gtk.xml.in : Add explicit accelerator entries for
+	  the inc/dec indent because they are not in the menu by default, so
+	  their accels are not enabled.
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : don't eat
+	  Alt-left/right.  We want those for accelerators.
+
+2006-11-08  Jody Goldberg <jody@gnome.org>
+
+	* src/gutils.c (gnm_push_C_locale) : new utility to set the C locale
+	(gnm_pop_C_locale) : and restore it.  Useful for persistence to avoid
+	  problems with decimal points.
+	* src/xml-io.c (xml_cellregion_read) : Use it here.
+	(xml_workbook_read) : and here.
+	* src/xml-sax-read.c (gnm_xml_file_open) : ditto.
+	* src/xml-sax-write.c (gnm_xml_file_save) : ditto.
+	(gnm_cellregion_to_xml) : ditto.
+
+	* src/sheet-object-graph.c (gnm_sog_write_object) : do not change the
+	  locale here.
+	* src/sheet-object.c (sheet_object_write_object) : that logic belongs
+	  here.  Use the new push/pop C_locale routines.
+
+2006-11-08  Eduardo Lima <eduardo.lima@indt.org.br>
+
+	* configure.in: Make print support optional. #331948
+	* plugins/excel/excel-xml-read.c: Ditto.
+	* plugins/excel/ms-excel-read.c: Ditto.
+	* plugins/openoffice/openoffice-write.c: Ditto.
+	* src/Makefile.am: Ditto.
+	* src/gnm-so-filled.c: Ditto.
+	* src/gnm-so-line.c: Ditto.
+	* src/gnm-so-polygon.c: Ditto.
+	* src/gnumeric-gconf.c: Ditto.
+	* src/gnumeric-gconf.h: Ditto.
+	* src/pattern.c: Ditto.
+	* src/pattern.h: Ditto.
+	* src/print-info.c: Ditto.
+	* src/print-info.h: Ditto.
+	* src/sheet-object-cell-comment.c: Ditto.
+	* src/sheet-object-graph.c: Ditto.
+	* src/sheet-object-image.c: Ditto.
+	* src/sheet-object-impl.h: Ditto.
+	* src/sheet-object.c: Ditto.
+	* src/sheet-object.h: Ditto.
+	* src/style-border.c: Ditto.
+	* src/style-border.h: Ditto.
+	* src/style-font.h: Ditto.
+	* src/wbc-gtk.c: Ditto.
+	* src/wbcg-actions.c: Ditto.
+	* src/workbook-control-gui.c: Ditto.
+	* src/xml-io.c: Ditto.
+	* src/xml-sax-read.c: Ditto.
+	* src/xml-sax-write.c: Ditto.
+	* src/dialogs/Makefile.am: Ditto.
+	* src/dialogs/dialogs.h: Ditto.
+
+2006-11-07  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c : Add a brush from the gimp for use in format
+	  pasting.
+
+2006-10-30  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (auto_sum) :  <Alt>= is the accelerator.
+
+2006-11-05  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_paste_copy_impl): Paste objects on
+	non-initial redos.  Paste the proper set of objects.  Fixes
+	#308300.
+
+2006-11-04  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_paste_copy_impl): Keep track of new objects
+	created and undo as needed.  Fixes part of #308300.
+
+2006-11-03  Morten Welinder  <terra@gnome.org>
+
+	* */*.c: Avoid checked g_free and g_strdup.  They handle NULL just
+	fine.  Fixes #369661.
+
+2006-11-01  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (show_gui): Fix initial sizing. Fixes
+	#368825.
+
+2006-10-31  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (cb_editline_focus_in): Restore entry
+	to normal state.  Fixes #367870.
+
+2006-10-31  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-control-gui.c (scg_drag_data_received): Don't output
+	warning if UTF8_STRING drag is received.
+
+	* src/gnumeric-pane.c (cb_pane_drag_leave): Just return, no
+	critical, when drag source widget is something other than GnmCanvas.
+
+	* src/application.c (gnm_app_workbook_get_by_name,
+	gnm_app_workbook_get_by_uri): Check for NULL URI. Fixes crash part
+	of #367870.
+
+2006-10-28  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-edit.c (cb_entry_delete_text): Handle the no-scg
+	case.
+	(wbcg_edit_finish): Ditto.  Fixes #366570.
+
+	Fixes for #366477:
+
+	* src/workbook-view.c (wb_view_sheet_focus): Set
+	current_sheet_view when we set current_sheet.
+
+	* src/sheet-view.c (sv_sheet_visibility_changed): New function.
+	(sv_real_dispose): Disconnect sv_sheet_visibility_changed.
+	(sheet_view_new): Connect sv_sheet_visibility_changed.
+
+	* src/workbook-view.c (wb_view_sheet_add): Fix order and use
+	wb_view_sheet_focus.
+
+2006-10-28  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (wbcg_show_save_dialog): Escape URI
+	so that g_markup can do the right thing.
+	(wbcg_close_control): Regenerate window list. Fixes #366335.
+
+2006-10-24  Jody Goldberg <jody@gnome.org>
+
+	* src/value.c (value_get_is_zero) : new.
+
+2006-10-24  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnm_dialog_setup_destroy_handlers): New function
+	for handling issues like 364291.
+
+	* src/workbook-control-gui.c (wbcg_get_scg): Fix sheet removal
+	problem.  Fixes #364865.
+
+	* src/sheet-autofill.c (sheet_autofill_dir): Copy the style, don't
+	just ref it, before sending it to sheet_style_set_pos.
+
+2006-10-24  Jon K Hellan  <hellan@acm.org>
+
+	* src/style-border.c (style_border_fetch): Return empty border for
+	invalid border types. Fixes #364658.
+
+2006-10-24  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (reloc_range) : Special case deleting cols/rows.
+	  Trunate rather than invalidate  if only the bottom/right range 
+	  is being removed.  Top/Left case is already handled by the inversion
+	  avoidance.
+
+	* src/sheet.c (sheet_delete_cols) : translate only columns when
+	  invalidating otherwise the relocation code does not shorten ranges.
+	(sheet_insert_rows) : ditto.
+
+2006-10-24  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (gnm_func_group_fetch_with_translation) : warning
+	  suppression.
+
+2006-10-24  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (relocate_cellref) : delete and take a different range
+	  based approach.
+	(cellref_shift) : delete.
+	(invalidate_sheet_cellrange) : split out from the old
+	  relocate_cellrange.
+	(relocate_range) : new code to relocate a range (do not handle abs/rel
+	  here).  If the entire range is enclosed then move it, otherwise
+	  extend any of the sides that are enclosed but do not allow
+	  inversion.  eg relocating the bottom above the top.
+	(reloc_normalize_cellref) : new code to map from abs/rel cellref to
+	  straight cellpos.  Take into account the 'check_rels' flag for use
+	  with names that disables relocation of relative references (Not used
+	  yet).
+	(reloc_restore_cellref) : reverse the process in
+	  reloc_normalize_cellref and do bounds checking.
+	(relocate_cellrange) : rewrite, much simpler conceptually than the old
+	  code.  Rather than handling abs/rel and in/out as part of the
+	  process always do the conversions then generate a result if
+	  something changed.  This code also handles full col/row refs better.
+	(gnm_expr_relocate) : merge the ignore_rel flag into a new wrapper
+	  'RelocInfoInternal'
+	(gnm_expr_top_relocate) : check 'from_inside' here rather than for
+	  every ref and use the new internal Reloc struct to pass the extra
+	  information.
+
+	* src/ranges.c (range_make_full) : new.
+
+2006-10-24  Joseph Pingenot <trelane@digitasaru.net>
+
+	* src/style-conditions.c (gnm_style_conditions_eval) :  Add in
+	  additional string and error conditional operators.
+
+2006-10-23  Jon K Hellan  <hellan@acm.org>
+
+	* src/xml-sax-read.c (xml_sax_wb_view): Check that "SelectedTab"
+	exists. Fixes #312010.
+
+	* src/xml-io.c (xml_workbook_read): Ditto.
+
+2006-10-22  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (search_collect_cells_cb): Adapt to change in
+	CellIterFunc type.  Fixes #364085.
+
+2006-10-21  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control.c (wb_control_parse_and_jump): If the range
+	does not have a sheet, use current.  Fixes #363977.
+
+2006-10-20  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_get_scg): When we are focusing
+	a new sheet it might not have a page yet.
+	(wbcg_sheet_focus): Handle NULL sheet properly.
+
+	* src/workbook.c (workbook_focus_other_sheet): Set focus even if
+	that is NULL.
+
+	* src/expr-name.c (cb_check_name): Survive a name without any
+	expression.  That can happen in connection with sheet undo/redo.
+
+2006-10-20  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-view.c: Add preconditions
+
+2006-10-19  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (cb_sheet_label_button_press): Only
+	enable context menu when label is editable, which it is when we're
+	not editing a cell. Fixes #363261.
+
+2006-10-18  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_next_token, comp_term): Remove.
+	(stf_parse_csv_cell): Make sane.  Fixes #359269.
+
+2006-10-18  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (cellregion_to_string): Brown paper bag -
+	would try to allocate negative memory. Fixes #362993.
+
+2006-10-17  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_claim_clipboard): Really fix #308569.
+
+2006-10-17  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release bump
+

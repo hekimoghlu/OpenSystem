@@ -1,0 +1,359 @@
+2013-03-09  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.1
+
+2013-03-06  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (list_actions): Handle a null group.
+
+2013-03-03  Morten Welinder  <terra@gnome.org>
+
+	* src/libgnumeric.c (gnm_pre_parse_init): Don't call deprecated
+	g_thread_init if compiled with later than glib 2.32.0.
+
+2013-03-02  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-pane-impl.h: remove alignments.
+	* src/gnm-pane.c (gnm_pane_header_init): dittO;
+	* src/gnm-plugin.c (plugin_service_ui_read_xml): fixed a C++ type comment.
+	* src/item-bar.c (item_bar_calc_size): force recalc when indent changed.
+	* src/sheet-control-gui-priv.h: remove all tables by one grid.
+	* src/sheet-control-gui.c (cb_table_destroy), (scg_set_panes),
+	(set_resize_pane_pos), (idle_resize), (cb_canvas_resize),
+	(sheet_control_gui_new), (scg_finalize), (scg_adjust_preferences),
+	(scg_mode_edit): ditto.
+	* src/wbc-gtk.c (cb_show_sheet), (cb_sheet_label_button_press),
+	(cb_sheet_visibility_change), (wbcg_sheet_add),
+	(wbcg_sheet_remove), (wbcg_sheet_focus),
+	(wbcg_sheet_order_changed), (wbcg_sheet_remove_all),
+	(wbcg_get_nth_scg): ditto.
+
+2013-03-01  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gui-file.c (gui_file_open): GtkTable to GtkGrid.
+	* src/print.c (gnm_create_widget_cb): ditto.
+	* src/sheet-object-graph.c (sheet_object_graph_guru): ditto.
+
+2013-03-01  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.h: Make sure the "q" functions take "p" as their
+	first argument, not "x".
+
+2013-03-01  Jean Brefort  <jean.brefort@normalesup.org>
+
+	reviewed by: <delete if not using a buddy>
+
+	* INSTALL:
+	* src/sheet-object-widget.c (sheet_widget_button_user_config),
+	(sheet_widget_adjustment_user_config_impl),
+	(sheet_widget_checkbox_user_config),
+	(sheet_widget_radio_button_user_config):
+	* src/wbc-gtk.c (wbc_gtk_init):
+
+2013-02-28  Morten Welinder  <terra@gnome.org>
+
+	* configure.ac: remove the DISABLE_DEPRECATED defines even from
+	development versions.  We now get the information through gcc
+	warnings.
+	(solver): Make solver code unconditional.  Feel free to not
+	distribute the relevant plugins.
+
+2013-02-26  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (convert): Avoid segfault.  Fixes #694741.
+
+2013-02-26  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/number-match.c: more introspection warnings.
+
+2013-02-23  Morten Welinder  <terra@gnome.org>
+
+	* */*.c: Avoid G_OBJECT casts for g_object_ref and g_object_unref.
+
+2013-02-21  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sheet_style_foreach): Take a GFunc, not a
+	GHFunc.  All callers changed.  Impose a robust ordering.
+	(sh_all_styles): New function replacing sh_foreach.
+
+2013-02-20  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-graph.c (dim_start): Survive malformed xml.
+
+2013-02-20  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.ac: make configure --with-python fail when some
+	dependency is missing.
+
+2013-02-17  Morten Welinder  <terra@gnome.org>
+
+	* configure.ac (set_more_warnings): Improve support for clang.
+
+2013-02-16  Morten Welinder  <terra@gnome.org>
+
+	* *.c: Clear up confusion between GtkStateType and GtkStateFlags.
+	(Most cases a matter of 0 vs. 0.)
+
+2013-02-16  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* schemas/org.gnome.gnumeric.dialogs.gschema.xml.in.in: fixed
+	default value for stf export format.
+	* src/dependent.c: fix introspection warnings.
+	* src/sheet-style.c: ditto.
+
+2013-02-15  Morten Welinder  <terra@gnome.org>
+
+	* configure.ac (libspreadsheet_gtk_reqs): Explicitly require gtk
+	3.2.0 just like goffice.
+
+	* src/gui-util.c (gnm_store_text_tag_attr_in_pango): Adjust to
+	requiring gtk 3.2
+
+2013-02-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-so-path.c (so_path_view_set_bounds): Use G_MAXDOUBLE,
+	not MAXDOUBLE.  Fixes #693761.
+
+2013-02-10  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (cb_unlink): gnm_style_unlink_dependents
+	doesn't belong here.  We handle everything in rstyle_apply.
+
+2013-02-08  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (rstyle_apply): Take extra range argument and
+	link/unlink style dependents.  All callers changed.
+	(sheet_style_shutdown): Set default style for whole sheet to
+	ensure style dependents get cleared.
+
+2013-02-07  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (cell_tile_optimize): Implement
+	ptr-matrix-to-matrix optimization and use it to simplify things.
+
+	* src/dependent.c (GnmStyleDependent): New type of dependent.
+	When triggered, the cells in which it resised will be rerendered
+	and redrawn.
+
+	* src/mstyle.c (gnm_style_link_dependents)
+	(gnm_style_unlink_dependents): New functions to manage style
+	dependents due to conditional formatting.
+
+2013-02-06  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (vector_apply_pstyle): Turn loop structure
+	inside-out in anticipation of future changes.
+
+	(col_indicies, row_indicies): Alignment of the corners of apply_to
+	is only relevant if we are within the tile.
+
+2013-02-06  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (tile_is_uniform): Extract from
+	cell_tile_optimize.
+	(vector_apply_pstyle): Don't return a value.
+	(cell_tile_apply): Use tile_is_uniform.
+
+2013-02-05  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sheet_style_get): Simplify with "while"
+	instead of crazy "goto".
+	(cell_tile_apply): Simplify the covers-whole-tile case.
+
+	* src/sheet.h (Sheet): Remove max_width and max_height members.
+	All users fixed.
+
+	* src/dependent.h (GnmDependentClass): Add pos handler.
+
+	* src/dependent.c (dependent_pos): Use pos handler.
+	(dummy_dep_eval): New null handler for GnmDependentClass::eval.
+
+2013-02-04  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dependent_pos): Make global.
+
+	* src/position.c (eval_pos_init_dep, parse_pos_init_dep): Use
+	dependent_pos.
+
+	* src/ssconvert.c (run_tool_test): Add code for running the
+	regression tool.
+	(convert): Run an analysis tool if requested.  (For testing.)
+
+2013-02-02  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (rstyle_ctor): Split into rstyle_ctor_style
+	and rstyle_ctor_pstyle.  All callers changed.
+
+2013-01-18  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (gnm_matrix_new, gnm_matrix_free)
+	(gnm_matrix_is_empty, gnm_matrix_from_value, gnm_matrix_to_value):
+	New matrix support.
+	(gnm_matrix_multiply): Renamed from mmult and changed to use above.
+	(gnm_matrix_eigen): Change to take GnmMatrix arguments.
+
+2013-01-15  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_read_workbook_auto_csvtab): Fix crash for text
+	import from command line.
+
+2013-01-15  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.ac: renamed configure.in and update obsolete macros.
+	* configure.in: ditto.
+
+2013-01-14  Colin Watson  <cjwatson@ubuntu.com>
+
+	* configure.in: Add
+	distutils.sysconfig.get_python_inc(plat_specific=True) to Python
+	includes.
+
+2013-01-14  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-control-gui.c (sheet_control_gui_new): typo.
+	* src/sheet-object-graph.c (cb_graph_size_changed): do not remoe
+	twice the top and bottom margins when displaying a graph
+	sheet. [#691472]
+
+2013-01-10  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_lookup_or_add_placeholder): Drop copy_name
+	argument and assume TRUE.  Drop scope name and assume NULL (which
+	is what all callers should have used).  All callers changed.
+	(gnm_func_add_placeholder): Ditto.
+	(invent_name): Downcase the preferred name.
+	(gnm_func_add_placeholder_full): Eliminate GNM_FUNC_FREE_NAME.
+	(gnm_func_add): Initialize arg_names_p.
+
+	* src/gnm-plugin.c (plugin_service_function_group_activate):
+	Upgrade existing placeholder functions as needed.
+
+	* src/func.c (gnm_func_upgrade_placeholder): Rename from
+	gnm_func_upgrade_placeholder.  Take GnmFunc argument, not name.
+
+2013-01-10  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_add_placeholder_localized): New function.
+	(gnm_func_add_placeholder_full): Extract from
+	gnm_func_add_placeholder.  Handle localization better.
+	(gnm_func_set_localized_name): New function.
+	(gnm_func_free, gnm_func_get_name): Use
+	gnm_func_set_localized_name.
+
+	* src/parse-util.c (std_func_map): Improve handling of unknown
+	function names.
+
+	* src/func.c (gnm_func_group_remove_func): Factor this out from...
+	(gnm_func_free): ...here.
+
+2013-01-09  Morten Welinder  <terra@gnome.org>
+
+	* src/symbol.c: delete.
+
+	* src/func.c: rewrite to use GHashTable instead of symbol.c
+	(gnm_func_lookup_prefix): Take extra argument indicating whether
+	to search translated names.  Caller changed.
+
+	* src/parse-util.c (std_func_map): Lookup translated name as
+	needed.
+	(parse_util_init): Add enviroment magic to turn on translated
+	functions names.  This is not ready for prime time and should be
+	controlled by a user preference eventually.
+
+	* src/mathfunc.c (gnm_matrix_eigen): Silence warning.  Document a
+	bit.
+
+2013-01-07  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (gnm_matrix_eigen): Detect underflow of the
+	pivot.  Use gnm_hypot where possible.
+
+2013-01-04  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (gnm_x_claim_clipboard): Take a GdkDisplay
+	as argument.  Keep track of displays.
+	(gnm_x_disown_clipboard): New function.
+
+	* src/application.c (gnm_app_clipboard_clear): Use
+	gnm_x_disown_clipboard to make things multi-head safe.
+
+2013-01-03  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (collect_floats): Fix handling of
+	COLLECT_IGNORE_ERRORS.
+	(collect_strings): Ditto.
+	(callback_function_collect): Handle new flag COLLECT_ZERO_ERRORS.
+
+2013-01-01  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_set_from_pango_attribute): Don't use
+	deprecated goffice stuff.
+
+	* src/cellspan.c (cell_register_span, cell_calc_span): Remove
+	unused variable.
+	* src/gnm-pane.c (control_point_leave_notify): Ditto.
+	* src/gnm-plugin.c (plugin_service_solver_activate): Ditto.
+	* src/wbc-gtk.c (wbc_gtk_create_edit_area): Ditto.
+
+	* src/application.c (gnm_app_history_add): Kill warning.
+
+2012-12-31  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sheet_style_resize): Double off-by-one.
+	Fixed #690929.
+
+	* src/ssdiff.c: Introduce --highlight mode.
+
+2012-12-30  Morten Welinder  <terra@gnome.org>
+
+	* src/ssdiff.c (main): Add option to send output to a file.
+
+2012-12-29  Morten Welinder  <terra@gnome.org>
+
+	* src/ssdiff.c (diff): Use C locale.
+	(ignore_cell): Ignore arrays, except for the corner.
+	(output_cell): New function taking proper care of value types,
+	convensions, etc.
+	(xml_cell_changed): Use output_cell.
+	(compare_corresponding_cells): Don't use entered_text here either,
+	although it's harmless.
+	(output_cell, compare_corresponding_cells): Handle value formats
+	too.
+
+2012-12-28  Valek Filippov  <frob@df.ru>
+
+	* gnm-pane.c, shell-control-gui.c: Replaced deprecated
+	gdk_window_get_pointer calls.
+
+2012-12-28  Morten Welinder  <terra@gnome.org>
+
+	* src/*.c: Eliminate use of printf.
+
+	* src/sheet-style.c (sheet_style_range_foreach): Move handling of
+	range offset here.  This may need to move further.
+	* src/ssdiff.c (cb_diff_sheets_styles_2): From here.
+	(diff_sheets_cells): Ignore completely empty cells.
+	(xml_sheet_start): Change meaning of Old and New attributes to be
+	index_in_wb and absent when workbook doesn't have the sheet.
+	(xml_style_changed): Describe style differences.
+
+2012-12-27  Morten Welinder  <terra@gnome.org>
+
+	* src/ssdiff.c (diff_sheets): Compare styles too.
+
+	* src/sheet-style.c (sheet_style_range_foreach): Add optional
+	range argument.  All callers changed.
+
+2012-12-24  Morten Welinder  <terra@gnome.org>
+
+	* src/ssdiff.c (def_cell_changed): Merge cell_added and
+	cell_removed handlers into the cell_changed handler.
+	(main): Add --xml option.
+
+	* configure.in: ssconvert, ssindex, and ssgrep are no longer
+	configurable.  We need ssconvert for the test and it's silly
+	anyway.
+
+2012-12-18  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

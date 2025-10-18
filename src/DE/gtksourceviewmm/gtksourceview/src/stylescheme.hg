@@ -1,0 +1,130 @@
+/* stylescheme.h
+ *
+ * Copyright (C) 2004-2005 Jae Jang
+ * Copyright (C) 2005-2006 Rob Page
+ * Copyright (C) 2006 Dodji Seketeli
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <vector>
+
+#include <gtksourceview/gtksource.h>
+
+#include <glibmm/object.h>
+
+#include <gtksourceviewmm/style.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gsv
+{
+
+
+
+/** Object controlling appearance of View.
+ *
+ * StyleScheme contains all the text styles to be used in View and
+ * Buffer. For instance, it contains text styles for syntax highlighting,
+ * it may contain foreground and background color for non-highlighted text,
+ * color for the line numbers, etc.
+ *
+ * Style schemes are stored in XML files. The format of a scheme file is
+ * the documented in the C library gtksourceview documentation.
+ *
+ * @newin{2,2}
+ */
+class StyleScheme : public Glib::Object
+{
+  _CLASS_GOBJECT(StyleScheme, GtkSourceStyleScheme, GTK_SOURCE_STYLE_SCHEME, Glib::Object, GObject)
+
+public:
+
+  /** Gets scheme id.
+   *
+   * @return Scheme id.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(Glib::ustring get_id() const, gtk_source_style_scheme_get_id)
+
+  /** Gets scheme name.
+   *
+   * @return Scheme name.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_source_style_scheme_get_name)
+
+  /** Gets scheme description.
+   *
+   * @return Scheme description.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(Glib::ustring get_description() const, gtk_source_style_scheme_get_description)
+
+#m4 _CONVERSION(`const gchar**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+
+  /** Gets scheme authors.
+   *
+   * @return Array with scheme authors.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(std::vector<Glib::ustring> get_authors() const, gtk_source_style_scheme_get_authors)
+
+  /** Gets scheme filename.
+   *
+   * @return Scheme file name if the scheme was created parsing a style scheme
+   * file or empty string in the other cases.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(std::string get_filename() const, gtk_source_style_scheme_get_filename)
+
+  /** Gets style corresponding to @a style_id in scheme.
+   *
+   * @param style_id Id of the style to retrieve.
+   *
+   * @return Style which corresponds to @a style_id in the scheme,
+   * or empty Glib::RefPtr when no style with this name found.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(Glib::RefPtr<Style> get_style(const Glib::ustring& style_id), gtk_source_style_scheme_get_style, refreturn)
+
+  /** Gets style corresponding to @a style_id in scheme.
+   *
+   * @param style_id Id of the style to retrieve.
+   *
+   * @return Style which corresponds to @a style_id in the scheme,
+   * or empty Glib::RefPtr when no style with this name found.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(Glib::RefPtr<const Style> get_style(const Glib::ustring& style_id) const, gtk_source_style_scheme_get_style, refreturn, constversion)
+
+  _WRAP_PROPERTY("id", std::string)
+  _WRAP_PROPERTY("name", Glib::ustring)
+  _WRAP_PROPERTY("description", Glib::ustring)
+  _WRAP_PROPERTY("filename", std::string)
+};//end class StyleScheme
+
+}//end namespace Gsv
+
+

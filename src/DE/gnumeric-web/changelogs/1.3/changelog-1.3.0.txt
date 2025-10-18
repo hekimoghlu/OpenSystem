@@ -1,0 +1,806 @@
+2004-03-30  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.3.0
+
+	* Makefile.am : Add distcleancheck_listfiles, and distuninstallcheck_listfiles
+	  to keep automake from complaining about the docs.
+	  Clean the .desktop and .keys file
+	  Dist the new gnome-common auto installed xmldoc.make and omf.make
+
+	* autogen.sh : require automake 1.7.2 to get the *_listfiles support
+	  required to make the doc build pass distcheck.
+
+	* omf-install/* : delete
+
+	* configure.in : remove omf-install, plugins/gb/Makefile,
+	  plugins/uihello/Makefile
+
+	* schemas/Makefile.am : clean the generated schema files
+
+	* src/cell-draw.c (cell_calc_layout) : mark hashed values as variable
+	  width so that they resize when columns change size.
+
+	* src/item-grid.c (item_grid_event) : clear the cursor timer when the
+	  mouse leaves the grid (eg enters the edit item)
+
+2004-03-30  Jody Goldberg <jody@gnome.org>
+
+	Test case.  Enter string into C3 that spans into E3 then change
+	alignment
+	* src/commands.c (cmd_format_undo) : be lazy, queue a full redraw in
+	  case spans changed.
+	(cmd_format_redo) : ditto.
+
+2004-03-28  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c : cheat and install a SheetInsert action to avoid
+	  having an 'Insert' entry in the insert menu because we named the
+	  InsertSheet action for the Sheet menu.
+
+	* src/item-edit.c (ie_layout) : Support rich text.
+
+	* src/wbc-gtk.c (wbc_gtk_style_feedback) : Pull the values from
+	  @changes if it is supplied.
+	(cb_post_activate) : new.
+	(wbc_gtk_init) :  Only restore focus when we aren't editing.
+	  Otherwise every time the style feedback changes we lose focus.
+
+2004-03-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-edit.c (cb_delete_filter) : first step in syncing the
+	  markup when content changes.
+	(cb_entry_delete_text) : ditto.
+
+2004-03-25  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (cb_help_docs) : quick an dirty
+
+2004-03-26  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_reload_recent_file_menu): Make UTF-8 safe
+	and stop using tooltips for storing filenames.
+
+	* src/history.c (history_item_label): Make this UTF-8 safe.
+
+2004-03-25  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=137818
+	* src/style.c (required_updates_for_style) : redraw for h-align,
+	  striketrough, underline, and font colour changes.
+
+	* src/application.c (gnumeric_application_setup_icons) : pull in some
+	  icons
+
+2004-03-20  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c : Move the font actions into a distinct group.
+
+	* src/wbc-gtk.c (wbc_gtk_actions_sensitive) : start to account for
+	  font vs normal actions.  This interface sucks.  We'll need something
+	  more functional as the number of action groups increases (eg clipboard)
+	(wbc_gtk_init_color_fore) : move into font group
+	(wbc_gtk_init_font_name) : move into font group
+	(wbc_gtk_init_font_size) : move into font group
+	(wbc_gtk_set_toggle_action_state) : split font actions into a distinct
+	  group
+	(cb_handlebox_dock_status) : ditto.
+	(wbc_gtk_init) : ditto.
+
+2004-03-19  Morten Welinder  <terra@gnome.org>
+
+	* src/plugin-util.c (gnumeric_fopen): Ditto.
+	* src/format-template.c (format_template_save): Delete unused
+	function.
+
+2004-03-18  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-canvas.c (row_scroll_step): Use a continious
+	function, not a step function.
+	(col_scroll_step): Ditto.
+
+2004-03-18  Guntupalli Karunakar  <karunakar@freedomink.org>
+
+	* configure.in: Added "mr" for Marathi to ALL_LINGUAS.
+
+2004-03-17  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_string_append_gstring): New function.
+
+	* src/format.c (format_get_decimal, format_get_thousand,
+	format_get_currency): Return a GString*.  All callers changed and
+	happy since they don't need to call strlen.
+	(convert1): Operate of GString.
+
+2004-03-17  Christopher James Lahey  <clahey@ximian.com>
+
+	* configure.in: Added
+	src/cut-n-paste-code/goffice/libpresent/Makefile and
+	src/cut-n-paste-code/goffice/test/Makefile.
+
+2004-03-16  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=137357
+	* src/item-bar.c : Use a custom detail 'GnmItemBarCell' rather than
+	  the more generic 'button' to keep some themes 'industrial and gorilla'
+	  from freaking out at the lack of button.
+
+2004-03-16  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the gtk req to reflect the churn in the filesel
+
+2004-03-16  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-autofill.c (autofill_cell): Kill some read-only
+	warnings.
+
+2004-03-16  Jean Brefort  <jean.brefort@ac-dijon.fr>
+
+	* configure.in: add src/cut-n-paste-code/goffice/data/Makefile.in
+
+2004-03-11  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (csv_tsv_probe) : Be more forgiving about what might be
+	text.  Accept
+	    1) *.txt
+	    2) Anything that has no null characters in the first 80 bytes
+	It won't catch everything, but it should be marginally better.
+
+2004-03-08  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init) : split the menus into a distinct
+	  group.  There's no need to senstize them
+
+2004-03-12  Jean Brefort  <jean.brefort@ac-dijon.fr>
+
+	* src/graph.c (gnm_go_data_vector_load_values): changed initial maximum
+	from G_MINDOUBLE to - G_MAXDOUBLE.
+	
+2004-03-13  Christopher James Lahey  <clahey@ximian.com>
+
+	* configure.in: Added
+	src/cut-n-paste-code/goffice/drawing/Makefile and
+	src/cut-n-paste-code/goffice/ms-compat/Makefile.
+
+2004-03-11  Kjartan Maraas  <kmaraas@gnome.org>
+
+	* src/wbc-bonobo.c: (wbcb_style_feedback): Remove extraenous
+	semicolon from a test.
+	* src/wbc-gtk.c: (wbc_gtk_style_feedback): Same here. Closes
+	bug #136849.
+
+2004-03-09  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_close_if_user_permits): Set the
+	ATK_ROLE_ALERT for dialog.
+
+	* src/item-bar.c (ib_draw_cell, item_bar_draw): Avoid deprecated
+	gtk_draw_shadow call.
+
+2004-03-06  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-graphic.c (sheet_object_text_finalize) : release
+	  the markup.
+	(sheet_object_text_new_view) : set the attributes.
+	(sheet_object_text_clone) : handle the attributes.
+	(gnm_so_text_set_font_color) : delete.
+	(gnm_so_text_set_markup) : new.
+
+2004-03-05  Jody Goldberg <jody@gnome.org>
+
+	* src/colrow.c (colrow_set_sizes) : force re-render of variable width cells
+	(colrow_restore_state_group) : ditto
+
+	* src/rendered-value.c (rendered_value_render) : privatize
+
+	* src/style.c (required_updates_for_style) : Now that rendered values
+	  contain size info too we can dispense with the distinction between
+	  rendering and sizing.  Without this changing the font size would not
+	  resize because the rendered value cached the size and was not
+	  re-rendered until draw, rather than at row-height calc.
+
+2004-03-05  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_save_as): We no longer need to show
+	extra-widgets in the file chooser outselves.
+
+2004-03-05  Christian Neumair  <chris@gnome-de.org>
+
+	* src/gui-file.c: free from deprecated GtkOptionMenu, use
+	  GtkComboBox instead.
+
+2004-03-04  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-widget.c : rework the List and combo to use a
+	  shared base.  Then store and restore the dependents in xml
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=135946
+	* src/formats.c : Add mmmmm-yy and mmmmm as defaults
+	* src/format.c (append_month) : support them.
+
+	* src/main-application.c (gnumeric_arg_parse) : When we don't need a
+	  gui we still need to initialize gobject.
+
+2004-03-01  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_image_file_select): Adapt to latest gtk+ cvs
+	head.
+
+2004-02-29  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=126563
+	* src/sheet.c (sheet_dup) :
+
+2004-02-28  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=74205
+	* src/item-edit.c : Display blue range designator even in other panes
+
+2004-02-27  Morten Welinder  <terra@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=135609
+	* src/parse-util.c (rangeref_as_string): Before dropping the
+	second half of the range, make sure the $-designations agree also.
+
+2004-02-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (fsel_key_event, fsel_delete_event,
+	fsel_handle_cancel, fsel_handle_ok, fsel_dialog_finish): Delete.
+	(gnumeric_dialog_file_selection): Remove GtkFileSelector version.
+
+2004-02-25  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (update_preview_cb): Keep the preview, possibly
+	blank, at all times to avoid flicker.
+
+2004-02-23  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_image_file_select): New arg "is_save" for
+	button and dialog naming.  All callers changed.
+
+	* src/sheet-object-graph.c (cb_save_as): Use
+	gui_image_file_select.  Plug leak.
+
+2004-02-22  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=135044
+	* src/commands.c (cmd_resize_colrow): Fixed incorrect string
+
+2004-02-21  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=134627
+	* src/workbook-view.c (wb_view_selection_desc) : Display name of edit
+	  position after releasing Shift key, not the top left
+
+	* src/workbook-control-gui.c (cb_wbcg_drag_data_received) : disable
+	  the gnome-vfs portions.  They did not work anyway.  We can probably
+	  just #ifdef it in the future, I can't see an easy way to put that into
+	  a plugin.
+
+	* src/wbc-gtk.c (cb_font_name_changed) : quick and dirty enabling.
+	(cb_font_size_changed) : ditto.
+
+	* src/stf.c (stf_write_workbook) : remove the pointless wrapping of a
+	  pointer and just return the result directly.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=97216
+	* src/sheet-control-gui.c (scg_mode_create_object) : Go back to the
+	  primary sheet when creating an object
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=131588
+	* src/rangefunc.c (range_sum) : use long double if it is available
+
+	* src/mstyle.c (mstyle_new_default) : remove the gconf usage it did
+	  not belong here.
+	* src/style.c (font_init) : ditto.
+
+	* src/normal-args.c : deleted. content moved
+
+	* src/main-application.c : Move the arg handling into here, and #ifdef
+	  it rather than using external files.  It makes it easier to read.
+	  For the non gnome case we need to manually add gtk deps.  Now that
+	  we're not so dependent on gnome we can do more magic and move to a
+	  more abi-style approach with --convert and abi-commands in place of
+	  ssconvert
+
+	* src/libgnumeric.h : drop the arg handler stubs
+
+	* src/libgnumeric.c (gnm_shutdown) : gconf shutdown is handled
+	  internally now.
+
+	* src/hlink.c (gnm_hlink_url_activate) : conditionalize gnome depend.
+
+	* src/gutils.c (gnumeric_sys_data_dir) : Use g_build_path, just to be
+	  pedantic.
+	(gnumeric_sys_lib_dir) : ditto.
+
+	* src/gui-util.c (gnumeric_dialog_run) : Don't destroy the dialog
+	  until a stock response comes in (useful for druids)
+	(gnumeric_help_display) : conditionalize gnome.
+	(gnumeric_icondir) : new.
+	(gnumeric_load_image) : use it.
+	(gnumeric_load_pixbuf) : use it.
+
+	* src/gnumeric-gconf.c (gnm_app_get_gconf_client) : moved to here.
+	(gnm_conf_init_essential) : handle the font stuff here.
+
+	* src/gnumeric-gconf-priv.h : Clean up the default font keys and move
+	  them here.
+
+	* src/application.c : remove the gconf_client
+	(gnm_app_get_gconf_client) : move for now.
+	(gnm_app_release_gconf_client) : delete.
+
+	* src/Makefile.am : Further down the path of making gnome optional
+
+	* icons/Makefile.am : Add the new about box image, dunno where/how to
+	  use it yet.
+
+	* configure.in : corba is dependent on gnome for now.
+	  Move libgnome* into the gnome specific libs
+	  Add the new radar plot engine
+
+	* src/wbc-gtk.c (cb_show_menu_tip) : fix leak.
+
+2004-02-20  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-util.c: Don't include preview-file-selector.h.
+
+	* src/workbook-control-gui.c: Ditto.
+
+	* src/wbcg-actions.c: Ditto.
+
+2004-02-19  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_image_file_select): Add new "initial"
+	argument.  Caller changed.
+
+2004-02-18  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_image_file_select): New function.
+
+	* src/wbcg-actions.c (GNM_ACTION_DEF): Use gui_image_file_select.
+
+	* src/gui-file.c (file_format_changed_cb): Use
+	gtk_widget_set_sensitive.
+
+	* src/gui-util.c (gnm_fixup_filechooser_size): Remove this.  No
+	longer needed.
+
+2004-02-17  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_open): Destroy file selector before
+	calling opener.  (File selector grabs focus so stf-import could
+	not be interacted with.)
+
+	* src/print.c (compute_scale_fit_to): For 0 pages, just return
+	100%.
+
+2004-02-13  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnm_fixup_filechooser_size): New function.
+	(gnumeric_dialog_dir_selection): Delete.
+
+	* src/gui-file.c (gui_file_save_as, gui_file_open): Use
+	gnm_fixup_filechooser_size.
+
+2004-02-11  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (compute_scale_fit_to): Guard against pages <= 0.
+	Use doubles, not floats.
+	(print_range_down_then_right, print_range_right_then_down,
+	compute_group): Use doubles, not floats.
+
+2004-02-09  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-object-toolbar.c: Properly include
+	<gnumeric-config.h> so the tests will work.
+
+2004-02-04  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (yylex): Accept a few unicode characters.
+
+2004-02-04  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c : Make Sheet a cheesy sort of GObject.  Leave the macros
+	  as the old signature based variants for now.
+
+2004-02-04  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-file.c (gui_file_open) : add a label and mnemonic for the
+	  type selector.
+
+2004-02-02  Jody Goldberg <jody@gnome.org>
+
+	* src/session.c : make conditional on WITH_GNOME
+
+2004-02-03  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c (toggle_current_font_attr): Remove debug
+	spew.
+
+2004-02-01  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_custom_color_created) : mark the custom dialog as
+	  a transient of the wbcg.
+
+2004-02-01  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_toolbar_timer_clear) : people
+	  didn't like it so remove it to allow custom color selection to work.
+	  With it in place the action was still insensitive when the
+	  color_changed fired so the activation was ignored.
+
+	* src/wbc-gtk.c (wbc_gtk_init) : connect the post_activate signal
+	  as a swapped_object to avoid calling it after we use an accelerator
+	  to quit.
+
+2004-02-01  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gu_delete_handler): new
+	(gnumeric_dialog_file_selection): catch window manager deletion 
+	  of the dialog.
+
+2004-01-28  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=131933
+	* src/format.c (update_lc) : catch mismatched monetary and numeric
+	  locales that set result in the decimal seperator and thousands
+	  seperator being the same.
+
+2004-01-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: Add schemas correponding to 
+	  the new printing keys.
+
+2004-01-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnumeric-gconf-priv.h: add many more printing related keys
+	* src/gnumeric-gconf.c (gnm_conf_init_essential): initialize 
+	  printing variables from gconf
+	(gnm_gconf_set_print_center_horizontally): implement
+	(gnm_gconf_set_print_center_vertically): implement
+	(gnm_gconf_set_print_grid_lines): implement
+	(gnm_gconf_set_print_even_if_only_styles): implement
+	(gnm_gconf_set_print_black_and_white): implement
+	(gnm_gconf_set_print_titles): implement
+	(gnm_gconf_set_print_order_right_then_down): implement
+	(gnm_gconf_set_print_scale_percentage): implement
+	(gnm_gconf_set_print_scale_percentage_value): implement
+	(gnm_gconf_set_print_scale_width): implement
+	(gnm_gconf_set_print_scale_height): implement
+	(gnm_gconf_set_print_repeat_top): implement
+	(gnm_gconf_set_print_repeat_left): implement
+	(gnm_gconf_set_print_tb_margins): implement
+	(gnm_gconf_set_print_header_formats): implement
+	* src/print-info.c (load_formats): add saved custom formats
+
+2004-01-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnumeric-gconf.c (gnm_conf_init_essential): initialize new
+	  configuration variables
+	(gnm_conf_init_extra): move some items to essential
+	(gnm_gconf_set_print_center_horizontally): new stub
+	(gnm_gconf_set_print_center_vertically): new stub
+	(gnm_gconf_set_print_grid_lines): new stub
+	(gnm_gconf_set_print_even_if_only_styles): new stub
+	(gnm_gconf_set_print_black_and_white): new stub
+	(gnm_gconf_set_print_titles): new stub
+	(gnm_gconf_set_print_order_right_then_down): new stub
+	(gnm_gconf_set_print_scale_percentage): new stub
+	(gnm_gconf_set_print_scale_percentage_valuee): new stub
+	(gnm_gconf_set_print_scale_width): new stub
+	(gnm_gconf_set_print_scale_height): new stub
+	(gnm_gconf_set_print_repeat_top): new stub
+	(gnm_gconf_set_print_repeat_left): new stub
+	(gnm_gconf_set_print_tb_margins): new stub
+	(gnm_gconf_set_print_header_formats): new stub
+	* src/gnumeric-gconf.h: various new functions (see above) and 
+	  fields to the pref structure.
+	* src/print-info.c: remove dependence on libgnome/gnome-config.h
+	(load_margin): deleted
+	(load_hf): deleted
+	(load_range): deleted
+	(load_formats): remove gnome-config stuff
+	(print_info_new): switch to gconf functions
+	(save_margin): deleted
+	(save_range): deleted
+	(save_hf): deleted
+	(save_formats): use gconf
+	(print_info_save): use new gconf functions
+	(print_info_set_orientation): new
+	(print_info_get_orientation): new
+	* src/print-info.h: remove orientation field in pi
+	(print_info_set_orientation): new
+	(print_info_get_orientation): new
+	* src/xml-io.c (xml_write_print_info): use print_info_get_orientation
+	(xml_read_print_info): use print_info_set_orientation
+
+2004-01-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_save_as): Switch to file chooser.
+
+2004-01-27  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (sheet_print): remove warnings
+
+2004-01-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_open): Cleanup and hack a better size.
+
+2004-01-26  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* configure.in: bump libgnomeprint[ui] requirement to 2.5.2
+	* src/print.c (sheet_print): don't close the print dialog on preview
+	  and use gnome_print_dialog_run to avoid overwriting files without
+	  dialog
+
+2004-01-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_open): Switch to file chooser.
+
+	* src/gui-util.c (gnumeric_dialog_file_selection): Handle file
+	chooser widgets too.
+
+2004-01-26  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=132448
+	* src/wbcg-actions.c (cb_auto_filter) : fix
+	* src/selection.c (selection_first_range) : improve readability of
+	  error message.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=127138
+	* src/wbcg-actions.c (cb_view_freeze_panes) : Don't get confused by an
+	  attempt to freeze without centering when the top or left is not 0.
+
+2004-01-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/cell-draw.c (cell_calc_layout): new
+	(cell_draw): move the pango layout code into cell_calc_layout
+
+2004-01-24  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-graphic.c : defaults for color combos are now more
+	  useful.  The actions can set them up for toolbars in one place
+	  rather than users setting the combo in dozens.
+
+2004-01-23  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_find_command) : new utility
+
+	* src/wbc-gtk.c (cb_undo_activated) : port to new interface
+	(cb_redo_activated) : port to new interface
+
+	* src/sheet-control-gui.c (scg_object_update_bbox) : silence
+	  irritating warning.
+
+2004-01-23  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the gtk and glib depends to yesterday's releases
+
+2004-01-22  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c : clean up the border combo and adapt to its new api
+
+2004-01-16  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : check for symbolic link support
+	* src/Makefile.am : install executable as
+	    gnumeric-<version>
+	  with a symlink to that from gnumeric
+
+2004-01-16  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (stf_write_workbook) : update the string and drop the
+	  warning.
+
+	* src/wbc-gtk.c (wbc_gtk_init) : enable translations for menus and
+	  toolbars.
+
+2004-01-16  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c : Fix some accelerators and enable colour combos.
+	  Some undo/redo is working too.
+
+	* src/style-color.c (style_color_new_go) : new.
+
+	* configure.in : Push the goffice include up here until it can get a
+	  pkg file.
+
+	* autogen.sh (REQUIRED_AUTOMAKE_VERSION) : bump automake version to
+	  get stricter distchecks.
+
+2004-01-14  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.mime : prune this to just types gnome-mime-data does not
+	  appear to have.
+
+2004-01-15  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=131343
+	* src/print.c (print_job_info_update_from_config): new
+	(print_job_info_get): move some code into 
+	  print_job_info_update_from_config
+	(sheet_print): call print_job_info_update_from_config after the
+	  user may have changed the paper info in the print dialog.
+
+2004-01-14  Jon K Hellan  <hellan@acm.org>
+
+	* README: Spellcheck
+
+2004-01-14  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c : silence some warnings from the zoom combo.  It's not
+	  functional yet so why spew errors.
+	- Add status line display of menu tooltips
+	- Fix accel for the display formula toggle
+
+2004-01-13  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (function_call_with_list) : fix the address tests by
+	  allowing missing optional args to get passed as NULL.
+
+2004-01-12  Morten Welinder  <terra@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml: remove menu entris for bold, etc.
+	(Probably accidentally committed.)
+
+2004-01-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/GNOME_Gnumeric-gtk.xml: Add accelerators for bold, italic
+	and underline.
+
+2004-01-10  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c : Display the progress bar
+	  enable the sensitzation/desensitization of the actions.  NOTE :
+	  requires a gtk patch that is not in cvs yet.
+	  Set a tooltip for the border and colour combos, requires another gtk
+	  patch that is not in cvs.
+
+	* src/gnumeric-pane.c : Conditionally disable the stipple border for
+	  now, but fix it to scale properly with zoom anyway.
+
+	* src/Makefile.am (bonobo_component_ui_DATA) : install the GtkAtion ui
+	  file for now.  We can cleanup later.  Display ssconvert too, that
+	  needs to merge or move to a new dir.  It doubles link time.
+
+2004-01-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c: Add invisible CopyDown and CopyRight
+	actions.  Stubbed so far.
+	Remove accelerator for double underline as it collided with
+	single underline.
+
+2004-01-08  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=130172
+	* src/func.c (function_call_with_list) : A major change
+	  Do not do the empty conversion to int(0) in expr_eval
+	  ALLOW scalars to return empty/NULL, the convert them to empty for
+	  most types, and int(0) for float/bool.  Which makes
+	  'S' the same as 's' for all purposes accept documentation.
+
+	* src/GNOME_Gnumeric-gtk.xml : No need to name items their action is
+	  sufficient as long as they are unique in their parent.
+
+	* src/cell.h (CELL_HAS_NEW_EXPR) : AARRRGGH.  Actually a sign a
+	  _unique_ value to it.
+
+	* src/gnumeric-pane.c (cb_control_point_event) : change the cursor
+	  when dragging.  Only start dragging on button 1 down.  Ignore other
+	  buttons while dragging.
+	(cb_sheet_object_canvas_event) : ditto.
+
+	* src/main-application.c (main) : set the app name.
+
+2004-01-07  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=130700
+	* src/format.c (format_entry_ctor) : init the new 'suppress_minus'
+	  entry.
+	(format_compile) : initialize supress minus if the condition is of the
+	  form [<=(val <= 0)] or [<(val < 0)] I hope this is a reasonable
+	  approximation of MS Excel.
+	(render_number) : pull out all the old elements that added minus signs
+	(format_number) : handle the new entry based suppress minus operator
+	  here, and prepend the sign.
+
+	* src/wbcg-actions.c : Sync labels and mnemonics with the old
+	  bonobo/gnomeui menus
+
+2004-01-06  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars) : Enable/Disable the arrow
+	  contraction on the toolbars if the handlbox is docked/undocked.
+	  This avoids having floating toolbars with nothing but the collapse
+	  arrow.
+
+	* configure.in : re-enable the *DEPRECATED*
+	and add a pile of #undef/#warning to make sure things still work
+
+2004-01-06  Jody Goldberg <jody@gnome.org>
+
+	The initial pass at GtkAction custom combos are mucho broken
+	* src/sheet.c (sheet_toggle_hide_zeros) : move this out of the macro
+	  in wbcg.
+	(sheet_toggle_show_formula) : ditto.
+
+	* src/sheet-object-graph.c (cb_save_as) : add jpg, and translate the
+	  error message now that string freeze is done.
+
+	* src/gui-util.c : restore DISABLE_DEPRECATED
+	(gnumeric_toolbar_insert_with_eventbox) : delete.
+	(gnumeric_toolbar_append_with_eventbox) : delete.
+	(gtk_button_stock_alignment_set) : delete.
+	(gnumeric_toolbar_new) : delete.
+	(gnumeric_inject_widget_into_bonoboui) : move the wbc-bonobo.c
+	(gnumeric_toolbar_get_widget) : delete.
+	(gnm_widget_disable_focus) : move here from workbook-format-toolbar.c
+
+	* workbook-format-toolbar.{c,h} : move contents into
+	* wbcg-actions.c : this new file
+	* wbc-gtk.c : or this new file
+	* wbc-bonobo.c : or this new file (WHICH DOES NOT COMPILE OR WORK)
+	  Should probably merge into workbook-control-component or something
+	  like that
+
+	* src/gnm-marshalers.list (VOID) : Use the stock marshallers in glib
+	  directly rather than adding our own wrappers.
+	* src/application.c : here
+
+	* src/GNOME_Gnumeric.xml : rename FileExit -> FileQuit to be consistent
+	* src/GNOME_Gnumeric-gtk.xml : new file for GtkAction
+	  NOTE NOTE NOTE
+	  You must be running in gnumeric/src
+	  I Repeat
+	  YOU MUST BE RUNNING IN gnumeric/src
+	  for anything to work right now.  I don't quite know how I want to
+	  handle the file yet (the bonobo approach was irritating) we'll see.
+
+	* configure.in :
+	- Add goffice/gui-utils
+	- Get rid of --with-bonobo
+	- Add --with-gnome
+	- Add --enable-bonobo-component
+	* plugins/Makefile.am : Adapt to that.
+	* src/Makefile.am : ditto, and add the new files.
+
+2004-01-05  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=130424
+	* src/commands.c (cmd_set_text_redo) : remove manual kludge.
+	* src/dependent.h (cell_eval) : move from here
+	* src/cell.h (cell_eval) : to here.  Add a new flag CELL_HAS_NEW_EXPR
+	* src/cell.c (cell_set_expr_internal) : set the flag here.
+	* src/rendered-value.c (rendered_value_new) : test it here.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=130582
+	* src/sheet-control-gui.c (scg_cursor_move) : don't scroll the other
+	  panes unless we absolutely have to.  Apparently we only fuxed normal
+	  cursor movement for http://bugzilla.gnome.org/show_bug.cgi?id=77303
+	  This fixes rangesel too.
+
+2003-12-29  Jody Goldberg <jody@gnome.org>
+
+	* * : Move everything to glib/gi18n.h in place of gnumeric-i18n.h
+	* gnumeric-i18n.h : delete
+
+	* configure.in : Looks like we're really requiring gtk/glib 2.3.1 at a
+	  minimum.  In reality it's probably closer to CVS at this point.  I'm
+	  kinda looking forward to the gtk freeze.
+
+2003-12-24  Morten Welinder  <terra@gnome.org>
+
+	* src/io-context-gtk.c (cb_realize): Remove workaround for old
+	gtk.
+	* src/stf-parse.c (stf_parse_lines): Ditto.
+	* src/workbook-control-gui.c (wbcg_get_gtk_settings): Ditto.
+	(show_gui): Ditto.
+
+	* src/gui-util.c (gdk_cursor_new_from_pixbuf): Remove.
+
+2003-12-23  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post BRANCH bump
+	  require gtk/glib 2.3.0, that will probably go up shortly
+	  as we depend more on head directly

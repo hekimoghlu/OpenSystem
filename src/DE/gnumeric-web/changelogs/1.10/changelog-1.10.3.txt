@@ -1,0 +1,169 @@
+2010-05-07  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.3
+
+2010-05-05  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (value_intersection): Handle non-cell dependency
+	better.  Fixes #142412.
+
+2010-05-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/colrow.h (_ColRowInfo): add in_advanced_filter field
+	* src/wbc-gtk-actions.c (actions): make it clear that ShowAll 
+	  relates to Advanced Filters
+	* src/wbc-gtk.c (wbcg_menu_state_update): keep has_filtered_rows
+	  for advanced filters separate from the auto filters.
+
+2010-05-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c: change argument to filter_show_all
+	* src/wbc-gtk.c (wbcg_menu_state_update): use MS_FILTER_STATE_CHANGED
+	  rather than MS_CONSOLIDATE
+	* src/workbook-control.h (MS_FILTER_STATE_CHANGED): new
+	
+2010-05-03  Morten Welinder  <terra@gnome.org>
+
+	* src/style.c (gnm_pango_context_get): Cache the context.  (Some
+	pango versions are indeterministic in font selection.)
+	(gnm_font_shutdown): Release the context.
+
+	* src/sheet.h (struct _Sheet): Drop context field.
+
+	* src/rendered-value.c (gnm_rendered_value_new): Add a
+	PangoContext* argument.  All callers changed.
+
+	* src/item-edit.c (item_edit_realize): Use proper pango context.
+
+	* src/sheet.c (cb_sheet_cell_copy): Unwrap the array expression.
+
+	* src/expr.c (gnm_expr_is_array): New function.
+	(gnm_expr_new_array_corner): Complain if subexpression in a array.
+	(gnm_expr_top_is_array): Use gnm_expr_is_array.
+
+	* src/sheet.c (sheet_dup_cells): Queue recalc of the new sheet.
+	(cb_sheet_cell_copy): Don't copy computed values.
+
+2010-05-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mathfunc.c (gnm_matrix_eigen_max_index): stay in the matrix
+	(gnm_matrix_eigen_*): use unsigned int
+
+2010-05-03  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (cb_sheet_cell_copy): Use gnm_cell_assign_value, not
+	gnm_cell_set_value, for non-corner array cells.  Copy the value for same.
+	Don't leak cells.  Fixes most of #617469.
+
+2010-05-02  Morten Welinder  <terra@gnome.org>
+
+	* src/complex.c (complex_pow): Fix problem on negative real axis.
+
+	* src/complex.h (complex_invalid, complex_invalid_p): New
+	functions.
+
+2010-05-01  Morten Welinder  <terra@gnome.org>
+
+	* src/complex.c (complex_from_string): Reject invalid strings like
+	"42.0.1i".
+
+2010-04-30 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cmd-edit.c (cmd_shift_rows): protect against data loss
+	(cmd_shift_cols): ditto
+
+2010-04-30 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_insert_cols): protect against data loss
+	(cmd_insert_rows): ditto
+
+2010-04-30  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (find_rows_that_match): Fix checking of multiple
+	criteria.  Fixes rest of #164169.
+
+	* src/sheet-filter.c (filter_expr_eval): When we're looking for a
+	number, match also strings.  Match strings case insensitively.
+
+2010-04-27  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: needs goffice-0.8.3.
+	* src/wbc-gtk.c (wbc_gtk_init_borders), (wbc_gtk_init_color_fore),
+	(wbc_gtk_init_color_back): use the combo-activate signal.
+
+2010-04-27  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_set_property,
+	wb_view_get_property): Keep auto expression attributes too.
+	(wb_view_auto_expr_recalc): Set colour when needed.  Fixes
+	#575104.
+
+	* src/wbc-gtk.c (wbcg_auto_expr_text_changed): Set attributes too.
+	(wbcg_view_changed): Watch attribute changes too.
+
+	* src/gutils.c (gnm_pango_attr_list_equal): Import from commands.c
+	and make this public.
+
+2010-04-23  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_unserialize),
+	(gnm_go_data_vector_load_len), (gnm_go_data_vector_load_values): allow
+	multiple and block selection for graph vector data.
+	* src/wbc-gtk.c (cb_graph_dim_editor_update): ditto.
+
+2010-04-22  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_sheet_add): Set label's initial visibility.
+	Fixes #616549.
+
+2010-04-21 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* gnumeric.doap: add e-mail address
+	* src/print.c (print_page): graphs on graph sheets always take 
+	  the whole space, no need to center
+
+2010-04-21  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Handle empty strings.
+	Fixes #616139.
+
+	* src/cell.c (gnm_cell_get_entered_text): Make sure the empty
+	string gets quoted.  Fixes part of #616139.
+
+2010-04-21  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/commands.c (update_sheet_graph_cb), (cmd_print_setup_undo),
+	(cmd_print_setup_redo): implement graph only sheets (at least for the
+	visible part). [#158170]
+	* src/gnumeric.h: ditto.
+	* src/graph.h: ditto.
+	* src/print.c (print_page): ditto.
+	* src/sheet-control-gui.c (scg_resize), (scg_scrollbar_config),
+	(scg_set_top_left), (scg_make_cell_visible), (scg_set_panes),
+	(set_resize_pane_pos), (post_create_cb), (sheet_control_gui_new),
+	(scg_finalize), (scg_unant), (scg_ant), (scg_adjust_preferences),
+	(scg_object_create_view): ditto.
+	* src/sheet-object-graph.c (cb_graph_size_changed),
+	(cb_post_new_view), (gnm_sog_new_view), (gnm_sog_bounds_changed),
+	(cb_sheet_target_changed), (sheet_object_graph_guru),
+	(sheet_object_graph_ensure_size): ditto.
+	* src/sheet-object-graph.h: ditto.
+	* src/sheet-object.c (sheet_object_populate_menu_real),
+	(sheet_object_draw_cairo_sized), (sheet_object_view_enter_notify),
+	(cb_so_menu_activate), (cb_ptr_array_free), (build_so_menu),
+	(sheet_object_view_button_pressed): ditto.
+	* src/sheet-object.h: ditto.
+	* src/sheet.c (sheet_new_with_type): ditto.
+	* src/sheet.h: ditto.
+	* src/wbc-gtk-actions.c (cb_add_graph): ditto.
+	* src/wbc-gtk.c (wbcg_update_action_sensitivity),
+	(wbcg_set_direction), (cb_scroll_wheel), (wbcg_get_n_scg): ditto.
+	* src/workbook.c (workbook_sheet_add_with_type): ditto.
+	* src/workbook.h: ditto.
+	* src/xml-sax-read.c (xml_sax_wb_sheetsize),
+	(xml_sax_wb_sheetname): ditto.
+	* src/xml-sax-write.c (xml_write_sheet_names): ditto.
+
+2010-04-16  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

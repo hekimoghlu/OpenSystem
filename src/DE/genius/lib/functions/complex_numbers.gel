@@ -1,0 +1,80 @@
+# Basic functions to do with complex numbers
+
+# Argument of a complex number
+# (branch cut on negative real axis, (-infty,0) -- always returns
+#  result in (-pi,pi] returns null for 0
+function Argument(z) = if (z != 0) then Im(ln(z)) # else null;
+Arg=Argument;
+arg=Argument;
+SetHelp("Argument","functions","argument (angle) of complex number");
+SetHelpAlias ("Argument", "arg");
+SetHelpAlias ("Argument", "Arg");
+
+
+#
+# For Moebius mapping discussion see
+# John B. Conway, Functions of One Complex Variable I
+# 1978, Springer-Verlag, New York, Inc.
+#
+SetHelp("MoebiusDiskMapping","functions","Moebius mapping of the disk to itself mapping a to 0");
+function MoebiusDiskMapping(a,z) = (
+	(z-a)/(1-conj(a)*z)
+)
+
+SetHelp("MoebiusMapping","functions","Moebius mapping using the cross ratio taking z2,z3,z4 to 1,0, and infinity respectively");
+function MoebiusMapping(z,z2,z3,z4) = (
+	((z-z3)/(z-z4))/((z2-z3)/(z2-z4))
+)
+
+SetHelp("MoebiusMappingInftyToOne","functions","Moebius mapping using the cross ratio taking infinity to 1 and z3,z4 to 0 and infinity respectively");
+function MoebiusMappingInftyToOne(z,z3,z4) = (
+	(z-z3)/(z-z4)
+)
+
+SetHelp("MoebiusMappingInftyToZero","functions","Moebius mapping using the cross ratio taking infinity to 0 and z2,z4 to 1 and infinity respectively");
+function MoebiusMappingInftyToZero(z,z2,z4) = (
+	(z2-z4)/(z-z4)
+)
+
+SetHelp("MoebiusMappingInftyToInfty","functions","Moebius mapping using the cross ratio taking infinity to infinity and z2,z3 to 1 and 0 respectively");
+function MoebiusMappingInftyToInfty(z,z2,z3) = (
+	(z-z3)/(z2-z3)
+)
+
+SetHelp("cis","functions","The cis function, that is cos(x)+i*sin(x)");
+function cis(x) = cos(x)+(sin(x))i
+
+# FIXME: this is too stupid, must have better implementation
+# to be at all useful
+#SetHelp("ZetaFunctionTolerance", "parameters", "Tolerance for the ZetaFunction");
+#parameter ZetaFunctionTolerance = 10.0^(-5);
+#
+#SetHelp("ZetaFunction","functions","The Riemann zeta function up to ZetaFunctuionTolerance");
+#function ZetaFunction(z) = (
+	#if z == 1 then (
+		#(error("ZetaFunction: 1 is a pole");bailout);
+	#) else if Re(z) > 0 then (
+		## FIXME: this is stupid!
+		#oldtol = SumProductTolerance;
+		#oldtries = SumProductNumberOfTries;
+		#SumProductTolerance = ZetaFunctionTolerance;
+		#SumProductNumberOfTries = 100000;
+		#zeta = InfiniteSum (`(n) = float(1/(n^z)), 1, 1);
+		#SumProductTolerance = oldtol;
+		#SumProductNumberOfTries = oldtries;
+		#if IsNull (zeta) then
+			#(error("ZetaFunction: Cannot do within tolerance");bailout);
+		#zeta
+	#) else (
+		## FIXME: implement this
+		#(error("ZetaFunction: Not yet defined for Re z < 0");bailout);
+	#)
+#)
+
+#SetHelp("GammaFunctionTolerance", "parameters", "Tolerance for the GammaFunction");
+#parameter GammaFunctionTolerance = 10.0^(-10);
+
+#SetHelp("GammaFunction","functions","The gamma function up to ZetaFunctuionTolerance");
+#function GammaFunction(z) = (
+# FIXME: implement
+#)

@@ -1,0 +1,35 @@
+/*
+ * Copyright (C) 2006 INDT
+ *  Andre Moreira Magalhaes <andre.magalhaes@indt.org.br>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA*
+ */
+
+#ifndef _DMAP_UTILS_H
+#define _DMAP_UTILS_H
+
+#include <glib.h>
+#include <libsoup/soup.h>
+
+/**
+ * dmap_utils_mime_to_format:
+ * @transcode_mimetype: a string representing a MIME type (e.g., "audio/wav").
+ *
+ * Returns: a string representing the corresponding type  (e.g., "wav").
+ */
+gchar * dmap_utils_mime_to_format (const gchar * transcode_mimetype);
+
+G_END_DECLS
+#endif

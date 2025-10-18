@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+
+# Copyright (C) 2011 Morten Welinder <terra@gnome.org>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
+# USA
+
+# This program is fairly dumb: we do search-and-replace on the text of
+# an xml file.  Don't expect anything fancy to work.
+
+use strict;
+use Getopt::Long;
+use English;
+
+my $myself = $0;
+$myself =~ s|^.*/||;
+
+my $filedir = ".";
+
+&GetOptions("file-dir=s" => \$filedir,
+    ) or die "$0: invalid usage -- inquire within\n";
+
+my $srcfile = shift @ARGV;
+my $dstfile = shift @ARGV;
+
+my $data = &read_file ($srcfile, undef);
+
+while ($data =~ m{(<service\s+type="resource"\s+id=".*")(\s+)file="(.*)"(\s*/>)}) {
+    my $filename = $3;
+    print STDERR "Embedding $filename\n";
+    my $file_data = &read_file ($filename, $filedir);
+    my $encoded_data = &xml_encode ($file_data);
+    $data = $PREMATCH . $1 . $2 . "data=\"$encoded_data\"" . $4 . $POSTMATCH;
+}
+
+&write_file ($dstfile, $data);
+
+
+sub read_file
+{
+    my ($filename,$dir) = @_;
+
+    if ($filename !~ m|^/| && defined $dir) {
+	$filename = "$dir/$filename";
+    }
+
+    local (*FIL);
+    local $/ = undef;
+    open (*FIL, "<$filename") or die "$myself: cannot read $filename: $!\n";
+    my $data = <FIL>;
+    close (*FIL);
+    return $data;
+}
+
+sub write_file
+{
+    my ($filename,$data) = @_;
+
+    local (*FIL);
+    open (*FIL, ">$filename") or die "$myself: cannot write $filename: $!\n";
+    print FIL $data;
+    close (*FIL);
+}
+
+sub xml_encode {
+    my ($s) = @_;
+
+    my $res = "";
+
+    foreach my $c (split (//, $s)) {
+	my $ci = ord ($c);
+	if ($c eq "&") {
+	    $res .= '&amp;';
+	} elsif ($c eq "<") {
+	    $res .= '&lt;';
+	} elsif ($c eq ">") {
+	    $res .= '&gt;';
+	} elsif ($c eq '"') {
+	    $res .= '&quot;';
+	} elsif ($ci >= 32 && $ci < 127) {
+	    $res .= $c;
+	} elsif ($ci == 7) {
+	    die "$myself: cannot embed character 7\n";
+	} else  {
+	    $res .= '&#' . $ci . ";";
+	}
+    }
+
+    return $res;
+}

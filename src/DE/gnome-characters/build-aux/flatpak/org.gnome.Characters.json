@@ -1,0 +1,84 @@
+{
+    "id" : "org.gnome.CharactersDevel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "command" : "gnome-characters",
+    "branch" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "finish-args" : [
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--metadata=X-DConf=migrate-path=/org/gnome/Characters/"
+    ],
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "*.la",
+        "*.a",
+        "/share/doc",
+        "/share/gir-1.0"
+    ],
+    "modules" : [
+        {
+            "name": "noto-emoji",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p /app/share/fonts",
+                "cp ./fonts/NotoColorEmoji.ttf /app/share/fonts"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/googlefonts/noto-emoji/archive/refs/tags/v2.051.tar.gz",
+                    "sha256": "04f3d1e5605edebebac00a7a0becb390a4a3ead015066905b27935b30c18e745"
+                }
+            ]
+        },
+        {
+            "name" : "gnome-desktop",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddebug_tools=false",
+                "-Ddesktop_docs=false",
+                "-Dudev=disabled",
+                "-Dlegacy_library=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-desktop"
+                }
+            ]
+        },
+        {
+            "name" : "gnome-characters",
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "run-tests" : true,
+            "build-options" : {
+                "test-args" : [
+                    "--device=dri",
+                    "--share=ipc",
+                    "--socket=fallback-x11",
+                    "--socket=wayland"
+                ]
+            },
+            "config-opts" : [
+                "-Dprofile=development"
+            ],
+            "sources" : [
+                {
+                    "type" : "dir",
+                    "path" : "../../"
+                }
+            ]
+        }
+    ]
+}

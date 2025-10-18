@@ -1,0 +1,126 @@
+[project]
+name = "PyGObject"
+description = "Python bindings for GObject Introspection"
+readme = 'README.rst'
+license = { file = 'COPYING' }
+authors = [
+    { name="James Henstridge", email="james@daa.com.au" }
+]
+maintainers = [
+    { name="Christoph Reiter", email="creiter@src.gnome.org" },
+    { name="Arjan Molenaar", email="amolenaar@gnome.org" },
+    { name="Dan Yeaw", email="danyeaw@gnome.org" },
+    { name="Ignacio Casal Quinteiro", email="icq@gnome.org" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: C",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pycairo>=1.16"
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://pygobject.gnome.org"
+Repository = "https://gitlab.gnome.org/GNOME/pygobject.git"
+Changelog = "https://gitlab.gnome.org/GNOME/pygobject/-/blob/main/NEWS"
+
+[tool.pdm.dev-dependencies]
+lint = [
+    "pre-commit",
+]
+build = [
+    # Setuptools 74 removed msvccompiler, required by g-ir-scanner (<1.82.0)
+    # See https://gitlab.gnome.org/GNOME/gobject-introspection/-/issues/515
+    "setuptools<74",
+    "meson-python",
+    "ninja",
+    "pycairo",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+docs = [
+    "sphinx",
+    "pydata-sphinx-theme",
+    "sphinx-copybutton>=0.5.2",
+]
+
+[tool.pdm.options]
+install = [
+    "--no-isolation",
+    "--config-setting=setup-args=-Dtests=true",
+    "--config-setting=setup-args=-Dbuildtype=debug",
+    "--config-setting=editable-verbose=true",
+]
+build = [
+    "--no-wheel",
+    "--config-setting=setup-args=-Dtests=true",
+]
+
+[tool.meson-python.args]
+setup = ["-Dtests=false", "-Dwheel=true", "--wrap-mode=nofallback"]
+dist = ["--include-subprojects"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+python_files = "test_*.py"
+addopts = [
+    "--import-mode=importlib",
+]
+
+[tool.ruff]
+extend-include = ["docs/**/*.rst"]
+extend-exclude = ["subprojects", "COPYING"]
+
+[tool.ruff.lint]
+extend-select = [
+    "UP",    # pyupgrade
+    "E",     # pycodestyle error
+    "W",     # pycodestyle warning
+    "D",     # pydocstyle
+    "R",     # refactor
+    "C4",    # flake8-comprehensions
+    "ASYNC", # flake8-async
+    "EXE",   # flake8-executable
+    "T20",   # flake8-print
+    "SIM",   # flake8-simplify
+    "RUF",   # extra ruff rules
+    "PERF",  # perflint
+]
+ignore = [
+    "D1",
+    "D211",
+    "D203",
+    "D213",
+    "D4",
+    "D205",
+    "E402",
+    "E501",
+    "E731",
+    "E722",
+    "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"docs/tutorials/**/*py" = ["T20", "SIM905"]
+"fixup-lcov-paths.py" = ["T20"]
+
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[build-system]
+build-backend = "mesonpy"
+requires = ["meson-python>=0.12.1", "pycairo>=1.16"]

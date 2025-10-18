@@ -1,0 +1,195 @@
+/* Copyright (C) 2017 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <gdkmm/snapshot.h>
+#include <gdkmm/rectangle.h>
+#include <gdkmm/graphene_rect.h>
+#include <gskmm/roundedrect.h>
+#include <gskmm/transform.h>
+#include <gtkmm/stylecontext.h>
+#include <pangomm/layout.h>
+#include <gtk/gtk.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gdkmm/private/snapshot_p.h)
+
+typedef struct _graphene_rect_t graphene_rect_t;
+
+namespace Gdk
+{
+class GTKMM_API Paintable;
+class GTKMM_API RGBA;
+class GTKMM_API Texture;
+}
+
+namespace Gtk
+{
+
+/** Auxiliary object for snapshots.
+ *
+ * %Snapshot is an auxiliary object that assists in creating GskRenderNodes
+ * in Gtk::Widget::snapshot_vfunc(). It functions in a similar way to
+ * a cairo context, and maintains a stack of render nodes and their associated
+ * transformations.
+ *
+ * The node at the top of the stack is the the one that append_node()
+ * operates on. Use the push() and pop() functions to change the current node.
+ *
+ * The typical way to obtain a %Snapshot object is as an argument to
+ * Gtk::Widget::snapshot_vfunc(). If you need to create your own %Snapshot, use create().
+ *
+ * @newin{3,90}
+ */
+class GTKMM_API Snapshot : public Gdk::Snapshot
+{
+  _CLASS_GOBJECT(Snapshot, GtkSnapshot, GTK_SNAPSHOT, Gdk::Snapshot, GdkSnapshot, , , GTKMM_API)
+  // GtkSnapshot is typedefed as GdkSnapshot in gtktypes.h.
+  // GtkSnapshot's wrap function can't be called wrap(). It would be ambiguous
+  // when there is a wrap(GdkSnapshot*, bool)
+  _NO_WRAP_FUNCTION
+
+public:
+  //TODO: Add more methods. What shall be done with methods that take Gsk or graphene classes?
+
+#m4 _CONVERSION(`GtkSnapshot*',`Glib::RefPtr<Snapshot>', `Glib::wrap_gtk_snapshot($3)')
+  // gtk_snapshot_new() does more than call g_object_new().
+  _WRAP_METHOD(static Glib::RefPtr<Snapshot> create(), gtk_snapshot_new)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Paintable> to_paintable(const Gdk::Graphene::Size& size{?}),
+    gtk_snapshot_to_paintable, newin "4,12")
+  _IGNORE(gtk_snapshot_free_to_paintable)
+
+  /** Creates a new debug node.
+   *
+   * @newin{3,94}
+   *
+   * @param name The name for the new node, or an empty string for no name.
+   */
+  void push_debug(const Glib::ustring& name);
+  _IGNORE(gtk_snapshot_push_debug)
+
+  _WRAP_METHOD(void push_opacity(double opacity), gtk_snapshot_push_opacity)
+  _WRAP_METHOD(void push_blur(double radius), gtk_snapshot_push_blur)
+
+#m4 _CONVERSION(`const Gdk::Rectangle&',`const graphene_rect_t*', `gdk_rect_to_graphene_rect($3).get()')
+  _WRAP_METHOD(void push_repeat(const graphene_rect_t* bounds, const graphene_rect_t* child_bounds),
+    gtk_snapshot_push_repeat, deprecated "Use push_repeat() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void push_repeat(const Gdk::Rectangle& bounds, const Gdk::Rectangle& child_bounds{?}),
+    gtk_snapshot_push_repeat, deprecated "Use push_repeat() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void push_repeat(const Gdk::Graphene::Rect& bounds, const Gdk::Graphene::Rect& child_bounds{?}),
+    gtk_snapshot_push_repeat, newin "4,12")
+
+  _WRAP_METHOD(void push_clip(const graphene_rect_t* bounds), gtk_snapshot_push_clip,
+    deprecated "Use push_clip() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void push_clip(const Gdk::Rectangle& bounds), gtk_snapshot_push_clip,
+    deprecated "Use push_clip() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void push_clip(const Gdk::Graphene::Rect& bounds),
+    gtk_snapshot_push_clip, newin "4,12")
+  _WRAP_METHOD(void push_rounded_clip(const Gsk::RoundedRect& bounds),
+    gtk_snapshot_push_rounded_clip, newin "4,20")
+
+  _WRAP_METHOD(void push_cross_fade(double progress), gtk_snapshot_push_cross_fade)
+
+  _IGNORE(gtk_snapshot_push_gl_shader) dnl// deprecated
+  _WRAP_METHOD(void gl_shader_pop_texture(), gtk_snapshot_gl_shader_pop_texture,
+    deprecated "GTK's new Vulkan-focused rendering does not support this feature. Use Gtk::GLArea for OpenGL rendering.")
+  _WRAP_METHOD(void pop(), gtk_snapshot_pop)
+
+  _WRAP_METHOD(void save(), gtk_snapshot_save)
+  _WRAP_METHOD(void restore(), gtk_snapshot_restore)
+
+  _WRAP_METHOD(void transform(const Glib::RefPtr<const Gsk::Transform>& transform),
+    gtk_snapshot_transform, newin "4,20")
+  _WRAP_METHOD(void translate(const Gdk::Graphene::Point& point),
+    gtk_snapshot_translate, newin "4,12")
+  _WRAP_METHOD(void rotate(float angle), gtk_snapshot_rotate)
+  _WRAP_METHOD(void scale(float factor_x, float factor_y), gtk_snapshot_scale)
+  _WRAP_METHOD(void scale(float factor_x, float factor_y, float factor_z), gtk_snapshot_scale_3d)
+  _WRAP_METHOD(void perspective(float depth), gtk_snapshot_perspective)
+
+  _WRAP_METHOD(Cairo::RefPtr<Cairo::Context> append_cairo(const graphene_rect_t* bounds),
+    gtk_snapshot_append_cairo, deprecated "Use append_cairo() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(Cairo::RefPtr<Cairo::Context> append_cairo(const Gdk::Rectangle& bounds),
+    gtk_snapshot_append_cairo, deprecated "Use append_cairo() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(Cairo::RefPtr<Cairo::Context> append_cairo(const Gdk::Graphene::Rect& bounds),
+    gtk_snapshot_append_cairo, newin "4,12")
+
+  _WRAP_METHOD(void append_texture(const Glib::RefPtr<Gdk::Texture>& texture,
+    const graphene_rect_t* bounds), gtk_snapshot_append_texture,
+    deprecated "Use append_texture() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void append_texture(const Glib::RefPtr<Gdk::Texture>& texture,
+    const Gdk::Rectangle& bounds), gtk_snapshot_append_texture,
+    deprecated "Use append_texture() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void append_texture(const Glib::RefPtr<Gdk::Texture>& texture,
+    const Gdk::Graphene::Rect& bounds), gtk_snapshot_append_texture, newin "4,12")
+
+  _WRAP_METHOD(void append_color(const Gdk::RGBA& color, const graphene_rect_t* bounds),
+    gtk_snapshot_append_color, deprecated "Use append_color() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void append_color(const Gdk::RGBA& color, const Gdk::Rectangle& bounds),
+    gtk_snapshot_append_color, deprecated "Use append_color() with Gdk::Graphene::Rect instead.")
+  _WRAP_METHOD(void append_color(const Gdk::RGBA& color, const Gdk::Graphene::Rect& bounds),
+    gtk_snapshot_append_color, newin "4,12")
+
+  _WRAP_METHOD(void append_inset_shadow(const Gsk::RoundedRect& outline,
+    const Gdk::RGBA& color, float dx, float dy, float spread, float blur_radius),
+    gtk_snapshot_append_inset_shadow, newin "4,20")
+  _WRAP_METHOD(void append_outset_shadow(const Gsk::RoundedRect& outline,
+    const Gdk::RGBA& color, float dx, float dy, float spread, float blur_radius),
+    gtk_snapshot_append_outset_shadow, newin "4,20")
+
+  _WRAP_METHOD(void append_layout(const Glib::RefPtr<Pango::Layout>& layout,
+    const Gdk::RGBA& color), gtk_snapshot_append_layout)
+
+  _WRAP_METHOD(void render_backgrount(const Glib::RefPtr<StyleContext>& context,
+    double x, double y, double width, double height), gtk_snapshot_render_background,
+    deprecated "This method is misspelt. Prefer render_background(), although it is also deprecated.")
+  _WRAP_METHOD(void render_background(const Glib::RefPtr<StyleContext>& context,
+    double x, double y, double width, double height), gtk_snapshot_render_background,
+    newin "4,18", deprecated "There is no replacement for querying the style machinery. Stylable UI elements should use widgets.")
+  _WRAP_METHOD(void render_frame(const Glib::RefPtr<StyleContext>& context,
+    double x, double y, double width, double height), gtk_snapshot_render_frame,
+    deprecated "There is no replacement for querying the style machinery. Stylable UI elements should use widgets.")
+  _WRAP_METHOD(void render_focus(const Glib::RefPtr<StyleContext>& context,
+    double x, double y, double width, double height), gtk_snapshot_render_focus,
+    deprecated "There is no replacement for querying the style machinery. Stylable UI elements should use widgets.")
+  _WRAP_METHOD(void render_layout(const Glib::RefPtr<StyleContext>& context,
+    double x, double y, const Glib::RefPtr<Pango::Layout>& layout), gtk_snapshot_render_layout,
+    deprecated "There is no replacement for querying the style machinery. Stylable UI elements should use widgets.")
+  _WRAP_METHOD(void render_insertion_cursor(const Glib::RefPtr<StyleContext>& context,
+    double x, double y, const Glib::RefPtr<Pango::Layout>& layout, int index,
+    Pango::Direction direction), gtk_snapshot_render_insertion_cursor,
+    deprecated "There is no replacement for querying the style machinery. Stylable UI elements should use widgets.")
+};
+
+} // namespace Gtk
+
+namespace Glib
+{
+  /** A Glib::wrap() method for this object.
+   *
+   * It's not called %wrap() because GtkSnapshot is a typedef of GdkSnapshot.
+   *
+   * @param object The C instance.
+   * @param take_copy False if the result should take ownership of the C instance. True if it should take a new copy or ref.
+   * @result A C++ instance that wraps this C instance.
+   *
+   * @relates Gtk::Snapshot
+   */
+  GTKMM_API
+  Glib::RefPtr<Gtk::Snapshot> wrap_gtk_snapshot(GtkSnapshot* object, bool take_copy = false);
+}

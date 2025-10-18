@@ -1,0 +1,104 @@
+/* renderer.h
+ *
+ * Copyright(C) 2004 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or(at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <pangomm/context.h>
+#include <pangomm/glyphitem.h>
+#include <pangomm/glyphstring.h>
+#include <pangomm/layout.h>
+#include <pangomm/layoutline.h>
+
+_DEFS(pangomm,pango)
+_PINCLUDE(glibmm/private/object_p.h)
+_PINCLUDE(pango/pango.h)
+
+namespace Pango
+{
+
+/** Pango::Renderer is a base class that contains the necessary logic for rendering a Pango::Layout or Pango::LayoutLine. 
+ * By subclassing Pango::Renderer and overriding operations such as draw_glyphs and draw_rectangle, 
+ * renderers for particular font backends and destinations can be created.
+ */
+class PANGOMM_API Renderer : public Glib::Object
+{
+  _CLASS_GOBJECT(Renderer, PangoRenderer, PANGO_RENDERER, Glib::Object, GObject, , , PANGOMM_API)
+
+public:
+  _WRAP_ENUM(Part, PangoRenderPart, decl_prefix PANGOMM_API)
+
+  _WRAP_METHOD(void draw_layout(const Glib::RefPtr<Layout>& layout, int x, int y), pango_renderer_draw_layout)
+  _WRAP_METHOD(void draw_layout_line(const Glib::RefPtr<LayoutLine>& line, int x, int y), pango_renderer_draw_layout_line)
+  _WRAP_METHOD(void draw_glyphs(const Glib::RefPtr<Font>& font, const GlyphString& glyphs, int x, int y), pango_renderer_draw_glyphs)
+  _WRAP_METHOD(void draw_glyph_item(const Glib::ustring& text, const GlyphItem& glyph_item, int x, int y), pango_renderer_draw_glyph_item)
+  _WRAP_METHOD(void draw_rectangle(Part part, int x, int y, int width, int height), pango_renderer_draw_rectangle)
+  _WRAP_METHOD(void draw_error_underline(int x, int y, int width, int height), pango_renderer_draw_error_underline)
+  _WRAP_METHOD(void draw_trapezoid(Part part, double y1, double x11, double x21, double y2, double x12, double x22), pango_renderer_draw_trapezoid)
+  _WRAP_METHOD(void draw_glyph(const Glib::RefPtr<Font>& font, Glyph glyph, double x, double y), pango_renderer_draw_glyph)
+
+  _WRAP_METHOD(void activate(), pango_renderer_activate)
+  _WRAP_METHOD(void deactivate(), pango_renderer_deactivate)
+
+  _WRAP_METHOD(void part_changed(Part part), pango_renderer_part_changed)
+
+  _WRAP_METHOD(void set_color(Part part, const Color& color), pango_renderer_set_color)
+
+#m4 _CONVERSION(`PangoColor*',`Color',`Color($3)')
+  _WRAP_METHOD(Color get_color(Part part) const, pango_renderer_get_color)
+
+  _WRAP_METHOD(void set_alpha(Part part, guint16 alpha), pango_renderer_set_alpha)
+  _WRAP_METHOD(guint16 get_alpha(Part part) const, pango_renderer_get_alpha)
+
+  _WRAP_METHOD(void set_matrix(const Matrix& matrix), pango_renderer_set_matrix)
+
+  /** Gets the transformation matrix that will be applied when rendering.
+   * See set_matrix().
+   *
+   * @return The matrix. If no matrix has been set, an identity matrix is returned.
+   */
+  Matrix get_matrix() const;
+  _IGNORE(pango_renderer_get_matrix)
+
+  _WRAP_METHOD(Glib::RefPtr<Layout> get_layout(), pango_renderer_get_layout, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Layout> get_layout() const, pango_renderer_get_layout, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<LayoutLine> get_layout_line(), pango_renderer_get_layout_line, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const LayoutLine> get_layout_line() const, pango_renderer_get_layout_line, refreturn, constversion)
+
+protected:
+#m4begin
+_CONVERSION(`PangoFont*',`const Glib::RefPtr<Font>&',`Glib::wrap($3, true)')
+_CONVERSION(`PangoGlyphString*',`const GlyphString&',`Glib::wrap($3, true)')
+_CONVERSION(`const AttrShape&',`PangoAttrShape*',`const_cast<PangoAttrShape*>(($3).gobj())')
+_CONVERSION(`PangoAttrShape*',`const AttrShape&',`Glib::wrap($3, true)')
+_CONVERSION(`const GlyphItem&',`PangoGlyphItem*',`const_cast<PangoGlyphItem*>(($3).gobj())')
+_CONVERSION(`PangoGlyphItem*',`const GlyphItem&',`Glib::wrap($3, true)')
+#m4end
+  _WRAP_VFUNC(void draw_glyphs(const Glib::RefPtr<Font>& font, const GlyphString& glyphs, int x, int y), draw_glyphs)
+  _WRAP_VFUNC(void draw_rectangle(Part part, int x, int y, int width, int height), draw_rectangle)
+  _WRAP_VFUNC(void draw_error_underline(int x, int y, int width, int height), draw_error_underline)
+  _WRAP_VFUNC(void draw_shape(const AttrShape& attr, int x, int y), draw_shape)
+  _WRAP_VFUNC(void draw_trapezoid(Part part, double y1, double x11, double x21, double y2, double x12, double x22), draw_trapezoid)
+  _WRAP_VFUNC(void draw_glyph(const Glib::RefPtr<Font>& font, Glyph glyph, double x, double y), draw_glyph)
+  _WRAP_VFUNC(void part_changed(Part part), part_changed)
+  _WRAP_VFUNC(void begin(), begin)
+  _WRAP_VFUNC(void end(), end)
+  _WRAP_VFUNC(void prepare_run(const GlyphItem& run), prepare_run)
+  _WRAP_VFUNC(void draw_glyph_item(const Glib::ustring& text, const GlyphItem& glyph_item, int x, int y), draw_glyph_item)
+};
+
+} /* namespace Pango */

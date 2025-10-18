@@ -1,0 +1,238 @@
+2007-09-04  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.7.12
+
+2007-09-02  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Query format before locale
+	in determining month/day order.
+
+2007-08-31  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_write_csv): Add hack to allow ssconvert to dump
+	from specified sheet.
+
+2007-08-30  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump gsf req to get the open-pkg fixes.
+
+2007-08-30  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (GNM_PY_LIBADD): Don't use test==.  [#471726]
+
+2007-08-27  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (paste_object) : transpose objects too.
+
+2007-08-25  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: define WITH_GOFFICE_0_4 if needed.
+
+2007-08-24  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-image.c (gnm_soi_default_size) : handle failures a
+	  bit better [#462787]
+
+2007-08-13  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	Update of graph data allocator editor on dataset changes.
+
+	* src/wbc-gtk.c (cb_dataset_changed): new.
+	(graph_dim_editor_free): disconnect dataset changed signal.
+	(wbcg_data_allocator_editor): register editor entry update signal.
+	Connect to dataset changed signal.
+
+2007-08-13  Morten Welinder  <terra@gnome.org>
+
+	* src/libgnumeric.c (gnm_init): Initialize gnome_vfs here so
+	ssconvert will see it too.
+	* src/main-application.c (gnumeric_arg_parse): Not here.
+
+	* src/gnm-conf-keyfile.c (go_conf_get_str_list): Fix 64-bit issue.
+	(go_conf_get_type): Ditto.  Fixes #465545.
+
+2007-08-12  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (expr_name_validate): New function.
+
+2007-08-11  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (cb_relocate_name): New function.
+	(dependents_relocate): When needed, relocate named expressions.
+	Fixes #123649, I hope.
+
+	* src/expr.c (gnm_expr_relocate): For names, don't change when
+	inserting/deleting columns/rows.
+
+2007-08-10  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (libgoffice): Make this work with libgoffice-0.5
+	* libspreadsheet-1.7.pc.in (Requires): Fix libgoffice req.
+
+2007-08-09  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	Make Graph entry emit an update signal on focus out event, instead on
+	monitoring unmap and unrealize signals. Fix a bug where the update
+	signal was not emited when leaving the entry.
+
+	* src/wbcg-gtk.c (cb_graph_dim_entry_unmap),
+	(cb_graph_dim_entry_unrealize): removed.
+	(cb_graph_dim_entry_focus_out_event): new.
+	(wbcg_data_allocator_editor): connect to gee->entry focus-out-event.
+	Remove unmap and unrealize connections.
+
+2007-08-10  Jody Goldberg <jody@gnome.org>
+
+	* src/libgnumeric.c (gnm_pre_parse_init) : move the thread and stack
+	  init here, along with the call to go_shell_argv_to_glib_encoding.
+	(gnm_pre_parse_shutdown) : new.
+
+	* configure.in : More cleanup on the python code in preparation for
+	  win32.
+
+2007-08-08  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_ins_del_colrow_repeat): Simplify.
+	(cmd_ins_del_colrow_undo): Move undo stuff into GOUndo closure
+	returned by sheet_insert_rows and friends.
+
+	* src/sheet.c (sheet_delete_cols, sheet_delete_rows,
+	sheet_insert_cols, sheet_insert_rows, sheet_colrow_insert_finish,
+	sheet_colrow_delete_finish, sheet_colrow_insdel_finish): Remove
+	"states" argument.
+	(sheet_colrow_insdel_finish): Don't set states here.
+	(sheet_delete_cols, sheet_delete_rows, sheet_insert_cols,
+	sheet_insert_rows): If we collect undo info, append closure to
+	reset col/row states.
+
+	* src/sheet-object.c (sheet_objects_relocate): Don't update the
+	cell_bound for objects that get translated out of the sheet.
+
+2007-08-07  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_insert_rows): Plug leak.
+
+	* src/gnumeric.h (GnmRelocUndo): Replace by GOUndo.
+
+	* src/sheet-object.c (sheet_objects_clear): Add undo parameter.
+	All callers changed.  (This fixes sheet object undo when columns
+	containing objects are deleted.)
+
+	* src/dependent.c (dependents_unrelocate): Make static and no
+	longer free the info.
+	(dependents_unrelocate_free): Make static.
+	(dependents_relocate): Return a GOUndo.  All callers changed.
+
+	* src/sheet.c (sheet_delete_cols, sheet_delete_rows,
+	sheet_move_range): Use go_undo_combine to combine undo items.
+
+2007-08-07  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* src/sheet-object-graph.c (gnm_sog_draw_cairo): use
+	gog_graph_render_to_cairo_vector, a variant of
+	gog_graph_render_to_cairo for full vector output (no metric rounding).
+	Fixes #381682.
+
+2007-08-07  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c : merge with workbook-control-gui, and rename
+	  workbook-edit, and wbcg-actions to reflect a more rational naming
+	  scheme.
+
+	* src/wbc-gtk.c (wbc_gtk_style_feedback) : 400 -> 200 to make things a
+	  bit zippier.
+
+2007-08-06  Morten Welinder  <terra@gnome.org>
+
+	* *.c: Use go_slist_free_custom and go_list_free_custom as
+	appropriate.
+
+	* src/dependent.c (dependents_unrelocate): Handle arrays properly.
+	Fixes #463834.
+
+2007-08-06  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Added support for rendering documentation as PDF.
+
+2007-08-05  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_ins_del_colrow_redo): Always delete the
+	local colrow state here.  Move storing of undo information to
+	constructor.  Move checking for arrays too.
+	(cmd_ins_del_colrow): Store undo information and check for arrays
+	here.  Check for arrays/locks in the case of insert too.
+	(cmd_ins_del_colrow_undo): Undo contents using go_undo.  Don't
+	delete colrow state.
+
+	* src/sheet.c (sheet_colrow_insdel_finish): Don't delete state.
+
+2007-08-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: requires goffice-0.4.3.
+
+2007-08-01  Jody Goldberg <jody@gnome.org>
+
+	[#395926]
+	* src/func.c (function_iterate_argument_values) : Allow non-scalar
+	  results for var-arg arguments use intersect or union too.
+
+2007-07-29  Jody Goldberg <jody@gnome.org>
+
+	[#461284]
+	* src/wbcg-actions.c : Move 'Repeat' back into the standard actions so
+	  that it will be disabled while editing just like the other actions.
+	* src/workbook-control-gui.c : handle the sensitivity of repeat here,
+	  manually.
+	* src/wbc-gtk.c (wbc_gtk_init_undo_redo) : rather than initializing
+	  cb_chain_sensitivity down here to handle it.
+	(cb_chain_sensitivity ) : use gtk_action_GET_sensitive rather than
+	_IS_sensistive to avoid group effects.
+
+2007-07-29  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Resync ALL_LINGUAS with po files.
+
+2007-07-29  Jody Goldberg <jody@gnome.org>
+
+	[#438933]
+	* src/sheet-object.c (sheet_object_get_stacking) : simplify and just
+	  find the object in the ordered list of objects rather than
+	  searching in the realized lists.
+	(sheet_object_adjust_stacking) : maintain the order of the object list
+	  and have the views reflect that, rather than manipulating the views
+	  individually.
+
+	* src/gnm-pane.c (cb_pane_init_objs) : create the objects in the
+	  reverse order to match the stacking order.
+
+	* src/workbook-control-gui.c (wbcg_sheet_add) : no need to create the
+	  object views here.  The panes will do that for us when they are
+	  realized.
+
+2007-07-26  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-widget.c (cb_combo_model_changed) : we can not set
+	  the column until we have a model, but we can only set it the first
+	  time.
+
+2007-07-26  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* README: Update Debian package names.
+
+2007-07-26  Jody Goldberg <jody@gnome.org>
+
+	* src/io-context-gtk.c : Make show_splash and show_warnings
+	  properties, not global variables.
+	* src/libgnumeric.c : remove the globals from here.
+	* src/main-application.c : and move them locally here for the
+	  GOptions.
+
+2007-07-26  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_objects) : store the object in
+	  reverse stacking order to match the sheet_object_set_sheet's api
+	  that prepends new objects.
+
+2007-07-24  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release bump

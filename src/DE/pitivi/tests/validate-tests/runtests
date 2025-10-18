@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Wrapper script for running the Pitivi integration tests."""
+import os
+import subprocess
+import sys
+
+
+def main():
+    """Logic."""
+    try:
+        subprocess.check_call("which gst-validate-launcher", shell=True)
+    except subprocess.CalledProcessError as e:
+        print("ERROR: Cannot find gst-validate-launcher: %s" % e)
+        print("Make sure to install gst-devtools:")
+        print("    https://gitlab.freedesktop.org/gstreamer/gst-devtools/tree/master/validate")
+        sys.exit(127)
+
+    path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    # Path to scan for GstValidate TestsManager subclasses.
+    os.environ["GST_VALIDATE_APPS_DIR"] = path
+    testsuite = os.path.join(path, "suite.py")
+    command = ["gst-validate-launcher", testsuite]
+    command.extend(sys.argv[1:])
+    sys.exit(subprocess.call(command))
+
+
+if __name__ == "__main__":
+    main()

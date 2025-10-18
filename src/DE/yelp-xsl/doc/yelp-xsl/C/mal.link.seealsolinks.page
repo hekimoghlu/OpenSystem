@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<page xmlns="http://projectmallard.org/1.0/" style="xslt-template" id="mal.link.seealsolinks">
+ <info>
+  <link type="guide" xref="mal-link" group="templates"/>
+  <link type="guide" xref="templates" group="mal"/>
+  <desc>Output the see-also links for a page or section.</desc>
+  <revision version="3.18" date="2015-06-07" status="final"/>
+ </info>
+ <title>mal.link.seealsolinks</title>
+ <synopsis>
+  <title>Parameters</title>
+  <terms>
+   <item>
+    <title><code>$node</code></title>
+    <p>The <sys>page</sys> or <sys>section</sys> element to generate links for.</p>
+   </item>
+   <item>
+    <title><code>$role</code></title>
+    <p>A space-separated list of link roles, used to select the appropriate title, default <sys>"seealso"</sys>.</p>
+   </item>
+  </terms>
+ </synopsis>
+ <p>This template outputs all the see-also links for a page or section, whether
+ declared in the page or section or in another page or section.  It outputs
+ each of the links as a <sys>link</sys> element within the Mallard namespace.  Each
+ <sys>link</sys> element has an <sys>xref</sys> attribute pointing to the target page or section.
+ Or, in the case of external links, the <sys>link</sys> element has an <sys>href</sys> attribute
+ pointing to the external resource.</p>
+ <p>Each <sys>link</sys> element contains a <sys>title</sys> with <sys>type="sort"</sys> providing the
+ sort title of the target page or section. The <code>$role</code> attribute is used to
+ select a link title to sort on when a sort title is not present. The results
+ are not sorted when returned from this template. Use <sys>xsl:sort</sys> on the sort
+ titles to sort the results.</p>
+ <p>When a link comes from a topic link on <code>$node</code> that has an <sys>href</sys>
+ attribute but not an <sys>xref</sys> attribute, it is taken to be an external
+ link. In that case, the output link has an <sys>href</sys> attribute instead of
+ an <sys>xref</sys> attribute, and it has an <sys>info</sys> child element. This element
+ has a copy of all the child elements of the source <sys>link</sys> element.</p>
+ <p>The output is a result tree fragment.  To use these results, call
+ <sys>exsl:node-set</sys> on them.</p>
+ <list style="compact">
+  <title>Calls Parameters</title>
+  <item>
+   <p><link xref="mal.cache"/></p>
+  </item>
+ </list>
+ <list style="compact">
+  <title>Calls Keys</title>
+  <item>
+   <p><link xref="mal.cache.key"/></p>
+  </item>
+  <item>
+   <p><link xref="mal.cache.link.key"/></p>
+  </item>
+ </list>
+ <list style="compact">
+  <title>Calls Templates</title>
+  <item>
+   <p><link xref="mal.link.linkid"/></p>
+  </item>
+  <item>
+   <p><link xref="mal.link.sorttitle"/></p>
+  </item>
+  <item>
+   <p><link xref="mal.link.xref.linkid"/></p>
+  </item>
+ </list>
+</page>

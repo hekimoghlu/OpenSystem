@@ -1,0 +1,68 @@
+# Inputs: sourceUri, destUri, newFilename, newParent, newDataSource
+
+# Update nie:isStoredAs in the nie:InformationElement
+DELETE {
+  GRAPH ?g {
+    ?ie nie:isStoredAs ~sourceUri
+  }
+} INSERT {
+  GRAPH ?g {
+    ?ie nie:isStoredAs ~destUri
+  }
+} WHERE {
+  GRAPH ?g {
+    ?ie nie:isStoredAs ~sourceUri
+  }
+};
+
+# Update nfo:FileDataObject information in tracker:FileSystem graph
+WITH tracker:FileSystem
+DELETE {
+  ~sourceUri a rdfs:Resource .
+} INSERT {
+  ~destUri a nfo:FileDataObject ;
+       nfo:fileName ~newFilename ;
+       nie:url ~destUri ;
+       nfo:belongsToContainer ?newContainer ;
+       nfo:fileSize ?fileSize ;
+       nfo:fileLastModified ?fileLastModified ;
+       nfo:fileLastAccessed ?fileLastAccessed ;
+       nfo:fileCreated ?fileCreated ;
+       nie:dataSource ~newDataSource ;
+       nie:interpretedAs ?interpretedAs ;
+       tracker:extractorHash ?extractorHash .
+} WHERE {
+  ~sourceUri a nfo:FileDataObject ;
+    nfo:fileSize ?fileSize ;
+    nfo:fileLastModified ?fileLastModified ;
+    nfo:fileLastAccessed ?fileLastAccessed .
+
+  OPTIONAL { ~sourceUri nfo:fileCreated ?fileCreated } .
+  OPTIONAL { ~sourceUri nie:interpretedAs ?interpretedAs } .
+  OPTIONAL { ~sourceUri tracker:extractorHash ?extractorHash } .
+  OPTIONAL { ?newContainer a nfo:Folder ; nie:isStoredAs ~newParent } .
+};
+
+# Update nfo:FileDataObject in data graphs
+DELETE {
+  GRAPH ?g {
+    ~sourceUri a rdfs:Resource
+  }
+} INSERT {
+  GRAPH ?g {
+    ~destUri a nfo:FileDataObject ;
+      nfo:fileName ~newFilename ;
+      nfo:fileSize ?fileSize ;
+      nfo:fileLastModified ?fileLastModified ;
+      nie:dataSource ~newDataSource ;
+      nie:interpretedAs ?interpretedAs .
+  }
+} WHERE {
+  GRAPH ?g {
+    ~sourceUri a nfo:FileDataObject ;
+      nfo:fileSize ?fileSize ;
+      nfo:fileLastModified ?fileLastModified ;
+    OPTIONAL { ~sourceUri nie:interpretedAs ?interpretedAs } .
+  }
+  FILTER (?g != tracker:FileSystem)
+}

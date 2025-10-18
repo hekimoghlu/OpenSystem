@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.9 -->
+  <template class="BoxesDisplayPage" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <property name="spacing">0</property>
+    <signal name="size-allocate" handler="on_size_allocate"/>
+
+    <!-- Both the toolbars are only shown when in fullscreen. We show:
+
+         * toolbar, when mouse is grabbable (i-e server-side mouse) while
+         * overlay_toolbar when mouse is not grabbble (i-e client-side mouse)
+    !-->
+    <child>
+      <object class="BoxesDisplayToolbar" id="toolbar">
+        <property name="visible">True</property>
+        <property name="overlay">False</property>
+        <property name="handle-drag">True</property>
+        <property name="show-close-button">True</property>
+      </object>
+
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+        <property name="padding">0</property>
+      </packing>
+    </child>
+
+    <child>
+      <object class="GtkGrid" id="grid">
+        <property name="visible">True</property>
+
+        <child>
+          <object class="GtkOverlay" id="size_overlay">
+            <property name="visible">True</property>
+
+            <child type="overlay">
+              <object class="GtkLabel" id="size_label">
+                <property name="halign">center</property>
+                <property name="valign">center</property>
+                <style>
+                  <class name="app-notification"/>
+                  <class name="overlay-box"/>
+                </style>
+              </object>
+            </child>
+
+            <child type="overlay">
+              <object class="GtkBox" id="transfer_message_box">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">center</property>
+                    <property name="valign">center</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <style>
+                      <class name="app-notification"/>
+                      <class name="overlay-box"/>
+                    </style>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="halign">end</property>
+                        <property name="valign">center</property>
+                        <property name="margin_right">24</property>
+                        <property name="icon_name">document-save-symbolic</property>
+                        <property name="icon_size">6</property>
+                      </object>
+                      <packing>
+                        <property name="expand">True</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child type="center">
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="valign">center</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">10</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="halign">start</property>
+                            <property name="margin_left">4</property>
+                            <property name="label" translatable="yes">Ready to Receive File</property>
+                            <property name="justify">center</property>
+                            <style>
+                              <class name="tooltip"/>
+                            </style>
+                            <attributes>
+                              <attribute name="weight" value="bold"/>
+                            </attributes>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="vexpand">True</property>
+                            <property name="label" translatable="yes">You will find your file in the Downloads directory.</property>
+                            <property name="wrap">True</property>
+                            <property name="max_width_chars">25</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkEventBox" id="event_box">
+                <property name="visible">True</property>
+                <property name="above-child">True</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <signal name="event" handler="on_event_box_event"/>
+              </object>
+            </child>
+          </object>
+
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">0</property>
+            <property name="width">1</property>
+            <property name="height">2</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkEventBox" id="overlay_toolbar_box">
+            <property name="visible">True</property>
+            <property name="valign">start</property>
+            <property name="vexpand">False</property>
+
+            <child>
+              <object class="BoxesDisplayToolbar" id="overlay_toolbar">
+                <property name="visible">True</property>
+                <property name="overlay">True</property>
+                <property name="handle-drag">True</property>
+              </object>
+            </child>
+          </object>
+
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">0</property>
+            <property name="width">1</property>
+            <property name="height">1</property>
+          </packing>
+        </child>
+      </object>
+
+      <packing>
+        <property name="expand">True</property>
+        <property name="fill">True</property>
+        <property name="padding">0</property>
+      </packing>
+    </child>
+
+  </template>
+</interface>

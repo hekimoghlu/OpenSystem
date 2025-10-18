@@ -1,0 +1,29 @@
+## Delta functions and related
+
+## Dirac Delta ``function'' (actually a distribution)
+## Defined by Intergral_I(f*DiracDelta) = f(0) for I=[a,b], where
+## a<0<=b.
+
+## Discrete Delta
+## Takes a vector v and returns 1 if any entry is non-zero, 0 otherwise
+function DiscreteDelta(v) = KroneckerDelta([0,v])
+SetHelp("DiscreteDelta","functions","Returns 1 if and only if all elements are zero");
+
+## Kronecker Delta
+## Takes a vector v and returns 1 if all entries are equal,
+## 0 otherwise
+function KroneckerDelta(v) = 
+ (
+  test_value=v@(1);
+  for i in v do (
+    if i != test_value then return 0
+  );
+  1
+ )
+SetHelp("KroneckerDelta","functions","Returns 1 if and only if all elements are equal");
+
+## Unit Step Function
+## The integral of the Dirac Delta function
+## FIXME: should have option to make UnitStep(0) be undefined
+function UnitStep(x) = if (x<0) then 0 else 1
+SetHelp("UnitStep","functions","The unit step function = 0 for x<0, 1 otherwise.  This is the integral of the Dirac Delta function.");

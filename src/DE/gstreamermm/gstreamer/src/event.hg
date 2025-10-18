@@ -1,0 +1,700 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/miniobject.h>
+#include <gstreamermm/format.h>
+#include <gstreamermm/clock.h>
+#include <gstreamermm/segment.h>
+#include <gstreamermm/caps.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Glib
+{
+    template<typename T>
+    Glib::RefPtr<T> wrap_event_derived(GstEvent* object, bool take_copy)
+    {
+      if(take_copy && object)
+        gst_event_ref(object);
+
+      // See the comment at the top of this file, if you want to know why the cast works.
+      return Glib::RefPtr<T>(reinterpret_cast<T*>(object));
+    }
+
+}
+
+namespace Gst
+{
+
+#define GST_EVENT_MAKE_TYPE(num,flags) \
+    (((num) << GST_EVENT_NUM_SHIFT) | (flags))
+
+#define FLAG(name) GST_EVENT_TYPE_##name
+
+_WRAP_ENUM(EventType, GstEventType)
+_WRAP_ENUM(EventTypeFlags, GstEventTypeFlags)
+_WRAP_ENUM(QOSType, GstQOSType)
+_WRAP_ENUM(StreamFlags, GstStreamFlags)
+
+#undef FLAG
+
+class Message;
+class Structure;
+class TagList;
+class Buffer;
+class Toc;
+
+namespace Enums
+{
+
+/** Gets a printable name for the given event type.
+ *
+ * @param type The event type.
+ * @return A reference to the static name of the event.
+ */
+Glib::ustring get_name(EventType type);
+
+/** Gets the unique quark for the given event type.
+ *
+ * @param type The event type.
+ * @return The quark associated with the event type.
+ */
+Glib::QueryQuark get_quark(EventType type);
+
+/** Gets the Gst::EventTypeFlags associated with type.
+ * @param type A Gst::EventType.
+ * @return A Gst::EventTypeFlags.
+ */
+EventTypeFlags get_flags(EventType type);
+
+} //namespace Enums
+
+/** A class that represents events that are passed up and down a pipeline.
+ * The event class provides factory methods to construct and functions query
+ * (parse) events.
+ *
+ * Events are usually created by using the Gst::Event derrived classes'
+ * create() methods. To send an event application will usually use
+ * Gst::Element::send_event() and elements will use Gst::Pad::send_event() or
+ * Gst::Pad::push_event().
+ *
+ * Events that have been received can be parsed with their respective parse()
+ * functions.
+ *
+ * Events are passed between elements in parallel to the data stream. Some
+ * events are serialized with buffers, others are not. Some events only travel
+ * downstream, others only upstream. Some events can travel both upstream and
+ * downstream.
+ *
+ * The events are used to signal special conditions in the datastream such as
+ * EOS (end of stream) or the start of a new stream-segment. Events are also
+ * used to flush the pipeline of any pending data.
+ *
+ * Most of the event API is used inside plugins. Applications usually only
+ * construct and use seek events. To do that Gst::EventSeek::create() is used
+ * to create a seek event. It takes the needed parameters to specity seeking
+ * time and mode.  The event is then sent to the element like so:
+ * @code
+ * pipeline->send_event(event);
+ * @endcode
+ */
+class Event : public MiniObject
+{
+  _CLASS_OPAQUE_REFCOUNTED(Event, GstEvent, NONE, gst_event_ref, gst_event_unref)
+  _IGNORE(gst_event_ref, gst_event_unref)
+
+public:
+// A copy is taken so that the original is not freed by the wrapper.
+#m4 _CONVERSION(`const GstStructure*',`Gst::Structure',`Glib::wrap(const_cast<GstStructure*>($3), true)')
+  _WRAP_METHOD(Gst::Structure get_structure() const, gst_event_get_structure)
+
+  _WRAP_METHOD(bool has_name(const Glib::ustring& name) const, gst_event_has_name)
+
+  _WRAP_METHOD(guint32 get_seqnum() const, gst_event_get_seqnum)
+  _WRAP_METHOD(void set_seqnum(guint32 seqnum), gst_event_set_seqnum)
+
+  _WRAP_METHOD(gint64 get_running_time_offset() const, gst_event_get_running_time_offset)
+  _WRAP_METHOD(void set_running_time_offset(gint64 offset), gst_event_set_running_time_offset)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Event> copy() const, gst_event_copy)
+
+  /**
+   * Makes a writable event from the given event. If the source event is
+   * already writable, this will simply return the same event.
+   * @return A Gst::Event (possibly the same reference) that is writable.
+   */
+  Glib::RefPtr<Gst::Event> create_writable();
+
+  /** Check if an event can travel downstream.
+   */
+  bool is_downstream() const;
+
+  /** Check if an event is serialized with the data stream.
+   */
+  bool is_serialized() const;
+
+  /** Check if an event can travel upstream.
+   */
+  bool is_upstream() const;
+
+  /** Get the Gst::EventType of the event.
+   */
+  _MEMBER_GET(event_type, type, EventType, GstEventType)
+
+  /** Get the Gst::ClockTime timestamp of the event. This is the time when the
+   * event was created.
+   */
+  _MEMBER_GET(timestamp, timestamp, Gst::ClockTime, guint64)
+};
+
+/** A flush start event.  See create() for more details.
+ */
+class EventFlushStart : public Event
+{
+  _CLASS_GENERIC(EventFlushStart, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventFlushStart>',`Glib::wrap_event_derived<EventFlushStart>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventFlushStart> create(), gst_event_new_flush_start)
+};
+
+/**  A flush stop event.  See create() for more details.
+ */
+class EventFlushStop : public Event
+{
+  _CLASS_GENERIC(EventFlushStop, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventFlushStop>',`Glib::wrap_event_derived<EventFlushStop>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventFlushStop> create(bool reset_time), gst_event_new_flush_stop)
+
+  /** Retrieve a reset time member.
+   * @return TRUE, if time should be reset; FALSE, otherwise.
+   */
+  bool parse_reset_time() const;
+  _IGNORE(gst_event_parse_flush_stop)
+};
+
+/** A stream-start event.  See create() for more details.
+ */
+class EventStreamStart : public Event
+{
+  _CLASS_GENERIC(EventStreamStart, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventStreamStart>',`Glib::wrap_event_derived<EventStreamStart>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventStreamStart> create(const Glib::ustring& stream_id), gst_event_new_stream_start)
+
+  /** Parse a stream-id event.
+   *
+   * @return A stream id.
+   */
+  Glib::ustring parse_stream_id() const;
+  _IGNORE(gst_event_parse_stream_start)
+
+  _WRAP_METHOD(void set_stream_flags(Gst::StreamFlags flags), gst_event_set_stream_flags)
+
+  /** Parse a stream flag.
+   *
+   * @return A stream flags.
+   */
+  Gst::StreamFlags parse_stream_flags() const;
+  _IGNORE(gst_event_parse_stream_flags)
+
+  _WRAP_METHOD(bool parse_group_id(guint& group_id) const, gst_event_parse_group_id)
+  _WRAP_METHOD(void set_group_id(guint group_id), gst_event_set_group_id)
+};
+
+/** A caps event. See create() for more details.
+ */
+class EventCaps : public Event
+{
+  _CLASS_GENERIC(EventCaps, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventCaps>',`Glib::wrap_event_derived<EventCaps>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventCaps> create(const Glib::RefPtr<Gst::Caps>& caps), gst_event_new_caps)
+
+  /** Get the caps from @a event. The caps remains valid as long as @a event remains
+   * valid.
+   *
+   * @return A caps object.
+   */
+  Glib::RefPtr<Gst::Caps> parse_caps();
+  _IGNORE(gst_event_parse_caps)
+
+  /** Get the caps from @a event. The caps remains valid as long as @a event remains
+   * valid.
+   *
+   * @return A caps object.
+   */
+  Glib::RefPtr<const Gst::Caps> parse_caps() const;
+};
+
+/** A segment event. See create() for more details.
+ */
+class EventSegment : public Event
+{
+  _CLASS_GENERIC(EventSegment, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventSegment>',`Glib::wrap_event_derived<EventSegment>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventSegment> create(const Gst::Segment& segment), gst_event_new_segment)
+
+  /** Parses a segment event and copies the GstSegment.
+   *
+   * @return A copy of a Gst::Segment.
+   */
+  Gst::Segment copy_segment() const;
+  _IGNORE(gst_event_copy_segment)
+  _IGNORE(gst_event_parse_segment)
+};
+
+/** A tag event. See create() for more details.
+ */
+class EventTag : public Event
+{
+  _CLASS_GENERIC(EventTag, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventTag>',`Glib::wrap_event_derived<EventTag>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventTag> create(const Gst::TagList& taglist), gst_event_new_tag)
+
+  /** Gets a tag list.
+   * @return A Gst::TagList.
+   */
+  Gst::TagList parse_tag_list() const;
+  _IGNORE(gst_event_parse_tag)
+};
+
+/** A buffer size event.  See create() for more details.
+ */
+class EventBufferSize : public Event
+{
+  _CLASS_GENERIC(EventBufferSize, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventBufferSize>',`Glib::wrap_event_derived<EventBufferSize>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventBufferSize> create(Format format, gint64 minsize, gint64 maxsize, bool async), gst_event_new_buffer_size)
+
+  /** Get the format, minsize, maxsize and async-flag in the buffersize event.
+   *
+   * @param format A reference to store the format in.
+   * @param minsize A reference to store the minsize in.
+   * @param maxsize A reference to store the maxsize in.
+   * @param async A reference to store the async-flag in.
+   */
+  void parse(Format& format, gint64& minsize, gint64& maxsize, bool& async) const;
+  _IGNORE(gst_event_parse_buffer_size)
+
+  /** Get the minsize in the buffersize event.
+   *
+   * @return The mininum size.
+   */
+  gint64 parse_min_size() const;
+
+  /** Get the format, in the buffersize event.
+   *
+   * @return The format.
+   */
+  Gst::Format parse_format() const;
+
+  /** Get the maxsize in the buffersize event.
+   *
+   * @return The maximum size.
+   */
+  gint64 parse_max_size() const;
+
+  /** Get the async-flag in the buffersize event.
+   *
+   * @return The async flag.
+   */
+  bool parse_async() const;
+};
+
+/** A sink-message event.  See create() for more details.
+ */
+class EventSinkMessage : public Event
+{
+  _CLASS_GENERIC(EventSinkMessage, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventSinkMessage>',`Glib::wrap_event_derived<EventSinkMessage>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventSinkMessage> create(const Glib::ustring& name, const Glib::RefPtr<Gst::Message>& message), gst_event_new_sink_message)
+
+  /** Parse the sink-message event.
+   * @return the sink-messge's event message.
+   */
+  Glib::RefPtr<Gst::Message> parse_message();
+  _IGNORE(gst_event_parse_sink_message)
+
+  /** Parse the sink-message event.
+   * @return the sink-messge's event message.
+   */
+  Glib::RefPtr<const Gst::Message> parse_message() const;
+};
+
+/** An end of stream event. See create() for more details.
+ */
+class EventEos : public Event
+{
+  _CLASS_GENERIC(EventEos, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventEos>',`Glib::wrap_event_derived<EventEos>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventEos> create(), gst_event_new_eos)
+};
+
+/** A new table of content event. See create() for more details.
+ */
+class EventToc : public Event
+{
+  _CLASS_GENERIC(EventToc, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventToc>',`Glib::wrap_event_derived<EventToc>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventToc> create(const Glib::RefPtr<Gst::Toc>& toc, bool updated), gst_event_new_toc)
+
+  /** Parse a TOC event and store the results in the given toc and updated locations.
+   *
+   * @param toc A Gst::Toc structure.
+   * @param updated A TOC update flag.
+   */
+  void parse(Glib::RefPtr<Gst::Toc>& toc, bool& updated);
+  _IGNORE(gst_event_parse_toc)
+
+  /** Parse a TOC event and store the results in the given toc and updated locations.
+   *
+   * @param toc A Gst::Toc structure.
+   * @param updated A TOC update flag.
+   */
+  void parse(Glib::RefPtr<const Gst::Toc>& toc, bool& updated) const;
+
+  /** Parse a Toc structure.
+   *
+   * @return A Gst::Toc structure.
+   */
+  Glib::RefPtr<Gst::Toc> parse_toc();
+
+  /** Parse a Toc structure.
+   *
+   * @return A Gst::Toc structure.
+   */
+  Glib::RefPtr<const Gst::Toc> parse_toc() const;
+
+  /** Parse a TOC update flag.
+   *
+   * @return A TOC update flag.
+   */
+  bool parse_updated() const;
+};
+
+/** A protection event. See create() for more details.
+ */
+class EventProtection : public Event
+{
+  _CLASS_GENERIC(EventProtection, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventProtection>',`Glib::wrap_event_derived<EventProtection>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventProtection> create(const Glib::ustring& system_id, const Glib::RefPtr<Gst::Buffer>& data,
+      const Glib::ustring& origin), gst_event_new_protection)
+
+ /**
+  * Parses an event containing protection system specific information and stores the results in system_id, data and origin.
+  *
+  * @param system_id Result location for the UUID string uniquely identifying a content protection system.
+  * @param data Result location for the Gst::Buffer holding protection system specific information.
+  * @param origin Result location for the value that indicates where the protection information carried by event was extracted from.
+  */
+  void parse(Glib::ustring& system_id, Glib::RefPtr<Gst::Buffer>& data, Glib::ustring& origin) const;
+  _IGNORE(gst_event_parse_protection)
+
+  /** Parse UUID of the protection event.
+   * @return The UUID.
+   */
+  Glib::ustring parse_system_id() const;
+
+  /** Parse data of the protection event.
+   * @return The data.
+   */
+  Glib::RefPtr<Gst::Buffer> parse_data();
+
+  /** Parse data of the protection event.
+   * @return The data.
+   */
+  Glib::RefPtr<const Gst::Buffer> parse_data() const;
+
+  /** Parse origin of the protection event.
+   * @return The origin.
+   */
+  Glib::ustring parse_origin() const;
+};
+
+/** A segment done event. See create() for more details.
+ */
+class EventSegmentDone : public Event
+{
+  _CLASS_GENERIC(EventSegmentDone, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventSegmentDone>',`Glib::wrap_event_derived<EventSegmentDone>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventSegmentDone> create(Gst::Format, gint64 position), gst_event_new_segment_done)
+
+ /**
+  * Extracts the position and format from the segment done event.
+  *
+  * @param format Result location for the format.
+  * @param position Result location for the position.
+  */
+  void parse(Gst::Format& format, gint64& position) const;
+  _IGNORE(gst_event_parse_segment_done)
+
+  /** Parse format of the segment done event.
+   * @return The format.
+   */
+  Gst::Format parse_format() const;
+
+  /** Parse position of the segment done event.
+   * @return The position.
+   */
+  gint64 parse_position() const;
+};
+
+/** A gap in the stream event. See create() for more details.
+ */
+class EventGap : public Event
+{
+  _CLASS_GENERIC(EventGap, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventGap>',`Glib::wrap_event_derived<EventGap>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventGap> create(Gst::ClockTime timestamp, Gst::ClockTime duration), gst_event_new_gap)
+
+ /**
+  * Extract timestamp and duration from a new GAP event.
+  *
+  * @param timestamp Location where to store the start time (pts) of the gap.
+  * @param duration Location where to store the duration of the gap.
+  */
+  void parse(Gst::ClockTime& timestamp, Gst::ClockTime& duration) const;
+  _IGNORE(gst_event_parse_gap)
+
+  /** Parse timestamp of the gap event.
+   * @return The timestamp.
+   */
+  Gst::ClockTime parse_timestamp() const;
+
+  /** Parse duration of the gap event.
+   * @return The duration.
+   */
+  Gst::ClockTime parse_duration() const;
+};
+
+/** A QOS event.  See create() for more details.
+ */
+class EventQos : public Event
+{
+  _CLASS_GENERIC(EventQos, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventQos>',`Glib::wrap_event_derived<EventQos>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventQos> create(QOSType type, double proportion, Gst::ClockTimeDiff diff, Gst::ClockTime timestamp), gst_event_new_qos)
+
+ /**
+  * Gets the type, proportion, diff and timestamp from the qos event. 
+  *
+  * @param type A pointer to store the QoS type in.
+  * @param proportion A pointer to store the proportion in.
+  * @param diff A pointer to store the diff in.
+  * @param timestamp A pointer to store the timestamp in.
+  */
+  void parse(QOSType& type, double& proportion, Gst::ClockTimeDiff& diff, Gst::ClockTime& timestamp) const;
+  _IGNORE(gst_event_parse_qos)
+
+  /** Get the QoS type. See create() for more information
+   * about the different QoS values.
+   *
+   * @return The QoS type.
+   */
+  QOSType parse_type() const;
+
+  /** Get the proportion in the qos event. See create() for more information
+   * about the different QoS values.
+   *
+   * @return The proportion.
+   */
+  double parse_proportion() const;
+
+  /** Get the diff in the qos event. See create() for more information about
+   * the different QoS values.
+   *
+   * @return The difference.
+   */
+  Gst::ClockTimeDiff parse_diff() const;
+
+  /** Get the timestamp in the qos event. See create() for more information
+   * about the different QoS values.
+   * @return The timestamp.
+   */
+  Gst::ClockTime parse_timestamp() const;
+};
+
+/** A seek event.  See create() for more details.
+ */
+class EventSeek : public Event
+{
+  _CLASS_GENERIC(EventSeek, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventSeek>',`Glib::wrap_event_derived<EventSeek>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventSeek> create(double rate, Format format,
+    SeekFlags flags, SeekType start_type, gint64 start, SeekType stop_type, gint64 stop), gst_event_new_seek)
+
+  /** Parses a seek event and stores the results in the given result locations.
+   *
+   * @param rate Result location for the rate.
+   * @param format Result location for the stream format.
+   * @param flags Result location for the Gst::SeekFlags.
+   * @param start_type Result location for the Gst::SeekType of the start
+   * position.
+   * @param start Result location for the start postion expressed in format.
+   * @param stop_type Result location for the Gst::SeekType of the stop
+   * position.
+   * @param stop Result location for the stop postion expressed in format.
+   */
+  void parse(double& rate, Format& format, SeekFlags& flags,
+    SeekType& start_type, gint64& start, SeekType& stop_type,
+    gint64& stop) const;
+  _IGNORE(gst_event_parse_seek)
+
+  /** Parses the start of a seek event.
+   * @return The start.
+   */
+  gint64 parse_start() const;
+
+  /** Parses the rate of a seek event.
+   * @return The rate.
+   */
+  double parse_rate() const;
+
+  /** Parses the format of a seek event.
+   * @return The format.
+   */
+  Format parse_format() const;
+
+  /** Parses the flags of a seek event.
+   * @return The flags.
+   */
+  SeekFlags parse_flags() const;
+
+  /** Parses the start type of a seek event.
+   * @return The start type.
+   */
+  SeekType parse_start_type() const;
+
+  /** Parses the stop type of a seek event.
+   * @return The stop type.
+   */
+  SeekType parse_stop_type() const;
+
+  /** Parses the stop of a seek event.
+   * @return The stop.
+   */
+  gint64 parse_stop() const;
+};
+
+/** A latency event.  See create() for more details.
+ */
+class EventLatency : public Event
+{
+  _CLASS_GENERIC(EventLatency, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventLatency>',`Glib::wrap_event_derived<EventLatency>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventLatency> create(Gst::ClockTime latency), gst_event_new_latency)
+
+  /** Get the latency in the latency event.
+   *
+   * @return The latency.
+   */
+  Gst::ClockTime parse_latency() const;
+  _IGNORE(gst_event_parse_latency)
+};
+
+/** A step event.  See create() for more details.
+ */
+class EventStep : public Event
+{
+  _CLASS_GENERIC(EventStep, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventStep>',`Glib::wrap_event_derived<EventStep>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventStep> create(Gst::Format format, guint64 amount,
+      double rate, bool flush, bool intermediate), gst_event_new_step)
+
+  /** Parse the step event.
+   *
+   * @param format A reference to store the format in.
+   * @param amount A reference to store the amount in.
+   * @param rate A reference to store the rate in.
+   * @param flush A reference to store the flush boolean in.
+   * @param intermediate A reference to store the intermediate boolean in.
+   */
+  void parse(Gst::Format& format, guint64& amount, double& rate,
+    bool& flush, bool& intermediate) const;
+  _IGNORE(gst_event_parse_step)
+
+  /** Get the amount in a step event.
+   * @return The amount.
+   */
+  guint64 parse_amount() const;
+
+  /** Get the format in a step event.
+   * @return The format.
+   */
+  Gst::Format parse_format() const;
+
+  /** Get the rate in a step event.
+   * @return The rate.
+   */
+  double parse_rate() const;
+
+  /** Get the flush in a step event.
+   * @return The flush flag.
+   */
+  bool parse_flush() const;
+
+  /** Get the intermediate flag in a step event.
+   * @return The intermediate flag.
+   */
+  bool parse_intermediate() const;
+};
+
+/** A reconfigure event.  See create() for more details.
+ */
+class EventReconfigure : public Event
+{
+  _CLASS_GENERIC(EventReconfigure, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventReconfigure>',`Glib::wrap_event_derived<EventReconfigure>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventReconfigure> create(), gst_event_new_reconfigure)
+};
+
+/** A toc select event. See create() for more details.
+ */
+class EventTocSelect : public Event
+{
+  _CLASS_GENERIC(EventTocSelect, GstEvent)
+public:
+#m4 _CONVERSION(`GstEvent*',`Glib::RefPtr<Gst::EventTocSelect>',`Glib::wrap_event_derived<EventTocSelect>($3, false)')
+  _WRAP_METHOD(static Glib::RefPtr<Gst::EventTocSelect> create(const Glib::ustring& uid), gst_event_new_toc_select)
+
+  /** Parse the UID in a toc select event.
+   * @return The UID.
+   */
+  Glib::ustring parse_uid() const;
+  _IGNORE(gst_event_parse_toc_select)
+};
+
+} //namespace Gst

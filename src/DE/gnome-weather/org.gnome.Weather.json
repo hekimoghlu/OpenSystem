@@ -1,0 +1,98 @@
+{
+    "app-id" : "org.gnome.WeatherDevel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.node24",
+        "org.freedesktop.Sdk.Extension.typescript"
+    ],
+    "command" : "gnome-weather",
+    "tags" : [
+        "nightly"
+    ],
+    "finish-args" : [
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--share=network",
+        "--env=G_ENABLE_DIAGNOSTIC=1",
+        "--metadata=X-DConf=migrate-path=/org/gnome/Weather/",
+        "--device=dri"
+    ],
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "build-options" : {
+        "append-path" : "/usr/lib/sdk/node24/bin:/usr/lib/sdk/typescript/bin"
+    },
+    "modules": [
+        {
+            "name" : "geocode-glib",
+            "config-opts" : [
+                "-Denable-installed-tests=false",
+                "-Denable-gtk-doc=false",
+                "-Dsoup2=false"
+            ],
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/geocode-glib.git"
+                }
+            ]
+        },
+        {
+            "name" : "libgweather",
+            "config-opts" : [
+                "-Denable_vala=false",
+                "-Dtests=false",
+                "-Dgtk_doc=false"
+            ],
+            "buildsystem" : "meson",
+            "modules": [
+                {
+                    "name" : "gweather-locations",
+                    "buildsystem" : "meson",
+                    "sources" : [
+                        {
+                            "type" : "git",
+                            "url" : "https://gitlab.gnome.org/GNOME/gweather-locations",
+                            "branch" : "main"
+                        }
+                    ]
+                }
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libgweather.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "gnome-weather",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dprofile=development"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-weather.git",
+                    "branch" : "main"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1215 @@
+2002-04-29  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.3
+
+2002-04-28  Jody Goldberg <jody@gnome.org>
+
+	* src/item-cursor.c : no need to do the gdk_flushes here.
+	  the grab/ungrab wrappers handle it.
+
+2002-04-29  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (deserialize_wb_from_xml_stream): New
+	function. Factored out of gnumeric_bonobo_read_from_stream.
+	Deserializes a Workbook from an XML stream.
+	(read_from_stream): New function. Factored out of
+	gnumeric_bonobo_read_from_stream. Handles bonobo stream oriented
+	aspect of stream deserialization task.
+	(gnumeric_bonobo_read_from_stream): Refactor so that only Workbook
+	/ WorkbookView / WorkbookControl aspects of deserialization are
+	handled here. The stream and XML concerns are factored out into
+	separate functions. Also, fix reload bugs by making code more
+	similar to wb_view_open. Still not perfect, but better.
+
+2002-04-28  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c : no longer needs item-debug support.
+
+	* src/sheet-object.c (sheet_object_view_key) : ARRGGGHHHH.
+	  cut-n-paste error.
+
+	* src/gnumeric-simple-canvas.c (gnm_simple_canvas_ungrab) : be anal
+	  and gdk_flush.
+	(gnm_simple_canvas_grab) : ditto.  We periodically do some processing
+	  after an ungrab which might delay flushing the event queue.  Which
+	  could result in the grab remaining for the duration of the event.
+
+2002-04-28  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (gnumeric_bonobo_read_from_stream): Initialize
+	wb, drop dirty test. This fixes component display bug.
+
+2002-04-28  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (gnumeric_bonobo_read_from_stream): Drop
+	workbook_is_pristine test. In the viewer, we know we shouldn't
+	save, but the test gives suprising results.
+
+2002-04-27  Jody Goldberg <jody@gnome.org>
+
+	* src/item-acetate.c (item_acetate_point) : remember that the far
+	  point is not included.
+
+	* src/bonobo-io.c (gnumeric_bonobo_read_from_stream) : similar to
+	  wb_view_open we need to recalc as necessary and do a sheet_update.
+
+	* src/workbook-control-gui.c (cb_insert_image) : no need to recalc or
+	  update.
+
+2002-04-27  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Check for bonobo libraries when --with-bonobo is
+	selected.
+
+2002-04-27  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_finalize) : destroy the views
+	  before we destroy the control.
+
+	* src/sheet-object.c (cb_sheet_object_view_finalized) : renamed from
+	  sheet_object_view_destroyed and simplified to use weakrefs.  At this
+	  point all we can do is remove the view from the list.
+	(sheet_object_new_view) : using weakrefs we are more constrained.
+	  object data is already done so there is no need to add refs to the
+	  control.
+
+2002-04-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_sheet_add) : Use
+	  sc_object_create_view.
+
+	* src/sheet-control-gui-priv.h (SCG_FOREACH_PANE) : new.
+	* src/sheet-control-gui.c (scg_redraw_all) : use SCG_FOREACH_PANE.
+	(scg_redraw_region) : ditto.
+	(scg_resize) : ditto.
+	(scg_set_zoom_factor) : ditto.
+	(cb_table_destroy) : ditto.
+	(sheet_control_gui_new) : ditto.
+	(scg_unant) : ditto.
+	(scg_ant) : ditto.
+	(scg_adjust_preferences) : ditto.
+	(scg_cursor_visible) : ditto.
+	(scg_compute_visible_region) : ditto.
+	(scg_edit_start) : ditto.
+	(scg_edit_stop) : ditto.
+	(scg_rangesel_changed) : ditto.
+	(scg_rangesel_start) : ditto.
+	(scg_rangesel_stop) : ditto.
+	(scg_set_display_cursor) : ditto.
+	(scg_colrow_resize_stop) : ditto.
+	(scg_colrow_resize_start) : ditto.
+	(scg_colrow_resize_move) : ditto.
+	(scg_special_cursor_start) : ditto.
+	(scg_special_cursor_stop) : ditto.
+	(scg_special_cursor_bound_set) : ditto.
+	(scg_object_stop_editing) : clear the control points in the panes.
+	(scg_mode_edit_object) : ditto.
+	(scg_object_update_bbox) : ditto.
+
+	* src/gnumeric-pane.c (gnm_pane_init) : init anted_cursors and the
+	  control points.  Optionally create views of all the objects if we
+	  already have a sheet.
+	(gnm_pane_object_stop_editing) : transfered from scg.
+	(gnm_pane_object_move) : ditto.
+	(cb_slide_handler) : ditto.
+	(display_object_menu) : ditto.
+	(cb_control_point_event) : ditto.
+	(new_control_point) : ditto.
+	(set_item_x_y) : ditto.
+	(set_acetate_coords) : ditto.
+	(gnm_pane_object_set_bounds) : ditto.
+	(cb_sheet_object_canvas_event) : ditto.
+	(cb_sheet_object_view_destroy) : ditto.
+	(cb_sheet_object_widget_canvas_event) : ditto.
+	(gnm_pane_object_register) : ditto.
+	(gnm_pane_widget_register) : ditto.
+
+	* src/sheet-control-gui.c (scg_object_destroy_view) : new.
+	(scg_object_create_view) : new.
+	(scg_class_init) : register the new functions.
+
+	* src/sheet-object*.c
+	(*update_bounds) : update signature.
+	(*new_view) : update signature.
+
+2002-04-26  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (compute_sheet_pages) : don't overwrite number of 
+	  pages from previous sheets.
+
+2002-04-26  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (get_bytes_from_compressed_stream): Fix typo
+
+2002-04-26  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (struct StreamIOCtxt): Context data structure
+	for reading a PersistStream. 
+	(get_raw_bytes_from_stream): New function. Read raw bytes from the
+	stream. 
+	(get_bytes_from_compressed_stream): New function. Uncompress bytes
+	from the stream and copy wanted number of bytes into buffer.
+	(get_bytes_from_stream): New function. Read bytes from the stream,
+	having uncompressed them if necessary.
+	(cleanup_stream): New function. Clean up zlib when closing stream.
+	(check_gzip_header): New function. Check if stream is gzipped.
+	(init_for_inflate): New function. Initialize data structures for
+	uncompressing.
+	(hack_xmlSAXParseFile): Drop the non HAVE_LIBXML_2 branch. Rename
+	context variables: We now have both an xml context and a stream
+	context.
+	(gnumeric_bonobo_read_from_stream): Set up handling of compressed
+	streams. Propagate CORBA exceptions where allowed by the
+	PersistStream interface.
+
+2002-04-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add sort schemas
+	* src/gnumeric-gconf-priv.h : add sort related keys
+	* src/gnumeric-gconf.[ch] : add sort-related get/set methods
+	* src/sort.[ch] : use preferences, add preserve formats flags
+	* src/workbook-control-gui.c (sort_by_rows) : use preferences
+	
+2002-04-25  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (set_acetate_coords) : work around some
+	  strange code in the canvas-shape that was blowing out the borders.
+
+2002-04-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnumeric-canvas.[ch] : add sheet_object_group
+	* src/commands.c : add selector to cmd_object_raise 
+	* src/commands.h : ditto
+	* src/sheet-object-container.c : use sheet_object_group
+	* src/sheet-object-graphic.c : ditto
+	* src/sheet-object-image.c : ditto
+	* src/sheet-object-item.c : ditto
+	* src/sheet-object.c (cb_sheet_object_raise_to_top) : new
+	(cb_sheet_object_lower_to_bottom) : new
+	(sheet_object_populate_menu) : add raise to top/lower to bottom  
+	  menu items
+
+2002-04-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/item-grid.c (ig_obj_create_finish) : don't unref the sheet
+	  object, the ref has already been absorbed elsewhere.
+	  http://bugzilla.gnome.org/show_bug.cgi?id=79809
+
+2002-04-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.[ch] (cmd_object_raise) : new command
+	* src/sheet-object.h (sheet_object_raise) : new
+	* src/sheet-object.c (sheet_object_raise) : new
+	(cb_sheet_object_raise) : new
+	(cb_sheet_object_lower) : new
+	(sheet_object_populate_menu) : add raise/lower menu items
+
+2002-04-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (setup_rotation) : deleted
+	(print_page) : remove call to setup_rotation
+	(sheet_print) : no need to hide landscape printing
+
+2002-04-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (sheet_print) : work around some gnome-print bug and hide
+	  landscape printing temporarily.
+
+2002-04-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/application.c (application_clipboard_clear) : also clear CLIPBOARD
+	* src/gui-clipboard.c (x_selection_clear) : clear selection only if PRIMARY 
+	  is asserted elsewhere
+	(x_clipboard_bind_workbook) : set CLIPBOARD targets
+	* src/workbook-control-gui.c (wbcg_claim_selection) : claim PRIMARY and
+	  CLIPBOARD
+
+2002-04-23  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_analysis_tool_undo) : reset column widths and
+	  row heights
+	(cmd_analysis_tool_redo) : save column widths and row heights
+	(cmd_analysis_tool) : initialize column widths and row heights save lists
+	(cmd_analysis_tool_finalize) : delete column widths and row heights save lists
+
+2002-04-21  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* idl/Makefile.am: introduce EVOLUTION_IDL_DIR to support building
+	with Evolution-Composer.idl in a non-standard location.
+
+2001-11-04  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: added gdk_pixbuf to the libs considered for
+	GNUMERIC_CFLAGS and GNUMERIC_LIBS.
+
+2001-10-27  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in : Support --with-python=prog consistently: never call
+	`python', always call $python_prog.
+
+2001-10-21  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* idl/Makefile.am : Introduced EVOLUTION_IDL_DIR to make it possible
+	  to use Evolution-Composer.idl from a non-standard location.
+
+2001-11-04  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: added gdk_pixbuf to the libs considered for
+	GNUMERIC_CFLAGS and GNUMERIC_LIBS.
+
+2002-04-22  Morten Welinder  <terra@diku.dk>
+
+	* src/value.c (criteria_test_equal, criteria_test_unequal,
+	criteria_test_less, criteria_test_less_or_equal,
+	criteria_test_greater, criteria_test_greater_or_equal,
+	parse_criteria, parse_criteria_range, free_criterias,
+	find_rows_that_match, parse_database_criteria,
+	find_column_of_field): Move from fn-database.
+
+2002-04-22  Morten Welinder  <terra@diku.dk>
+
+	* src/expr-name.c (expr_name_shutdown): New function.
+
+	* src/libgnumeric.c (gnm_common_init, gnm_shutdown): Fix
+	prototype.
+	(gnm_shutdown): Shut down expr_name.
+
+2002-04-19  Morten Welinder  <terra@diku.dk>
+
+	* src/expr.c (gnm_expr_new_error): Remove.
+
+	* src/func-builtin.c (gnumeric_selection, gnumeric_version): Moved
+	from fn-sheet.
+
+2002-04-19  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.[ch] (gnumeric_bonobo_read_from_stream): New
+	function. Reads a workbook from a Bonobo PersistStream.
+
+	* src/bonobo-io.c (hack_xmlSAXParseFile): Re-enable
+
+	* src/main-component.c: No longer a dummy. Remove DUMMY compile
+	flag.
+	(load_workbook_from_stream): Remove.
+	(dummy_add_interfaces): Rename to add_interfaces. Pass control to
+	bonobo_persist_stream_new.
+	(gnumeric_component_factory): Make a real gnumeric component.
+
+	* src/sheet-control-gui.c (scg_take_focus): Test if wbcg_toplevel
+	!= NULL.
+
+	* src/workbook-control.[ch] (wb_control_menu_state_sheet_count):
+	New virtual.
+
+	* src/workbook-control-priv.h: Virtualize menu_state.sheet_count.
+
+	* src/workbook-control-component.c (wbcc_get_password,
+	wbcc_progress_set, wbcc_progress_message_set, wbcc_init_state,
+	wbcc_title_set, wbcc_format_feedback, wbcc_zoom_feedback,
+	wbcc_edit_line_set, wbcc_edit_selection_descr_set,
+	wbcc_auto_expr_value, wbcc_undo_redo_clear,
+	wbcc_undo_redo_truncate, wbcc_undo_redo_pop, wbcc_undo_redo_push,
+	wbcc_undo_redo_labels, wbcc_menu_state_update,
+	wbcc_menu_state_sheet_prefs, wbcc_menu_state_sheet_count,
+	wbcc_menu_state_sensitivity, wbcc_validation_msg): New no-op
+	methods.
+	(wbcc_error_system, wbcc_error_plugin, wbcc_error_read,
+	wbcc_error_save, wbcc_error_invalid, wbcc_error_error_info,
+	wbcc_control_new, wbcc_sheet_focus, wbcc_claim_selection): New
+	methods.
+	(workbook_control_component_init): New function.
+	(workbook_control_component_ctor_class): Flesh out.
+	(workbook_control_component_new): New function.
+
+	* src/workbook-control-gui.[ch] (wbcg_sheet_to_page_index): Rename
+	from sheet_to_page_index and make public.
+
+	* src/workbook-control-gui.c (wbcg_cur_scg, wbcg_sheet_remove,
+	wbcg_sheet_rename, wbcg_sheet_focus, wbcg_sheet_move, cb_edit_cut,
+	cb_sheet_remove): Use new name of from sheet_to_page_index and
+	make public.
+	(wbcg_sheet_add): Use virtualized menu_sheet_count.
+	(workbook_control_gui_ctor_class): Virtualize menu_sheet_count.
+
+2002-04-18  Morten Welinder  <terra@diku.dk>
+
+	* src/expr-name.c (expr_name_add): Plug leaks.
+
+	* src/gnumeric-graph.c: Resurrect enough so that the excel plugin
+	will load.  This doens't mean things will work!
+
+	* src/func-builtin.c (func_builtin_init): New file.  Some stuff
+	from src/functions/fn-math.c imported.
+
+	* src/libgnumeric.c (gnm_shutdown): Shutdown functions also.
+
+	* src/func.c (functions_init): Init builtins.
+	(functions_shutdown): New function.
+
+2002-04-18  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_error_info_dialog_show) : hide cursor
+
+2002-04-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-file.c : replace gnome-config with get/set methods from
+	  src/gnumeric-gconf.h
+	* schemas/gnumeric-general.schemas : new schemas
+	* src/gnumeric-gconf-priv.h : new keys
+	* src/gnumeric-gconf.[ch] : new get/set methods
+	
+2002-04-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.[ch] (gnumeric_dialog_show) : deleted
+	* src/gui-file.c (ask_for_file_saver) : change GnomeDialog to GtkDialog
+	  NOTE: untested change!
+	* src/sheet-object-container.c (sheet_object_container_new_file) : 
+	  change GnomeDialog to GtkDialog.  NOTE: untested change!
+
+2002-04-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_error_info_dialog_show_full) : renamed to
+	  gnumeric_error_info_dialog_show and rewritten
+	(gnumeric_error_info_dialog_show) : deleted
+	(ctree_insert_error_info) : deleted
+	(insert_error_info) : new
+
+2002-04-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_error_info_dialog_show_full) : converted from 
+	  GnomeDialog to GtkDialog
+
+2002-04-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add xml-compression schema
+	* src/gnumeric-gconf-priv.h : new xml-compression-level key
+	* src/gnumeric-gconf.[ch] : new xml-compression-level get/set functions
+	* src/xml-io.c : use get/set methods from src/gnumeric-gconf.h rather
+	  than gnome-config directly
+	
+2002-04-16  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_open) : merge with wb_view_open_custom
+	  and remove the useless view argument.
+
+	* src/libgnumeric.c : move the application specific code from here.
+	* src/main-application.c : to here.
+
+	* configure.in : Addd gobject & gmodule
+
+2002-04-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add window size schemas
+	* src/gnumeric-gconf-priv.h : add window size keys
+	* src/gnumeric-gconf.[ch] : add window size set/get methods
+	* src/workbook-control-gui.c : use gconf for all preferences
+
+2002-04-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-dialogs.schemas : add more schemas
+	* src/commands.c : use get/set methods from src/gnumeric-gconf.h
+	* src/file-autoft.[ch] : switch from gnome-config to gconf
+	* src/gnumeric-gconf-priv.h : more keys
+	* src/gnumeric-gconf.[ch] : more get/set methods
+	* src/gutils.[ch] (gnumeric_config_get_string_list) : deleted
+
+2002-04-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-dialogs.schemas : new plugin schemas
+	* src/Makefile.am : add src/gnumeric-gconf.c and src/gnumeric-gconf-priv.h
+	* src/application.c : use get/set methods from src/gnumeric-gconf.h
+	* src/commands.c : change include
+	* src/error-info.c : switch to GSLists from GLists
+	* src/error-info.h : switch to GSLists from GLists
+	* src/gnumeric-gconf.h : new get/set methods
+	* src/gnumeric-gconf.c : new
+	* src/gnumeric-gconf-priv.h : formerly src/gnumeric-gconf.h
+	* src/gui-util.c : switch to GSLists from GLists
+	* src/gutils.h : some new g_slist functions 
+	* src/gutils.c : some new g_slist functions
+	* src/libgnumeric.c : use get/set methods from src/gnumeric-gconf.h
+	* src/plugin-loader-module.c : switch to GSLists from GLists
+	* src/plugin-loader.c : switch to GSLists from GLists
+	* src/plugin-loader.h : switch to GSLists from GLists
+	* src/plugin-service.c : switch to GSLists from GLists
+	* src/plugin.c : switch to GSLists from GLists and use gconf
+	* src/plugin.h : switch to GSLists from GLists
+	* src/workbook-control-gui.c : use get/set methods from src/gnumeric-gconf.h
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/.cvsignore: Ingore gnumeric-component
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/main-component.c (gnumeric_component_factory): And another one.
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/main-component.c (gnumeric_component_factory): Silence
+	warning.
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/main.[ch]: Remove from CVS.
+
+	* src/libgnumeric.c: Really don't include main.h
+
+2002-04-15  Jody Goldberg <jody@gnome.org>
+
+	* src/libgnumeric.c : delete some stale code that is no longer needed
+	  in gtk2.
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/libgnumeric.h: Rename header guards after file rename.
+
+	* src/main.[ch]: Add notes that the files are obsolete
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/libgnumeric.c: Copied from src/main.c. Don't include main.h
+
+	* src/libgnumeric.h: Copied from src/main.h
+
+	* src/corba-args.c: s/main.h/libgnumeric.h/
+
+	* src/main-application.c: s/main.h/libgnumeric.h/
+
+	* src/main-component.c: s/main.h/libgnumeric.h/
+
+	* src/normal-args.c: s/main.h/libgnumeric.h/
+
+	* src/print.c: s/main.h/libgnumeric.h/
+
+	* src/workbook.c: s/main.h/libgnumeric.h/
+
+	* src/workbook-control-gui.c: s/main.h/libgnumeric.h/
+
+2002-04-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/main.[ch]: Restructure.
+
+	* src/gui-gnumeric.h: Declare WorkbookControlComponent and
+	WorkbookControlStandalone.
+
+	* GNOME_Gnumeric.server.in.in: Add gnumeric-component /
+	OAFIID:GNOME_Gnumeric_Factory
+
+	* src/Makefile.am: Add gnumeric-component to build, and new files.
+
+	* src/workbook-control-gui.h (WORKBOOK_CONTROL_GUI_CLASS): Fix typo.
+
+	* src/workbook-control-standalone.h: New file. wbcg class for
+	standalone app - public header file. Dummy for now.
+
+	* src/workbook-control-standalone.c: New file. wbcg class for
+	standalone app - source file. Dummy for now.
+
+	* src/workbook-control-standalone-priv.h: New file. wbcg class for
+	standalone app - private header file. Dummy for now.
+
+	* src/workbook-control-component.h: New file. Bonobo component
+	class - public header file. Dummy for now.
+
+	* src/workbook-control-component.c: New file. Bonobo component
+	class - source file. Dummy for now.
+
+	* src/workbook-control-component-priv.h: New file. Bonobo
+	component class - private header file. Dummy for now.
+
+	* src/main-component.c: New file. Main entry point for Bonobo
+	component.
+
+	* src/main-application.c: New file: Main entry point for
+	standalone application.
+
+2002-04-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-dialogs.schemas : add more preferences
+	* src/application.c : move autocorrect_init into src/main.c
+	* src/gnumeric-gconf.h : added defines and comments
+	* src/main.c : add autocorrect_init and autocorrect_shutdown
+
+2002-04-15  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet.c (sheet_cell_add_to_hash): Plug leak.
+
+2002-04-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add various new preferences
+	* schemas/gnumeric-dialogs.schemas : fix capitalization
+	* src/application.c : switch gnome_config to gconf
+	* src/gnumeric-gconf.h : new preferences
+
+2002-04-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/rangefunc-strings.c : fix warning
+	* src/history.c : fis argument type in non-bonobo build
+
+2002-04-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add max number of undo items pref
+	* src/commands.c (truncate_undo_info) : also truncate if max number
+	  of items is exceeded.
+	* src/gnumeric-gconf.h : add max number of undo items pref
+
+2002-04-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/GNOME_Gnumeric.xml : Change menu text for Sheet Reorder/Manage
+	* src/workbook-control-gui.c : Change tooltip for Sheet Manage
+
+2002-04-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add history and n of sheets 
+	  preferences
+	* src/Makefile.am : add src/rangefunc-strings.[ch]
+	* src/application.c : change file history handling to gconf,
+	  change app.history_list to GSList from GList
+	* src/application.h : change app.history_list to GSList from GList
+	* src/collect.c : add string functions
+	* src/collect.h :add string functions
+	* src/gnumeric-gconf.h : add history and n of sheets preferences
+	* src/history.c : change history_list to GSList from GList
+	* src/history.h : change history_list to GSList from GList
+	* src/main.c : add user-specified number of sheets to first workbook
+	* src/workbook-control-gui.c : add user-specified number of sheets 
+	  to new workbooks
+	* src/workbook.c : change history_list to GSList from GList
+	* src/rangefunc-strings.h : new
+	* src/rangefunc-strings.c : new
+
+2002-04-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/main.h (has_gnumeric_been_compiled_with_guile_support):
+	This function disappeared long ago. Remove.
+	
+2002-04-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/collect.c (callback_function_collect) : keep missing data info
+	(collect_floats) : afdd missing data info handling
+	(collect_floats_value_with_info) : new
+	(cb_insert_diff_elements) : new
+	(cb_int_descending) : new
+	(union_of_int_sets) : new
+	(cb_remove_missing_el) : new
+	(strip_missing) : new
+	(float_range_function2) : use flags
+	* src/collect.h (CollectFlags) : 2 new flags
+	* src/commands.c (max_descriptor_width) : fix sense of test.
+
+2002-04-13  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (max_descriptor_width) : add some protection.
+
+2002-04-13  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_cellregion_write) : Patch massive leak introduced
+	  in the transition to libxml2.  Thanks Andreas.
+
+2002-04-13  Morten Welinder  <terra@diku.dk>
+
+	* */*: Make fn-financial a plugin.
+
+	* src/commands.c (cmd_range_list_to_string_utility): Try not to
+	allocate gigabytes of memory for no reason.
+
+2002-04-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_range_to_str_utility) : new
+	* src/commands.h (cmd_range_to_str_utility) : new
+
+2002-04-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/value.c (value_get_as_string) : handle VALUE_ARRAY more reasonably
+	(value_peek_string) : initialize all fields of cache
+
+2002-04-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-file.c: s/ENABLE_BONOBO/WITH_BONOBO/
+
+	* src/gui-util.c: Ditto.
+
+	* src/history.c: Ditto.
+
+	* src/main.c: Ditto.
+
+	* src/sheet.c: Ditto.
+
+	* src/sheet-object.c: Ditto.
+
+	* src/workbook-control-gui.c: Ditto.
+
+	* src/workbook-format-toolbar.c: Ditto.
+
+	* src/workbook-object-toolbar.c: 
+
+	* src/workbook.c: Ditto.
+
+	* src/workbook-private.c: Ditto.
+
+	* src/xml-io.c: Ditto.
+
+2002-04-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add 2 undo preference settings
+	* src/commands.c : add sheet name to descriptors depending on
+	  preference setting
+	* src/commands.h : add cmd_range_list_to_string_utility and
+	  cmd_cell_pos_name_utility
+	* src/gnumeric-gconf.h : new file, gather gconf paths in a single 
+	  includable place
+
+2002-04-12  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-private.c :  move the really broken bonobo stuff here.
+
+	* src/sheet-control-gui.c (scg_object_update_bbox) : Use fabs to
+	  handle inversion.
+	(scg_mode_edit_object) : Be a touch more anal.
+
+	* src/style.c (get_substitute_font) : add more font mappings.
+
+	* src/item-grid.c (ig_obj_create_finish) : no need to moneky with the
+	  internals of scg.  Setting the mode clears the new object.  Setting
+	  the sheet adds a ref, so there are no worries that it will go away.
+
+	* src/gnumeric-canvas.c : rip out the drag and drop support.
+	* src/workbook-control-gui.c : move it here.
+	(cb_insert_image) : silence a warning.
+	(cb_edit_cut) : at least make the object deletetion undoable.
+	(workbook_close_if_user_permits) : reorder to conform to HIG.
+
+2002-04-08  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_object_stop_editing) : unref the
+	  current object.
+	(scg_mode_edit_object) : ref the current object.
+
+	* src/item-grid.c (ig_obj_create_finish) : Use
+	  scg_mode_edit_object.
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_object) : Use
+	  sc_mode_edit to handle objects that are still being created.
+
+2002-04-06  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_object_update_bbox) : abs the dif when
+	  checking for middle ctrl points.
+
+2002-04-01  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (gnumeric_toolbar_new) : minor clean up.
+	  one init is sufficient.
+
+2002-04-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/GNOME_Gnumeric.xml (FilePrintSetup): Add back "print" stock icon.
+	(FilePreferences): Add as menu item.
+	(InsertGraph, InsertComponent, InsertShapedComponent): Comment out
+	both from menu and toolbar.
+	(InsertImage, InsertFormula): Add to "Insert" menu.
+	(List, Combo): Re-enable in object toolbar.
+	
+2002-04-12  Morten Welinder  <terra@diku.dk>
+
+	* src/auto-format.c (auto_format_init): Install a key destroyer.
+	(auto_format_shutdown): Simplify.
+	(auto_format_function_result_by_name): New function.
+	(auto_format_function_result): Use
+	auto_format_function_result_by_name.
+	(auto_format_function_result_remove): New function.
+
+2002-04-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-format-toolbar.c: Replace Gnome stock pixmap names
+	with gtk synonym.
+
+	* src/item-cursor.c (item_cursor_popup_menu): Replace Gnome stock
+	copy pixmap name with gtk synonym.
+
+2002-04-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/GNOME_Gnumeric.xml: Update to current pixmap names. Add
+	'preferences' command.
+
+2002-04-12  Jon K Hellan  <hellan@acm.org>
+
+	* plugins/Makefile.am (SUBDIRS_FILE_FORMATS): Plan Perfect plugin
+	  got installed, but not built. Don't do either.
+
+2002-04-12  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in (bonobo_msg): (re)introduce ENABLE_BONOBO variable
+	and bonobo_suffix.
+
+	* src/Makefile.am (uidir): Update to gnome-2 conventions.
+
+	* idl/GNOME_Gnumeric.idl
+	(GNOME::Gnumeric::Application.new_workbook): Fix syntax error.
+
+	* src/bonobo-io.c: #ifdef out the lot for now.
+
+	* src/gnumeric-graph.c: ditto.
+
+	* src/sheet-object-bonobo.c: ditto.
+	
+	* src/sheet-object-container.c: ditto.
+
+	* src/sheet-object-item.c: ditto.
+
+	* src/main.c (main): #ifdef out gnumeric_bonobo_io_init for now.
+	(main): #ifdef out EmbeddableGridFactory_init.
+
+	* src/print.c: Remove bonobo-print-client.h include.
+
+	* src/sheet-object.c (sheet_object_register): #ifdef out bonobo
+	object registration.
+
+	* src/workbook.c (workbook_is_pristine, workbook_init,
+	workbook_new): #ifdef bonobo case to be the same as non bonobo for
+	now.
+	(workbook_persist_file_load, workbook_persist_file_save,
+	workbook_bonobo_setup): #ifdef out for now.
+
+	* src/workbook-control-gui.c (cb_launch_graph_guru,
+	insert_bonobo_object, cb_insert_component,
+	cb_insert_shaped_component): #ifdef out for now.
+	(verbs): #ifdef out GraphGuru, InsertComponent and
+	InsertShapedComponent for now.
+
+	* src/workbook-private.[ch]: #ifdef bonobo case to be the same as non
+	bonobo for now.
+
+2002-04-11  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/dependent.c (dependent_set_expr) : fix leak
+	(invalidate_refs) : fix leak
+	(cb_name_invalidate_sheet) : fix leak
+	* src/expr-name.c (expr_name_create) : fix leak
+
+2002-04-11  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-object-graphic.c (cb_dialog_graphic_config_apply_clicked) :
+	  removed
+	(cb_dialog_graphic_config_ok_clicked) : don't call 
+	  cb_dialog_graphic_config_apply_clicked
+	(cb_adjustment_value_changed) : also change real sheet object
+	(cb_color_changed) : ditto
+	(cb_dialog_filled_config_apply_clicked) : removed
+	(cb_dialog_filled_adjustment_value_changed) : new
+	(cb_dialog_filled_color_changed) : new
+	(cb_dialog_filled_config_ok_clicked) : don't call 
+	  cb_dialog_filled_config_apply_clicked
+	(sheet_object_filled_user_config) : hook-up cb_dialog_filled_*_changed
+	* src/sheet-object-widget.c (cb_scrollbar_config_ok_clicked) : save
+	  all data
+	(cb_checkbox_config_destroy) : delete old_label
+	(cb_checkbox_config_cancel_clicked) : reset all data
+	(sheet_widget_checkbox_user_config) : save old label
+
+2002-04-11  Morten Welinder  <terra@diku.dk>
+
+	* */*: Make new plugins fn-eng from src/functions/fn-eng.c
+
+	* src/parser.y (gnumeric_parse_error): Plug leak.
+
+	* src/item-edit.c (item_edit_destroy): Fix memory corruption on
+	double destroys.
+
+2002-04-10  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-object-graphic.c (sheet_object_filled_user_config) : don't
+	  use GnomeDialog. Use Glade.
+	(cb_dialog_filled_config_destroy) : replaces cb_dialog_filled_close
+	(cb_dialog_filled_config_apply_clicked) : replaces cb_dialog_filled_clicked
+	(cb_dialog_filled_config_ok_clicked) : new
+	(cb_dialog_filled_config_cancel_clicked) : new
+
+2002-04-10  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-object-graphic.c (sheet_object_graphic_user_config) : add line 
+	  preview
+
+2002-04-10  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-object-graphic.c (sheet_object_graphic_user_config) : don't
+	  use GnomeDialog. Use Glade.
+	(cb_dialog_graphic_config_destroy) : replaces cb_dialog_graphic_close
+	(cb_dialog_graphic_config_apply_clicked) : replaces cb_dialog_graphic_clicked
+	(cb_dialog_graphic_config_ok_clicked) : new
+	(cb_dialog_graphic_config_cancel_clicked) : new
+	(cb_adjustment_value_changed) : use changed DialogGraphicData
+
+2002-04-10  Morten Welinder  <terra@diku.dk>
+
+	* src/clipboard.c (paste_cell_with_operation): Plug leak.
+	(paste_link): Ditto.
+
+2002-04-10  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.c (cellref_a1_get): Fix toupper usage.  Make this
+ 	work for non-English.  Check for overflow in row number.
+
+2002-04-10  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* sheet-object-widget.c (cb_checkbox_config_ok_clicked) : plug
+ 	expr leak
+	(cb_scrollbar_config_ok_clicked) : plug expr leak
+
+2002-04-10  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* sheet-object-widget.c (cb_checkbox_config_cancel_clicked) : new
+	(cb_checkbox_config_ok_clicked) replaces cb_scrollbar_config_clicked
+	(sheet_widget_checkbox_user_config) : don't use GnomeDialog
+
+2002-04-09  Morten Welinder  <terra@diku.dk>
+
+	* src/rendered-value.c (rendered_value_new,
+ 	rendered_value_destroy, rendered_value_init,
+ 	rendered_value_shutdown): Yet another pool allocator.
+
+2002-04-09  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* gnumeric-canvas.c (gnm_canvas_key_mode_object) : Sheet objects 
+	  are GObjects
+	* src/item-grid.c (ig_obj_create_finish) : unref the object since
+	  scg_mode_edit_object might not pick up the reference
+	* src/sheet-control-gui.c (scg_object_stop_editing) : unref the 
+	  sheet object
+	(scg_mode_edit_object) : ref the object if we store a reference
+	* src/workbook-control-gui.c (cb_edit_cut) :  Sheet objects 
+	  are GObjects
+
+2002-04-09  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* sheet-object-widget.c (cb_scrollbar_config_cancel_clicked) : new
+	(cb_scrollbar_config_ok_clicked) replaces cb_scrollbar_config_clicked
+	(sheet_widget_scrollbar_user_config) : don't use GnomeDialog
+
+2002-04-09  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (bind_textdomain_codeset): Add -lintl when needed.
+
+	* src/workbook-control-gui.c: s/E_qual/_Equal/.
+
+2002-04-08  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c (hide_show_detail_real) : new
+	(group_ungroup_colrow_real) : new
+	(hide_show_detail) : use dialog_col_row
+	(group_ungroup_colrow) : use dialog_col_row
+
+2002-04-08  Morten Welinder  <terra@diku.dk>
+
+	* src/expr.c (cb_expression_pool_leak): New function.
+	(expr_shutdown): Show leaking expressions.
+
+	* src/validation.c (validation_eval): Plug leaks.
+
+2002-04-08  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Test for <wctype.h>
+
+	* src/stf-parse.c: Include <wctype.h> only if present.
+
+2002-04-08  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/colrow.c (colrow_set_sizes) : set to default if size is 0
+	* src/commands.c (cmd_resize_colrow) : size == 0 means default size
+	* src/summary.c : avoid warnings
+	* src/workbook-cmd-format.c (sheet_dialog_set_column_width) : just
+	  call dialog_col_width
+	(workbook_cmd_format_column_std_width) : ditto
+	(sheet_dialog_set_row_height) : just call dialog_row_height
+	(workbook_cmd_format_row_std_height) : ditto
+
+2002-04-07  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Test for isfinite as a macro.
+	* acconfig.h: Ditto.
+
+2002-04-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/item-edit.c : link to the expr-entry changed signal rather than its
+	  gtkentry changed signal.
+
+2002-04-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/item-edit.c (point_is_inside_range) : rather than parsing
+	  using parse_surrounding_ranges, ask the expression entry
+	  widget for the already parsed info.
+	* src/parse-util.c (parse_surrounding_ranges) : fix formatting and
+	  add some debug switches
+
+2002-04-05  Morten Welinder  <terra@diku.dk>
+
+	* src/gutils.c (gnm_mem_chunk_foreach_leak): New function.
+
+	* src/str.c (string_get, string_get_nocopy, string_unref):
+	Optionally use string pool.
+	(string_shutdown): New function.
+	* src/main.c (main): Call string_shutdown.
+
+2002-04-05  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_insert_image) : add insert image.
+
+	* src/sheet-object.c (sheet_object_default_size) : add a default_size
+	  handler that can generate default sizes per instance rather than
+	  class.
+
+	* src/sheet-object-image.c (sheet_object_image_default_size) :
+	  implement.
+	(sheet_object_image_class_init) : register the deafult size handler.
+	* src/application.c  : add insert image.
+	* src/pixmaps/Makefile.am : add insert image.
+
+2002-04-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnumeric-pane.c (gnm_pane_reposition_cursors) : also 
+	  reposition item-edit cursor
+	  http://bugzilla.gnome.org/show_bug.cgi?id=77321
+
+2002-04-04  Morten Welinder  <terra@diku.dk>
+
+	* src/main.c (main): Initialize and shutdown expr class.
+
+	* src/expr.c (gnm_expr_new_constant, gnm_expr_new_funcall) 
+	(gnm_expr_new_unary, gnm_expr_new_binary, gnm_expr_new_name) 
+	(gnm_expr_new_cellref, gnm_expr_new_array, gnm_expr_new_set) 
+	(do_gnm_expr_unref): Conditionally use expression pool.
+	(expr_init, expr_shutdown): Setup new expression pool.
+
+2002-04-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/item-edit.h (point_is_inside_range) : don't call 
+	  gnumeric_char_start_expr_p since it changes the cursor position
+	(entry_cursor_event) : new
+	(item_edit_set_arg) : use notify::cursor-position rather than 
+	  button-press-event
+
+2002-04-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/parse-util.c (parse_surrounding_ranges) : new, code extracted
+	  from src/widgets/gnumeric-expr-entry.c 
+	* src/parse-util.h (parse_surrounding_ranges) : new
+	* src/item-edit.c (scan_at) : deleted
+	(point_is_inside_range) : use arse_surrounding_ranges
+	* src/position.c (value_to_rangeref) : new
+	(rangeref_normalize) : new
+	* src/position.h (value_to_rangeref, rangeref_normalize) : new
+	* src/ranges.c (setup_range_from_value) : use setup_range_from_range_ref
+	(setup_range_from_range_ref) : new
+	* src/ranges.h (setup_range_from_range_ref) : new
+	* src/value-sheet.c (value_cellrange_normalize) : use rangeref_normalize
+
+2002-04-03  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/ranges.h (setup_range_from_value) : new
+	(value_to_global_range) : new
+	* src/ranges.c : ditto
+	* src/consolidate.c : use setup_range_from_value
+	* src/corba-sheet.c : ditto
+	* src/item-edit.c : ditto
+	* src/value.c : ditto
+
+2002-04-03  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : Fix long description formatting. 
+
+2002-04-02  Jon K Hellan  <hellan@acm.org>
+
+	* src/func.c (function_def_get_arg_name): Don't crash if arguments
+	aren't named.
+
+2002-04-01  Morten Welinder  <terra@diku.dk>
+
+	* src/value.c (USE_VALUE_POOLS): Make pools conditional.
+
+	* src/parser.y (line, opt_exp): Plug gigantic leak.  Now why does
+	the expression widget call the parser thousands of times?
+
+	* src/expr.c (expr_eval_real): Simplify.
+
+2002-04-01  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/item-cursor.c (item_cursor_target_region_ok) : fix message dialog
+
+2002-04-01  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/mstyle.c (mstyle_new_default) : protect against faulty
+	  schema installation
+	* src/style.c (font_init) : protect against faulty
+	  schema installation and also configure bold and italic default fonts.
+
+2002-04-01  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add default font schemas
+	* src/application.[ch] : add central preferences dialog
+	* src/main.c : dispose of preference dialog on exit
+	* src/mstyle.c : use gconf data to initialize default style
+	* src/style.[ch] : use gconf data to initialize default style
+	* src/workbook-control-gui.c : add preference menu items
+
+2002-04-01  Morten Welinder  <terra@diku.dk>
+
+	* src/expr.c (expr_eval_real): Fix overflow for EXP case.  (Twice.)
+
+	* src/mathfunc.c (gnumeric_fake_trunc): Fix for negative valus.
+
+2002-03-31  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c : use workbook signals
+	* src/commands.h : include tools/tools.h rather than dialogs/tools.h 
+	* src/summary.c (summary_info_add) : return boolean
+	* src/summary.h (summary_info_add) : return boolean
+	* src/workbook.c : new workbook signals
+	(workbook_add_summary_info) : new, emit signal
+	(workbook_set_filename) : emit signal
+	* src/workbook.h : new workbook signals
+
+2002-03-31  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_analysis_tools_undo) : clear region
+	  before pasting (to avoid leaving cell comments behind)
+
+2002-03-31  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c : cmd_analysis_tools allow the engines
+	  to carry info from TOOL_ENGINE_LAST_VALIDITY_CHECK to
+	  TOOL_ENGINE_PERFORM_CALC
+	* src/commands.h : include dialogs/tools.h rather than 
+	  tools/analysis-tools.h
+
+2002-03-31  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (gnumeric_toolbar_new) : respect ui preferences.
+
+2002-03-30  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_analysis_tool_redo) : TOOL_ENGINE_PERFORM_CALC
+	  should never return TRUE since we already cleared the target.
+
+2002-03-29  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : new schema file
+	* schemas/Makefile.am : added gnumeric-general.schemas
+	* src/application.h (application_release_gconf_client) : new
+	(application_get_gconf_client) : new
+	* src/application.c (application_release_gconf_client) : new
+	(application_get_gconf_client) : new
+	(app_init) : initialize new app.gconf_client
+	* src/commands.c (truncate_undo_info) : read size_left from gconf
+	* src/main.c : destroy app.gconf_client on exit
+
+2002-03-29  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/sheet.c (sheet_delete_rows, sheet_delete_cols) : Fixed the
+	adjustments for Solver's parameters.
+
+	* src/sheet.c (sheet_insert_rows, sheet_insert_cols) : Fixed the
+	adjustments for Solver's parameters.
+
+2002-03-29  Morten Welinder  <terra@diku.dk>
+
+	* src/value.c (value_new_cellrange_unsafe, value_new_cellrange,
+	value_new_cellrange_r, value_new_array_non_init, value_release):
+	Use chunk allocator for ranges and arrays.
+	(value_init): Initialise range and array pools.
+	(value_shutdown): Free range and array pools.
+
+2002-03-29  Morten Welinder  <terra@diku.dk>
+
+	* src/gutils.c (gnm_mem_chunk_new, gnm_mem_chunk_destroy,
+	gnm_mem_chunk_alloc, gnm_mem_chunk_free): Keep per-block
+	freelists.
+	(gnm_mem_chunk_free): g_free chunks that are completely empty.
+
+	* src/value.c (value_get_as_float): Improve precision.
+	(value_get_as_int): Take sign into account when (fake-)truncating
+	floating point numbers.
+	(value_new_error, value_new_error_str, value_new_string,
+	value_new_string_str, value_release): Use chunk allocator for
+	strings and errors.
+	(value_init): Initialise error and string pools.
+	(value_shutdown): Free error and string pools.
+
+2002-03-29  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* samples/solver/regression-test-suite.gnumeric: Solver's
+	regression test suite added.
+
+2002-03-28  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object.c (sheet_object_set_sheet) : ref the object when we
+	  add it to the sheet.
+	(sheet_object_clear_sheet) : unref here.
+	(sheet_object_set_sheet) : move the content of new_view here.
+
+	* src/print-cell.c (print_cell) : seems like the sign of the descenty
+	  is reversed.
+	* src/print.c (print_footers) : ditto.
+
+	* src/sheet.c (sheet_move_range) : long list onto short list not
+	  vice versa.
+	(sheet_delete_cols) : ditto.
+	(sheet_delete_rows) : ditto.
+	* src/dependent.c (micro_hash_resize) : ditto.
+
+	* src/style.c (style_font_new_simple) : init the print_font.
+	(style_font_unref) : unref the print_font.
+
+	* src/print-cell.c (print_cell) : use the print_font.
+
+	* src/print.c (print_job_info_destroy) : GnomeFont is a GObject.
+
+2002-03-27  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.desktop.in (Exec) : Add %F
+
+2002-03-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_analysis_tool_redo) : add dao_autofit_columns
+
+2002-03-28  Morten Welinder  <terra@diku.dk>
+
+	* */*.c: Fix g_warning calls to not have terminating n.
+
+2002-03-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (sheet_print) : gpm is not a GtkObject
+
+2002-03-27  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c : port to gnome2
+
+2002-03-27  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_destroy_dialog) : replaced by call to
+	  gtk_widget_destroyed
+
+2002-03-27  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Include the necessary gconf setup to install schemas.
+
+2002-03-27  Jody Goldberg <jody@gnome.org>
+
+	* src/io-context.c (gnm_io_get_password) : new.
+	* src/command-context.c (cmd_context_get_password) : new.
+	* src/workbook-control-gui.c (wbcg_get_password) : new.
+
+2002-03-26  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y (yylex) : make utf8 clean.
+	(find_char) : ditto.
+	(find_matching_close) : ditto.
+
+2002-03-26  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add schemas dir.
+
+	* src/gnumeric-canvas.c (gnumeric_canvas_new) : disable auto-center.
+
+2002-03-27  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/xml-io.c: Added saving and loading of Solver's options.

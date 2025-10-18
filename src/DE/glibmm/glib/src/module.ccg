@@ -1,0 +1,56 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/utility.h>
+#include <gmodule.h>
+
+namespace Glib
+{
+
+Module::Module(const std::string& file_name, Flags flags)
+: gobject_(g_module_open(file_name.empty() ? nullptr : file_name.c_str(), (GModuleFlags)flags))
+{
+}
+
+Module::Module(Module&& other) noexcept : gobject_(std::move(other.gobject_))
+{
+  other.gobject_ = nullptr;
+}
+
+Module&
+Module::operator=(Module&& other) noexcept
+{
+  if (gobject_)
+    g_module_close(gobject_);
+
+  gobject_ = std::move(other.gobject_);
+  other.gobject_ = nullptr;
+
+  return *this;
+}
+
+Module::~Module()
+{
+  if (gobject_)
+    g_module_close(gobject_);
+}
+
+Module::operator bool() const
+{
+  return (gobject_ != nullptr);
+}
+
+} // namespace Glib

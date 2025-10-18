@@ -1,0 +1,203 @@
+{
+    "app-id": "org.gnome.FileRoller",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "file-roller",
+    "finish-args": [
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--filesystem=home",
+        "--metadata=X-DConf=migrate-path=/org/gnome/file-roller/",
+        "--own-name=org.gnome.ArchiveManager1"
+    ],
+    "cleanup": [
+        "/share/man"
+    ],
+    "modules": [
+        {
+            "name": "p7zip",
+            "no-autogen": true,
+            "make-args": [
+                "7z"
+            ],
+            "make-install-args": [
+                "DEST_HOME=/app"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/p7zip-project/p7zip/archive/refs/tags/v17.05.tar.gz",
+                    "sha256": "d2788f892571058c08d27095c22154579dfefb807ebe357d145ab2ddddefb1a6",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/p7zip-project/p7zip/releases/latest",
+                        "version-query": ".tag_name | sub(\"^v\"; \"\")",
+                        "url-query": "\"https://github.com/p7zip-project/p7zip/archive/refs/tags/v\" + $version + \".tar.gz\""
+                    }
+                }
+            ]
+        },
+        {
+            "name": "gnustep-make",
+            "buildsystem": "simple",
+            "build-commands": [
+                "./configure --prefix=/app",
+                "make -j $FLATPAK_BUILDER_N_JOBS install"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/gnustep/tools-make/releases/download/make-2_9_1/gnustep-make-2.9.1.tar.gz",
+                    "sha256": "c3d6e70cf156b27e7d1ed2501c57df3f96e27488ce2f351b93e479c58c01eae7",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/gnustep/tools-make/releases/latest",
+                        "version-query": ".tag_name | sub(\"^make-\"; \"\") | gsub(\"_\"; \".\")",
+                        "url-query": ".assets[] | select(.name==\"gnustep-make-\" + $version + \".tar.gz\") | .browser_download_url"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "gnustep",
+            "buildsystem": "simple",
+            "build-commands": [
+                "./configure --prefix=/app --disable-xml",
+                "make -j $FLATPAK_BUILDER_N_JOBS install",
+                "ls /app/include"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/gnustep/libs-base/releases/download/base-1_31_1/gnustep-base-1.31.1.tar.gz",
+                    "sha256": "e7546f1c978a7c75b676953a360194a61e921cb45a4804497b4f346a460545cd",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/gnustep/libs-base/releases/latest",
+                        "version-query": ".tag_name | sub(\"^base-\"; \"\") | gsub(\"_\"; \".\")",
+                        "url-query": ".assets[] | select(.name==\"gnustep-base-\" + $version + \".tar.gz\") | .browser_download_url"
+                    }
+                },
+                {
+                    "type": "patch",
+                    "path": "7b51c1bb4ed0b1777db2f018eadaba89f00bf0c5.patch"
+                }
+            ]
+        },
+        {
+            "name": "unar",
+            "buildsystem": "simple",
+            "build-commands": [
+                "sed -s -i 's#/usr/include/GNUstep#/app/include#g' */Makefile.linux",
+                "make -C XADMaster -j $FLATPAK_BUILDER_N_JOBS -f Makefile.linux",
+                "install -m755 XADMaster/unar XADMaster/lsar /app/bin/"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/MacPaw/XADMaster/archive/v1.10.8/XADMaster-v1.10.8.tar.gz",
+                    "sha256": "652953d7988b3c33f4f52b61c357afd1a7c2fc170e5e6e2219f4432b0c4cd39f",
+                    "dest": "XADMaster",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/MacPaw/XADMaster/releases/latest",
+                        "version-query": ".tag_name | sub(\"^v\"; \"\")",
+                        "url-query": "\"https://github.com/MacPaw/XADMaster/archive/v\" + $version + \".tar.gz\""
+                    }
+                },
+                {
+                    "type": "archive",
+                    "url": "https://github.com/MacPaw/universal-detector/archive/1.1/universal-detector-1.1.tar.gz",
+                    "sha256": "8e8532111d0163628eb828a60d67b53133afad3f710b1967e69d3b8eee28a811",
+                    "dest": "UniversalDetector",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/MacPaw/universal-detector/releases/latest",
+                        "version-query": ".tag_name | sub(\"^\"; \"\")",
+                        "url-query": "\"https://github.com/MacPaw/universal-detector/archive/\" + $version + \".tar.gz\""
+                    }
+                },
+                {
+                    "type": "patch",
+                    "path": "unar-int-conversion.patch"
+                }
+            ]
+        },
+        {
+            "name": "zstd",
+            "buildsystem": "meson",
+            "subdir": "build/meson",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz",
+                    "sha256": "9c4396cc829cfae319a6e2615202e82aad41372073482fce286fac78646d3ee4",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/facebook/zstd/releases/latest",
+                        "version-query": ".tag_name | sub(\"^v\"; \"\")",
+                        "url-query": ".assets[] | select(.name==\"zstd-\" + $version + \".tar.gz\") | .browser_download_url"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "rpm2cpio",
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -D rpm2cpio.py /app/bin/rpm2cpio"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/ruda/rpm2cpio/archive/2017.tar.gz",
+                    "sha256": "d266a4f49e65b5d05956502549ceb1d5671f927375ff71299069e6d92363297a",
+                    "x-checker-data": {
+                        "type": "json",
+                        "url": "https://api.github.com/repos/ruda/rpm2cpio/releases/latest",
+                        "version-query": ".tag_name",
+                        "url-query": "\"https://github.com/ruda/rpm2cpio/archive/\" + $version + \".tar.gz\""
+                    }
+                },
+                {
+                    "type": "patch",
+                    "path": "rpm2cpio.patch"
+                }
+            ]
+        },
+        {
+            "name": "libportal",
+            "buildsystem": "meson",
+            "builddir": true,
+            "config-opts": [
+                "-Ddocs=false",
+                "-Dbackend-gtk3=disabled",
+                "-Dbackend-gtk4=enabled"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/flatpak/libportal.git",
+                    "branch": "main"
+                }
+            ]
+        },
+        {
+            "name": "file-roller",
+            "buildsystem": "meson",
+            "cleanup": [
+                "org.gnome.FileRoller.ArchiveManager1.service"
+            ],
+            "builddir": true,
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "../"
+                }
+            ]
+        }
+    ]
+}

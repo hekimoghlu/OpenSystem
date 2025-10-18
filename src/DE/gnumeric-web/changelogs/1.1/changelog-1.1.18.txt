@@ -1,0 +1,748 @@
+2003-06-07  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.18
+
+2003-06-06  Morten Welinder  <terra@gnome.org>
+
+	* src/style-border.c (style_border_set_gc_dash): Work around a
+	missing const in gdk.
+	(*_line, *_pattern): constify.
+
+	* src/style-color.c (gnumeric_color_shutdown): Unref
+	black/white/grid colors.  Print leaks.
+
+	* src/format.c (number_format_shutdown): Print leaks.
+	(number_format_shutdown): Unref default formats.
+	(format_destroy): Make static.
+
+2003-06-06  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_colrow_delete_finish) : This is bad practice and
+	  should not really be here.  However, we need to ensure that update is
+	  run before sv_panes_insdel_colrow plays with frozen panes, updating
+	  those can trigger redraws before sheet_update has been called.
+	(sheet_colrow_insert_finish) : ditto.
+
+	* configure.in : bump gsf req.
+	* README : ditto.
+
+2003-06-06  Jody Goldberg <jody@gnome.org>
+
+	* src/bonobo-io.c (gnm_persist_stream_load) : warning suppression.
+
+2003-06-06  Morten Welinder  <terra@gnome.org>
+
+	* src/item-bar.c (struct _ItemBar): Add normal_font_ascent and
+	bold_font_ascent fields.  Change normal_font and bold_font to
+	PangoFonts.
+	(item_bar_calc_size): Set font and ascent fields.
+	(ib_draw_cell): Use them.
+	(item_bar_normal_font): Change to return a pango font.
+	(ib_fonts_unref): Use g_object_unref, not style_font_unref.
+	(ib_draw_cell): Use the right font for shaping.  (This prevents
+	the bold dancing effect.)
+
+	* src/sheet-control-gui.c (scg_setup_group_buttons): Match
+	item_bar_normal_font change.
+
+	* src/style.c (font_init): Don't export gnumeric_default_font, but
+	gnumeric_default_font_width instead.  Single user changed.
+	(style_font_string_width): Make static.
+	(style_font_get_height): Delete.
+
+2003-06-05  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_gconf_rm_notification) : delete.
+
+	* src/plugin.c (gnumeric_extra_plugin_dirs) : clarify the ownership of
+	  the lists.
+	(plugins_init) : ditto.
+	(plugins_shutdown) : ditto.
+
+	* src/application.c (application_history_get_list) : const the output
+	  to be clear on the ownership semantics.  Add a 'force_reload'
+	  argument to force the list to reload and clip from the underlying
+	  gconf source.  Should not be necessary later when we clear up the
+	  relationship between application, and the config.
+	(application_history_update_list) : deleted.
+	(application_history_add) : new.  merge in some of the old
+	  application_history_update_list, and some of the history_menu stuff
+	  and emit a notifuy even on the newly created file_history_list
+	  property of the application.  We should do the same for other
+	  properties rather than requiring direct gconf connections.
+	(application_history_list_shrink) : delete.
+	(application_history_write_config) : delete.
+	(gnumeric_application_get_property) : new.
+	(gnumeric_application_class_init) : install the property.
+
+	* src/workbook.c (workbook_finalize) : Just call
+	  application_history_add directly rather than
+	  workbook_history_update that was a pointless layer of indirection.
+	  No need to directly call application_history_write_config
+	  history_add handles that.
+
+	* src/sheet-object-widget.c (sheet_widget_list_create_widget) : If
+	  we're going to throw in a stub widget, it might as well a treeview
+	  rather than a deprecated list widget.
+
+	* src/workbook.c (workbook_history_update) : delete the vast majority
+	  of this moving what little remained into.
+
+	* src/history.c : delete everything but history_item_label.
+	  greatly simplify the logic and move the majority of it into.
+	* src/workbook-control-gui.c : here.  While we're at it simplify our
+	  lives in preparation for turning the bonobo mess into virtuals on
+	  wbcg.  Use a simpler approach to creation and removal that let
+	    - monitors the application::notify::file-history-list rather than
+	      requiring explicit calls from a non-gui layer.
+	    - removes everything even the seperator then reinserts the new
+	      entries.
+	(wbcg_file_history_setup) : renamed from wbcg_history_setup.
+	(change_menu_label) : Use gtk_label_set_text with use_underline
+	  set to true in place of the deprecated parse_uline gunk.  While
+	  we're in here set the tooltip too.  Its a hack, setting the data
+	  directly based on knownledge of the implementation in libgnomeui.
+	  However, there aren't many choices other than fixing libgnomeui
+	  which is just too long a wait.
+	(cb_edit_paste_special) : move call to cmd_paste_to_selection in to
+	  the dialog like every other implemntation.
+	(wbcg_finalize) :  Use g_signal_handlers_disconnect_by_func in place
+	  of the deprecated gtk_signal_disconnect_by_func.
+	(workbook_setup_sheets) : Use gtk_notebook_set_show_border (FALSE) in
+	  place of the deprecated gtk_notebook_set_tab_border (0).
+	(workbook_control_gui_init) : use allow_grow, and allow_shrink
+	  properties in place of deprecated gtk_window_set_policy.  And
+	  g_idle_add, in place of deprecated gtk_idle_add.
+
+	* src/sheet-control-gui.c (context_menu_handler) :
+	  dialog_paste_special now calls cmd_paste_to_selection itself
+	  like all the other dialogs.
+
+	* src/gutils.c (g_slist_map) : constify to make life easier.
+
+	* src/gnumeric-pane.c : some minor property renaming in the custom
+	  canvas-items when we removed the deprecated gunk.
+	* src/item-bar.c : remove deprecated GtkArg gunk in favour of
+	  GObject::Param stuff.
+	* src/item-grid.c : ditto.
+
+	* src/gnumeric-gconf.h : Make the public GSLists const just to be
+	  absolutely clear about who owns what.
+
+	* src/gnumeric-gconf.c (gnm_gconf_set_plugin_extra_dirs) : make list
+	  ownership semantics absolutely clear.
+	(gnm_gconf_set_plugin_extra_dirs) : ditto.
+	(gnm_gconf_set_file_history_files) : ditto.
+	(gnm_gconf_add_notification_plugin_directories) : delete unused.
+	(gnm_gconf_set_autoformat_extra_dirs) : delete unused.
+
+	* src/gnumeric-gconf-priv.h : no need to publicly include gconf anymore
+
+2003-06-05  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_read_default_probe): Delete.
+
+	* src/stf-parse.c (stf_parse_get_rowcount): Delete.
+	(stf_parse_fixed_cell): Make UTF-8 safe.
+	(stf_parse_get_longest_row_width): Ditto.
+	(stf_parse_is_valid_data): Delete.
+
+	* src/stf.c (stf_preparse): Butcher this.  Don't do encodings
+	here.
+
+2003-06-04  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_store_results): Fix off-by-one and missing base
+	error in setting formats.
+
+	* src/gui-clipboard.c (x_clipboard_to_cell_region): Fix off-by-one
+	error in setting formats.
+
+	* src/stf-parse.c (stf_parse_region): Quote anything that might be
+	an expression.  Still not brilliant, but better.
+
+2003-06-04  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-filter.c (cb_filter_button_press) : this seems simpler,
+	  and catches clicking on other buttons to close the popup.
+
+2003-06-03  Jody Goldberg <jody@gnome.org>
+
+	For Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+	http://bugzilla.gnome.org/show_bug.cgi?id=112713
+	* src/gui-utils.[ch] 
+	(gnumeric_button_new_with_stock_image) : new
+	(gnumeric_add_dialog_button) : new
+	(gnumeric_message_dialog_new) : new
+	* src/workbook-control-gui.c
+	(workbook_close_if_user_permits) : build a HIG compliant 
+	confirmation dialog
+
+2003-06-03  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_row_size_fit_pixels) : delete the old hack to
+	  work around granular font sizes and take out the +1 for the grid
+	  line
+
+	* src/sheet-filter.c (gnm_filter_remove) : make filterered rows
+	  visible.
+	* src/workbook-control-gui.c (cb_auto_filter) : sheet_update on remove
+	  too.
+
+	* src/item-cursor.c : clear out deprecated GtkObject::Arg goo.
+	(item_cursor_draw) : pixel noise drawing zero sized animated cursors.
+
+2003-06-03  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.h : delete some non-existant decls.
+
+	* src/sheet-object.c (sheet_objects_relocate) : kludgy tweak so that
+	  ins/del col/row moves things and cut-n-paste does not.
+
+2003-06-03  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-filter.c (gnm_filter_overlaps_range) : new.
+	(gnm_filter_contains_row) : delete.
+	* src/sheet-view.c (sv_first_selection_in_filter) : new.
+	(sv_edit_pos_in_filter) : delete.
+	* src/workbook-control-gui.c (wbcg_menu_state_update) : use here.
+	(cb_auto_filter) : and here.
+
+2003-06-03  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (gnm_named_expr_collection_insert) : ease
+	  requirements and allow active names to be inserted.  This is the
+	  majority case for all the places we up/dowgrade placeholders and
+	  change scope.
+	(expr_name_check_for_loop) : rename from name_refer_circular and make
+	  public.
+	(expr_name_downgrade_to_placeholder) : new.
+	(expr_name_set_scope) : no need to diddle ::active now that
+	  collection_insert is less anal.
+	(expr_name_cmp_by_name) : renamed from expr_name_by_name.
+
+	* src/commands.c (cmd_define_name*) : add more checking at the start.
+	  Don't bother keeping a ref to the nexpr.
+	  handle undo for defining an existing placeholder.
+
+2003-06-03  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_lines): New function.
+	(stf_parse_next_token): Move UTF-8 from here to callers to avoid
+	insane slowdown.
+
+2003-06-02  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_set_scope) : if the new scope does not
+	  have any names initialize it.  Don't remove the name from the old
+	  scope if it already exists in the newscope.  Return an error message
+	  in the case of problems.
+
+2003-06-02  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_general_free): New function.
+	(stf_parse_general): Switch from list <list<string>> to
+	ptrarray<ptrarray<string>>, gaining random access.  All callers
+	changed.
+
+	* src/style.c (style_font_new_simple): Take a pango context
+	argument also instead of producing a bogus one.
+	(style_font_new): Ditto.  Improve fall-back scheme.
+	(font_init): For now, create the default font on the default
+	screen.  The need for the default is almost gone.
+
+	* src/mstyle.c (mstyle_get_font, mstyle_get_pango_attrs): Take a
+	pango context also to produce fonts.
+	* src/rendered-value.c (calc_indent, rendered_value_render): Ditto.
+	* src/sheet-control-gui.c (scg_get_style_font): Ditto.
+
+	* src/print.c (sheet_print): Display preview on the right display.
+
+	* src/gui-util.c (gnm_link_button_and_entry): New function.
+
+	* src/commands.c (cmd_analysis_tool): Clarify memory ownership
+	rules and adhere to them.  Plug leak.
+
+	* src/item-edit.c (ie_layout): Handle ->layout properly so it
+	doesn't get leaked.
+
+2003-06-01  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object.c (sheet_objects_relocate) : check for
+	  move_with_cells.
+	(sheet_object_init) : init move_with_cells.
+
+	* src/sheet-filter.c (filter_field_init) : new.
+
+	* src/workbook-control-gui.c (cb_auto_filter) : update the menu when
+	  adding or removing a filter.
+
+2003-05-31  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=114084
+	* src/parser.y (find_matching_close) : Generated spurious paren errors
+	  because gnm_strunescape points to the first char after the string
+	  then we incremented.
+	(yylex) : As long as we're down here tack on a bit of user
+	  friendliness in the face of spaces.  If we know they can't be
+	  operators based on the token we're returning ignore them to help the
+	  users out.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=114147.
+	* src/sheet.c (sheet_clone_colrow_info) : copy max outline level too.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=114151.
+	* src/commands.c (cmd_selection_outline_change) : minor thinko when
+	  implementing inverted placement.
+
+	* src/sheet-control-gui.c (scg_setup_group_buttons) : honour the
+	  sheet::display_outline flag.  We could probably move these to the
+	  SheetView.
+
+	* src/parser.y (parser_sheet_by_name) : don't leak the arguments when
+	  attempting to parse an expression with an unknown function name.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=114144.
+	* src/workbook-control-gui.c (wbcg_validation_msg) : add accelerators
+	  for the buttons.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=114097.
+	* src/sheet-object-widget.c : while we're in here clean up a bit.
+	(cb_checkbox_label_changed) : doh!
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=114079.
+	* src/colrow.c (colrow_get_states) : a difference in the default state
+	  will also split a run. (fixes crash #2)
+	* src/sheet-merge.c (sheet_merge_remove) : don't free range until
+	  after we're through using r.  Just in case they are the same.
+
+	* src/workbook-control-gui.c (cb_view_freeze_panes) : base the
+	  decision to use default position on the last visible, not last full.
+
+	* src/gnumeric-pane.c (cb_sheet_object_canvas_event) : don't freak out
+	  if we can't edit the seleted object.
+
+	* src/xml-io.c (xml_read_style) : target needs a function, it is not a
+	  GObject::param.
+
+	* src/dialogs/dialog-hyperlink.c (dialog_hyperlink) : we need to
+	  register the types earlier.  Move the calls from here.
+	* src/libgnumeric.c (gnm_common_init) : to here.
+
+	* src/gui-util.c (gnumeric_error_info_dialog_new) : make the close
+	  button the default.
+
+	* src/validation.c (validation_eval) : fix typo that passed the type
+	  as the style. Unique to 1.1.x
+
+2003-05-31  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-edit.c (wbcg_edit_finish) : add an optional flag to
+	  indicate if a dialog was displayed.  This is necessary for only 1
+	  caller.
+	* src/validation.c (validation_eval) : add the dialog needed flag here
+	  too.
+	* src/item-grid.c (item_grid_button_press) : don't start dragging or
+	  showing a menu.  If there was a validation dialog we already ignored
+	  the corresponding button release.
+
+	* src/tools/fill-series.c (do_row_filling) : only clip the fill with
+	  the selection if the stoping value is not set.  Add a bounds test.
+	(do_column_filling) : ditto.
+
+	* src/GNOME_Gnumeric.xml : disable unimplemented import external.
+	  Give Fill -> Series & Merge mnemonics
+	  s/Graph/Chart/
+	* src/workbook-control-gui.c : ditto.
+
+2003-05-30  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control.c (wb_control_parse_and_jump): Fix 114045.
+
+	* src/style.c: Eliminate gnumeric_default_bold_font and
+	gnumeric_default_italic_font.
+	(style_font_new): Apply a simpler fall-back scheme that will work
+	for bold & italic also.
+	(style_shutdown): Greatly simplify now that
+	gnumeric_default_bold_font and gnumeric_default_italic_font are
+	gone.
+
+	* src/mstyle.c (mstyle_link_sheet): Avoid referring to
+	possibly-freed pointer.
+
+2003-05-30  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (mstyle_init, mstyle_shutdown): New functions.
+	(mstyle_new, mstyle_copy, mstyle_copy_merge, mstyle_unref): Use
+	mstyle pool.
+
+	* src/libgnumeric.c (gnm_common_init): Init mstyles.
+	(gnm_shutdown): Shut them down.
+
+2003-05-28  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add he to ALL_LINGUAS
+
+2003-05-27  Jon K Hellan  <hellan@acm.org>
+
+	* src/main-component.c: Include gnumeric-paths.h.
+
+2003-05-27  Morten Welinder  <terra@gnome.org>
+
+	* src/style-border.c (style_border_none_set_color): Fix ref count
+	leak.
+
+	* src/style.c (style_font_new_simple): Fix warning text.
+
+	* src/gnumeric-pane.h (struct _GnumericPane): cursor_type is of
+	type GnmCursorType, not int.
+
+	* src/item-grid.c (cb_cursor_motion): Ditto for cursor.
+	* src/sheet-control-gui.c (scg_set_display_cursor): Ditto.
+
+2003-05-24  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_sheet_label_drag_begin) : remove
+	  deprecation.
+
+2003-05-23  Jody Goldberg <jody@gnome.org>
+
+	* src/selection.c (sv_selection_to_plot) : skip the dimension if its
+	  can't be filled, don't just keep looking for data to put in it.
+
+2003-05-23  Morten Welinder  <terra@gnome.org>
+
+	* src/style-border.c (style_border_get_gc): Fix ref count error.
+
+	* src/gnumeric-pane.c (set_acetate_coords): Create bitmap on the
+	right display.
+
+	* src/pattern.c (gnumeric_pattern_get_stipple): Take drawable
+	argument for identifying screen that bitmaps need to be valid on.
+
+	* src/workbook-format-toolbar.c (workbook_create_format_toolbar):
+	Switch font and size selectors to gnm_combo_text.
+
+	* src/gui-util.c (gnm_cursor_set_widget): New function, cloned
+	from GAL's e_cursor_set_widget which isn't multihead safe.  Some
+	GAL stuff imported.  All callers changed.
+
+	* src/pattern.c (gnumeric_background_set_gc): Batching is back per
+	Jody's request.  The multihead issues remain fixed, though.
+
+2003-05-22  Morten Welinder  <terra@gnome.org>
+
+	* src/style-color.c (style_color_new_uninterned): Set bogus .pixel
+	values.
+
+	* src/pattern.c (gnumeric_background_set_gc): Don't batch, gdk
+	already does that.  Don't assume .pixel for colours.
+
+	* src/gui-clipboard.c (x_claim_clipboard): Get the clipboard from
+	the right display.
+	(x_request_clipboard): Ditto.
+
+	* src/clipboard.c (cellregion_to_string): Take a pango context
+	parameter.  Use that instead of faking it.
+
+	* src/gui-clipboard.c (x_clipboard_get_cb): Make this take a wbcg
+	which is what it already gets.  Use that to get a pango context to
+	send to cellregion_to_string.
+
+	* src/item-bar.c (item_bar_realize): Set cursor for the right
+	display.
+
+	* src/workbook-control-gui.c (workbook_control_gui_new): Extra
+	argument here is a GdkScreen pointer.  Supply that to
+	workbook_control_gui_init.  All callers changed.
+
+	* src/workbook-control-priv.h (WorkbookControlClass): Add extra
+	parameter to control_new method.
+
+	* src/workbook-control.c (wb_control_wrapper_new): Add "extra"
+	argument here also and supply it to control_new.  All callers
+	changed.
+
+	* src/workbook-control-gui.c (workbook_control_gui_init): Make
+	static.  Take extra GdkScreen parameter and set the new screen
+	asap before we go creating pango contexts and gcs relating to the
+	default screen.  All callers changed.
+
+2003-05-22  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (dependents_relocate) : cells optionally don't
+	  relink, but objects must for now.
+
+	* src/expr.c (cellrange_relocate) : fix logic inversion introduced
+	  when I removed the unnecessary heuristic on 2003-05-16.
+
+2003-05-22  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (workbook_menu_view): Combine the two
+	New-View entries into one.
+	(workbook_control_gui_init): Fix reference to freeze-panes menu
+	entry.
+	(cb_view_new): New function just calling the dialog.
+
+2003-05-21  Jody Goldberg <jody@gnome.org>
+
+	* src/item-edit.c : General de-cruftification.
+	  - Move from GtkObject -> GObject
+	  - Use set_property rather than set_args
+	  - Remove pointless inclusion of sheet-control-gui-priv.h
+	  (ie_layout) : rename from recalc_spans, move the
+	  PangoLayout generation from _draw in here because it was more
+	  advanced and cache the layout.
+
+	* Makefile.am : don't clean the .server file it is generated by
+	autoconf and a real pain to regenerate
+
+2003-05-21  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (cb_free_keyed_dialog_context): Set the
+	KeyedDialog property on the right object.
+
+	* src/style-border.h (struct _StyleBorder): Add gc_screen field to
+	track the screen that gc belongs to.
+
+	* src/style-border.c (style_border_get_gc): Manage gc_screen.
+	(style_border_unref): Ditto.
+
+	* src/workbook-control-gui.c (workbook_create_standard_toolbar):
+	Get pango context from toplevel widget.
+
+	* src/preview-grid.c (preview_grid_draw): Get pango context from
+	widget and pass it to pg_construct_cell.
+	(pg_construct_cell): Remove bogus context construction from here.
+
+2003-05-20  Morten Welinder  <terra@gnome.org>
+
+	* src/style-border.c (style_border_set_gc_dash): Set the
+	background colour as previosly, not the foreground.  Ugh.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new): Use
+	g_object_set_data, not gtk_object_set_data.
+
+	* src/style-border.c (style_border_set_gc_dash): Use
+	gdk_gc_set_rgb_fg_color, not gdk_gc_set_foreground.  USe
+	gdk_gc_set_rgb_bg_color, not gdk_gc_set_background.
+	(style_border_none_set_color): Ditto.
+	(style_border_get_gc): Ditto.
+
+	* src/item-grid.c (item_grid_realize): Ditto.
+	* src/item-cursor.c (item_cursor_draw): Ditto.
+	* src/pattern.c (gnumeric_background_set_pc): Ditto.  (#if 0'ed.)
+	(gnumeric_background_set_gc): Ditto, more or less.
+
+	* src/preview-grid.c (preview_grid_realize): Plug "white" out of
+	the style.  Use gdk_gc_set_rgb_fg_color, not
+	gdk_gc_set_foreground.
+
+	* src/gnumeric-canvas.c (gnm_canvas_realize): Plug "white" out of
+	the style.
+
+	* src/style-color.c (gnumeric_color_init): Make gs_yellow,
+	gs_white, gs_black, gs_dark_gray, gs_light_gray, and gs_lavender
+	unallocated colours.  Eliminate unused gs_red.
+
+	* src/item-bar.c (item_bar_realize): Use gdk_gc_set_rgb_fg_color,
+	not gdk_gc_set_foreground for multi-head support.
+
+	* src/style-color.h (struct _StyleColor): Remove redundant red,
+	green, and blue members.  All users changed to use color member.
+
+	* src/style-color.c (color_hash): Improve hash function (as if it
+	mattered).
+
+2003-05-20  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-graph.c (sheet_object_graph_remove_from_sheet) : new.
+	(sheet_object_graph_class_init) : hook it up.
+
+	* src/graph.c (gnm_go_data_vector_finalize) : free the values too.
+	(gnm_go_data_scalar_set_sheet) : handle unlinking too.
+	(gnm_go_data_vector_load_len) : only free the buffer if the length
+	  changed.
+	(gnm_go_data_vector_set_sheet) : ditto.
+	(cb_assign_val) : be smarter and collect min/max and do decent end
+	  checking.
+	(nm_go_data_vector_load_values) : use the additional information.
+
+2003-05-19  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_sheet_focus) : set the scg earlier
+	  as soon as the sheet gets focus.
+
+	* configure.in : remove -Wsign-promo according to gcc-3.3 it is only
+	  valid for C++ now.
+
+2003-05-19  Morten Welinder  <terra@gnome.org>
+
+	* src/history.c (file_history_cmd): Use GObject methods.
+	(history_menu_item_create): Ditto.
+	* src/gui-util.c (popup_item_activate): Ditto.
+
+	* src/workbook-control-gui.c (workbook_create_standard_toolbar):
+	Use gtk_widget_set_size_request, not gtk_widget_set_usize.
+	(workbook_setup_auto_calc): Ditto.
+	(show_gui): Ditto.
+	(workbook_setup_edit_area): Ditto.  Also don't use an arbitrary
+	pixel count.
+
+	* src/workbook-format-toolbar.c (workbook_create_format_toolbar):
+	Use gtk_widget_set_size_request, not gtk_widget_set_usize.
+
+	* src/gui-util.c (gnumeric_error_info_dialog_new): Use
+	gtk_widget_set_size_request, not gtk_widget_set_usize.  Also base
+	size of window on screen size, not arbitrary pixel counts.
+
+	* src/sheet-control-gui.c (scg_setup_group_buttons, scg_resize,
+	scg_resize): Use gtk_widget_set_size_request, not
+	gtk_widget_set_usize.
+
+	* src/workbook-format-toolbar.c: Avoid GNOME deprecated pixmaps.
+
+	* src/libgnumeric.c (gnm_common_init): Use glade_init, not
+	glade_gnome_init.
+
+	* src/gui-util.c (gnumeric_position_tooltip): Use gtk_window_move,
+	not deprecated gtk_widget_set_uposition.
+	(gnumeric_clist_moveto): Use "void *" as arg instead of deprecated
+	"GtkCList *" so the many includers of gui-util.h do not get
+	punished.
+
+2003-05-18  Morten Welinder  <terra@gnome.org>
+
+	* src/*.c: Eliminate obvious deprecated stuff.
+
+2003-05-16  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=106148.
+	* src/expr.c (cellrange_relocate) : remove previous hack.  We're not
+	  changing the expression so don't pretend to.  The right solution is.
+	* src/dependent.c (dependents_relocate) : here.
+	  Even if the expression does not change queue it for recalc.  We know
+	  it depends on the region, so it needs to recalc.
+
+	* src/sheet.c (sheet_move_range) : queue dependencies of target region
+	  for recalc their expressions may not change but the content will.
+
+2003-05-16  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (workbook_setup_auto_calc,
+	workbook_create_standard_toolbar): Use gnm_measure_string instead
+	of incorrect and deprecated GdkFont stuff.
+
+	* src/workbook-format-toolbar.c (workbook_create_format_toolbar):
+	Ditto.
+
+	* src/gui-util.c (gnm_measure_string): New function.
+
+2003-05-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/stf-parse.c (stf_parse_csv_cell): remove debug spew
+
+2003-05-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/GNOME_Gnumeric.xml: Fix spelling
+	* src/workbook-control-gui.c: ditto
+
+2003-05-14  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_notebook_switch_page) : set the edit
+	  line's scg if we are not in the middle of a rangesel.
+
+	* src/xml-io.c (xml_read_names) : revert my previous error.
+	  We can't use parse_pos_init_sheet here because it will fail in the
+	  context of workbook level names.
+
+	* src/position.c (parse_pos_init_sheet) : check for that.
+
+2003-05-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-file.c (gui_file_open): change in charmap_selector_new
+	  arguments
+
+2003-05-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (ldexpgnum): Use gnm_pinf and gnm_ninf.
+	* src/regression.c (general_linear_regression): Ditto.
+
+	* src/mathfunc.c (mathfunc_init): Generate gnm_pinf and gnm_ninf
+	also.  Try much harder at making a NaN.
+
+	* src/stf-export.c (stf_export_can_transliterate): Don't use
+	fallback.  I think we want it to fail if it cannot transliterate
+	the test string.
+
+	* src/stf-export.h (StfExportOptions_t): Make quoting_char and
+	cell_separator gunichars.
+
+	* src/stf-export.c (stf_export_options_set_quoting_char,
+	stf_export_options_set_cell_separator): Ditto.
+	(stf_export_cell): Handle gunichar quoting.
+
+2003-05-13  Jody Goldberg <jody@gnome.org>
+
+	* schemas/gnumeric-general.schemas.in : Sans 10 is the default font
+
+2003-05-13  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_read_workbook): Set an error message so cancels
+	won't cause blank books.
+
+	* src/mathfunc.c (random_binomial): Use qbinom for sane time
+	consumption.
+	(random_negbinom): Use qnbinom for sane time consumption.
+
+2003-05-13  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-file.c (gui_file_open) : add mnemonics for the type and
+	  encoding selector.
+	(file_format_changed_cb) : desensitize the label as well as the menu.
+
+2003-05-13  Jody Goldberg <jody@gnome.org>
+
+	* src/pattern.c (gnumeric_pattern_get_stipple) : fence post.
+
+2003-05-13  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (trim_spaces_inplace): Make UTF-8 safe.
+
+2003-05-12  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_open_and_read): Fix crash on errors and empty
+	files.  Fix return value for empty files.
+
+	* src/xml-io.c (gnumeric_xml_write_workbook): Fix broken object
+	handling.
+
+2003-05-12  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/stf-parse.c (compare_terminator) : return the byte
+	  length of the used terminator
+	(stf_parse_paresoptions_new): initialize the string indicator
+	  to our default
+	(stf_parse_next_token): pass all parse options, check also for
+	  separators and terminators
+	(stf_parse_options_csv_set_stringindicator): the string
+	  indicator could be a non-ascii character
+	(stf_parse_csv_cell): use the type information returned by
+	  stf_parse_next_token
+	(stf_parse_eat_separators): Don't eat null bytes.
+	(stf_parse_get_rowcount): use stf_parse_next_token to avoid
+	  counting in-string newlines
+	* src/stf-parse.h (stf_parse_next_token): pass all parse
+	  options
+	(stf_parse_options_csv_set_stringindicator): the string
+	  indicator could be a non-ascii character
+	* src/stf.c (stf_read_workbook_auto_csvtab): stf_parse_next_token
+	  now needs a parseoption
+
+2003-05-12  Jody Goldberg <jody@gnome.org>
+
+	* omf-install/Makefile.am : add missing ;
+
+2003-05-12  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump

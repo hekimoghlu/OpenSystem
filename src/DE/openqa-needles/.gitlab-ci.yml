@@ -1,0 +1,16 @@
+stages:
+- validate
+
+validate:
+  stage: validate
+  image: python:latest
+  script:
+  - python3 utils/format_needles.py
+  - |
+    git diff
+    if ! git diff --quiet; then
+        echo >&2 "Needles are not correctly formatted."
+        echo >&2
+        echo >&2 "Please use utils/format_needles.py to reformat them."
+        exit 1
+    fi

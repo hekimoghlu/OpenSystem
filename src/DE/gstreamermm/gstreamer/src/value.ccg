@@ -1,0 +1,214 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+namespace Gst
+{
+
+Fourcc::Fourcc()
+: first(0), second(0), third(0), fourth(0)
+{}
+
+Fourcc& Fourcc::operator=(const Fourcc& src)
+{
+  first = src.first;
+  second = src.second;
+  third = src.third;
+  fourth = src.fourth;
+
+  return *this;
+}
+
+Fourcc::Fourcc(char first, char second, char third, char fourth)
+: first(first), second(second), third(third), fourth(fourth)
+{}
+
+Fourcc::Fourcc(const Glib::ustring& s)
+: first(0), second(0), third(0), fourth(0)
+{
+  guint32 fourcc = GST_STR_FOURCC(s.c_str());
+  set_ccs(fourcc);
+
+}
+
+Fourcc::Fourcc(guint32 fourcc)
+: first(0), second(0), third(0), fourth(0)
+{
+  set_ccs(fourcc);
+}
+
+Fourcc::Fourcc(const Fourcc& f)
+: first(f.first), second(f.second), third(f.third), fourth(f.fourth)
+{}
+
+void Fourcc::set_ccs(guint32 fourcc)
+{
+  first = fourcc & 0xff;
+  second = (fourcc >> 8) & 0xff;
+  third = (fourcc >> 16) & 0xff;
+  fourth = (fourcc >> 24) & 0xff;
+}
+
+
+Fraction::Fraction()
+: num(0), denom(1)
+{}
+
+Fraction::Fraction(int num, int denom)
+: num(num), denom(denom)
+{}
+
+Fraction::Fraction(const Fraction& src)
+: num(src.num), denom(src.denom)
+{}
+
+Fraction::Fraction(const Glib::ValueBase& value)
+: num(0), denom(1)
+{
+  if(GST_VALUE_HOLDS_FRACTION(value.gobj()))
+  {
+    num = gst_value_get_fraction_numerator(value.gobj());
+    denom = gst_value_get_fraction_denominator(value.gobj());
+  }
+}
+
+Fraction::Fraction(const GValue& value)
+: num(0), denom(1)
+{
+  //if(GST_VALUE_HOLDS_FRACTION(&value))
+  {
+    num = gst_value_get_fraction_numerator(&value);
+    denom = gst_value_get_fraction_denominator(&value);
+  }
+}
+
+Fraction& Fraction::operator=(const Fraction& src)
+{
+  num = src.num;
+  denom = src.denom;
+
+  return *this;
+}
+
+template <>
+void Range<int>::init_range(const GValue& value)
+{
+  if(G_VALUE_HOLDS(&value, GST_TYPE_INT_RANGE))
+  {
+    min = gst_value_get_int_range_min(&value);
+    max = gst_value_get_int_range_max(&value);
+  }
+}
+
+template <>
+void Range<double>::init_range(const GValue& value)
+{
+  if(G_VALUE_HOLDS(&value, GST_TYPE_DOUBLE_RANGE))
+  {
+    min = gst_value_get_double_range_min(&value);
+    max = gst_value_get_double_range_max(&value);
+  }
+}
+
+template <>
+void Range<Gst::Fraction>::init_range(const GValue& value)
+{
+  if(G_VALUE_HOLDS(&value, GST_TYPE_FRACTION_RANGE))
+  {
+    const GValue* min = gst_value_get_fraction_range_min(&value);
+    const GValue* max = gst_value_get_fraction_range_max(&value);
+
+    this->min.num = gst_value_get_fraction_numerator(min);
+    this->min.denom = gst_value_get_fraction_denominator(min);
+
+    this->max.num = gst_value_get_fraction_numerator(max);
+    this->max.denom = gst_value_get_fraction_denominator(max);
+  }
+}
+
+} //namespace Gst
+
+namespace Glib
+{
+
+// static
+GType Value<Gst::Range<int>>::value_type()
+{
+  return GST_TYPE_INT_RANGE;
+}
+
+void Value<Gst::Range<int>>::set(const Gst::Range<int>& data)
+{
+  gst_value_set_int_range(&gobject_, data.min, data.max);
+}
+
+Gst::Range<int> Value<Gst::Range<int>>::get() const
+{
+  return Gst::Range<int>(gobject_);
+}
+
+// static
+GType Value<Gst::Range<double>>::value_type()
+{
+  return GST_TYPE_DOUBLE_RANGE;
+}
+
+void Value<Gst::Range<double>>::set(const Gst::Range<double>& data)
+{
+  gst_value_set_double_range(&gobject_, data.min, data.max);
+}
+
+Gst::Range<double> Value<Gst::Range<double>>::get() const
+{
+  return Gst::Range<double>(gobject_);
+}
+
+// static
+GType Value<Gst::Fraction>::value_type()
+{
+  return GST_TYPE_FRACTION;
+}
+
+void Value<Gst::Fraction>::set(const Gst::Fraction& data)
+{
+  gst_value_set_fraction(&gobject_, data.num, data.denom);
+}
+
+Gst::Fraction Value<Gst::Fraction>::get() const
+{
+  return Gst::Fraction(gobject_);
+}
+
+// static
+GType Value<Gst::Range<Gst::Fraction>>::value_type()
+{
+  return GST_TYPE_FRACTION_RANGE;
+}
+
+void Value<Gst::Range<Gst::Fraction>>::set(const Gst::Range<Gst::Fraction>& data)
+{
+  gst_value_set_fraction_range_full(&gobject_, data.min.num, data.min.denom,
+    data.max.num, data.max.denom);
+}
+
+Gst::Range<Gst::Fraction> Value<Gst::Range<Gst::Fraction>>::get() const
+{
+  return Gst::Range<Gst::Fraction>(gobject_);
+}
+
+} // namespace Glib

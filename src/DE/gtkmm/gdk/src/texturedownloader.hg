@@ -1,0 +1,82 @@
+/* Copyright (C) 2023 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gdkmmconfig.h)
+
+#include <gdkmm/texture.h>
+#include <gdkmm/enums.h>
+#include <array>
+
+_DEFS(gdkmm,gdk)
+
+namespace Gdk
+{
+class GDKMM_API ColorState;
+
+/** The %Gdk::TextureDownloader is used to download the contents of a Gdk::Texture.
+ *
+ * It is intended to be created as a short-term object for a single download,
+ * but can be used for multipe downloads of different textures or with different
+ * settings.
+ *
+ * %Gdk::TextureDownloader can be used to convert data between different formats.
+ * Create a Gdk::Texture for the existing format and then download it in a
+ * different format.
+ *
+ * @newin{4,10}
+ */
+
+class GDKMM_API TextureDownloader
+{
+  _CLASS_BOXEDTYPE(TextureDownloader, GdkTextureDownloader, NONE,
+    gdk_texture_downloader_copy, gdk_texture_downloader_free, GDKMM_API)
+  _IGNORE(gdk_texture_downloader_copy, gdk_texture_downloader_free)
+public:
+
+  /** Creates a new texture downloader for @a texture.
+   *
+   * @newin{4,10}
+   */
+  explicit TextureDownloader(const Glib::RefPtr<Texture>& texture);
+
+  _WRAP_METHOD(void set_texture(const Glib::RefPtr<Texture>& texture), gdk_texture_downloader_set_texture)
+  _WRAP_METHOD(Glib::RefPtr<Texture> get_texture(), gdk_texture_downloader_get_texture, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Texture> get_texture() const, gdk_texture_downloader_get_texture,
+    refreturn, constversion)
+
+  _WRAP_METHOD(void set_format(MemoryFormat format), gdk_texture_downloader_set_format)
+  _WRAP_METHOD(MemoryFormat get_format() const, gdk_texture_downloader_get_format)
+
+  // ColorState is immutable. No need for a non-const get-method.
+  _WRAP_METHOD(Glib::RefPtr<ColorState> get_color_state() const, gdk_texture_downloader_get_color_state, refreturn)
+  _WRAP_METHOD(void set_color_state(const Glib::RefPtr<const ColorState>& color_state), gdk_texture_downloader_set_color_state)
+
+  _WRAP_METHOD(void download_into(guchar* data, gsize stride) const, gdk_texture_downloader_download_into)
+  _WRAP_METHOD(Glib::RefPtr<Glib::Bytes> download_bytes(gsize& out_stride) const,
+    gdk_texture_downloader_download_bytes)
+
+  // ArrayPlanes is defined because gmmproc is confused by the comma in std::array<gsize, 4>.
+  /** An array type, used by download_bytes_with_planes().
+   * @newin{4,20}
+   */
+  using ArrayPlanes = std::array<gsize, 4>;
+#m4 _CONVERSION(`ArrayPlanes&',`gsize',`$3.data()')
+  _WRAP_METHOD(Glib::RefPtr<Glib::Bytes> download_bytes_with_planes(
+    ArrayPlanes& out_offsets, ArrayPlanes& out_strides) const,
+    gdk_texture_downloader_download_bytes_with_planes)
+};
+
+} // namespace Gdk

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkWindow" id="window">
+    <property name="title" translatable="yes">Fishbowl</property>
+    <property name="default-width">400</property>
+    <property name="default-height">400</property>
+    <property name="titlebar">
+      <object class="GtkHeaderBar" id="">
+        <child type="start">
+          <object class="GtkBox">
+            <style>
+              <class name="linked"/>
+            </style>
+            <child>
+              <object class="GtkButton">
+                <property name="child">
+                  <object class="GtkImage">
+                    <property name="paintable">
+                      <object class="GtkIconPaintable">
+                        <property name="file">resource:///org/gtk/libgtk/icons/go-previous-symbolic.svg</property>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+                <signal name="clicked" handler="fishbowl_prev_button_clicked_cb" object="bowl" swapped="no"/>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="child">
+                  <object class="GtkImage">
+                    <property name="paintable">
+                      <object class="GtkIconPaintable">
+                        <property name="file">resource:///org/gtk/libgtk/icons/go-next-symbolic.svg</property>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+                <signal name="clicked" handler="fishbowl_next_button_clicked_cb" object="bowl" swapped="no"/>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child type="end">
+          <object class="GtkLabel">
+            <binding name="label">
+              <closure type="gchararray" function="format_header_cb">
+                <lookup name="count">bowl</lookup>
+                <lookup name="framerate">bowl</lookup>
+              </closure>
+            </binding>
+            <property name="attributes">0 -1 font-features "tnum=1"</property>
+          </object>
+        </child>
+        <child type="end">
+          <object class="GtkToggleButton" id="changes_allow">
+            <property name="child">
+              <object class="GtkImage">
+                <property name="paintable">
+                  <object class="GtkIconPaintable">
+                    <property name="file">resource:///org/gtk/libgtk/icons/changes-allow-symbolic.svg</property>
+                  </object>
+                </property>
+              </object>
+            </property>
+            <property name="has-frame">0</property>
+            <signal name="notify::active" handler="fishbowl_changes_toggled_cb"/>
+          </object>
+        </child>
+      </object>
+    </property>
+    <property name="child">
+      <object class="GtkFishbowl" id="bowl">
+        <property name="visible">True</property>
+        <property name="overflow">hidden</property>
+        <property name="animating">True</property>
+        <property name="benchmark" bind-source="changes_allow" bind-property="active" bind-flags="invert-boolean | sync-create"/>
+      </object>
+    </property>
+  </object>
+</interface>

@@ -1,0 +1,159 @@
+libspelling 0.4.9
+=================
+
+This is a bug-fix release for GNOME 48 and newer
+
+ * Improve discovery of no-spell-check tags
+ * Fix various leaks in the testsuite which CI now tests for
+ * Improve life-cycle tracking of text-region from SpellingEngine
+ * CI now runs ASAN/LSAN/UBSAN and others on every commit
+ * Translation updates
+
+libspelling 0.4.8
+=================
+
+This is a bug-fix release for GNOME 48 and newer
+
+ * Improve initial dictionary selection which is particularly
+   useful for languages which don't typically use spaces to
+   separate word boundaries.
+ * Build system fixes for building without enchant
+ * Translation updates
+
+libspelling 0.4.7
+=================
+
+This is a bug-fix release for GNOME 47 and newer
+
+ * Fix a potential assertion failure in B+Tree item removal
+ * Translation updates
+
+libspelling 0.4.6
+=================
+
+This is a bug-fix release for GNOME 47
+
+ * Improve detection of asynchronous fragment cancellation to break out
+   of long-running spellchecking.
+ * Fix Rust example and documentation links.
+
+libspelling 0.4.5
+=================
+
+This is a bug-fix release for GNOME 47
+
+ * Various robustness fixes for weak ref tracking
+ * Various GObject Introspection fixes
+ * A new build option to install a static library (libspelling-1.a)
+ * Fix a minor leak of extra_word_chars for a language dictionary
+ * Fix ICU success check
+ * Translation updates
+
+libspelling 0.4.4
+=================
+
+This is a bug-fix release for GNOME 47
+
+ * Adds a few dozen translations for menu items
+
+libspelling 0.4.3
+=================
+
+This is a bug-fix release for GNOME 47
+
+ * Fix build to disable assertions in release builds
+ * Fix an off-by-one in assertion
+ * Add i18n for translations of menu entries
+ * Ignore empty strings when building job list
+
+libspelling 0.4.2
+=================
+
+This is a bug-fix release for GNOME 47
+
+ * Limit the number of corrections to 10 in enchant backend to help with
+   dictionary configurations which produce many results.
+ * Hide add/ignore menu items when disabled.
+ * Don't show word corrections when spellcheck is disabled.
+
+libspelling 0.4.1
+=================
+
+This is a bug-fix release for GNOME 47
+
+ * Fixes an important issue tracking weak pointers from a GtkTextBuffer.
+ * Fixes an important issue where we could get invalid text iters from
+   GtkTextBuffer::delete-range() after the deletion occurred when other
+   signal handlers are in play.
+
+libspelling 0.4.0
+=================
+
+This is a stable release for GNOME 47.0
+
+ * Protect the SpellingEngine from systems with misconfigured dictionaries.
+ * Protect the SpellingTextBufferAdapter from NULL language codes.
+ * Protect the SpellingJob from uncooperative break chars which could
+   result in zero length runs.
+ * Fix some incorrect licenses.
+
+libspelling 0.3.1
+=================
+
+This is an unstable release for GNOME 47.rc.
+
+ * Immediately clear tags for invalidated regions without round-tripping
+   to the checker thread.
+ * Bump soname for ABI changes in 0.3
+ * Fix licenses to be LGPLv2.1+
+ * Add sysprof profiler marks for performance profiling
+ * Update example so people know to copy the button-press work
+   to update the menu immediately.
+ * Fix pkg-config fields
+ * Fix libspelling usage from subproject
+ * Make introspection building optional
+ * Documentation improvements
+
+libspelling 0.3.0
+=================
+
+This is an unstable release for GNOME 47.beta.
+
+The highlight for this release is a new threaded spellchecking
+engine. It performs text analysis and dictionary lookups in
+bulk off the UI thread. Care is taken to catch collisions in the
+face of user editing while spellchecking operations are in flight.
+
+I expect a significant reduction in initial spellchecking time
+after opening a document. Opening `gtktextbuffer.c` in Text Editor
+was more than 8x faster.
+
+Currently, libspelling relies on GTK main until 4.15.5 is released
+so do keep this in mind if you are a distributor.
+
+Some API has changed, though that is unlikely to affect any known
+applications using libspelling.
+
+ * Many new unit tests are part of the testsuite
+ * SpellingLanguage was renamed to SpellingDictionary
+ * SpellingLanguageInfo was renamed to SpellingLanguage
+ * Various helpers were added to SpellingTextBufferAdapter so
+   that they can update spelling menus. Applications that update
+   the cursor position on clicks before showing menus may want to
+   force the menu updating before `menu.popup`.
+ * SpellingTextBufferAdapter now uses the new GtkTextBufferCommitNotify
+   API in GTK 4.15.5 and newer
+
+libspelling 0.2.1
+=================
+
+ * Fix licenses to all be LGPLv2.1+
+ * Fix handling of cursor-moved signal
+
+libspelling 0.2.0
+=================
+
+This is the first stable release of libspelling, for GNOME 45
+
+While I don't promise that we won't break ABI before 1.0, we do aim
+to try for that.

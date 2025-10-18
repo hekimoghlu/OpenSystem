@@ -1,0 +1,144 @@
+2011-07-31  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.17
+
+2011-07-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/pattern.c (gnumeric_background_set): always change selection
+	background color. [#648676]
+
+2011-07-30 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/gnumeric.c (go_gnm_component_render): fix call to
+	gnm_gtk_print_cell_range
+
+2011-07-30  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (yylex): Fix parsing crash.  [Redhat #726860]
+
+2011-07-28 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_gtk): implement printing of errors as
+	NA and as dashes
+
+2011-07-28 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_gtk): be sure that the value is
+	uptodate
+
+2011-07-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_comments): new
+	(xml_sax_print_errors): new
+	(gnumeric_1_0_dtd): connect the above
+	* src/xml-sax-write.c (xml_write_print_info): write comment placement
+	and error display
+
+2011-07-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_sheet_pages): account for column width change
+	when formulae are shown.
+
+2011-07-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style-border.c (gnm_style_borders_row_print_gtk): account for
+	column width change when formulae are shown.
+
+2011-07-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_page_col_headers): adjust for column widths when
+	formulae are shown
+
+2011-07-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_gtk): only replace errors by blanks if the
+	error wopuld in fact be shown, i.e. not if it is the result of a formula
+	and formulae are shown.
+
+2011-07-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.h (gnm_gtk_print_cell_range): change argument type
+	* src/print-cell.c (gnm_gtk_print_cell_range): change argument type
+	(print_cell_gtk): consider print-info and possibly print errors	as blank
+	(print_merged_range_gtk): ditto
+	* src/print.c (print_page_cells): adjust call of gnm_gtk_print_cell_range
+
+2011-07-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/collect.h (collect_float_pairs): add argument
+	* src/collect.c (pairs_floats_cache_entry_free): new
+	(pairs_floats_cache_entry_hash): new
+	(pairs_floats_cache_entry_equal): new
+	(clear_caches): handle pairs_floats_cache
+	(create_caches): ditto
+	(prune_caches): ditto
+	(get_pairs_floats_cache_entry): ditto
+	(get_or_fake_pairs_cache_entry): ditto
+	(get_single_cache_key_from_value): new
+	(get_single_cache_key): use get_single_cache_key_from_value
+	(collect_floats): no need to initialize cl if we don't use it
+	(collect_float_pairs_ce): new
+	(collect_float_pairs): use cache and collect_float_pairs_ce
+
+2011-07-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* gnumeric.xsd: update
+
+2011-07-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_insert_cols): use sheet_range_trim rather
+	than sheet_get_extent (this will always be faster).
+	(cmd_insert_rows): ditto
+
+2011-07-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-clipboard.c (x_clipboard_get_cb): provide undo of cut.
+
+2011-07-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style-conditions.c (gnm_style_conditions_eval): != IS_LESS is
+	not the same as == IS_EQUAL || == IS_GREATER
+
+2011-07-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style-conditions.c (gnm_style_conditions_delete): new
+	* src/style-conditions.h (gnm_style_conditions_delete): new
+
+2011-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/rendered-value.c (gnm_rendered_value_new): consider conditional
+	styles
+	* src/style.c (gnm_style_required_spanflags): consider conditional
+	styles
+
+2011-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style-conditions.c (gnm_style_conditions_eval): fix the sense
+	of the comparison (the value string is expected to be smaller than
+	the cell string) and avoid infinite loops.
+
+2011-07-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add menu item
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/sheet-control-gui.c
+	* src/style-conditions.c (gnm_style_conditions_dup): new
+	(gnm_style_cond_is_valid): not all conditions need an expression
+	(gnm_style_conditions_eval): not all conditions need an expression
+	* src/style-conditions.h (gnm_style_conditions_dup): new
+	* src/wbc-gtk-actions.c (cb_format_cells_cond): new
+
+2011-06-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* print.c (load_repeat_range): move from here to
+	* print-info.c (print_load_repeat_range): renaming as we go
+	* print-info.h (print_load_repeat_range): new
+
+2011-06-17  Morten Welinder  <terra@gnome.org>
+
+	* src/session.c: Fix --with-gnome compilation. #652802
+
+2011-06-16  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

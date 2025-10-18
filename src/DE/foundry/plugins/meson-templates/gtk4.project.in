@@ -1,0 +1,1678 @@
+[Template]
+Name=@name@
+Description=@title@
+Tags=Meson;Flatpak;
+
+[Input name]
+Type=text
+Title=Project Name
+Subtitle=The name for your project which should not contain spaces
+Validate=^[-\\w0-9]+$
+
+[Input app_id]
+Type=text
+Title=Application ID
+Subtitle=The application ID for your app such as "org.example.App"
+Validate=^[a-z][a-zA-Z0-9]*\\.[a-zA-Z][a-zA-Z0-9\\-]*(\\.[a-zA-Z][a-zA-Z0-9\\-]*)+$
+Default=org.example.App
+
+[Input language]
+Type=language
+Title=Language
+Subtitle=The primary programming language for the project
+Choices=c;js;python3;vala;rust;cpp
+Default=c
+
+[Input Namespace]
+Type=text
+Title=Namespace
+Subtitle=The namespace for the library such as "Myapp"
+Validate=^[\\w]+$
+Default=My
+
+[Input license]
+Type=license
+Title=License
+Default=GPL-3.0-or-later
+
+[Input git]
+Type=switch
+Title=Version Control
+Default=true
+
+
+```
+require GLib
+
+def replace(string, find, with)
+  GLib.strjoinv(with, GLib.strsplit(string, find, i32(0)))
+end
+
+dirname = name
+
+ns = Namespace.mangle()
+NS = ns.upper()
+Ns = ns.title()
+pfx = replace(ns, "_", "-")
+ParentNs = "Gtk"
+PARENT_NS = "GTK"
+
+name_ = replace(name.lower(), "-", "_")
+resource_path = replace(app_id, ".", "/")
+gsettings_path = replace(app_id, ".", "/")
+is_gnome = @is_adwaita@
+
+if is_gnome then ParentNs = "Adw"
+
+if is_gnome then PARENT_NS = "ADW"
+
+if (language.id == "c") || (language.id == "vala") then meson_c_language = "c"
+else if language.id == "cpp" then meson_c_language = "cpp"
+```
+
+
+```{{dirname}}/meson.options
+option('development',
+         type: 'boolean',
+        value: false,
+  description: 'If this is a development build (implies .Devel app-id suffix)')
+```
+
+
+```{{dirname}}/meson.build
+project('{{dirname}}',{{if language.meson_id}} '{{language.meson_id}}',{{end}}
+
+          version: '1.0.alpha',
+    meson_version: '>= 1.1.0',
+  default_options: ['warning_level=2', 'werror=false'{{if language.id == "cpp"}}, 'cpp_eh=none'{{end}}],
+{{if license.id}}
+          license: '{{license.id}}',
+{{end}}
+)
+
+{{if language.id == "c"}}
+cc = meson.get_compiler('c')
+
+{{else if language.id == "vala"}}
+cc = meson.get_compiler('c')
+valac = meson.get_compiler('vala')
+
+{{else if language.id == "cpp"}}
+cc = meson.get_compiler('cpp')
+
+{{end}}
+gnome = import('gnome')
+i18n = import('i18n')
+pkg = import('pkgconfig')
+{{if language.id == "python3"}}
+python = import('python')
+{{end}}
+
+app_id = '{{app_id}}'
+if get_option('development')
+  app_id = '\@0\@.Devel'.format(app_id)
+endif
+
+config_h = configuration_data()
+config_h.set_quoted('APP_ID', app_id)
+config_h.set_quoted('GETTEXT_PACKAGE', '{{name}}')
+config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
+config_h.set_quoted('LOCALEDIR', join_paths(get_option('prefix'), get_option('datadir'), 'locale'))
+config_h.set10('DEVELOPMENT_BUILD', get_option('development'))
+
+prefix = get_option('prefix')
+datadir = join_paths(prefix, get_option('datadir'))
+libdir = join_paths(prefix, get_option('libdir'))
+
+glib_req_version = '2.82'
+glib_req = '>= \@0\@'.format(glib_req_version)
+glib_dep = dependency('gio-2.0', version: glib_req)
+
+gtk_req_version = '4.18'
+gtk_req = '>= \@0\@'.format(gtk_req_version)
+gtk_dep = dependency('gtk4', version: gtk_req)
+
+{{if is_gnome}}
+adw_req_version = '1.7'
+adw_req = '>= \@0\@'.format(adw_req_version)
+adw_dep = dependency('libadwaita-1', version: adw_req)
+
+{{end}}
+{{if language.id == "cpp"}}
+peel_dep = dependency('peel')
+peel_gen = find_program('peel-gen')
+
+{{end}}
+{{if (language.id == "c") || (language.id == "cpp") || (language.id == "vala")}}
+project_c_args = []
+test_c_args = [
+  '-Watomic-alignment',
+  '-Wcast-align',
+  '-Wdeclaration-after-statement',
+  '-Werror=address',
+  '-Werror=array-bounds',
+  '-Werror=empty-body',
+{{if language.id != "cpp"}}
+  '-Werror=implicit',
+  '-Werror=implicit-function-declaration',
+  '-Werror=incompatible-pointer-types',
+{{end}}
+  '-Werror=init-self',
+{{if language.id != "cpp"}}
+  '-Werror=int-conversion',
+{{end}}
+  '-Werror=int-to-pointer-cast',
+  '-Werror=main',
+  '-Werror=misleading-indentation',
+  '-Werror=missing-braces',
+  '-Werror=missing-include-dirs',
+  '-Werror=nonnull',
+  '-Werror=overflow',
+  '-Werror=parenthesis',
+  '-Werror=pointer-arith',
+{{if language.id != "cpp"}}
+  '-Werror=pointer-to-int-cast',
+{{end}}
+  '-Werror=redundant-decls',
+  '-Werror=return-type',
+  '-Werror=sequence-point',
+{{if language.id != "cpp"}}
+  '-Werror=shadow',
+  '-Werror=strict-prototypes',
+{{end}}
+  '-Werror=trigraphs',
+  '-Werror=undef',
+  '-Werror=write-strings',
+  '-Wformat-nonliteral',
+  '-Wignored-qualifiers',
+{{if language.id != "cpp"}}
+  '-Wimplicit-function-declaration',
+{{end}}
+  '-Wlogical-op',
+  '-Wmissing-declarations',
+  '-Wmissing-format-attribute',
+  '-Wmissing-include-dirs',
+  '-Wmissing-noreturn',
+  '-Wnested-externs',
+  '-Wno-cast-function-type',
+  '-Wno-dangling-pointer',
+  '-Wno-missing-field-initializers',
+  '-Wno-sign-compare',
+  '-Wno-unused-parameter',
+  '-Wold-style-definition',
+  '-Wpointer-arith',
+  '-Wredundant-decls',
+  '-Wstrict-prototypes',
+  '-Wswitch-default',
+  '-Wswitch-enum',
+  '-Wtrampolines',
+  '-Wundef',
+  '-Wuninitialized',
+  '-Wunused',
+  '-fstrict-flex-arrays=3',
+  '-fno-strict-aliasing',
+{{if language.id == "vala"}}
+  '-Wno-unused-variable',
+  '-Wno-discarded-qualifiers',
+{{else if language.id == "cpp"}}
+  '-Wno-suggest-attribute=format',
+{{end}}
+  ['-Werror=format-security', '-Werror=format=2'],
+  '-FImsvc_recommended_pragmas.h',
+]
+foreach arg: test_c_args
+  if cc.has_multi_arguments(arg)
+    project_c_args += arg
+  endif
+endforeach
+add_project_arguments(project_c_args, language: '{{meson_c_language}}')
+
+release_args = []
+global_link_args = []
+test_link_args = [
+  '-Wl,-z,relro',
+  '-Wl,-z,now',
+  '-Wl,-z,noexecstack',
+]
+if not get_option('buildtype').startswith('debug')
+  release_args += ['-DG_DISABLE_ASSERT', '-DG_DISABLE_CAST_CHECKS']
+  test_link_args += [
+    '-Wl,-Bsymbolic',
+    '-fno-plt',
+  ]
+endif
+foreach link_arg: test_link_args
+  if cc.has_link_argument(link_arg)
+    global_link_args += link_arg
+  endif
+endforeach
+add_project_link_arguments(global_link_args, language: '{{meson_c_language}}')
+
+glib_major_version = glib_req_version.split('.')[0].to_int()
+glib_minor_version = glib_req_version.split('.')[1].to_int()
+if glib_minor_version % 2 == 1
+  glib_minor_version = glib_minor_version + 1
+endif
+deprecated_c_args = [
+  '-DG_DISABLE_DEPRECATED',
+  '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_\@0\@_\@1\@'.format(glib_major_version, glib_minor_version),
+]
+
+gtk_major_version = gtk_req_version.split('.')[0].to_int()
+gtk_minor_version = gtk_req_version.split('.')[1].to_int()
+if gtk_minor_version % 2 == 1
+  gtk_minor_version = gtk_minor_version + 1
+endif
+deprecated_c_args = [
+  '-DG_DISABLE_DEPRECATED',
+  '-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_\@0\@_\@1\@'.format(gtk_major_version, gtk_minor_version),
+]
+
+{{if is_gnome}}
+adw_major_version = adw_req_version.split('.')[0].to_int()
+adw_minor_version = adw_req_version.split('.')[1].to_int()
+deprecated_c_args = [
+  '-DG_DISABLE_DEPRECATED',
+  '-DADW_VERSION_MIN_REQUIRED=ADW_VERSION_\@0\@_\@1\@'.format(adw_major_version, adw_minor_version),
+]
+
+{{end}}
+add_project_arguments('-I' + meson.project_build_root(), language: '{{meson_c_language}}')
+{{end}}
+
+subdir('data')
+subdir('src')
+subdir('po')
+
+configure_file(output: 'config.h', configuration: config_h)
+```
+
+if language.id == "cpp"
+```{{dirname}}/subprojects/peel.wrap
+[wrap-git]
+url=https://gitlab.gnome.org/bugaevc/peel.git
+revision=HEAD
+depth=1
+
+[provide]
+program_names=peel-gen
+```
+end
+
+if (language.id == "c") || (language.id == "cpp") || (language.id == "vala")
+```{{dirname}}/src/meson.build
+{{name_}}_sources = [
+{{if language.id == "c"}}
+  'main.c',
+  '{{ns}}-application.c',
+  '{{ns}}-window.c',
+{{else if language.id == "cpp"}}
+  'main.cpp',
+  '{{pfx}}-application.cpp',
+  '{{pfx}}-window.cpp',
+{{else if language.id == "vala"}}
+  'main.vala',
+  'application.vala',
+  'window.vala',
+{{end}}
+
+  gnome.compile_resources('{{pfx}}-resources', '{{pfx}}.gresource.xml',
+    c_name: '{{ns}}'
+  ),
+]
+
+{{if language.id == "cpp"}}
+{{if is_gnome}}
+peel_adw = custom_target('peel-codegen',
+{{else}}
+peel_gtk = custom_target('peel-codegen',
+{{end}}
+  command: [
+    peel_gen,
+    '--recursive',
+    '--out-dir', '\@OUTDIR\@',
+{{if is_gnome}}
+    'Adw', '1',
+{{else}}
+    'Gtk', '4.0',
+{{end}}
+  ],
+  output: 'peel',
+)
+{{if is_gnome}}
+{{name_}}_sources += peel_adw
+{{else}}
+{{name_}}_sources += peel_gtk
+{{end}}
+
+{{end}}
+{{name_}}_deps = [
+  glib_dep,
+  gtk_dep,
+{{if is_gnome}}
+  adw_dep,
+{{end}}
+{{if language.id == "vala"}}
+  valac.find_library('config', dirs: meson.current_source_dir()),
+{{else if language.id == "cpp"}}
+  peel_dep,
+{{end}}
+]
+
+{{name_}}_c_args = [
+  deprecated_c_args,
+  release_args,
+  '-DGETTEXT_PACKAGE="\@0\@"'.format(meson.project_name()),
+  '-DG_LOG_DOMAIN="{{Ns}}"',
+]
+
+{{name_}} = executable('{{name}}', {{name_}}_sources,
+  dependencies: {{name_}}_deps,
+{{if language.id == "cpp"}}
+      cpp_args: {{name_}}_c_args,
+{{else}}
+        c_args: {{name_}}_c_args,
+{{end}}
+       install: true,
+)
+```
+end
+
+if language.id == "python3"
+```{{dirname}}/src/meson.build
+pkgdatadir = get_option('prefix') / get_option('datadir') / meson.project_name()
+moduledir = pkgdatadir / '{{dirname}}'
+
+gnome.compile_resources('{{pfx}}', '{{pfx}}.gresource.xml',
+  gresource_bundle: true,
+           install: true,
+       install_dir: pkgdatadir,
+)
+
+conf = configuration_data()
+conf.set('PYTHON', python.find_installation('python3').full_path())
+conf.set('VERSION', meson.project_version())
+conf.set('localedir', get_option('prefix') / get_option('localedir'))
+conf.set('pkgdatadir', pkgdatadir)
+
+configure_file(
+          input: '{{name}}.in',
+         output: '{{name}}',
+  configuration: conf,
+        install: true,
+    install_dir: get_option('bindir'),
+   install_mode: 'rwxr-xr-x'
+)
+
+{{name_}}_sources = [
+  '__init__.py',
+  'application.py',
+  'window.py',
+]
+
+install_data({{name_}}_sources, install_dir: moduledir)
+```
+
+```{{dirname}}/src/__init__.py
+{{include "license.py"}}
+```
+
+```{{dirname}}/src/window.py
+{{include "license.py"}}
+
+{{if is_gnome}}
+from gi.repository import Adw, Gtk
+{{else}}
+from gi.repository import Gtk
+{{end}}
+
+@Gtk.Template(resource_path='/{{resource_path}}/ui/{{pfx}}-window.ui')
+class {{Ns}}Window({{ParentNs}}.ApplicationWindow):
+    __gtype_name__ = '{{Ns}}Window'
+
+    label = Gtk.Template.Child()
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+```
+
+```{{dirname}}/src/{{name}}.in
+#!\@PYTHON\@
+
+{{include "license.py"}}
+
+import os
+import sys
+import signal
+import locale
+import gettext
+
+VERSION = '\@VERSION\@'
+pkgdatadir = '\@pkgdatadir\@'
+localedir = '\@localedir\@'
+
+sys.path.insert(1, pkgdatadir)
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+locale.bindtextdomain('{{name}}', localedir)
+locale.textdomain('{{name}}')
+gettext.install('{{name}}', localedir)
+
+if __name__ == '__main__':
+    import gi
+
+    gi.require_version('Gtk', '4.0')
+{{if is_gnome}}
+    gi.require_version('Adw', '1')
+{{end}}
+
+    from gi.repository import Gio
+    resource = Gio.Resource.load(os.path.join(pkgdatadir, '{{pfx}}.gresource'))
+    resource._register()
+
+    from {{name_}}.application import {{Ns}}Application
+
+    sys.exit({{Ns}}Application().run(sys.argv))
+```
+
+```{{dirname}}/src/application.py
+{{include "license.py"}}
+
+{{if is_gnome}}
+from gi.repository import Adw, Gio, Gtk
+{{else}}
+from gi.repository import Gio, Gtk
+{{end}}
+
+from .window import {{Ns}}Window
+
+class {{Ns}}Application({{ParentNs}}.Application):
+    __gtype_name__ = '{{Ns}}Application'
+
+    def __init__(self):
+        super().__init__(application_id='{{app_id}}',
+                         flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
+                         resource_base_path='/{{resource_path}}/')
+
+    def do_activate(self):
+        window = self.props.active_window
+        if not window:
+            window = {{Ns}}Window(application=self)
+        window.present()
+```
+end
+
+```{{dirname}}/src/{{pfx}}.gresource.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/{{resource_path}}/ui">
+    <file preprocess="xml-stripblanks">{{pfx}}-window.ui</file>
+  </gresource>
+{{if language.id == "js"}}
+  <gresource prefix="/{{resource_path}}/js">
+    <file>application.js</file>
+    <file>main.js</file>
+    <file>window.js</file>
+  </gresource>
+{{end}}
+</gresources>
+```
+
+if !is_gnome
+```{{dirname}}/src/{{pfx}}-window.ui
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="{{Ns}}Window" parent="GtkApplicationWindow">
+    <property name="title" translatable="yes">{{dirname}}</property>
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="headerbar">
+        <child type="end">
+          <object class="GtkMenuButton">
+            <property name="menu-model">primary_menu</property>
+            <property name="icon-name">open-menu-symbolic</property>
+            <property name="primary">true</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="label">
+        <property name="label" translatable="yes">Hello, World!</property>
+      </object>
+    </child>
+  </template>
+  <menu id="primary_menu">
+  </menu>
+</interface>
+```
+end
+
+if is_gnome
+```{{dirname}}/src/{{pfx}}-window.ui
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="Adw" version="1.0"/>
+  <template class="{{Ns}}Window" parent="AdwApplicationWindow">
+    <property name="title" translatable="yes">{{dirname}}</property>
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <property name="content">
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <child type="end">
+              <object class="GtkMenuButton">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="primary">true</property>
+                <property name="menu-model">primary_menu</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <property name="content">
+          <object class="GtkLabel" id="label">
+            <property name="label" translatable="yes">Hello, World!</property>
+          </object>
+        </property>
+      </object>
+    </property>
+  </template>
+  <menu id="primary_menu">
+  </menu>
+</interface>
+```
+end
+
+if language.id == "c"
+```{{dirname}}/src/main.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include <glib/gi18n-lib.h>
+
+#include <locale.h>
+
+#include "{{ns}}-application.h"
+
+int
+main (int   argc,
+      char *argv[])
+{
+  g_autoptr({{Ns}}Application) app = NULL;
+  int ret;
+
+  setlocale (LC_ALL, "");
+  bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
+  bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+  textdomain (GETTEXT_PACKAGE);
+
+  g_set_prgname ("{{name}}");
+  g_set_application_name (_("{{dirname}}"));
+
+  app = {{ns}}_application_new ();
+  ret = g_application_run (G_APPLICATION (app), argc, argv);
+
+  return ret;
+}
+```
+```{{dirname}}/src/{{pfx}}-application.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include "{{pfx}}-application.h"
+#include "{{pfx}}-window.h"
+
+struct _{{Ns}}Application
+{
+  {{ParentNs}}Application parent_instance;
+};
+
+G_DEFINE_FINAL_TYPE ({{Ns}}Application, {{ns}}_application, {{PARENT_NS}}_TYPE_APPLICATION)
+
+static void
+{{ns}}_application_activate (GApplication *app)
+{
+  GtkWindow *window;
+
+  if (!(window = gtk_application_get_active_window (GTK_APPLICATION (app))))
+    window = GTK_WINDOW ({{ns}}_window_new ({{NS}}_APPLICATION (app)));
+
+  gtk_window_present (window);
+}
+
+static void
+{{ns}}_application_startup (GApplication *app)
+{
+  G_APPLICATION_CLASS ({{ns}}_application_parent_class)->startup (app);
+}
+
+static void
+{{ns}}_application_class_init ({{Ns}}ApplicationClass *klass)
+{
+  GApplicationClass *app_class = G_APPLICATION_CLASS (klass);
+
+  app_class->activate = {{ns}}_application_activate;
+  app_class->startup = {{ns}}_application_startup;
+}
+
+static void
+{{ns}}_application_init ({{Ns}}Application *self)
+{
+}
+
+{{Ns}}Application *
+{{ns}}_application_new (void)
+{
+  return g_object_new ({{NS}}_TYPE_APPLICATION,
+                       "application-id", APP_ID,
+                       "flags", G_APPLICATION_DEFAULT_FLAGS,
+                       "resource-base-path", "/{{resource_path}}",
+                       NULL);
+}
+```
+```{{dirname}}/src/{{pfx}}-application.h
+{{include "license.h"}}
+
+#pragma once
+
+{{if is_gnome}}
+#include <adwaita.h>
+{{else}}
+#include <gtk/gtk.h>
+{{end}}
+
+G_BEGIN_DECLS
+
+#define {{NS}}_TYPE_APPLICATION ({{ns}}_application_get_type())
+
+G_DECLARE_FINAL_TYPE ({{Ns}}Application, {{ns}}_application, {{NS}}, APPLICATION, {{ParentNs}}Application)
+
+{{Ns}}Application *{{ns}}_application_new (void);
+
+G_END_DECLS
+```
+```{{dirname}}/src/{{pfx}}-window.h
+{{include "license.h"}}
+
+#pragma once
+
+{{if is_gnome}}
+#include <adwaita.h>
+{{else}}
+#include <gtk/gtk.h>
+{{end}}
+
+#include "{{pfx}}-application.h"
+
+G_BEGIN_DECLS
+
+#define {{NS}}_TYPE_WINDOW ({{ns}}_window_get_type())
+
+G_DECLARE_FINAL_TYPE ({{Ns}}Window, {{ns}}_window, {{NS}}, WINDOW, {{ParentNs}}ApplicationWindow)
+
+GtkWidget *{{ns}}_window_new ({{Ns}}Application *app);
+
+G_END_DECLS
+```
+```{{dirname}}/src/{{pfx}}-window.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include "{{pfx}}-window.h"
+
+struct _{{Ns}}Window
+{
+  {{ParentNs}}ApplicationWindow  parent_instance;
+  GtkLabel             *label;
+};
+
+G_DEFINE_FINAL_TYPE ({{Ns}}Window, {{ns}}_window, {{PARENT_NS}}_TYPE_APPLICATION_WINDOW)
+
+static void
+{{ns}}_window_dispose (GObject *object)
+{
+  {{Ns}}Window *self = {{NS}}_WINDOW (object);
+
+  gtk_widget_dispose_template (GTK_WIDGET (self), {{NS}}_TYPE_WINDOW);
+
+  G_OBJECT_CLASS ({{ns}}_window_parent_class)->dispose (object);
+}
+
+static void
+{{ns}}_window_class_init ({{Ns}}WindowClass *klass)
+{
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->dispose = {{ns}}_window_dispose;
+
+  gtk_widget_class_set_template_from_resource (widget_class, "/{{resource_path}}/ui/{{pfx}}-window.ui");
+  gtk_widget_class_bind_template_child (widget_class, {{Ns}}Window, label);
+}
+
+static void
+{{ns}}_window_init ({{Ns}}Window *self)
+{
+  gtk_widget_init_template (GTK_WIDGET (self));
+
+#ifdef DEVELOPMENT_BUILD
+  gtk_widget_add_css_class (GTK_WIDGET (self), "devel");
+#endif
+}
+
+GtkWidget *
+{{ns}}_window_new ({{Ns}}Application *app)
+{
+  g_return_val_if_fail ({{NS}}_IS_APPLICATION (app), NULL);
+
+  return g_object_new ({{NS}}_TYPE_WINDOW,
+                       "application", app,
+                       NULL);
+}
+```
+end
+
+if language.id == "vala"
+```{{dirname}}/src/main.vala
+{{include "license.vala"}}
+
+int main (string[] args) {
+    Intl.bindtextdomain (Config.GETTEXT_PACKAGE, Config.LOCALEDIR);
+    Intl.bind_textdomain_codeset (Config.GETTEXT_PACKAGE, "UTF-8");
+    Intl.textdomain (Config.GETTEXT_PACKAGE);
+
+    var app = new {{Ns}}.Application ();
+    return app.run (args);
+}
+```
+```{{dirname}}/src/config.vapi
+[CCode (cprefix = "", lower_case_cprefix = "", cheader_filename = "config.h")]
+namespace Config {
+    public const string APP_ID;
+    public const string GETTEXT_PACKAGE;
+    public const string LOCALEDIR;
+    public const string PACKAGE_VERSION;
+}
+```
+```{{dirname}}/src/window.vala
+{{include "license.vala"}}
+
+[GtkTemplate (ui = "/{{resource_path}}/ui/{{ns}}-window.ui")]
+public class {{Ns}}.Window : {{ParentNs}}.ApplicationWindow {
+    public Window ({{Ns}}.Application app) {
+        Object (application: app);
+    }
+}
+```
+```{{dirname}}/src/application.vala
+{{include "license.vala"}}
+
+public class {{Ns}}.Application : {{ParentNs}}.Application {
+    public Application () {
+        Object (
+            application_id: Config.APP_ID,
+            flags: ApplicationFlags.DEFAULT_FLAGS,
+            resource_base_path: "/{{resource_path}}/"
+        );
+    }
+
+    public override void activate () {
+        var window = this.get_active_window();
+
+        if (window == null) {
+            window = new {{Ns}}.Window (this);
+        }
+
+        window.present ();
+    }
+}
+```
+end
+
+if language.id == "js"
+```{{dirname}}/src/{{name}}.in
+#!\@GJS\@ -m
+
+{{include "license.js"}}
+
+import { exit, programArgs, programInvocationName } from "system";
+
+imports.package.init({
+  name: "\@PACKAGE_NAME\@",
+  version: "\@PACKAGE_VERSION\@",
+  prefix: "\@prefix\@",
+  libdir: "\@libdir\@",
+  datadir: "\@datadir\@",
+});
+
+const { main } = await import("resource://\@resource_path\@/js/main.js");
+const exit_code = await main([programInvocationName, ...programArgs]);
+exit(exit_code);
+```
+
+```{{dirname}}/src/main.js
+{{include "license.js"}}
+
+import { {{Ns}}Application } from './application.js';
+
+export function main(argv) {
+    pkg.initGettext();
+    pkg.initFormat();
+
+    const application = new {{Ns}}Application();
+    return application.runAsync(argv);
+}
+```
+
+```{{dirname}}/src/application.js
+{{include "license.js"}}
+
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
+import Gtk from 'gi://Gtk?version=4.0';
+{{if is_gnome}}
+import Adw from 'gi://Adw?version=1';
+{{end}}
+
+
+import { {{Ns}}Window } from './window.js';
+
+export const {{Ns}}Application = GObject.registerClass(
+    class {{Ns}}Application extends {{ParentNs}}.Application {
+        constructor() {
+            super({
+                application_id: '{{app_id}}',
+                flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
+                resource_base_path: '/{{resource_path}}/'
+            });
+        }
+
+        vfunc_activate() {
+            let window = this.active_window;
+
+            if (!window)
+                window = new {{Ns}}Window(this);
+
+            window.present();
+        }
+    }
+);
+```
+
+```{{dirname}}/src/window.js
+{{include "license.js"}}
+
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Adw from 'gi://Adw';
+
+export const {{Ns}}Window = GObject.registerClass({
+    GTypeName: '{{Ns}}Window',
+    Template: 'resource:///{{resource_path}}/ui/{{pfx}}-window.ui',
+    InternalChildren: ['label'],
+}, class {{Ns}}Window extends {{ParentNs}}.ApplicationWindow {
+    constructor(application) {
+        super({ application });
+    }
+});
+```
+
+```{{dirname}}/src/meson.build
+pkgdatadir = get_option('datadir') / meson.project_name()
+
+gnome.compile_resources('{{name}}.src', '{{pfx}}.gresource.xml',
+  gresource_bundle: true,
+           install: true,
+       install_dir: pkgdatadir,
+)
+
+bin_conf = configuration_data()
+bin_conf.set('GJS', find_program('gjs').full_path())
+bin_conf.set('PACKAGE_VERSION', meson.project_version())
+bin_conf.set('PACKAGE_NAME', meson.project_name())
+bin_conf.set('prefix', get_option('prefix'))
+bin_conf.set('libdir', get_option('prefix') / get_option('libdir'))
+bin_conf.set('datadir', get_option('prefix') / get_option('datadir'))
+bin_conf.set('resource_path', '/{{resource_path}}/')
+
+configure_file(
+          input: '{{name}}.in',
+         output: '{{name}}',
+  configuration: bin_conf,
+        install: true,
+    install_dir: get_option('bindir'),
+   install_mode: 'rwxr-xr-x'
+)
+```
+end
+
+if language.id == "rust"
+```{{dirname}}/src/meson.build
+pkgdatadir = get_option('prefix') / get_option('datadir') / meson.project_name()
+
+gnome.compile_resources('{{name}}', '{{pfx}}.gresource.xml',
+  gresource_bundle: true,
+           install: true,
+       install_dir: pkgdatadir,
+)
+
+conf = configuration_data()
+conf.set_quoted('VERSION', meson.project_version())
+conf.set_quoted('GETTEXT_PACKAGE', '{{name}}')
+conf.set_quoted('LOCALEDIR', get_option('prefix') / get_option('localedir'))
+conf.set_quoted('PKGDATADIR', pkgdatadir)
+conf.set_quoted('app_id', app_id)
+
+configure_file(
+          input: 'config.rs.in',
+         output: 'config.rs',
+  configuration: conf
+)
+
+run_command(
+  'cp',
+  meson.project_build_root() / 'src' / 'config.rs',
+  meson.project_source_root() / 'src' / 'config.rs',
+  check: true
+)
+
+cargo_bin  = find_program('cargo')
+cargo_opt  = [ '--manifest-path', meson.project_source_root() / 'Cargo.toml' ]
+cargo_opt += [ '--target-dir', meson.project_build_root()  / 'src' ]
+cargo_env  = [ 'CARGO_HOME=' + meson.project_build_root()  / 'cargo-home' ]
+
+if get_option('buildtype') == 'release'
+  cargo_opt += [ '--release' ]
+  rust_target = 'release'
+else
+  rust_target = 'debug'
+endif
+
+cargo_build = custom_target('cargo-build',
+    build_by_default: true,
+  build_always_stale: true,
+              output: meson.project_name(),
+             console: true,
+             install: true,
+         install_dir: get_option('bindir'),
+             command: [
+                 'env', cargo_env,
+                 cargo_bin, 'build',
+                 cargo_opt, '&&', 'cp', 'src' / rust_target / meson.project_name(), '\@OUTPUT\@',
+             ],
+)
+```
+
+```{{dirname}}/src/config.rs.in
+pub static APP_ID: &str = \@app_id\@;
+pub static VERSION: &str = \@VERSION\@;
+pub static GETTEXT_PACKAGE: &str = \@GETTEXT_PACKAGE\@;
+pub static LOCALEDIR: &str = \@LOCALEDIR\@;
+pub static PKGDATADIR: &str = \@PKGDATADIR\@;
+```
+
+```{{dirname}}/Cargo.toml
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gettext-rs = { version = "0.7", features = ["gettext-system"] }
+gtk = { version = "0.9", package = "gtk4", features = ["gnome_47"] }
+{{if is_gnome}}
+adw = { version = "0.7", package = "libadwaita", features = ["v1_6"] }
+{{end}}
+```
+
+```{{dirname}}/src/main.rs
+{{include "license.rs"}}
+
+mod application;
+mod config;
+mod window;
+
+use self::application::{{Ns}}Application;
+use self::window::{{Ns}}Window;
+
+use config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, PKGDATADIR};
+use gettextrs::{bind_textdomain_codeset, bindtextdomain, textdomain};
+use gtk::{gio, glib};
+use gtk::prelude::*;
+
+fn main() -> glib::ExitCode {
+    bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR).expect("Unable to bind the text domain");
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8")
+        .expect("Unable to set the text domain encoding");
+    textdomain(GETTEXT_PACKAGE).expect("Unable to switch to the text domain");
+
+    let resources = gio::Resource::load(PKGDATADIR.to_owned() + "/{{name}}.gresource")
+        .expect("Could not load resources");
+    gio::resources_register(&resources);
+
+    let app = {{Ns}}Application::new(APP_ID, &gio::ApplicationFlags::empty());
+    app.run()
+}
+```
+
+```{{dirname}}/src/application.rs
+{{include "license.rs"}}
+
+{{if is_gnome}}
+use adw::prelude::*;
+use adw::subclass::prelude::*;
+{{else}}
+use gtk::prelude::*;
+use gtk::subclass::prelude::*;
+{{end}}
+
+use gtk::{gio, glib};
+
+use crate::{{Ns}}Window;
+
+mod imp {
+    use super::*;
+
+    #[derive(Debug, Default)]
+    pub struct {{Ns}}Application {}
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for {{Ns}}Application {
+        const NAME: &'static str = "{{Ns}}Application";
+        type Type = super::{{Ns}}Application;
+        type ParentType = {{if is_gnome}}adw{{else}}gtk{{end}}::Application;
+    }
+
+    impl ObjectImpl for {{Ns}}Application {
+        fn constructed(&self) {
+            self.parent_constructed();
+        }
+    }
+
+    impl ApplicationImpl for {{Ns}}Application {
+        fn activate(&self) {
+            let application = self.obj();
+
+            let window = application.active_window().unwrap_or_else(|| {
+                let window = {{Ns}}Window::new(&*application);
+                window.upcast()
+            });
+
+            window.present();
+        }
+    }
+
+    impl GtkApplicationImpl for {{Ns}}Application {}
+{{if is_gnome}}
+    impl AdwApplicationImpl for {{Ns}}Application {}
+{{end}}
+}
+
+glib::wrapper! {
+    pub struct {{Ns}}Application(ObjectSubclass<imp::{{Ns}}Application>)
+        @extends gio::Application, gtk::Application{{if is_gnome}}, adw::Application{{end}},
+        @implements gio::ActionGroup, gio::ActionMap;
+}
+
+impl {{Ns}}Application {
+    pub fn new(application_id: &str, flags: &gio::ApplicationFlags) -> Self {
+        glib::Object::builder()
+            .property("application-id", application_id)
+            .property("flags", flags)
+            .property("resource-base-path", "/{{resource_path}}/")
+            .build()
+    }
+}
+```
+
+```{{dirname}}/src/window.rs
+{{include "license.rs"}}
+
+{{if is_gnome}}
+use adw::prelude::*;
+use adw::subclass::prelude::*;
+{{else}}
+use gtk::prelude::*;
+use gtk::subclass::prelude::*;
+{{end}}
+
+use gtk::{gio, glib};
+
+mod imp {
+    use super::*;
+
+    #[derive(Debug, Default, gtk::CompositeTemplate)]
+    #[template(resource = "/{{resource_path}}/ui/{{pfx}}-window.ui")]
+    pub struct {{Ns}}Window {
+        // Template widgets
+        #[template_child]
+        pub label: TemplateChild<gtk::Label>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for {{Ns}}Window {
+        const NAME: &'static str = "{{Ns}}Window";
+        type Type = super::{{Ns}}Window;
+        type ParentType = {{if is_gnome}}adw{{else}}gtk{{end}}::ApplicationWindow;
+
+        fn class_init(klass: &mut Self::Class) {
+            klass.bind_template();
+        }
+
+        fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
+            obj.init_template();
+        }
+    }
+
+    impl ObjectImpl for {{Ns}}Window {}
+    impl WidgetImpl for {{Ns}}Window {}
+    impl WindowImpl for {{Ns}}Window {}
+    impl ApplicationWindowImpl for {{Ns}}Window {}
+{{if is_gnome}}
+    impl AdwApplicationWindowImpl for {{Ns}}Window {}
+{{end}}
+}
+
+glib::wrapper! {
+    pub struct {{Ns}}Window(ObjectSubclass<imp::{{Ns}}Window>)
+        @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow{{if is_gnome}}, adw::ApplicationWindow{{end}},
+        @implements gio::ActionGroup, gio::ActionMap;
+}
+
+impl {{Ns}}Window {
+    pub fn new<P: IsA<gtk::Application>>(application: &P) -> Self {
+        glib::Object::builder()
+            .property("application", application)
+            .build()
+    }
+}
+```
+end
+
+if language.id == "cpp"
+```{{dirname}}/src/main.cpp
+{{include "license.c"}}
+
+#include "config.h"
+
+#include <glib/gi18n.h>
+
+#include <clocale>
+
+#include <peel/GLib/functions.h>
+
+#include "{{pfx}}-application.h"
+
+using namespace peel;
+
+int
+main (int argc, char *argv[])
+{
+  setlocale (LC_ALL, "");
+  bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
+  bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+  textdomain (GETTEXT_PACKAGE);
+
+  GLib::set_prgname ("{{name}}");
+  GLib::set_application_name (_("{{dirname}}"));
+
+  auto app = {{Ns}}::Application::create ();
+  return app->run (argc, argv);
+}
+```
+```{{dirname}}/src/{{pfx}}-application.cpp
+{{include "license.c"}}
+
+#include "config.h"
+
+#include "{{pfx}}-application.h"
+#include "{{pfx}}-window.h"
+
+#include <peel/Gio/Gio.h>
+
+using namespace peel;
+
+PEEL_CLASS_IMPL ({{Ns}}::Application, "{{Ns}}Application", {{ParentNs}}::Application)
+
+inline void
+{{Ns}}::Application::vfunc_activate ()
+{
+  auto window = get_active_window ();
+  if (!window)
+    window = {{Ns}}::Window::create (this);
+
+  window->present ();
+}
+
+inline void
+{{Ns}}::Application::vfunc_startup ()
+{
+  parent_vfunc_startup<Application> ();
+}
+
+inline void
+{{Ns}}::Application::Class::init ()
+{
+  override_vfunc_activate<Application> ();
+  override_vfunc_startup<Application> ();
+}
+
+RefPtr<{{Ns}}::Application>
+{{Ns}}::Application::create ()
+{
+  return Object::create<Application> (prop_application_id (), APP_ID,
+                                      prop_flags (), Gio::Application::Flags::DEFAULT_FLAGS,
+                                      prop_resource_base_path (), "/{{resource_path}}");
+}
+```
+```{{dirname}}/src/{{pfx}}-application.h
+{{include "license.h"}}
+
+#pragma once
+
+{{if is_gnome}}
+#include <peel/Adw/Adw.h>
+{{else}}
+#include <peel/Gtk/Gtk.h>
+{{end}}
+#include <peel/class.h>
+
+namespace {{Ns}}
+{
+
+class Application final : public peel::{{ParentNs}}::Application
+{
+  PEEL_SIMPLE_CLASS (Application, peel::{{ParentNs}}::Application)
+  friend class peel::Gio::Application::Class;
+
+  void vfunc_activate ();
+  void vfunc_startup ();
+
+public:
+  static peel::RefPtr<Application> create ();
+};
+
+} /* namespace {{Ns}} */
+```
+```{{dirname}}/src/{{pfx}}-window.h
+{{include "license.h"}}
+
+#pragma once
+
+{{if is_gnome}}
+#include <peel/Adw/Adw.h>
+{{end}}
+#include <peel/Gtk/Gtk.h>
+#include <peel/class.h>
+
+namespace {{Ns}}
+{
+
+class Application;
+
+class Window final : public peel::{{ParentNs}}::ApplicationWindow
+{
+  PEEL_SIMPLE_CLASS (Window, peel::{{ParentNs}}::ApplicationWindow)
+
+  void init (Class *);
+  void vfunc_dispose ();
+
+  peel::Gtk::Label *label;
+
+public:
+  static Window *create (Application *app);
+};
+
+} /* namespace {{Ns}} */
+```
+```{{dirname}}/src/{{pfx}}-window.cpp
+{{include "license.c"}}
+
+#include "config.h"
+
+#include "{{pfx}}-window.h"
+#include "{{pfx}}-application.h"
+
+#include <peel/widget-template.h>
+
+using namespace peel;
+
+PEEL_CLASS_IMPL ({{Ns}}::Window, "{{Ns}}Window", {{ParentNs}}::ApplicationWindow)
+
+inline void
+{{Ns}}::Window::vfunc_dispose ()
+{
+  dispose_template (Type::of<Window> ());
+
+  parent_vfunc_dispose<Window> ();
+}
+
+inline void
+{{Ns}}::Window::Class::init ()
+{
+  override_vfunc_dispose<Window> ();
+
+  set_template_from_resource ("/{{resource_path}}/ui/{{pfx}}-window.ui");
+  PEEL_WIDGET_TEMPLATE_BIND_CHILD (Window, label);
+}
+
+inline void
+{{Ns}}::Window::init (Class *)
+{
+  init_template ();
+
+#ifdef DEVELOPMENT_BUILD
+  add_css_class ("devel");
+#endif
+}
+
+{{Ns}}::Window *
+{{Ns}}::Window::create ({{Ns}}::Application *app)
+{
+  g_return_val_if_fail (app->check_type<Application> (), nullptr);
+
+  return Object::create<Window> (prop_application (), app);
+}
+```
+end
+
+```{{dirname}}/README.md
+# {{name}}
+
+A GTK application to ...
+```
+
+```{{dirname}}/LICENSE
+{{license.text}}
+```
+
+```{{dirname}}/po/LINGUAS
+```
+
+```{{dirname}}/po/POTFILES.in
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+src/{{pfx}}-window.ui
+```
+
+```{{dirname}}/po/meson.build
+i18n.gettext('{{dirname}}', preset: 'glib')
+```
+
+```{{dirname}}/data/meson.build
+desktop_file_in_config = configuration_data()
+desktop_file_in_config.set('app_id', app_id)
+desktop_file_in = configure_file(
+          input: '{{name}}.desktop.in.in',
+         output: '\@0\@.desktop.in'.format(app_id),
+  configuration: desktop_file_in_config,
+)
+
+desktop_file = i18n.merge_file(
+        input: desktop_file_in,
+       output: '{{app_id}}.desktop',
+         type: 'desktop',
+       po_dir: '../po',
+      install: true,
+  install_dir: get_option('datadir') / 'applications'
+)
+
+desktop_utils = find_program('desktop-file-validate', required: false)
+if desktop_utils.found()
+  test('Validate desktop file', desktop_utils, args: [desktop_file])
+endif
+
+appstream_file_in_config = configuration_data()
+appstream_file_in_config.set('app_id', app_id)
+appstream_file_in = configure_file(
+          input: '{{name}}.metainfo.xml.in',
+         output: '\@0\@.metainfo.xml.in'.format(app_id),
+  configuration: appstream_file_in_config,
+)
+
+appstream_file = i18n.merge_file(
+        input: appstream_file_in,
+       output: '\@0\@.metainfo.xml'.format(app_id),
+       po_dir: '../po',
+      install: true,
+  install_dir: get_option('datadir') / 'metainfo'
+)
+
+appstreamcli = find_program('appstreamcli', required: false, disabler: true)
+test('Validate appstream file', appstreamcli,
+     args: ['validate', '--no-net', '--explain', appstream_file])
+
+install_data('{{name}}.gschema.xml',
+       rename: '\@0\@.gschema.xml'.format(app_id),
+  install_dir: get_option('datadir') / 'glib-2.0' / 'schemas'
+)
+
+compile_schemas = find_program('glib-compile-schemas', required: false, disabler: true)
+test('Validate schema file',
+     compile_schemas,
+     args: ['--strict', '--dry-run', meson.current_source_dir()])
+
+
+service_conf = configuration_data()
+service_conf.set('bindir', get_option('prefix') / get_option('bindir'))
+service_conf.set('app_id', app_id)
+configure_file(
+          input: '{{name}}.service.in',
+         output: '\@0\@.service'.format(app_id),
+  configuration: service_conf,
+    install_dir: get_option('datadir') / 'dbus-1' / 'services'
+)
+
+subdir('icons')
+```
+
+```{{dirname}}/data/{{name}}.gschema.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="{{name}}">
+  <schema id="{{app_id}}" path="/{{gsettings_path}}/">
+  </schema>
+</schemalist>
+```
+
+```{{dirname}}/data/icons/meson.build
+scalable_dir = 'hicolor' / 'scalable' / 'apps'
+install_data(
+  '{{app_id}}.svg',
+  rename: '\@0\@.svg'.format(app_id),
+  install_dir: get_option('datadir') / 'icons' / scalable_dir
+)
+
+symbolic_dir = 'hicolor' / 'symbolic' / 'apps'
+install_data(
+  '{{app_id}}-symbolic.svg',
+  rename: '\@0\@-symbolic.svg'.format(app_id),
+  install_dir: get_option('datadir') / 'icons' / symbolic_dir
+)
+```
+
+```{{dirname}}/data/icons/{{app_id}}.svg
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 0 16 16" width="16px"><g fill="#222222"><path d="m 5.207031 1.292969 c -0.390625 -0.390625 -1.023437 -0.390625 -1.414062 0 l -2.5 2.5 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 2.5 2.5 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 2.496094 -2.5 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 z m 0 0"/><path d="m 10 12 c 0 1.65625 -1.34375 3 -3 3 c -1.660156 0 -3 -1.34375 -3 -3 s 1.339844 -3 3 -3 c 1.65625 0 3 1.34375 3 3 z m 0 0"/><path d="m 11.945312 2.003906 c -0.339843 0.015625 -0.644531 0.203125 -0.8125 0.496094 l -2.320312 4 c -0.386719 0.664062 0.09375 1.5 0.863281 1.5 h 4.644531 c 0.769532 0 1.25 -0.835938 0.863282 -1.5 l -2.320313 -4 c -0.1875 -0.328125 -0.542969 -0.519531 -0.917969 -0.496094 z m 0 0"/></g></svg>
+```
+
+```{{dirname}}/data/icons/{{app_id}}-symbolic.svg
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 0 16 16" width="16px"><g fill="#222222"><path d="m 5.207031 1.292969 c -0.390625 -0.390625 -1.023437 -0.390625 -1.414062 0 l -2.5 2.5 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 2.5 2.5 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 2.496094 -2.5 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 z m 0 0"/><path d="m 10 12 c 0 1.65625 -1.34375 3 -3 3 c -1.660156 0 -3 -1.34375 -3 -3 s 1.339844 -3 3 -3 c 1.65625 0 3 1.34375 3 3 z m 0 0"/><path d="m 11.945312 2.003906 c -0.339843 0.015625 -0.644531 0.203125 -0.8125 0.496094 l -2.320312 4 c -0.386719 0.664062 0.09375 1.5 0.863281 1.5 h 4.644531 c 0.769532 0 1.25 -0.835938 0.863282 -1.5 l -2.320313 -4 c -0.1875 -0.328125 -0.542969 -0.519531 -0.917969 -0.496094 z m 0 0"/></g></svg>
+```
+
+```{{dirname}}/data/{{name}}.desktop.in.in
+[Desktop Entry]
+Name={{dirname}}
+Exec={{name}}
+Icon=\@app_id\@
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true
+```
+
+```{{dirname}}/data/{{name}}.metainfo.xml.in
+<component type="desktop-application">
+  <id>{{app_id}}</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>{{license.id}}</project_license>
+
+  <name>{{dirname}}</name>
+  <summary>Few word description</summary>
+  <description>
+    <p>No description</p>
+  </description>
+
+  <developer id="tld.vendor">
+    <name>{{author}}</name>
+  </developer>
+
+  <url type="homepage">https://example.org/</url>
+  <url type="vcs-browser">https://example.org/repository</url>
+  <url type="bugtracker">https://example.org/issues</url>
+  <url type="translate">https://example.org/translate</url>
+  <url type="faq">https://example.org/faq</url>
+  <url type="help">https://example.org/help</url>
+  <url type="donation">https://example.org/donate</url>
+  <url type="contact">https://example.org/contact</url>
+  <url type="contribute">https://example.org/contribute</url>
+
+  <translation type="gettext">{{name}}</translation>
+
+  <launchable type="desktop-id">\@app_id\@.desktop</launchable>
+
+</component>
+```
+
+```{{dirname}}/data/{{name}}.service.in
+[D-BUS Service]
+Name=\@app_id\@
+Exec=\@bindir\@/{{name}} --gapplication-service
+```
+
+```{{dirname}}/{{app_id}}.Devel.json
+{
+    "id" : "{{app_id}}.Devel",
+    "command" : "{{name}}",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "{{gnome_sdk_version}}",
+    "sdk" : "org.gnome.Sdk",
+{{if language.id == "rust"}}
+    "sdk-extensions" : [
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+{{else if language.id == "vala"}}
+    "sdk-extensions" : [
+{{if gnome_sdk_version == "master"}}
+        "org.freedesktop.Sdk.Extension.vala-nightly"
+{{else}}
+        "org.freedesktop.Sdk.Extension.vala"
+{{end}}
+    ],
+{{else if language.id == "javascript"}}
+    "sdk-extensions" : [
+        "org.freedesktop.Sdk.Extension.node20",
+        "org.freedesktop.Sdk.Extension.typescript"
+    ],
+{{end}}
+    "finish-args" : [
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland"
+    ],
+{{if language.id == "rust"}}
+    "build-options" : {
+        "append-path" : "/usr/lib/sdk/rust-stable/bin",
+        "build-args" : [
+            "--share=network"
+        ],
+        "env" : {
+            "RUST_BACKTRACE" : "1",
+            "RUST_LOG" : "{{name}}=debug"
+        }
+    },
+{{else if language.id == "vala"}}
+    "build-options" : {
+        "append-path" : "/usr/lib/sdk/vala/bin",
+        "prepend-ld-library-path" : "/usr/lib/sdk/vala/lib"
+    },
+{{else if language.id == "javascript"}}
+    "build-options" : {
+        "append-path" : "/usr/lib/sdk/typescript/bin:/usr/lib/sdk/node20/bin"
+    },
+{{end}}
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+{{if language.id == "cpp"}}
+        {
+            "name" : "peel",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/bugaevc/peel.git",
+                    "branch" : "main"
+                }
+            ],
+            "cleanup" : [
+                "*"
+            ]
+        },
+{{end}}
+        {
+            "name" : "{{dirname}}",
+            "builddir" : true,
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddevelopment=true"
+            ],
+            "sources" : [
+                {
+                    "type" : "dir",
+                    "path" : "."
+                }
+            ]
+        }
+    ]
+}
+```
+
+```{{dirname}}/.foundry/.gitignore
+tmp/
+user/
+cache/
+```
+
+```{{dirname}}/.foundry/project/settings.keyfile
+[project]
+build-system='meson'
+default-license='{{license.id}}'
+```
+
+if git
+{{dirname}}/.git/objects/
+{{dirname}}/.git/refs/heads/
+
+```{{dirname}}/.git/HEAD
+ref: refs/heads/main
+```
+end

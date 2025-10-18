@@ -1,0 +1,636 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or(at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+// This is for including the config header before any code (such as
+// the #ifndef GTKMM_DISABLE_DEPRECATED in deprecated classes) is generated:
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <vector>
+
+#include <gdkmm/contentprovider.h>
+#include <gtkmm/texttagtable.h>
+#include <gtkmm/textchildanchor.h>
+#include <gtkmm/textmark.h>
+#include <gtkmm/textiter.h>
+#include <gdkmm/clipboard.h>
+#include <gdkmm/paintable.h>
+#include <gtkmmconfig.h>
+#include <utility>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+
+/** Multi-line attributed text that can be displayed by one or more Gtk::TextView widgets.
+ *
+ * %Text in a buffer can be marked with tags. A @link Gtk::TextTag Gtk::TextBuffer::Tag@endlink is an attribute that can be applied to some range of text. For example, a tag
+ * might be called "bold" and make the text inside the tag bold. However, the tag concept is more general than that; tags don't
+ * have to affect appearance. They can instead affect the behavior of mouse and key presses, "lock" a range of text so the user
+ * can't edit it, or countless other things. A tag is represented by a @link Gtk::TextTag Gtk::TextBuffer::Tag@endlink object.
+ * One @link Gtk::TextTag Gtk::TextBuffer::Tag@endlink can be applied to any number of text ranges in any number of @link Gtk::TextBuffer Gtk::TextBuffers@endlink.
+ *
+ * Each tag is stored in a @link Gtk::TextTagTable Gtk::TextBuffer::TagTable@endlink. A tag table defines a set of tags that can be used together. Each buffer has one tag
+ * table associated with it; only tags from that tag table can be used with the buffer. A single tag table can be shared between
+ * multiple buffers, however.
+ *
+ * Most text manipulation is accomplished with iterators, represented by an @link Gtk::TextIter iterator@endlink
+ * or a @link Gtk::TextConstIter const_iterator@endlink. The iterator can
+ * be used to navigate over characters, words, lines, and sentences.
+ *
+ * But iterators can't be used to preserve positions across buffer modifications. To preserve a position, the
+ * @link Gtk::TextMark Gtk::TextBuffer::Mark@endlink object is ideal. There are two marks built-in to GtkTextBuffer; these are
+ * named "insert" and "selection_bound" and refer to the insertion point and the boundary of the selection which is not the
+ * insertion point. If no text is selected, these two marks will be in the same position. You can manipulate what is selected and
+ * where the cursor appears by moving these marks around.
+ *
+ * %Text buffers always contain at least one line, but may be empty (that is, buffers can contain zero characters). The last line
+ * in the text buffer never ends in a line separator (such as newline); the other lines in the buffer always end in a line
+ * separator. Line separators count as characters when computing character counts and character offsets. Note that some Unicode
+ * line separators are represented with multiple bytes in UTF-8, and the two-character sequence "\r\n" is also considered a line
+ * separator.
+ *
+ * @ingroup TextView
+ */
+class GTKMM_API TextBuffer : public Glib::Object
+{
+   _CLASS_GOBJECT(TextBuffer, GtkTextBuffer, GTK_TEXT_BUFFER, Glib::Object, GObject, , , GTKMM_API)
+   _IGNORE(gtk_text_buffer_get_iter_at_line_offset, gtk_text_buffer_get_iter_at_line_index,
+           gtk_text_buffer_get_iter_at_offset, gtk_text_buffer_get_iter_at_line, gtk_text_buffer_get_start_iter,
+           gtk_text_buffer_get_end_iter, gtk_text_buffer_get_bounds, gtk_text_buffer_get_iter_at_mark,
+           gtk_text_buffer_get_selection_bounds, gtk_text_buffer_insert_interactive,
+           gtk_text_buffer_insert, gtk_text_buffer_insert_at_cursor, gtk_text_buffer_insert_interactive_at_cursor,
+           gtk_text_buffer_insert_with_tags, gtk_text_buffer_insert_with_tags_by_name,
+           gtk_text_buffer_get_iter_at_child_anchor, gtk_text_buffer_insert_markup)
+public:
+  typedef TextIter iterator;
+  typedef TextConstIter const_iterator;
+  typedef TextTag Tag;
+  typedef TextTagTable TagTable;
+  typedef TextMark Mark;
+  typedef TextChildAnchor ChildAnchor;
+
+protected:
+  _CTOR_DEFAULT()
+  explicit TextBuffer(const Glib::RefPtr<TagTable>& tag_table);
+
+public:
+  _WRAP_ENUM(NotifyFlags, GtkTextBufferNotifyFlags, decl_prefix GTKMM_API)
+
+  _WRAP_CREATE()
+  _WRAP_CREATE(const Glib::RefPtr<TagTable>& tag_table)
+
+  _WRAP_METHOD(int get_line_count() const, gtk_text_buffer_get_line_count)
+  _WRAP_METHOD(int get_char_count() const, gtk_text_buffer_get_char_count)
+
+  /// See get_char_count().
+  int size() const;
+
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer::TagTable> get_tag_table(), gtk_text_buffer_get_tag_table, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const TextBuffer::TagTable> get_tag_table() const, gtk_text_buffer_get_tag_table, refreturn, constversion)
+
+  /** Removes the current contents of the buffer, and inserts @a text instead.
+   * @param text The text to put in the buffer.
+   */
+  void set_text(const Glib::ustring& text);
+
+  /** Removes the current contents of the buffer, and inserts @a text instead.
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   */
+  void set_text(const char* text_begin, const char* text_end);
+  _IGNORE(gtk_text_buffer_set_text)
+
+  //TODO: Make all insert() methods have the same return type:
+
+  /** Inserts @a text at position @a pos.
+   * Emits the "insert_text" signal; insertion actually occurs in the default handler for the signal.
+   * The @a pos iterator is invalidated when insertion occurs (because the buffer contents change).
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text The text to be inserted in the buffer.
+   * @result An iterator that points to the end of the inserted text.
+   */
+  iterator insert(const iterator& pos, const Glib::ustring& text);
+
+  /** Inserts text at position @a pos.
+   * Emits the "insert_text" signal; insertion actually occurs in the default handler for the signal.
+   * The @a pos iterator is invalidated when insertion occurs (because the buffer contents change).
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   * @result An iterator that points to the end of the inserted text.
+   */
+  iterator insert(const iterator& pos, const char* text_begin, const char* text_end);
+
+  /** Inserts @a text, using the current cursor position as the insertion point.
+   * Emits the "insert_text" signal; insertion actually occurs in the default handler for the signal.
+   *
+   * @param text The text to be inserted in the buffer.
+   */
+  void insert_at_cursor(const Glib::ustring& text);
+
+  /** Inserts text, using the current cursor position as the insertion point.
+   * Emits the "insert_text" signal; insertion actually occurs in the default handler for the signal.
+   *
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   */
+  void insert_at_cursor(const char* text_begin, const char* text_end);
+
+  /** Like insert(), but the insertion will not occur if @a iter is at a non-editable location in the buffer.
+   * Usually you want to prevent insertions at ineditable locations if the insertion results from a user action (is interactive).
+   *
+   * @a default_editable indicates the editability of text that doesn't have a tag affecting editability applied to it.
+   * Typically the result of Gtk::TextView::get_editable() is appropriate here.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text The text to be inserted in the buffer.
+   * @param default_editable Default editability of buffer
+   * @result Whether text was actually inserted
+   */
+  std::pair<iterator,bool> insert_interactive(
+      const iterator& pos, const Glib::ustring& text, bool default_editable = true);
+
+  /** Like insert(), but the insertion will not occur if @a pos is at a non-editable location in the buffer.
+   * Usually you want to prevent insertions at ineditable locations if the insertion results from a user action (is interactive).
+   *
+   * @a default_editable indicates the editability of text that doesn't have a tag affecting editability applied to it.
+   * Typically the result of Gtk::TextView::get_editable() is appropriate here.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   * @param default_editable Default editability of buffer.
+   * @result Whether text was actually inserted
+   */
+  std::pair<iterator,bool> insert_interactive(
+      const iterator& pos, const char* text_begin, const char* text_end, bool default_editable = true);
+
+  /** Calls insert_interactive() at the cursor position.
+   *
+   * @a default_editable indicates the editability of text that doesn't have a tag affecting editability applied to it.
+   * Typically the result of Gtk::TextView::get_editable() is appropriate here.
+   *
+   * @param text The text to be inserted in the buffer.
+   * @param default_editable Default editability of buffer
+   * @result Whether text was actually inserted
+   */
+  bool insert_interactive_at_cursor(const Glib::ustring& text, bool default_editable = true);
+
+  /** Calls insert_interactive() at the cursor position.
+   *
+   * @a default_editable indicates the editability of text that doesn't have a tag affecting editability applied to it.
+   * Typically the result of Gtk::TextView::get_editable() is appropriate here.
+   *
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   * @param default_editable Default editability of buffer
+   * @result Whether text was actually inserted
+   */
+  bool insert_interactive_at_cursor(const char* text_begin, const char* text_end,
+                                    bool default_editable = true);
+
+  /** Copies text, tags, and paintable between @a range_begin and @a range_end (the order of range_begin and range_begin doesn't
+   * matter) and inserts the copy at @a pos. Used instead of simply getting/inserting text because it preserves images and tags.
+   * If range_begin and range_end are in a different buffer, the two buffers must share the same tag table.
+   *
+   * Implemented via emissions of the insert_text and apply_tag signals, so expect those.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param range_begin A position in a buffer.
+   * @param range_end Another position in the same buffer as @a range_begin.
+   * @result Whether text was actually inserted
+   */
+  iterator insert(const iterator& pos, const const_iterator& range_begin, const const_iterator& range_end);
+  _IGNORE(gtk_text_buffer_insert_range)
+
+  /** Same as insert_range(), but does nothing if the insertion point isn't editable.
+   *
+   * The @a default_editable parameter indicates whether the text is editable at @a pos if no tags enclosing @a pos affect editability.
+   * Typically the result of Gtk::TextView::get_editable() is appropriate here.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param range_begin A position in a buffer.
+   * @param range_end Another position in the same buffer as @a range_begin.
+   * @param default_editable Default editability of buffer.
+   * @result Whether text was actually inserted
+   */
+  std::pair<iterator,bool> insert_interactive(const iterator& pos, const const_iterator& range_begin, const const_iterator& range_end, bool default_editable = true);
+  _IGNORE(gtk_text_buffer_insert_range_interactive)
+
+  iterator insert_with_tag(const iterator& pos, const Glib::ustring& text, const Glib::RefPtr<Tag>& tag);
+  iterator insert_with_tag(const iterator& pos, const char* text_begin, const char* text_end, const Glib::RefPtr<Tag>& tag);
+
+  iterator insert_with_tag(const iterator& pos, const Glib::ustring& text, const Glib::ustring& tag_name);
+  iterator insert_with_tag(const iterator& pos, const char* text_begin, const char* text_end, const Glib::ustring& tag_name);
+
+  /** Inserts text into buffer at @a pos, applying the list of tags to the newly-inserted text.
+   * Equivalent to calling insert(), then apply_tag() on the inserted text; This is just a convenience function.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text The text to be inserted in the buffer.
+   * @param tags A standard C++ container of @link Gtk::TextTag Gtk::TextBuffer::Tags@endlink.
+   * @result Whether text was actually inserted
+   */
+  iterator insert_with_tags(const iterator& pos, const Glib::ustring& text,
+                            const std::vector< Glib::RefPtr<Tag> >& tags);
+
+  /** Inserts text into buffer at @a pos, applying the list of tags to the newly-inserted text.
+   * Equivalent to calling insert(), then apply_tag() on the inserted text; This is just a convenience function.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   * @param tags A standard C++ container of @link Gtk::TextTag Gtk::TextBuffer::Tags@endlink.
+   * @result Whether text was actually inserted
+   */
+  iterator insert_with_tags(const iterator& pos, const char* text_begin, const char* text_end,
+                            const std::vector< Glib::RefPtr<Tag> >& tags);
+
+  /** Inserts text into buffer at @a pos, applying the list of tags to the newly-inserted text.
+   * Equivalent to calling insert(), then apply_tag() on the inserted text; This is just a convenience function.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text The text to be inserted in the buffer.
+   * @param tag_names A standard C++ container of tag names.
+   * @result Whether text was actually inserted
+   */
+  iterator insert_with_tags_by_name(const iterator& pos, const Glib::ustring& text,
+                                    const std::vector<Glib::ustring>& tag_names);
+
+
+  /** Equivalent to calling insert(), then apply_tag() on the inserted text; This is just a convenience function.
+   *
+   * @param pos An iterator pointing to the position at which the text should be inserted.
+   * @param text_begin The start of a UTF8 character array.
+   * @param text_end The end of the UTF8 character array.
+   * @param tag_names A standard C++ container of tag names.
+   * @result Whether text was actually inserted
+   */
+  iterator insert_with_tags_by_name(const iterator& pos, const char* text_begin, const char* text_end,
+                                    const std::vector<Glib::ustring>& tag_names);
+
+  /** Inserts text in @a markup at position @a pos.
+   * Emits the "insert_text" signal, possibly multiple times; insertion actually occurs in the
+   * default handler for the signal. The @a pos iterator will point to the end of the
+   * inserted text on return.
+   *
+   * @param pos Location to insert the markup.
+   * @param markup The text containing pango markup to be inserted in the buffer.
+   * @result An iterator that points to the end of the inserted markup text.
+   */
+  iterator insert_markup(const iterator& pos, const Glib::ustring& markup);
+
+  /** Inserts markup text at position @a pos.
+   * Emits the "insert_text" signal; insertion actually occurs in the default handler for the signal.
+   * The @a pos iterator will point to the end of the inserted text on return.
+   *
+   * @param pos Location to insert the markup.
+   * @param markup_begin The start of a UTF8 character array containing pango markup.
+   * @param markup_end The end of the UTF8 character array containing pango markup.
+   * @result An iterator that points to the end of the inserted markup text.
+   */
+  iterator insert_markup(const iterator& pos, const char* markup_begin, const char* markup_end);
+
+  /* Deletes all text between @a range_begin and @a range_end. The order of range_begin and range_end is not actually relevant.
+   * This function actually emits the "delete_range" signal, and the default handler of that signal deletes the text.
+   * Because the buffer is modified, all outstanding iterators become invalid after calling this function.
+   * @param range_begin
+   * @param range_end
+   * @result An iterator that points to the location where text was deleted.
+   */
+  iterator erase(const iterator& range_begin, const iterator& range_end);
+  _IGNORE(gtk_text_buffer_delete)
+
+   /* Deletes all editable text between @a range_begin and @a range_end. The order of range_begin and range_end is not actually relevant.
+   * This function actually emits the "delete_range" signal, and the default handler of that signal deletes the text.
+   * Because the buffer is modified, all outstanding iterators become invalid after calling this function.
+   *
+   * @a default_editable indicates the editability of text that doesn't have a tag affecting editability applied to it.
+   * Typically the result of Gtk::TextView::get_editable() is appropriate here.
+   *
+   * @param range_begin
+   * @param range_end
+   * @param default_editable Default editability of buffer
+   * @result An iterator that points to the location where text was deleted, or end() is no text was deleted.
+   */
+  std::pair<iterator,bool> erase_interactive(const iterator& range_begin, const iterator& range_end, bool default_editable = true);
+  _IGNORE(gtk_text_buffer_delete_interactive)
+
+  /** Performs the appropriate action as if the user hit the delete
+   * key with the cursor at the position specified by @a iter. In the
+   * normal case a single character will be deleted, but when
+   * combining accents are involved, more than one character can
+   * be deleted, and when precomposed character and accent combinations
+   * are involved, less than one character will be deleted.
+   *
+   * Because the buffer is modified, all outstanding iterators become
+   * invalid after calling this method; however, this method returns
+   * a valid iterator that points to the location where text was deleted.
+   *
+   * @param iter A position in the buffer.
+   * @param interactive Whether the deletion is caused by user interaction.
+   * @param default_editable Whether the buffer is editable by default.
+   * @result An iterator to the location where text was deleted, if the buffer was modified.
+   */
+  iterator backspace(const iterator& iter, bool interactive = true, bool default_editable = true);
+  _IGNORE(gtk_text_buffer_backspace)
+
+  _WRAP_METHOD(Glib::ustring get_text(const const_iterator& range_start, const const_iterator& range_end, bool include_hidden_chars = true) const, gtk_text_buffer_get_text)
+
+  /** Returns all the text in the buffer. Excludes undisplayed
+   * text (text marked with tags that set the invisibility attribute) if
+   *  @a include_hidden_chars  is <tt>false</tt>. Does not include characters
+   * representing embedded images, so byte and character indexes into
+   * the returned string do <em>not</em> correspond to byte
+   * and character indexes into the buffer. Contrast with
+   * get_slice().
+   *
+   * @param include_hidden_chars Whether to include invisible text.
+   * @return An allocated UTF-8 string.
+   */
+  Glib::ustring get_text(bool include_hidden_chars = true) const;
+
+  _WRAP_METHOD(Glib::ustring get_slice(const const_iterator& range_start, const const_iterator& range_end, bool include_hidden_chars = true) const, gtk_text_buffer_get_slice)
+
+  iterator insert_paintable(const iterator& pos, const Glib::RefPtr<Gdk::Paintable>& paintable);
+  _IGNORE(gtk_text_buffer_insert_paintable)
+
+  iterator insert_child_anchor(const iterator& pos, const Glib::RefPtr<ChildAnchor>& anchor);
+  _IGNORE(gtk_text_buffer_insert_child_anchor)
+
+  Glib::RefPtr<ChildAnchor> create_child_anchor(const iterator& pos);
+  _IGNORE(gtk_text_buffer_create_child_anchor)
+
+  _WRAP_METHOD(void add_mark(const Glib::RefPtr<TextBuffer::Mark>& mark, const iterator& where), gtk_text_buffer_add_mark)
+
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer::Mark> create_mark(const Glib::ustring& mark_name, const iterator& where, bool left_gravity = true), gtk_text_buffer_create_mark, refreturn)
+
+  /** Create an anonymous mark. */
+  /** Creates an anonymous mark at position @a where.
+   *
+   * If a mark has left gravity, and text is
+   * inserted at the mark's current location, the mark will be moved to
+   * the left of the newly-inserted text. If the mark has right gravity
+   * ( @a left_gravity  = <tt>false</tt>), the mark will end up on the right of
+   * newly-inserted text. The standard left-to-right cursor is a mark
+   * with right gravity (when you type, the cursor stays on the right
+   * side of the text you're typing).
+   *
+   * Emits the "mark_set" signal as notification of the mark's initial
+   * placement.
+   * @param where Location to place mark.
+   * @param left_gravity Whether the mark has left gravity.
+   * @return The new Gtk::TextMark object.
+   */
+  Glib::RefPtr<Mark> create_mark(const iterator& where, bool left_gravity = true);
+
+  _WRAP_METHOD(void move_mark(const Glib::RefPtr<Mark>& mark, const iterator& where), gtk_text_buffer_move_mark)
+  _WRAP_METHOD(void delete_mark(const Glib::RefPtr<Mark>& mark), gtk_text_buffer_delete_mark)
+
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer::Mark> get_mark(const Glib::ustring& name), gtk_text_buffer_get_mark, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const TextBuffer::Mark> get_mark(const Glib::ustring& name) const, gtk_text_buffer_get_mark, refreturn, constversion)
+
+  _WRAP_METHOD(void move_mark_by_name(const Glib::ustring& name, const iterator& where), gtk_text_buffer_move_mark_by_name)
+  _WRAP_METHOD(void delete_mark_by_name(const Glib::ustring& name), gtk_text_buffer_delete_mark_by_name)
+
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer::Mark> get_insert(), gtk_text_buffer_get_insert, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer::Mark> get_selection_bound(), gtk_text_buffer_get_selection_bound, refreturn)
+
+  _WRAP_METHOD(void place_cursor(const iterator& where), gtk_text_buffer_place_cursor)
+  _WRAP_METHOD(void apply_tag(const Glib::RefPtr<Tag>& tag, const iterator& range_start, const iterator& range_end), gtk_text_buffer_apply_tag)
+  _WRAP_METHOD(void remove_tag(const Glib::RefPtr<Tag>& tag, const iterator& range_start, const iterator& range_end), gtk_text_buffer_remove_tag)
+  _WRAP_METHOD(void apply_tag_by_name(const Glib::ustring& name, const iterator& range_start, const iterator& range_end), gtk_text_buffer_apply_tag_by_name)
+  _WRAP_METHOD(void remove_tag_by_name(const Glib::ustring& name, const iterator& range_start, const iterator& range_end), gtk_text_buffer_remove_tag_by_name)
+  _WRAP_METHOD(void remove_all_tags(const iterator& range_start, const iterator& range_end), gtk_text_buffer_remove_all_tags)
+
+  /** Creates a tag and adds it to the tag table for buffer. Equivalent to calling Gtk::TextBuffer::Tag::create() and then adding
+   * the tag to the buffer's tag table.
+   * A tag called @a tag_name must not already exist in the tag table for this buffer.
+   *
+   * @param tag_name The name for the new tag.
+   * @result The new tag.
+   */
+  Glib::RefPtr<Tag> create_tag(const Glib::ustring& tag_name);
+  _IGNORE(gtk_text_buffer_create_tag)
+
+  /** Creates an anoymous tag and adds it to the tag table for buffer. Equivalent to calling Gtk::TextBuffer::Tag::create() and then adding
+   * the tag to the buffer's tag table.
+   *
+   * @result The new tag.
+   */
+  Glib::RefPtr<Tag> create_tag();
+
+  iterator get_iter_at_line_offset(int line_number, int char_offset);
+  const_iterator get_iter_at_line_offset(int line_number, int char_offset) const;
+  iterator get_iter_at_line_index(int line_number, int byte_index);
+  const_iterator get_iter_at_line_index(int line_number, int byte_index) const;
+  iterator get_iter_at_offset(int char_offset);
+  const_iterator get_iter_at_offset(int char_offset) const;
+  iterator get_iter_at_line(int line_number);
+  const_iterator get_iter_at_line(int line_number) const;
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
+  void get_bounds(iterator& range_begin, iterator& range_end);
+  void get_bounds(const_iterator& range_begin, const_iterator& range_end) const;
+
+  /** Get the current position of a mark.
+   * @param mark The @link Gtk::TextMark Gtk::TextBuffer::Mark@endlink
+   * @result An iterator that points to the position of the @a mark.
+   */
+  iterator get_iter_at_mark(const Glib::RefPtr<Mark>& mark);
+
+  /** Get the current position of a mark.
+   * @param mark The @link Gtk::TextMark Gtk::TextBuffer::Mark@endlink
+   * @result An iterator that points to the position of the @a mark.
+   */
+  const_iterator get_iter_at_mark(const Glib::RefPtr<Mark>& mark) const;
+
+  /** Get the current position of an anchor.
+   * @param anchor A @link Gtk::TextChildAnchor Gtk::TextBuffer::Anchor@endlink that appears in the buffer.
+   * @result An iterator that points to the position of the @a anchor.
+   */
+  iterator get_iter_at_child_anchor(const Glib::RefPtr<ChildAnchor>& anchor);
+
+  /** Get the current position of an anchor.
+   * @param anchor A @link Gtk::TextChildAnchor Gtk::TextBuffer::Anchor@endlink that appears in the buffer.
+   * @result An iterator that points to the position of the @a anchor.
+   */
+  const_iterator get_iter_at_child_anchor(const Glib::RefPtr<ChildAnchor>& anchor) const;
+
+  _WRAP_METHOD(bool get_modified() const, gtk_text_buffer_get_modified)
+  _WRAP_METHOD(void set_modified(bool setting = true), gtk_text_buffer_set_modified)
+
+  _WRAP_METHOD(bool get_has_selection() const, gtk_text_buffer_get_has_selection)
+
+  _WRAP_METHOD(void add_selection_clipboard(const Glib::RefPtr<Gdk::Clipboard>& clipboard), gtk_text_buffer_add_selection_clipboard)
+  _WRAP_METHOD(void remove_selection_clipboard(const Glib::RefPtr<Gdk::Clipboard>& clipboard), gtk_text_buffer_remove_selection_clipboard)
+  _WRAP_METHOD(void cut_clipboard(const Glib::RefPtr<Gdk::Clipboard>& clipboard, bool default_editable = true), gtk_text_buffer_cut_clipboard)
+  _WRAP_METHOD(void copy_clipboard(const Glib::RefPtr<Gdk::Clipboard>& clipboard), gtk_text_buffer_copy_clipboard)
+  _WRAP_METHOD(void paste_clipboard(const Glib::RefPtr<Gdk::Clipboard>& clipboard, const iterator& override_location{?},
+     bool default_editable = true), gtk_text_buffer_paste_clipboard)
+
+  _WRAP_METHOD(bool get_selection_bounds(iterator& range_start, iterator& range_end), gtk_text_buffer_get_selection_bounds)
+  _WRAP_METHOD(bool get_selection_bounds(const_iterator& range_start, const_iterator& range_end) const, gtk_text_buffer_get_selection_bounds)
+  _WRAP_METHOD(bool erase_selection(bool interactive = true, bool default_editable = true), gtk_text_buffer_delete_selection)
+
+  // gtk_text_buffer_get_selection_content() gives us a ref. Don't add refreturn.
+  _WRAP_METHOD(Glib::RefPtr<Gdk::ContentProvider> get_selection_content(), gtk_text_buffer_get_selection_content)
+
+  _WRAP_METHOD(void select_range(const iterator& ins, const iterator& bound), gtk_text_buffer_select_range)
+
+  _WRAP_METHOD(bool get_can_undo() const, gtk_text_buffer_get_can_undo)
+  _WRAP_METHOD(bool get_can_redo() const, gtk_text_buffer_get_can_redo)
+  _WRAP_METHOD(bool get_enable_undo() const, gtk_text_buffer_get_enable_undo)
+  _WRAP_METHOD(void set_enable_undo(bool enable_undo = true), gtk_text_buffer_set_enable_undo)
+  _WRAP_METHOD(guint get_max_undo_levels() const, gtk_text_buffer_get_max_undo_levels)
+  _WRAP_METHOD(void set_max_undo_levels(guint max_undo_levels), gtk_text_buffer_set_max_undo_levels)
+  _WRAP_METHOD(void undo(), gtk_text_buffer_undo)
+  _WRAP_METHOD(void redo(), gtk_text_buffer_redo)
+  _WRAP_METHOD(void begin_irreversible_action(), gtk_text_buffer_begin_irreversible_action)
+  _WRAP_METHOD(void end_irreversible_action(), gtk_text_buffer_end_irreversible_action)
+  _WRAP_METHOD(void begin_user_action(), gtk_text_buffer_begin_user_action)
+  _WRAP_METHOD(void end_user_action(), gtk_text_buffer_end_user_action)
+
+/** A notification callback used by add_commit_notify().
+ *
+ * For instance:
+ * @code
+ * void on_commit_notify(NotifyFlags flags, guint position, guint length);
+ * @endcode
+ *
+ * You may not modify the %TextBuffer from a %SlotCommitNotify callback
+ * and that is enforced by the %Gtk::TextBuffer API.
+ *
+ * A %SlotCommitNotify callback may be used to be notified about
+ * changes to the underlying buffer right before-or-after the changes are
+ * committed to the underlying B-Tree. This is useful if you want to observe
+ * changes to the buffer without other signal handlers potentially modifying
+ * state on the way to the default signal handler.
+ *
+ * When @a flags is Gtk::TextBuffer::NotifyFlags::BEFORE_INSERT, @a position is set to
+ * the offset in characters from the start of the buffer where the insertion
+ * will occur. @a length is set to the number of characters to be inserted. You
+ * may not yet retrieve the text until it has been inserted. You may access the
+ * text from Gtk::TextBuffer::NotifyFlags::AFTER_INSERT using get_slice().
+ *
+ * When @a flags is Gtk::TextBuffer::NotifyFlags::AFTER_INSERT, @a position is set to
+ * offset in characters where the insertion occurred and @a length is set
+ * to the number of characters inserted.
+ *
+ * When @a flags is Gtk::TextBuffer::NotifyFlags::BEFORE_DELETE, @a position is set to
+ * offset in characters where the deletion will occur and @a length is set
+ * to the number of characters that will be removed. You may still retrieve
+ * the text from this handler using @a position and @a length.
+ *
+ * When @a flags is Gtk::TextBuffer::NotifyFlags::AFTER_DELETE, @a length is set to
+ * zero to denote that the delete-range has already been committed to the
+ * underlying B-Tree. You may no longer retrieve the text that has been
+ * deleted from the %Gtk::TextBuffer.
+ *
+ * @param flags The type of commit notification.
+ * @param position The position of the text operation.
+ * @param length The length of the text operation in characters.
+ *
+ * @newin{4,16}
+ */
+  using SlotCommitNotify = sigc::slot<void(NotifyFlags, guint, guint)>;
+
+  /** Adds a SlotCommitNotify to be called when a change
+   * is to be made to the %Gtk::TextBuffer.
+   *
+   * Functions are explicitly forbidden from making changes to the
+   * %Gtk::TextBuffer from this callback. It is intended for tracking
+   * changes to the buffer only.
+   *
+   * It may be advantageous to use %add_commit_notify() over connecting
+   * to signal_insert() or signal_erase() to avoid ordering issues with
+   * other signal handlers which may further modify the %Gtk::TextBuffer.
+   *
+   * @newin{4,16}
+   *
+   * @param flags Which notifications should be dispatched to @a slot.
+   * @param slot A SlotCommitNotify to call for commit notifications.
+   * @return A handler id which may be used to remove the commit notify
+   *         callback using remove_commit_notify().
+   */
+  guint add_commit_notify(NotifyFlags flags, const SlotCommitNotify& slot);
+  _IGNORE(gtk_text_buffer_add_commit_notify)
+
+  /** Removes the SlotCommitNotify handler previously registered with add_commit_notify().
+   *
+   * @newin{4,16}
+   *
+   * @param commit_notify_handler The notify handler identifier returned from
+   *        add_commit_notify().
+   */
+  _WRAP_METHOD(void remove_commit_notify(guint commit_notify_handler), gtk_text_buffer_remove_commit_notify)
+
+#m4begin
+dnl // HACK: Override the default conversion to deal correctly
+dnl // with non-0-terminated strings in insert_text_callback().
+_CONVERSION(`const char*',`const Glib::ustring&',`Glib::ustring(p1, p1 + p2)')
+_CONVERSION(`GtkTextIter*',`TextBuffer::iterator&',Glib::wrap_iter($3))
+#m4end
+  _WRAP_SIGNAL(void insert(TextBuffer::iterator& pos, const Glib::ustring& text, int bytes), "insert_text")
+
+#m4 _CONVERSION(`GdkPaintable*',`const Glib::RefPtr<Gdk::Paintable>&', Glib::wrap($3, true))
+  _WRAP_SIGNAL(void insert_paintable(TextBuffer::iterator& pos, const Glib::RefPtr<Gdk::Paintable>& paintable), "insert_paintable")
+
+#m4 _CONVERSION(`GtkTextChildAnchor*',`const Glib::RefPtr<ChildAnchor>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void insert_child_anchor(TextBuffer::iterator& pos, const Glib::RefPtr<ChildAnchor>& anchor), "insert_child_anchor")
+
+  _WRAP_SIGNAL(void erase(TextBuffer::iterator& range_start, TextBuffer::iterator& range_end), "delete_range")
+  _WRAP_SIGNAL(void changed(), "changed")
+  _WRAP_SIGNAL(void modified_changed(), "modified_changed")
+
+#m4 _CONVERSION(`GtkTextMark*',`const Glib::RefPtr<TextBuffer::Mark>&',`Glib::wrap($3, true)')
+#m4 _CONVERSION(`const GtkTextIter*',`const TextBuffer::iterator&',Glib::wrap_iter($3))
+  _WRAP_SIGNAL(void mark_set(const TextBuffer::iterator& location, const Glib::RefPtr<TextBuffer::Mark>& mark), "mark_set")
+
+#m4 _CONVERSION(`GtkTextTag*',`const Glib::RefPtr<TextBuffer::Tag>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void mark_deleted(const Glib::RefPtr<TextBuffer::Mark>& mark), "mark_deleted")
+  _WRAP_SIGNAL(void apply_tag(const Glib::RefPtr<TextBuffer::Tag>& tag, const TextBuffer::iterator& range_begin, const TextBuffer::iterator& range_end), "apply_tag")
+  _WRAP_SIGNAL(void remove_tag(const Glib::RefPtr<TextBuffer::Tag>& tag, const TextBuffer::iterator& range_begin, const TextBuffer::iterator& range_end), "remove_tag")
+  _WRAP_SIGNAL(void begin_user_action(), "begin_user_action")
+  _WRAP_SIGNAL(void end_user_action(), "end_user_action")
+
+#m4 _CONVERSION(`GdkClipboard*',`const Glib::RefPtr<Gdk::Clipboard>&', Glib::wrap($3, true))
+#m4 _CONVERSION(`const Glib::RefPtr<Gdk::Clipboard>&', `GdkClipboard*', Glib::unwrap($3))
+  _WRAP_SIGNAL(void paste_done(const Glib::RefPtr<Gdk::Clipboard>& clipboard), "paste_done")
+  _WRAP_SIGNAL(void redo(), "redo")
+  _WRAP_SIGNAL(void undo(), "undo")
+
+  _WRAP_PROPERTY("tag-table", Glib::RefPtr<TextBuffer::TagTable>)
+  _WRAP_PROPERTY("text", Glib::ustring)
+  _WRAP_PROPERTY("has-selection", bool)
+  _WRAP_PROPERTY("cursor-position", int)
+  _WRAP_PROPERTY("can-undo", bool)
+  _WRAP_PROPERTY("can-redo", bool)
+  _WRAP_PROPERTY("enable-undo", bool)
+
+private:
+  friend TextMark;
+
+  iterator get_iter_at_mark(GtkTextMark* mark);
+};
+
+} // namespace Gtk

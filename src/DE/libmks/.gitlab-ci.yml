@@ -1,0 +1,69 @@
+include:
+  - project: "gnome/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+
+stages:
+  - test
+  - docs
+  - deploy
+
+tests:
+  image: fedora:rawhide
+  stage: test
+  variables:
+    MESON_FLAGS: "-Db_coverage=true -Ddocs=false -Dvapi=false -Dintrospection=disabled"
+  before_script:
+    - sudo dnf install -y git gtk4-devel meson gcc gcovr lcov wget
+      qemu-system-x86 qemu-ui-dbus qemu-ui-opengl
+      dbus-x11 xorg-x11-server-Xvfb python3-packaging
+  script:
+    - meson setup _build
+    - meson configure ${MESON_FLAGS} _build
+    - meson compile -C _build
+    - meson test -C _build --suit "libmks"
+    - cd tests
+    - BUILDDIR=_build dbus-run-session xvfb-run -ad ./functional.sh
+    - cd ..
+    - ninja coverage-html -C _build
+  artifacts:
+    paths:
+      - _build/meson-logs/coveragereport
+
+
+flatpak:
+  variables:
+    BUNDLE: "mks-test-widget-dev.flatpak"
+    MANIFEST_PATH: "org.gnome.libmks.mks.json"
+    FLATPAK_MODULE: "mks"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.libmks.mks"
+  extends: ".flatpak"
+
+reference:
+  image: fedora:rawhide
+  stage: docs
+  variables:
+    MESON_FLAGS: "--buildtype=release -Ddocs=true -Dintrospection=enabled"
+  before_script:
+    - sudo dnf install -y git gtk4-devel meson gcc
+      gi-docgen gobject-introspection-devel vala python3-packaging
+  script:
+    - mkdir -p pfx/
+    - meson ${MESON_FLAGS} --prefix=${PWD}/pfx -Ddocs=true _build
+    - ninja -C _build install
+    - mkdir -p _reference/
+    - mv pfx/share/doc/libmks1/ _reference/
+  artifacts:
+    paths:
+      - _reference
+
+pages:
+  stage: deploy
+  needs: ["reference"]
+  script:
+    - mv _reference public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

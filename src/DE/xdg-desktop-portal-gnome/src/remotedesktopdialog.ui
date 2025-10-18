@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="xdg-desktop-portal-gnome">
+  <requires lib="gtk" version="4.0"/>
+  <template class="RemoteDesktopDialog" parent="AdwWindow">
+    <property name="default-width">660</property>
+    <property name="default-height">500</property>
+    <property name="title" translatable="yes">Remote Desktop</property>
+
+    <child>
+      <object class="GtkShortcutController">
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">Escape</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <property name="content">
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar" id="titlebar">
+            <property name="show-end-title-buttons">False</property>
+            <property name="show-start-title-buttons">False</property>
+            <child type="start">
+              <object class="GtkButton" id="cancel_button">
+                <property name="label" translatable="yes">_Cancel</property>
+                <property name="use_underline">1</property>
+                <signal name="clicked" handler="button_clicked"/>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkButton" id="accept_button">
+                <property name="sensitive">0</property>
+                <property name="label" translatable="yes">_Share</property>
+                <property name="use_underline">1</property>
+                <signal name="clicked" handler="button_clicked"/>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="hscrollbar-policy">never</property>
+            <property name="propagate-natural-height">1</property>
+            <property name="max-content-height">500</property>
+            <property name="child">
+              <object class="AdwClamp">
+                <property name="margin-top">32</property>
+                <property name="margin-bottom">32</property>
+                <property name="margin-start">32</property>
+                <property name="margin-end">32</property>
+                <property name="maximum-size">800</property>
+                <property name="child">
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="hexpand">1</property>
+                    <property name="vexpand">1</property>
+                    <property name="spacing">24</property>
+
+                    <child>
+                      <object class="GtkCheckButton" id="persist_check">
+                        <property name="visible">False</property>
+                        <property name="active">False</property>
+                        <property name="halign">center</property>
+                        <property name="label" translatable="yes">_Remember This Selection</property>
+                        <property name="use-underline">True</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkListBox">
+                        <property name="valign">start</property>
+                        <property name="selection-mode">none</property>
+                        <style>
+                          <class name="content" />
+                        </style>
+
+                        <child>
+                          <object class="AdwSwitchRow" id="allow_remote_interaction_switch">
+                            <property name="title" translatable="yes">Allow Remote _Interaction</property>
+                            <property name="use-underline">True</property>
+                            <signal name="notify::active" handler="on_allow_remote_interaction_switch_active_changed_cb" object="RemoteDesktopDialog" swapped="no" />
+                          </object>
+                        </child>
+
+                        <child>
+                          <object class="AdwSwitchRow" id="allow_remote_clipboard_switch">
+                            <property name="title" translatable="yes">Allow _Clipboard Access</property>
+                            <property name="use-underline">True</property>
+                            <property name="visible">False</property>
+                          </object>
+                        </child>
+
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="ScreenCastWidget" id="screen_cast_widget">
+                        <property name="visible">False</property>
+                        <property name="halign">fill</property>
+                        <property name="vexpand">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </property>
+  </template>
+</interface>

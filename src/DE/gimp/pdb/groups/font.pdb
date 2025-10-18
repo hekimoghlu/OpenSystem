@@ -1,0 +1,103 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+# The invoke code is compiled on the app side.
+# The invoke code must assign to each result var
+
+sub font_get_by_name {
+    $blurb = "Returns a font with the given name.";
+    $help = <<'HELP';
+If several fonts are named identically, the one which is returned by this
+function should be considered random. This can be used when you know you won't
+have multiple fonts of this name or that you don't want to choose
+(non-interactive scripts, etc.).
+
+If you need more control, you should use [func@fonts_get_list] instead.
+
+Returns %NULL when no font exists of that name.
+HELP
+
+    &mitch_pdb_misc('2023', '3.0');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The name of the font' }
+    );
+
+    @outargs = (
+      { name => 'font',
+        type => 'font',
+        desc => 'The font',
+        none_ok => 1 }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  font = GIMP_FONT (gimp_pdb_get_resource (gimp, GIMP_TYPE_FONT, name, GIMP_PDB_DATA_ACCESS_READ, error));
+  /* Ignore "not found" error, just return NULL. */
+  g_clear_error (error);
+}
+CODE
+    );
+}
+
+sub font_get_lookup_name {
+    $blurb = 'Retrieve the font lookup name.';
+
+    $help = <<'HELP';
+Retrieve the font lookup name.
+HELP
+
+    &idriss_pdb_misc('2023', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+      { name => 'font', type => 'font',
+        desc => 'GimpFont object' }
+    );
+
+    @outargs = (
+      { name => 'lookup_name', type => 'string',
+        desc => 'font lookup name' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+    lookup_name = g_strdup (gimp_font_get_lookup_name (font));
+}
+CODE
+    );
+}
+
+@headers = qw("core/gimp.h"
+              "text/gimpfont.h"
+              "gimppdb-utils.h");
+
+@procs = qw(font_get_lookup_name font_get_by_name);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Font';
+$doc_title = 'gimpfont';
+$doc_short_desc = 'Installable object used by text tools.';
+$doc_long_desc = 'Installable object used by text tools.';
+
+1;

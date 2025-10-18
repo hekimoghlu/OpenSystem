@@ -1,0 +1,117 @@
+<page xmlns="http://projectmallard.org/1.0/"
+      xmlns:its="http://www.w3.org/2005/11/its"
+      type="topic" style="task"
+      id="desktop-favorite-applications">
+
+  <info>
+    <link type="guide" xref="appearance"/>
+    <revision pkgversion="3.30" date="2019-02-22" status="review"/>
+
+    <credit type="author">
+      <name>Aruna Sankaranarayanan</name>
+      <email>aruna.evam@gmail.com</email>
+    </credit>
+    <credit type="editor">
+      <name>Petr Kovar</name>
+      <email>pknbe@volny.cz</email>
+      <years>2019</years>
+    </credit>
+
+    <include href="legal.xml" xmlns="http://www.w3.org/2001/XInclude"/>
+
+    <desc>Customize the default favorites in the Activities overview.</desc>
+
+  </info>
+
+  <title>Set default favorite applications</title>
+
+  <p>Favorite applications are those visible on the GNOME Shell
+  <link href="help:gnome-help/shell-introduction#activities">dash</link>.
+  You can use <sys its:translate="no">dconf</sys> to set favorite applications
+  for one user, or to set the same favorite applications
+  for all users. For both cases, you must first edit the
+  <sys its:translate="no">dconf</sys> profile found in
+  <file its:translate="no">/etc/dconf/profile/user</file>.</p>
+
+<section id="per-user">
+  <title>Set different favorite applications for different users</title>
+
+  <p>You can set the default favorite applications for each user by modifying
+  their user database via <cmd>gsettings</cmd>. The following example
+  command sets <app>Text Editor</app>,
+  <app>Terminal</app> and <app>Files</app> (<sys>nautilus</sys>) as default
+  favorites for a user.</p>
+
+  <listing>
+    <title>Contents of <file its:translate="no">/etc/dconf/profile/user</file>:</title>
+<code its:translate="no">
+# <span its:translate="yes">This line allows the user to change the default favorites later</span>
+user-db:user
+</code>
+  </listing>
+
+<p>Set Text Editor, Terminal and Files as default favorites:</p>
+<screen><output style="prompt"># </output><input>gsettings set org.gnome.shell favorite-apps "['org.gnome.TextEditor.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop']"</input></screen>
+
+  <note style="tip">
+    <p>You can also <link xref="dconf-lockdown">lock down</link> the above
+    settings to prevent users from changing them.</p>
+  </note>
+
+</section>
+
+<section id="all-users">
+  <title>Set the same favorite applications for all users</title>
+
+  <p>In order to have the same favorites for all users, you must modify system
+  database files using <link xref="dconf-keyfiles">dconf keyfiles</link>. The
+  following steps edit the <sys its:translate="no">dconf</sys> profile
+  and then create a keyfile to set default favorite applications for all
+  users in the <code>local</code> configuration database.</p>
+
+  <steps>
+    <title>Set the favorite applications</title>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-profile-user'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-profile-user-dir'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <item>
+      <p>Create the key file
+      <file>/etc/dconf/db/local.d/00-favorite-apps</file> to provide
+      information for the <sys>local</sys> database.</p>
+      <listing>
+      <title>Contents of
+      <file its:translate="no">/etc/dconf/db/local.d/00-favorite-apps</file>:
+      </title>
+<code>
+# Snippet sets gedit, terminal and nautilus as default favorites for all users
+[org/gnome/shell]
+favorite-apps = [<var>'gedit.desktop'</var>, <var>'gnome-terminal.desktop'</var>, <var>'nautilus.desktop'</var>]
+</code>
+      </listing>
+    </item>
+    <item>
+      <p>To prevent the user from overriding these settings, create the file
+      <file>/etc/dconf/db/local.d/locks/favorite-apps</file> with the following
+      content:</p>
+      <listing>
+      <title><file>/etc/dconf/db/local.d/locks/favorite-apps</file></title>
+<code>
+# Lock default favorite applications
+/org/gnome/shell/favorite-apps
+</code>
+      </listing>
+    </item>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-update'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-logoutin'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+  </steps>
+
+</section>
+
+</page>

@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
+<chapter id="migration-1">
+  <title>Migration from 1.x versions to 2.x versions</title>
+  <sect1><title>GdaValue and GdaDataModel changes</title>
+    <para>Libgda values were stored in <classname>GdaValue</classname> structures, this is no longer the case
+      as the standard <classname>GValue</classname> container is now used. As a consequence data types are now
+      identified by their <classname>GType</classname> identifier, there is thus no more any 
+      <classname>GdaType</classname> definition.</para>
+    <para>The <classname>GdaDataModel</classname> has been transformed into an interface (as defined by the Glib 
+      object system), and the old <classname>GdaDataModel</classname> has been replaced by the 
+      <classname>GdaDataModelRow</classname> class. No code using the <classname>GdaDataModel</classname> should
+      assume that data is internally stored as rows (vectors) of values as it was the case in the previous
+      stable release.
+    </para>
+    <para>In the new version, many objects implement the 
+      <classname>GdaDataModel</classname> interface for various usages which did not exist in the previous version
+      such as data import and filtering. <classname>GdaDataModel</classname> objects should now be considered
+      as non writable, and if they need to be modified, the modifications permissions should be checked
+      using the <function>gda_data_model_get_attributes_at()</function> function. See the
+      <link linkend="datamodels">section about the various data models</link> for more information. 
+    </para>
+    
+    <para> The following UML schema shows the various implementations of the <classname>GdaDataModel</classname> 
+      interface and what they are for. Note that the
+      <classname>GdaDataModelRow</classname> should not be instantiated directly but either
+      used as a base class, or used through its children classes.
+    </para>
+    <para>
+      <mediaobject>
+	<imageobject role="html">
+          <imagedata fileref="DataModels.png" format="PNG"/>
+	</imageobject>
+	<textobject>
+          <phrase>Various implementations of the GdaDataModel interface</phrase>
+	</textobject>
+      </mediaobject>
+    </para>
+  </sect1>
+  
+  <sect1><title>GdaClient, GdaConnection and GdaError</title>
+    <para>The <classname>GdaClient</classname> usage has remained unchanged except for some small API alterations and
+      a specific API has been defined to create and destroy databases.</para>
+    <para>The <classname>GdaError</classname> class has been renamed to <classname>GdaConnectionEvent</classname> and
+      can now convey not only errors but also other kind of events which have happened on a connection</para>
+    <para>The <classname>GdaConnection</classname> usage has remained by far unchanged, but some of its API have had
+      some alterations (finding the equivalent is trivial). The most noticeable change being that
+      the <function>gda_connection_escape_string()</function> has been removed because string escaping is 
+      now done by a <classname>GdaDataHandler</classname> object which each 
+      <classname>GdaServerProvider</classname> provides for each data type.
+    </para>
+  </sect1>
+
+  <sect1><title>Various API changes</title>
+    <para>
+      <itemizedlist>
+	<listitem>
+          <para><classname>GdaFieldAttributes</classname> has been renamed <classname>GdaColumn</classname></para>
+	</listitem>
+	<listitem>
+          <para>The <classname>GdaParameter</classname> is now an object, and it is extensively used within 
+	    <classname>GdaParameterList</classname> objects. Each <classname>GdaParameterList</classname> object represent a 
+	    vector of parameters (which may or may not have values assigned) and is the base of the
+	    <classname>GdaDataModelIter</classname> iterator object. The <classname>GdaParameter</classname> API has been
+	    altered.</para>
+	</listitem>
+	<listitem>
+          <para>The <classname>GdaExport</classname> class has been removed, the features it offered are now implemented
+	    in each <classname>GdaDataModel</classname> object.</para>
+	</listitem>
+	<listitem>
+          <para><classname>GdaSelect</classname> has been renamed 
+	    <classname>GdaDataModelFilterSQL</classname></para>
+	</listitem>
+	<listitem>
+          <para>The <classname>GdaTable</classname> class has been replaced by the
+	    <classname>GdaDataModelQuery</classname> class: it's a data model which can refresh itself and can be
+	    configured to be updatable, it's not limited to a database table.</para>
+	</listitem>
+	<listitem>
+          <para>The <classname>GdaXmlDatabase</classname> has been removed and the default database is now SQLite
+	    which is a complete RDBMS in a file</para>
+	</listitem>
+	<listitem>
+          <para>All the <function>gda_xql_*()</function> functions have been removed because they were unused and unmaintained.
+	  </para>
+	</listitem>
+	<listitem>
+          <para>The 'xml' provider has been removed as it did not work correctly and has been replaced by the SQLite provider
+	    as the provider to have serverless databases.</para>
+	</listitem>
+      </itemizedlist>
+    </para>
+  </sect1>
+</chapter>

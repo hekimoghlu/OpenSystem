@@ -1,0 +1,240 @@
+2007-10-21  Morten Welinder <terra@gnome.org>
+
+	* Release 1.7.13
+
+2007-10-20  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* src/gnm-so-filled.c (gnm_so_filled_draw_cairo): adapt to new
+	gog_style_create_cairo_pattern signature.
+
+2007-10-15  Kjartan Maraas  <kmaraas@gnome.org>
+
+	* configure.in: Remove no from ALL_LINGUAS.
+
+2007-10-14  Yannig Marchegay <yannig@marchegay.org>
+
+	* configure.in: Redo last change with both po/oc.po and properties-po/oc.po.
+
+2007-10-13  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Undo last change.
+
+2007-10-13  Yannig Marchegay <yannig@marchegay.org>
+
+	* configure.in: +Occitan.
+
+2007-10-10  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-image.c (so_image_view_set_bounds): Use
+	go_pixbuf_tile.
+
+2007-09-29  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* samples/chart-stripe-tests.gnumeric: add reference images.
+
+2007-09-29  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* samples/chart-smooth-fit-tests.gnumeric: add reference images.
+
+2007-09-29  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* samples/chart-smooth-fit-tests.gnumeric: new test file.
+
+2007-09-29  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	Duplicate the GogGraph object used by the graph dialog. That's needed
+	because GOGraphWidget change the width and height property of it's
+	graph model on every resize, which breaks the SheetObjectGraph.
+
+	* src/gnm-graph-window.c (gnm_graph_window_set_graph): duplicate
+	graph.
+	(gnm_graph_window_new): add a safety check on graph parameter.
+
+2007-09-28  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	Remove GOFFICE_WITH_CAIRO ifdefs.
+
+	* component/gnumeric.c: here.
+	* src/gnm-so-filled.c: here.
+	* src/gnm-so-line.c: here.
+	* src/gnm-so-polygon.c: here.
+	* src/sheet-object-graph.c: here.
+	* src/sheet-object.c: here.
+
+2007-09-28  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* src/sheet-object-graph.c (gnm_sog_draw_cairo): use
+	gog_graph_render_to_cairo instead of removed 
+	gog_graph_render_to_cairo_vector.
+
+2007-09-28  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* src/shhet-object-graph.c (sheet_object_graph_set_gog): use
+	gog_renderer_new instead of obsolete gog_renderer_new_for_pixbuf.
+
+2007-09-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: remove WITH_GOFFICE_O_4.
+	* src/graph.c: use new goffice math location.
+	* src/mathfunc.c: ditto.
+	* src/numbers.h: ditto.
+	* src/rangefunc.h: ditto.
+	* src/regression.h: ditto.
+
+2007-09-25  Morten Welinder  <terra@gnome.org>
+
+	* src/format-template.c (format_template_member_get_rect): Don't
+	check sanity (which barfs).  Let caller check with range_valid.
+
+	* configure.in (*_DISABLE_DEPRECATED): Turn off for stable
+	releases.
+
+2007-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/io-context-gtk.c (icg_set_transient_for) : Use
+	  go_gtk_window_set_transient instead of gtk_window_set_transient_for.
+	  The former causes problems on win32, and breaks window stacking.
+	(icg_show_gui) : ditto.
+
+2007-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am : install wbc-gtk-impl.h for now.  It has the
+	  definition of wbc_gtk_close.
+
+2007-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c : s/StyleFont/GnmFont/ and clean up the associated
+	  method names.  Then move things into style-font.h for now.
+	  This clarifies how much we'll need to move to GOFont.
+
+	* src/print-cell.h : just include the necessary gtk headers.  Even
+	  this breaks WITH_GTK work.  Why isn't this ins glib ?
+	* src/print.h : Move the renamed internal (not dllexported)
+	  gnm_print_debug flag here
+
+	Merge in the win32 cleanup work
+	* src/Makefile.am : Add a libspreadsheet CFLAG -DGNUMERIC_INTERNAL to
+	  control dllimport/dllexport for win32.  Required some adjustment of
+	  built-sources.
+
+	* src/libgnumeric.h : Add 'GNM_VAR_DECL' and use it for extern data
+	  that will be publicly visible.
+
+	* src/libgnumeric.c : re-order and handle some of the renaming
+	  style_init -> gnm_font_init, and gnumeric_color -> gnm_color.
+	(gnm_get_option_group) : move the shared cmd line arg parsing in here
+	  rather than duplicating the handlers in all the client apps.
+	* src/main-application.c (gnumeric_arg_parse) : eg from here.
+	  Rather than using global variables, pass the arguments as
+	  parameters to clean things up.
+	* src/ssconvert.c (main) : Use it here.
+	* src/ssindex.c (main) : and here.
+
+	* src/print-cell.h : just include the necessary gtk headers.  Even
+	  this breaks WITH_GTK work.  Why isn't this ins glib ?
+	* src/print.h : Move the renamed internal (not dllexported)
+	  gnm_print_debug flag here
+
+2007-09-22  Jody Goldberg <jody@gnome.org>
+
+	* src/item-bar.c (ib_draw_cell) : don't draw the text when we're
+	  really small.
+
+2007-09-20  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (compute_sheet_pages): Return error indicator,
+	notably for the multiple-selection-areas case.
+	(gnm_paginate_cb): Cancel print on error.  Fixes #478475.
+
+2007-09-18  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_filter_condition): Read
+	single-clause conditions right.  Fixes #477417.
+
+2007-09-17  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-filter.c (gnm_filter_condition_new_bucket): Make sure
+	->op[1] is UNUSED.
+	(filter_expr_init): Survive NULL value.
+
+2007-09-16  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.h : Do not include gtk/gtk.h it is too general.
+	  Use gtkpagesetup.h instead.
+	* src/gnumeric-gconf.h : and this requires gtkprintsettings.h
+
+2007-09-16  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-filter.c (gnm_filter_combo_apply): Add precondition in
+	hunt for #477417.  Actually use iter_flags.
+
+2007-09-14  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_cell_and_position): Re-use string
+	across calls.
+
+2007-09-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-control-gui.c (scg_drag_receive_uri_list): Enable odf
+	spreadsheet format.
+
+2007-09-12  Morten Welinder  <terra@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: Move things around abit.
+
+2007-09-09  Jody Goldberg <jody@gnome.org>
+
+	* Makefile.am : always build tools before schemas
+	* tools/Makefile.am : build the registry converter
+	* schemas/Makefile.am : fall back on wine to do the gconf -> registry
+	  conversion when cross compiling.
+
+2007-09-08  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Added support for rendering documentation as PDF
+	  through dblatex.
+
+2007-09-08  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_init) : init the expr cursor. (previously
+	  the 'feedback' cursor within item-edit).
+	(gnm_pane_reposition_cursors) : reposition it.
+	(gnm_pane_rangesel_start) : 'disable highlight' on the expr-entry
+	  rather than the item-editor.
+	(gnm_pane_rangesel_stop) : ditto.
+	(gnm_pane_expr_cursor_bound_set) : new.
+	(gnm_pane_expr_cursor_stop) : new.
+
+	* src/item-edit.c (ie_destroy_feedback_range) : delete.
+	(ie_scan_for_range) : move to gnm-expr-entry.
+	(item_edit_init) : clear the old code.
+	(entry_changed) : ditto.
+	(item_edit_dispose) : Use the new
+	  gnm_expr_entry_disable_highlight to destroy the feedback (aka
+	  'expr') cursor.
+	(item_edit_enable_highlight) : move to gnm-expr-entry.
+	(item_edit_disable_highlight : ditto.
+
+2007-09-05  Morten Welinder  <terra@gnome.org>
+	* src/gnm-format.c (gnm_format_has_hour,
+	gnm_format_month_before_day): New functions.
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Use
+	  gnm_format_month_before_day.
+
+	* src/number-match.c (format_match): Use gnm_format_has_hour and
+	  gnm_format_month_before_day.  No more hackery.
+
+2007-09-04  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (get_month_before_day): Rename from
+	hack_month_before_day.  Make non-hackish.
+
+2007-09-05  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-file.c (gui_file_open) : add a mnemonic to toggle
+	  simple/advanced.
+
+2007-09-04  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release bump

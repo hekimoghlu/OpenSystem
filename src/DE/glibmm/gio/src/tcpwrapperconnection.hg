@@ -1,0 +1,50 @@
+/* Copyright (C) 2015 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/tcpconnection.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/tcpconnection_p.h)
+
+namespace Gio
+{
+
+/** Wrapper for non-Gio::SocketConnection-based, Gio::Socket-based Gio::IOStreams.
+ *
+ * This can be used to wrap a Gio::Stream that is
+ * based on a Gio::Socket, but which is not actually a
+ * Gio::SocketConnection. This is used by Gio::SocketClient so that it can
+ * always return a Gio::SocketConnection, even when the connection it has
+ * actually created is not directly a Gio::SocketConnection.
+ *
+ * @newin{2,44}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API TcpWrapperConnection : public Gio::TcpConnection
+{
+    _CLASS_GOBJECT(TcpWrapperConnection, GTcpWrapperConnection, G_TCP_WRAPPER_CONNECTION, Gio::TcpConnection, GTcpConnection, , , GIOMM_API)
+
+public:
+
+  _WRAP_CTOR(TcpWrapperConnection(const Glib::RefPtr<IOStream>& base_io_stream, const Glib::RefPtr<Socket>& socket), g_tcp_wrapper_connection_new)
+
+  _WRAP_METHOD(Glib::RefPtr<IOStream> get_base_io_stream(), g_tcp_wrapper_connection_get_base_io_stream, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const IOStream> get_base_io_stream() const, g_tcp_wrapper_connection_get_base_io_stream, constversion, refreturn)
+
+  _WRAP_PROPERTY("base-io-stream", Glib::RefPtr<IOStream>, newin "2,44")
+};
+
+} // namespace Gio

@@ -1,0 +1,109 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnome-browser-connector"
+version = "46a1"
+authors = [
+    {name = "Yuri Konotopov", email = "ykonotopov@gnome.org"},
+]
+description = "OS-native connector counterpart for GNOME Shell browser extension"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["gnome", "gobject-introspection"]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "PyGObject",
+]
+
+[project.optional-dependencies]
+dev = [
+    "PyGObject-stubs==2.11.0",
+    "meson==1.4.0",
+    "pip-tools==7.5.0",
+    "pylint==3.3.8",
+    "pytest==8.4.2",
+    "ruff==0.12.12",
+]
+
+[project.scripts]
+gnome-browser-connector = "gnome_browser_connector.main:main"
+gnome-browser-connector-host = "gnome_browser_connector.main:connector"
+
+[project.urls]
+Homepage = "https://gnome.pages.gitlab.gnome.org/gnome-shell-integration"
+Repository = "https://gitlab.gnome.org/GNOME/gnome-browser-connector.git"
+Issues = "https://gitlab.gnome.org/GNOME/gnome-browser-connector/-/issues"
+Changelog = "https://gitlab.gnome.org/GNOME/gnome-browser-connector/-/commits/master"
+
+[tool.setuptools.packages.find]
+include = ["gnome_browser_connector*"]
+
+[tool.pylint.main]
+ignore-patterns = "^\\.#"
+jobs = 0
+disable = [
+    "C0111",
+    "C0115",
+    "C0116",
+    "W1203",
+]
+signature-mutators=[
+    "click.decorators.option",
+    "click.decorators.argument",
+    "click.decorators.version_option",
+    "click.decorators.help_option",
+    "click.decorators.pass_context",
+    "click.decorators.confirmation_option",
+]
+
+[tool.pyright]
+exclude = [
+    "build/",
+    "contrib/",
+    "dist/",
+    "**/*.egg-info",
+]
+reportMissingModuleSource = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+pythonpath = [
+    "."
+]
+testpaths = [
+    "tests",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gnome_browser_connector"]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+ignore = [
+    # We don't want to replace huge `if` statements with return
+    "SIM103",
+    # Explicit is better than implicit
+    "UP015",
+    # Deprecated rule
+    "UP038",
+]

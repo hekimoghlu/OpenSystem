@@ -1,0 +1,165 @@
+# Miscellaneous Combinatorial functions
+
+# Hofstadter's function q(n) is defined for positive integers by
+# q(1)=1, q(2)=1, q(n)=q(n-q(n-1))+q(n-q(n-2))
+# Note: the Hofstadter function is described in Godel, Escher, Bach:
+# An Eternal Golden Braid.
+# It's kinda chaotic (and becomes increasingly so) -- it starts off
+# looking like n/2 or such...
+SetHelp("Hofstadter", "combinatorics", "Hofstadter's function q(n) defined by q(1)=1, q(2)=1, q(n)=q(n-q(n-1))+q(n-q(n-2))")
+function Hofstadter(n) = (
+    if(IsMatrix(n)) then
+	return ApplyOverMatrix(n,Hofstadter)
+    else if not IsPositiveInteger(n) then
+    	(error("Hofstadter: argument not a positive integer");bailout);
+    # reason for doing this is that it's just plain faster then calling self
+    # again
+    function h (n) = (
+    	if n <= 2 then
+		1
+	else
+		h(n - h(n-1)) + h(n - h(n-2))
+    );
+    h (n)
+)
+
+
+# return the Fibonacci number, calculated using an iterative method
+SetHelp("Fibonacci", "combinatorics", "Calculate nth Fibonacci number");
+function Fibonacci(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,fib)
+	else if(not IsInteger(x)) then
+		(error("Fibonacci: argument not an integer");bailout)
+	else if(x<0) then
+		(error("Fibonacci: argument less than zero");bailout)
+	else (([1,1;1,0]^x)@(1,2))
+);
+SetHelpAlias ("Fibonacci", "fib");
+fib=Fibonacci
+
+## Harmonic Numbers
+## H_n^(r) (the nth harmonic number of order r)
+## = sum_{i=1}^n 1/i^r
+SetHelp("HarmonicNumber", "combinatorics", "Harmonic Number, the nth harmonic number of order r");
+function HarmonicNumber(n,r) = (
+  	if IsMatrix (n) or IsMatrix (r) then
+  		return ApplyOverMatrix2 (m, n, HarmonicNumber);
+	sum x=1 to n do x^(-r)
+)
+SetHelpAlias ("HarmonicNumber", "HarmonicH");
+HarmonicH = HarmonicNumber;
+
+
+# return the Frobenius number
+SetHelp("FrobeniusNumber", "combinatorics", "Calculate the Frobenius number for a coin problem");
+function FrobeniusNumber(v,arg...) = (
+	if not IsMatrix(v) and not IsValue(v) then
+		(error("FrobeniusNumber: argument not a value or vector");bailout);
+	# Not perfect argument checking
+
+	if IsNull (arg) then
+		m = [v]
+	else
+		m = [v, arg];
+
+	if (gcd (m) != 1) then
+		(error("FrobeniusNumber: gcd of arguments not 1");bailout);
+
+	# Trivial
+	if (elements (m) == 1) then
+		return -1;
+
+	# Sylvesters Formula
+	if (elements (m) == 2) then
+		return (m@(1)*m@(2) - (m@(1)+m@(2)));
+
+	m = SortVector (m);
+
+	if m@(1) == 1 then
+		return -1;
+
+	k = 1;
+	# Vitek's inequality for upper bound
+	#  See: Y. Vitek, Bounds for a Linear Diophantine Problem of Frobenius,
+	#  J. London Math.  Soc., (2) 10 (1975), 79–85.
+	for j = 2 to IntegerQuotient((m@(2)-1)*(m@(elements(m))-1),2)-1 do (
+		if IsNull(GreedyAlgorithm(j,m)) then
+			k = j
+	);
+	k
+);
+
+SetHelp("GreedyAlgorithm", "combinatorics", "Use greedy algorithm to find c, for c . v = n.  (v must be sorted)");
+function GreedyAlgorithm(n,v) = (
+	if not IsMatrix(v) then
+		(error("GreedyAlgorithm: argument not a nonempty vector");bailout);
+
+	elts = elements(v);
+
+	if (n == 0) then (
+		return zeros(elts);
+	);
+
+
+	if elts == 1 then (
+		if Divides (v@(1), n) then
+			return [IntegerQuotient(n,v@(1))]
+		else
+			return null
+	);
+
+	k = IntegerQuotient (n, v@(elts));
+	for m = k to 0 by -1 do (
+		c = GreedyAlgorithm (n - m * v@(elts),
+				     v@(1:(elts-1)));
+		if not IsNull(c) then (
+			return [c,m]
+		)
+	);
+	null
+);
+
+SetHelp("StirlingNumberFirst", "combinatorics", "Stirling number of the first kind");
+function StirlingNumberFirst(n,m) = (
+  	if IsMatrix (m) or IsMatrix (n) then
+  		return ApplyOverMatrix2 (n, m, StirlingNumberFirst)
+	else if not IsNonNegativeInteger(n) or not IsNonNegativeInteger(m) then
+		(error("StirlingNumberFirst: arguments not positive integers");bailout);
+	if m == 0 then (
+		if n == 0 then 1 else 0
+	) else if m > n then (
+		0
+	) else if m == n then (
+		1
+	) else (
+		StirlingNumberFirst(n-1,m-1) - n * StirlingNumberFirst(n-1,m)
+	)
+)
+SetHelpAlias ("StirlingNumberFirst", "StirlingS1");
+StirlingS1 = StirlingNumberFirst;
+
+SetHelp("StirlingNumberSecond", "combinatorics", "Stirling number of the second kind");
+function StirlingNumberSecond(n,m) = (
+  	if IsMatrix (m) or IsMatrix (n) then
+  		return ApplyOverMatrix2 (n, m, StirlingNumberSecond)
+    	else if not IsNonNegativeInteger(n) or not IsNonNegativeInteger(m) then
+    		(error("StirlingNumberSecond: arguments not positive integers");bailout);
+
+	1/(m!) * (sum j=0 to m do ((-1)^j * Binomial(m,j)*(m-j)^n))
+)
+SetHelpAlias ("StirlingNumberSecond", "StirlingS2");
+StirlingS2 = StirlingNumberSecond;
+
+## More: BernoulliPolynomial,
+## EulerNumber, EulerPolynomial
+#??
+#function BernoulliB(n) = BernoulliNumber(n)
+#function BernoulliB(n,x) = BernoulliPolynomial(n,x)
+#function EulerE(n) = EulerNumber(n)
+#function EulerE(n,x) = EulerPolynomial(n,x)
+#function PartitionsP(n) = PartitionsUnrestricted(n) # Unrestricted partitions of n
+#function PartitionsQ(n) = PartitionsDistinct(n) # Partitions of n into distinct parts
+
+# Partity (of a permutation)
+# ClebschGordan, ThreeJSymbol, SixJSymbol

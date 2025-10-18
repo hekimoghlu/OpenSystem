@@ -1,0 +1,107 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <vector>
+
+#include <gtkmm/window.h>
+#include <gtkmm/box.h>
+#include <gtkmm/button.h>
+#include <gtkmm/headerbar.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/window_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+//TODO: Really deprecate, when all subclasses have been deprecated.
+// See https://discourse.gnome.org/t/gtkdialog-is-deprecated-but-all-subclasses-are-not/14194
+//_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+/** @defgroup Dialogs Dialogs
+ */
+
+_CC_INCLUDE(gtk/gtk.h)
+_WRAP_ENUM(ResponseType, GtkResponseType, CONV_TO_INT, decl_prefix GTKMM_API)
+
+/** Create popup windows.
+ *
+ * %Dialog boxes are a convenient way to prompt the user for a small amount
+ * of input, eg. to display a message, ask a question, or anything else that
+ * does not require extensive effort on the user's part.
+ *
+ * The main area of a %Dialog is called the "content area", and is yours
+ * to populate with widgets such a Gtk::Label or Gtk::Entry, to present
+ * your information, questions, or tasks to the user.
+ *
+ * In addition, dialogs allow you to add "action widgets". Most commonly,
+ * action widgets are buttons. Depending on the platform, action widgets may
+ * be presented in the header bar at the top of the window, or at the bottom
+ * of the window.
+ *
+ * When adding buttons using add_button(), clicking the button will emit
+ * signal_response() with a "response id" you specified. You are encouraged
+ * to use the @ref Gtk::ResponseType_Wrapper::ResponseType "Gtk::ResponseType"
+ * enum (these all have values less than zero). If a dialog receives a delete
+ * event, the "response" signal will be emitted with a response id of
+ * @ref Gtk::ResponseType_Wrapper::ResponseType "Gtk::ResponseType::DELETE_EVENT".
+ *
+ * A “modal” dialog (that is, one which freezes the rest of the application
+ * from user input), can be created by calling Gtk::Window::set_modal() on the
+ * dialog. It is also possible to set the modal property in the constructor.
+ *
+ * @ingroup Dialogs
+ * @deprecated 4.10: Use Gtk::Window instead.
+ */
+class GTKMM_API Dialog : public Window
+{
+  _CLASS_GTKOBJECT(Dialog,GtkDialog,GTK_DIALOG,Gtk::Window,GtkWindow,,,GTKMM_API)
+  _UNMANAGEABLE
+  _IGNORE(gtk_dialog_add_buttons)
+public:
+  _CTOR_DEFAULT()
+  explicit Dialog(const Glib::ustring& title, bool modal = false, bool use_header_bar = false);
+  Dialog(const Glib::ustring& title, Gtk::Window& parent, bool modal = false, bool use_header_bar = false);
+
+  _WRAP_METHOD(void add_action_widget(Widget& child, int response_id), gtk_dialog_add_action_widget)
+  _WRAP_METHOD(Button* add_button(const Glib::ustring& button_text, int response_id), gtk_dialog_add_button)
+  _WRAP_METHOD(void set_response_sensitive(int response_id, bool setting = true), gtk_dialog_set_response_sensitive)
+  _WRAP_METHOD(void set_default_response(int response_id), gtk_dialog_set_default_response)
+  _WRAP_METHOD(Widget* get_widget_for_response(int response_id), gtk_dialog_get_widget_for_response)
+  _WRAP_METHOD(const Widget* get_widget_for_response(int response_id) const, gtk_dialog_get_widget_for_response, constversion)
+  _WRAP_METHOD(int get_response_for_widget(const Gtk::Widget& widget) const, gtk_dialog_get_response_for_widget)
+
+  _WRAP_METHOD(void response(int response_id), gtk_dialog_response)
+
+  _WRAP_METHOD(Box* get_content_area(), gtk_dialog_get_content_area)
+  _WRAP_METHOD(const Box* get_content_area() const, gtk_dialog_get_content_area, constversion)
+
+  _WRAP_METHOD(HeaderBar* get_header_bar(), gtk_dialog_get_header_bar) // transfer none
+  _WRAP_METHOD(const HeaderBar* get_header_bar() const, gtk_dialog_get_header_bar, constversion) // transfer none
+
+  _WRAP_SIGNAL(void response(int response_id), "response")
+
+  _WRAP_PROPERTY("use-header-bar", bool)
+
+  _IGNORE_SIGNAL("close") // Keybinding signal
+};
+
+} //namespace Gtk

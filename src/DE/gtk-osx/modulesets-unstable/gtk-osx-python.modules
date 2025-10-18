@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+  <!-- Please format this file using the following command:
+       tidy -config ../tidy.conf -m gtk-osx-python.modules; sed -i "" '/^ *$/d' gtk-osx-python.modules
+       You can get 'tidy' here: https://github.com/htacg/tidy-html5 -->
+  <repository name="git.gnome.org"
+              default="yes"
+              href="https://gitlab.gnome.org/GNOME"
+              type="git" />
+  <repository name="github"
+              href="https://github.com"
+              type="git" />
+  <repository name="python"
+              href="https://www.python.org/ftp/python/"
+              type="tarball" />
+  <repository name="pymodules"
+              href="https://pypi.python.org/packages/"
+              type="tarball" />
+  <metamodule id="meta-gtk-osx-python3-gtk3">
+    <dependencies>
+      <dep package="meta-gtk-osx-gtk3" />
+      <dep package="pygments" />
+      <dep package="pycairo" />
+      <dep package="pygobject3" />
+      <dep package="gtk-mac-integration-python" />
+    </dependencies>
+  </metamodule>
+  <autotools id="python3"
+             autogen-sh="autoreconf"
+             autogenargs="--enable-shared">
+    <branch module="3.13.2/Python-3.13.2.tar.xz"
+            version="3.13.2"
+            hash="sha256:d984bcc57cd67caab26f7def42e523b1c015bbc5dc07836cf4f0b63fa159eb56"
+            repo="python" />
+    <dependencies>
+      <dep package="readline" />
+      <!-- For hashlib -->
+      <dep package="openssl" />
+      <dep package="zlib"/>
+    </dependencies>
+    <after>
+      <dep package="sqlite" />
+    </after>
+  </autotools>
+  <meson id="pycairo">
+    <branch module="pygobject/pycairo"
+            repo="github" />
+    <dependencies>
+      <dep package="cairo" />
+      <dep package="python3" />
+      <dep package="meta-gtk-osx-gtk3" />
+    </dependencies>
+  </meson>
+  <meson id="pygobject3">
+    <branch module="pygobject"
+            checkoutdir="pygobject3" />
+    <dependencies>
+      <dep package="pycairo" />
+      <dep package="meta-gtk-osx-gtk3" />
+    </dependencies>
+    <after>
+      <dep package="python3" />
+    </after>
+  </meson>
+  <autotools id="gtk-mac-integration-python">
+    <branch module="gtk-mac-integration" />
+    <dependencies>
+      <dep package="pygobject3" />
+    </dependencies>
+  </autotools>
+   <pip id="pygments">
+    <branch module="7c/2d/c3338d48ea6cc0feb8446d8e6937e1408088a72a39937982cc6111d17f84/pygments-2.19.1.tar.gz"
+            version="2.19.1"
+            hash="61c16d2a8576dc0649d9f39e089b5f02bcd27fba10d8fb4dcc28173f7a45151f"
+            repo="pymodules">
+    </branch>
+    <dependencies>
+      <dep package="python3" />
+    </dependencies>
+  </pip>
+</moduleset>

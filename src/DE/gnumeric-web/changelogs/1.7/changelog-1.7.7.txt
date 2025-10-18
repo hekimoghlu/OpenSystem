@@ -1,0 +1,297 @@
+2007-02-16  Morten Welinder <terra@gnome.org>
+
+	* Release 1.7.7
+
+2007-02-13  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-view.c (sheet_view_new): Add handler for r1c1 changes.
+	(sv_real_dispose): Remove handler.
+	(sv_sheet_r1c1_changed): New function.
+
+	* src/workbook-view.c (wb_view_selection_desc): Use
+	parsepos_as_string to get R1C1 right.  Fixes #407247.
+
+	* src/parse-util.c (cell_name): Use R1C1 notation as appropriate.
+	(parsepos_as_string): New function.
+
+	* src/wbcg-actions.c (cb_edit_search_replace_query): Use cell_name,
+	not cellpos_as_string.
+	* src/sheet.c (cb_cell_pool_leak): Ditto.
+
+	* src/workbook-control.c (wb_control_parse_and_jump): Resolve
+	relative references.  Fixes #407274.
+
+2007-02-07  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_csv_cell): Don't drop whitespace that
+	happens to be separators.
+	(stf_parse_csv_line): Trim fields as requested.
+
+	* src/dependent.c (workbook_recalc): For now, any recalc needs to
+	lead to a redraw.  This is highly suboptimal, but will have to do
+	for now.
+
+2007-01-29  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-widget.c (sheet_widget_list_base_get_result_dep) : new.
+	(sheet_widget_list_base_get_content_dep) : new.
+
+2007-01-29  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-filter.c : improve some docs
+
+2007-01-24  Morten Welinder  <terra@gnome.org>
+
+	*/*.c: Include new go-locale.h as needed.
+
+	* src/numbers.h (gnm_render_number): Remove.
+
+2007-01-22  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (format_match): Don't compare a pointer to
+	GO_FORMAT_GENERAL, even if the latter is zero.
+	*/*.c: Deal with GOFormat now being opaque.
+
+	* libspreadsheet-1.7.pc.in (GOffice_plugins_dir): Fix undefined
+	variables.  [#399550]
+	Eliminate EXTRA_LIBS and EXTRA_INCLUDES now in goffice.
+	Fix goffice require.
+
+2007-01-19  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-filter.h : Add some new condition types to facilitate ODF
+	  import.
+
+2007-01-19  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (workbook_recalc): Reinstate a version of
+	redraw-after-recalc.  I don't like it, but the alternative is to
+	ask for redraw on a per-cell basis.
+
+2007-01-18  Morten Welinder <terra@gnome.org>
+
+	* */*.c: clean up interface between xmlChar and char.
+
+2007-01-18  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_condition) : use gnm_style_new rather
+	  than gnm_style_new_default.  We only want to fill in the required
+	  fields, not all of them.
+	* src/xml-io.c (xml_read_style) : fix the original here by adding an
+	  'leave_empty' argument that can force the use of style_new.
+
+2007-01-17  Morten Welinder  <terra@gnome.org>
+
+	* src/cell-draw.c (cell_draw): Render as necessary.
+
+	* src/graph.c (gnm_go_data_preferred_fmt): Handle the case of a
+	missing expression in the dep.
+
+	* src/xml-sax-read.c (xml_sax_condition): Merge
+	xml_sax_style_condition_style_start into here.
+	(xml_sax_condition_end): Merge xml_sax_style_condition_style_end
+	into here.  Rearrange parser to use recursive entry.
+	(xml_sax_object_start): Update progress here.
+	(xml_sax_object_end): Not here.  Object isn't ready yet.
+
+	* src/gui-util.c (gnm_pixbuf_tile): Round sizes up to 1 pixel, if
+	needed.
+
+	* src/xml-sax-read.c (gnm_xml_file_open): Clear state->cond.
+	(xml_sax_style_condition_style_start,
+	xml_sax_style_condition_style_end): New functions.
+	Fixes part of #397679.
+
+2007-01-16  Morten Welinder  <terra@gnome.org>
+
+	* src/Makefile.am (gnumeric_LDADD): Don't add in popt since we do
+	not use it directly anymore.  Fixes #396329.
+
+2007-01-10  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (maybe_convert): Always be quiet if no
+	conversion actually takes place, e.g., if everything is plain
+	ASCII.
+
+2007-01-09  Morten Welinder  <terra@gnome.org>
+
+	* */*.c: No need to reset errno before go_strtod and gnm_strto.
+
+	* src/xml-sax-read.c (xml_sax_double): Don't use g_strtod.  We do
+	not need or want dual-locale semantics.
+	(gnm_xml_attr_double): Ditto.
+
+	* src/sheet.c (sheet_range_bounding_box): Respan as needed.
+	Fixes #393359.
+
+	* src/item-grid.c (item_grid_draw): Handle respans outside the
+	loop, not inside.
+
+	* src/dependent.c (gnm_cell_eval_content): Optimize the
+	value-didn't-change case.
+	(workbook_recalc): Don't force full-sheet redraws here.
+
+	* src/xml-sax-read.c (gnm_xml_file_open): Initialize
+	seen_cell_contents.
+
+2007-01-08  Morten Welinder  <terra@gnome.org>
+
+	* src/numbers.h (gnm_strto): Map this to go_strtod or go_strtold.
+	Fixes #393347.
+
+2007-01-06  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_font_size_changed): Kill a few conversions.
+
+2007-01-05  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (gnm_format_is_date_for_value): New function.
+	* src/sheet-autofill.c (afm_teach_cell): Use
+	gnm_format_is_date_for_value.
+
+	* src/stf-export.c (try_auto_date): Use
+	gnm_format_is_date_for_value.
+
+	* src/auto-format.c (is_date): Use go_format_is_date.
+
+2007-01-03  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Handle v7 contents.
+	Fixes #392054.
+	(gnm_xml_file_open): Set up progress feedback.  Fixes #392546.
+	(maybe_update_progress): New function.
+	(xml_sax_style_region_end): Call maybe_update_progress.
+	(xml_sax_cell_content): Ditto.
+
+2007-01-02  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Call g_thread_init. Fixes #392050.
+	* src/ssindex.c (main): Ditto.
+	* src/ssconvert.c (main): Ditto.  Also increase stack
+	size, if needed.
+
+	* src/xml-sax-read.c (xml_sax_sheet_name): Handle missing sheet
+	index better.  [#392054]
+
+2006-12-29  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.c (gnm_expr_conventions_new_full): Theoretical
+	leak plug.
+
+	* src/xml-sax-read.c (xml_sax_named_expr_end): Delay all names.
+	(handle_delayed_names): New function.
+	(gnm_xml_file_open): Actually handle delayed names.  What a
+	concept!
+
+	* src/parser.y (parser_simple_val_or_name): Add support for
+	disallowing the use of undefined names.
+
+	* src/xml-sax-read.c (xml_sax_print_margins_unit): Even if we
+	don't have gnome-print, avoid throwing an unknown-attribute error.
+
+2006-12-28  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-graph.c (gnm_sog_foreach_dep): New function.
+
+	* src/sheet-object-widget.c (sheet_widget_adjustment_foreach_dep,
+	sheet_widget_checkbox_foreach_dep,
+	sheet_widget_radio_button_foreach_dep,
+	sheet_widget_list_base_foreach_dep): New functions.
+
+	* src/sheet-object.c (sheet_object_invalidate_sheet): Reimplement
+	in terms of sheet_object_foreach_dep.
+	(sheet_object_foreach_dep): New function.
+	(sheet_objects_dup): Fixup references to source sheet. Fixes
+	#158825.
+
+	* src/sheet.c (sheet_dup_names): Properly relocate expressions to
+	the new sheet.  Copy permanent names too, as long as they are
+	editable.
+	(cb_sheet_cell_copy): Relocate expressions from source to target
+	sheet.
+
+	* src/expr.c (gnm_expr_top_relocate_sheet): New convenience
+	function.
+
+2006-12-28  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	* src/pixmaps/expr-entry.png: convert to 16x16 image.
+	* src/widgets/gnumeric-expr-entry.c (gee_set_property): request a menu
+	sized icon instead of icon size.
+
+2006-12-27  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (gnm_named_expr_collection_lookup): Make public.
+
+	* src/sheet.c (sheet_dup_names): First cut at this.
+
+2006-12-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (format_value_common): Use long double version
+	of go_format_value_gstring as appropriate.
+
+2006-12-24  Jody Goldberg <jody@gnome.org>
+
+	* src/io-context-gtk.c (cb_realize) : request no decoration for the
+	  splash.
+	(icg_processing_file) : do not push the splash to the top for every
+	  file.  It's damn irritating.
+
+	* src/GNOME_Gnumeric-gtk.xml.in : Hook up the DataTable dialog
+	  and re-order Text-To-Columns.
+
+	* src/sheet-object-widget.c (cb_collect) : handle reference to blank
+	  cells.
+
+	* src/gnm-so-filled.c (gnm_so_filled_user_config) : give labels their
+	  own title.
+
+2006-12-21  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=388505
+	* src/sheet.c (cb_outline_level) : fix signature from 2006-06-25
+	  breakage.
+
+2006-12-20  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (format_value_common): Do colours right.
+
+2006-12-19  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object.h (SheetObjectAnchor::types) : simplfy to remove
+	  the vector 'type' the offsets are now always as percentages of cell
+	  size relative to the cell_bound.  The parent, GODrawingAnchor will
+	  eventually have the absolute positions, and the sheet object itself
+	  will specify how which set of coords in normative.
+
+2006-12-18  Jody Goldberg <jody@gnome.org>
+
+	* src/format-template.c (xml_read_format_template_members) : revert
+	  inadvertent renaming of the xml element names.
+	(format_template_new_from_file) : ditto.
+	(xml_write_format_template_members) : ditto.
+
+2006-12-18  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c (gnumeric_table) : patch leak.
+
+2006-12-18  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-format.c (format_value_common) : minor patch to keep text in
+	  black until it's clear where to get it from.
+
+2006-12-18  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c: Don't include goffice's format-impl.h,
+	(format_value_common): New function, mostly
+	extracted from gnm_format_layout, but using
+	go_format_value_gstring.
+	(find_entry, gnm_style_format_condition): Remove.
+	(hash_fill): Generalize to handle layouts and strings alike.
+	(format_value_gstring): Simplify using format_value_common.
+
+	* src/workbook-edit.c: Don't include goffice's format-impl.h,
+
+2006-12-18  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release bump

@@ -1,0 +1,61 @@
+/* Copyright (C) 2011 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+
+using Level = Gtk::FontChooser::Level;
+
+namespace
+{
+extern "C"
+{
+static gboolean SignalProxy_Filter_gtk_callback(const PangoFontFamily* family, const PangoFontFace* face, gpointer user_data)
+{
+  auto the_slot = static_cast<Gtk::FontChooser::SlotFontFilter*>(user_data);
+
+  try
+  {
+    // Create suitable C++ instances to pass to the C++ method:
+    const Glib::RefPtr<const Pango::FontFamily> cppFamily = Glib::wrap(const_cast<PangoFontFamily*>(family), true);
+    const Glib::RefPtr<const Pango::FontFace> cppFace = Glib::wrap(const_cast<PangoFontFace*>(face), true);
+    return (*the_slot)(cppFamily, cppFace);
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false; // arbitrary value
+}
+
+static void SignalProxy_Filter_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::FontChooser::SlotFontFilter*>(data);
+}
+
+} // extern "C"
+} // anonymous namespace
+
+namespace Gtk
+{
+
+void FontChooser::set_filter_func(const SlotFontFilter& slot)
+{
+  auto slot_copy = new SlotFontFilter(slot);
+  gtk_font_chooser_set_filter_func(gobj(), &SignalProxy_Filter_gtk_callback, slot_copy, &SignalProxy_Filter_gtk_callback_destroy);
+}
+
+} //namespace Gtk

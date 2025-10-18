@@ -1,0 +1,30 @@
+include:
+  - project: "GNOME/citemplates"
+    file: "templates/default-rules.yml"
+  - component: "gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master"
+  - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+    inputs:
+      dist-job-name: "build-gnomeos"
+      tarball-artifact-path: "_builddir/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz"
+
+fedora41:
+  image: fedora:41
+  stage: build
+  before_script:
+    - dnf update -y
+    - dnf install -y gcc meson ninja-build gettext gi-docgen glib2-devel libgit2-devel gobject-introspection-devel python3-gobject-devel vala libssh2-devel
+  script:
+    - meson build
+    - meson compile -C build
+    - meson install -C build
+
+fedora40:
+  image: fedora:40
+  stage: build
+  before_script:
+    - dnf update -y
+    - dnf install -y gcc meson ninja-build gettext gi-docgen glib2-devel libgit2-devel gobject-introspection-devel python3-gobject-devel vala libssh2-devel
+  script:
+    - meson build
+    - meson compile -C build
+    - meson install -C build

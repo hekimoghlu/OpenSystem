@@ -1,0 +1,50 @@
+#-*- mode: shell-script;-*-
+
+tinysparql_cmds()
+{
+    local cur prev words cword
+    _init_completion -s || return
+
+    cur=${COMP_WORDS[COMP_CWORD]}
+
+    if [[ $cword == 1 ]]; then
+	possible=`tinysparql | grep -E "   [a-z].*   " | awk '{ print ($1) }' | sort | uniq`
+	COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+	return 0;
+    fi
+
+    case $prev in
+	-h|--help)
+	    return 0;
+	    ;;
+	extract|info|-f|--file|-d|--database|-a|--add|-d|--remove)
+	    if [[ $cur != -* ]]; then
+		_filedir
+		return 0;
+	    fi
+	    ;;
+	-b|--dbus-service)
+	    possible=`tinysparql endpoint --list`
+	    COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+	    return 0;
+	    ;;
+	-r|--remote-service)
+	    possible=`tinysparql endpoint --list-http`
+	    COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+	    return 0;
+	    ;;
+	*)
+	    ;;
+    esac
+
+    if [[ $cword -lt 2 ]]; then
+	return 0;
+    fi
+
+    if [[ -z $cur ]] || [[ $cur == -* ]]; then
+	possible=`${words[0]} ${words[1]} -h | grep -E "^ *-" | sed "s/^ *//" | sed "s/  [^-].*//" | sed "s/,/\n/g" | sed "s/=.*//"`
+	COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+    fi
+}
+
+complete -F tinysparql_cmds tinysparql

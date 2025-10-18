@@ -1,0 +1,65 @@
+/* Copyright (C) 2014 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/gesturesingle.h>
+#include <gdkmm/rectangle.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/gesturesingle_p.h)
+
+namespace Gtk
+{
+/** Multipress gesture.
+ *
+ * This is a Gesture implementation able to recognize
+ * multiple clicks on a nearby zone, which can be listened for through
+ * signal_pressed(). Whenever time or distance between
+ * clicks exceed the GTK+ defaults, signal_stopped() is emitted,
+ * and the click counter is reset.
+ *
+ * @newin{3,14}
+ *
+ * @ingroup Gestures
+ */
+class GTKMM_API GestureClick : public GestureSingle
+{
+  _CLASS_GOBJECT(GestureClick, GtkGestureClick, GTK_GESTURE_CLICK, GestureSingle, GtkGestureSingle, , , GTKMM_API)
+
+protected:
+  /** Constructs a Gesture that recognizes single and multiple presses.
+   */
+  _CTOR_DEFAULT
+
+public:
+  /** Creates a Gesture that recognizes single and multiple presses.
+   *
+   * @newin{3,14}
+   *
+   * @return A RefPtr to a new GestureClick.
+   */
+  _WRAP_CREATE()
+
+  // no_default_handler because GtkGestureClickClass is private.
+  _WRAP_SIGNAL(void pressed(int n_press, double x, double y), "pressed", no_default_handler)
+  _WRAP_SIGNAL(void released(int n_press, double x, double y), "released", no_default_handler)
+  _WRAP_SIGNAL(void stopped(), "stopped", no_default_handler)
+  _WRAP_SIGNAL(void unpaired_release(double x, double y, guint button, Gdk::EventSequence* sequence),
+    "unpaired-release", no_default_handler)
+
+  // GestureMultiPress has no properties
+};
+
+} // namespace Gtk

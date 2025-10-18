@@ -1,0 +1,161 @@
+2009-11-01  Morten Welinder <terra@gnome.org>
+
+	* Release 1.9.15
+
+2009-11-01  Morten Welinder  <terra@gnome.org>
+
+	* src/solver.h (struct _SolverParameters): Keep target and input
+	as deps so they get maintained.
+
+	* src/expr.c (gnm_expr_top_get_cellref): New function.
+
+2009-10-31  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dependent_managed_init,
+	dependent_managed_set_expr): New functions.
+
+	* src/value.c (value_new_cellrange_parsepos_str): Use the right
+	convensions.  Add flags argument for finer control.  All callers
+	changed.
+
+2009-10-31  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c (cb_format_preferences): delete
+	(cb_tools_autocorrect): call dialog_preferences
+	(actions): delete FormatGnumeric
+
+2009-10-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.c (gnm_sheet_class_init): correct English grammar
+
+2009-10-29  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-pane-impl.h: fixed graph object size issues. [#599887]
+	* src/gnm-pane.c (gnm_pane_object_key_press), (gnm_pane_focus_out),
+	(gnm_pane_display_obj_size_tip), (gnm_pane_object_move),
+	(control_point_enter_notify), (control_point_leave_notify): ditto.
+
+2009-10-28  Morten Welinder  <terra@gnome.org>
+
+	* src/solver.h (SolverConstraint): Remove redundant str member.
+	All users changed to gnm_solver_constraint_as_str calls.
+
+2009-10-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_autofilter_add_remove): new
+	* src/commands.c (cmd_autofilter_add_remove): new
+	(cmd_autofilter_add_remove_impl): new
+	(cmd_autofilter_add_remove_undo): new
+	(cmd_autofilter_add_remove_redo): new
+	(cmd_autofilter_add_remove_finalize): new
+	fixes # 478152
+	* src/sheet-filter.h (gnm_filter_attach): publish
+	* src/sheet-filter.c (gnm_filter_attach): publish
+	  create field selectors here rather than in 
+	(gnm_filter_new)
+	(gnm_filter_remove): delete field selectors here rather than in
+	(gnm_filter_unref)
+	* src/wbc-gtk-actions.c (cb_auto_filter): just call 
+	  cmd_autofilter_add_remove
+
+2009-10-27  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_error_error): Don't xml-escape the text.
+	Fixes #599816.
+
+	* src/gutils.c (gnm_string_add_number): New function.
+
+2009-10-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/number-match.c (format_match_decimal_number): split into
+	  format_match_decimal_number and format_match_decimal_number_with_locale
+	* src/number-match.h (format_match_decimal_number_with_locale): new
+
+2009-10-23  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (handle_year): Handle pre-1900 dates.
+
+2009-10-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: add fn-christian-date plugin
+	* plugins/Makefile.am: ditto
+
+2009-10-20  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-gui.c (scg_context_menu): Disable slicer stuff
+	for now.
+
+2009-10-18  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet): Ignore event->state
+	bits related to caps lock, etc.  Fixes #597295.
+
+2009-10-16  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c: Support Biff8 via Citrix which yields a
+	different target name.
+	(table_cellregion_read): Use original area (from Excel) for paste.
+	Fixes #381732, #388531.
+
+	* src/gnm-so-line.c (gnm_so_line_prep_sax_parser): Read new
+	format.
+	(gnm_so_line_write_xml_sax): Write both arrow ends.
+
+2009-10-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-so-line.c: Move GOArrow to goffice.
+	(gnm_so_line_set_property): Eliminate is-arrow property.
+	(gnm_so_line_draw_cairo): Draw both arrows.
+
+	* configure.in (libspreadsheet_reqs): Require goffice 0.7.15 for
+	GOArrow.
+
+2009-10-13  Morten Welinder  <terra@gnome.org>
+
+	* src/libgnumeric.c (gnm_shutdown): Call gnm_xml_sax_read_shutdown
+	and gnm_xml_sax_write_shutdown.
+
+	* src/xml-sax-read.c (gnm_xml_sax_read_init): Plug leak.
+	(gnm_xml_sax_read_shutdown): New function.
+
+	* src/xml-sax-write.c (gnm_xml_sax_write_init): Plug leak.
+	(gnm_xml_sax_write_shutdown): New function.
+
+	* src/sheet-object-widget.c (sheet_widget_adjustment_get_horizontal):
+	New function.
+	(sheet_widget_list_base_get_content_link): Rename from
+	sheet_widget_list_base_get_content_dep.  Return ref'd GnmExprTop.
+	All callers changed.
+	(sheet_widget_list_base_get_result_link): Rename from
+	sheet_widget_list_base_get_result_dep.  Return ref'd GnmExprTop.
+	All callers changed.
+	(sheet_widget_list_base_get_adjustment): New function.
+
+2009-10-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mathfunc.c (random_skew_normal): simplify
+	(random_skew_tdist): simplify
+
+2009-10-11  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_resize_main): Reduce ->cols.max_used and
+	->rows.max_used as appropriate.
+	(gnm_sheet_resize): Check for merges.  Add new perr argument.  All
+	callers changed.
+	
+2009-10-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mathfunc.c (random_skew_normal): new
+	(random_skew_tdist): new
+	* src/mathfunc.h (random_skew_normal): new
+	(random_skew_tdist): new
+
+2009-10-10  Jody Goldberg <jody@gnome.org>
+
+	* src/main-application.c (gnumeric_arg_parse) : honour
+	  HAVE_G_OPTION_CONTEXT_SET_DELOCALIZE for people trying to build on
+	  win32 with stock gtk+.
+
+2009-10-11  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

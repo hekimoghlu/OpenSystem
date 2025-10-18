@@ -1,0 +1,44 @@
+stages:
+  - lint
+  - build
+
+.build-fedora-latest:
+  image: fedora:latest
+  before_script:
+    - dnf install -y ${PROJECT_DEPENDENCIES}
+  script:
+    - meson setup ${MESON_EXTRA_FLAGS} --prefix /usr _build .
+    - meson compile -C _build
+    - meson test -C _build
+    - meson install -C _build
+  artifacts:
+    when: always
+    name: "office-runner-${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+
+build-fedora:
+  extends: .build-fedora-latest
+  stage: build
+  needs: []
+  variables:
+    PROJECT_DEPENDENCIES:
+      desktop-file-utils
+      gcc
+      gettext
+      git
+      gtk3-devel
+      meson
+      ninja-build
+      redhat-rpm-config
+
+reuse:
+  stage: lint
+  image: fedora:latest
+  needs: []
+  before_script:
+    - export PATH="$HOME/.local/bin:$PATH"
+    - dnf install -y python3-pip
+  script:
+    - pip install --user reuse
+    - reuse --suppress-deprecation lint

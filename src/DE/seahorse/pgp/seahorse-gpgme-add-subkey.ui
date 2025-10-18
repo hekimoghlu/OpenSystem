@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<interface>
+  <template class="SeahorseGpgmeAddSubkey" parent="GtkDialog">
+    <child internal-child="content_area">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="margin-top">12</property>
+        <property name="margin-bottom">12</property>
+        <property name="margin-start">12</property>
+        <property name="margin-end">12</property>
+        <child>
+          <object class="AdwPreferencesPage">
+            <child>
+              <object class="AdwPreferencesGroup">
+                <child>
+                  <object class="AdwComboRow" id="algo_row">
+                    <property name="title" translatable="yes">Key _Type</property>
+                    <property name="use-underline">True</property>
+                    <signal name="notify::selected" handler="on_algo_row_notify_selected"/>
+                    <property name="model">
+                      <object class="GtkFilterListModel">
+                        <property name="model">
+                          <object class="AdwEnumListModel">
+                            <property name="enum-type">SeahorsePgpKeyAlgorithm</property>
+                          </object>
+                        </property>
+                        <property name="filter">
+                          <object class="GtkCustomFilter" id="algo_filter"/>
+                        </property>
+                      </object>
+                    </property>
+                    <property name="expression">
+                      <closure type="gchararray" function="algo_to_string">
+                        <lookup name="value" type="AdwEnumListItem"/>
+                      </closure>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwComboRow" id="usage_row">
+                    <property name="title" translatable="yes">Key _Usage</property>
+                    <property name="use-underline">True</property>
+                    <property name="model">
+                      <object class="GtkFilterListModel">
+                        <property name="model">
+                          <object class="AdwEnumListModel">
+                            <property name="enum-type">SeahorsePgpSubkeyUsage</property>
+                          </object>
+                        </property>
+                        <property name="filter">
+                          <object class="GtkCustomFilter" id="usage_filter"/>
+                        </property>
+                      </object>
+                    </property>
+                    <property name="expression">
+                      <closure type="gchararray" function="usage_to_string">
+                        <lookup name="value" type="AdwEnumListItem"/>
+                      </closure>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSpinRow" id="length_row">
+                    <property name="title" translatable="yes">Key _Length</property>
+                    <property name="use-underline">True</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="length_row_adjustment">
+                        <property name="value">1024</property>
+                        <property name="lower">768</property>
+                        <property name="upper">1024</property>
+                        <property name="step_increment">512</property>
+                      </object>
+                    </property>
+                    <property name="numeric">True</property>
+                    <property name="snap-to-ticks">True</property>
+                    <property name="climb-rate">128</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Expiration Date</property>
+                    <child>
+                      <object class="SeahorseDatePicker" id="expires_datepicker">
+                        <property name="sensitive" bind-source="never_expires_check" bind-property="active" bind-flags="bidirectional|sync-create|invert-boolean" />
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="never_expires_check">
+                        <property name="label" translatable="yes">Never E_xpires</property>
+                        <property name="tooltip_text" translatable="yes">If key never expires</property>
+                        <property name="use_underline">True</property>
+                        <property name="active">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child type="action">
+      <object class="GtkButton" id="cancel_button">
+        <property name="use-underline">True</property>
+        <property name="label" translatable="yes">_Cancel</property>
+      </object>
+    </child>
+    <child type="action">
+      <object class="GtkButton" id="ok_button">
+        <property name="label" translatable="yes">_Generate</property>
+        <property name="use-underline">True</property>
+        <property name="tooltip_text" translatable="yes">Generate a new subkey</property>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="-6">cancel_button</action-widget>
+      <action-widget response="-5" default="true">ok_button</action-widget>
+    </action-widgets>
+  </template>
+</interface>

@@ -1,0 +1,276 @@
+2005-10-10  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.6.0
+
+2005-10-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump gsf req to avoid breakage in 1.13.1
+
+2005-10-10  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pdhyper): Avoid infinite loop for NB==0, n==x.
+	NOTE: Changed directly in genereated code.
+
+2005-10-08  Jody Goldberg <jody@gnome.org>
+
+	* src/cellspan.c (cell_calc_span) : numbers can span when centered
+	  across selection. [Debian #286131]
+
+2005-10-07  Jody Goldberg <jody@gnome.org>
+
+	* src/style-border.c (style_borders_row_draw) : more rtl fixage.
+	(style_borders_row_print) : ditto.
+
+2005-10-07  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_summary): Save all the summary
+	items, not N copies of the first.  [#318254]
+
+2005-10-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnumeric-pane.c: (build_so_menu): localize all menu items [#318042].
+	* src/sheet-autofill.c: (in_list), (autofill_cell): use localized days
+	and months names when autofilling [#318043].
+
+2005-10-06  Jody Goldberg <jody@gnome.org>
+
+	* src/style-conditions.c (gnm_style_conditions_eval) : whip up the
+	  other conditions.
+	* src/print-cell.c (print_merged_range) : support conditional styles
+	  in merged cells.
+	* src/item-grid.c (item_grid_draw_merged_range) : ditto.
+
+2005-10-06  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=317806
+	* src/dependent.c (cb_single_contained_collect) : do not collect
+	  dynamic depends they may get cleared.
+	(cb_range_contained_collect) : ditto.
+
+2005-10-04  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am : libspreadsheet_la_LDFLAGS is already defined use
+	  += for WITH_WIN32
+
+2005-10-04  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c (gnumeric_table_link) : finish
+	* src/dependent.c (link_expr_dep) : take an EvalPos rather than just a
+	  dep so that we can pass around array bound details.
+
+2005-10-02  Jody Goldberg <jody@gnome.org>
+
+	* src/ranges.c (range_intersection) : return FALSE if the ranges do
+	  not overlap, but do not generate an error.
+	  formula_import_biff8.xls
+
+	* src/gnumeric-pane.c (gnm_pane_init) : Use a realize handler on the
+	  canvas to create the object views.  Doing it sooner can break
+	  because the canvas has not been attached to a container yet.
+	  test-xls/prislistekomplett.xls
+
+	* src/workbook-control-gui.c (wbcg_sheet_add) : only grab focus if we
+	  are the current sheet.
+	  samples/derivatives.gnumeric
+
+	* src/xml-sax-read.c : Move to new libgsf xml interface.
+	  Support un-namespaced variant of Name for compatibility.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=317427
+	* src/parse-util.c (gnm_1_0_rangeref_as_string) : new stripped down
+	  variant of rangeref_as_string.
+	* src/xml-sax-write.c (xml_io_conventions) : use it here.
+	* src/xml-io.c (xml_io_conventions) : and here.
+
+	* src/style.c (required_updates_for_style) : add super/sub script
+
+2005-10-01  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/Makefile.am (libspreadsheet_la_LDFLAGS): Add a -release flag,
+	  that says that there is no compatibility between releases.
+
+2005-09-28  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (xml_read_names): Check whether the expression is
+	NULL, not whether the exp function pointer is.
+	(xml_workbook_read): Setup context earlier.
+	(xml_read_names): Work around bug 317427.
+
+2005-09-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c: (gnm_go_data_set_sheet): unlink dependent if necessary
+	before setting the sheet.
+
+2005-09-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c: (gnm_go_data_dup): set the sheet of the dep with a
+	call to dependent_set_sheet.
+
+2005-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-style-impl.h : Add a script element to GnmStyle
+	* src/mstyle.c (elem_is_eq) : support scripts
+	(elem_assign_content) : support scripts
+	(gnm_style_new_default) : support scripts
+	(gnm_style_get_pango_attrs) : support scripts
+	(gnm_style_dump) : support scripts
+	(gnm_style_set_font_script) : new.
+	(gnm_style_get_font_script) : new.
+
+	* src/GNOME_Gnumeric-gtk.xml.in  : Add the super/sub script
+	  accelerators
+
+	* gnumeric.xsd : update to include the new h/v alignments and to add
+	  Script.
+
+	* src/wbc-gtk.c (wbc_gtk_style_feedback) : support super/sub script
+	  and fix support for double underline
+
+	* src/wbcg-actions.c (toggle_font_attr) : support super/sub script
+	(cb_font_subscript) : new.
+	(cb_font_superscript) : new.
+
+	* src/xml-io.c (xml_write_style) : ditto.
+	(xml_read_style) : ditto.
+	* src/xml-sax-read.c (xml_sax_styleregion_font) : ditto.
+	* src/xml-sax-write.c (xml_write_gnmstyle) : ditto.
+
+2005-09-27  Morten Welinder  <terra@gnome.org>
+
+	* src/position.c (eval_pos_init_dep): Fix typo.
+
+2005-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (show_gui) : protection against scg == NULL
+	  Wallenbach-Formulas2003/chap17/thermometer chart.xls 
+	(disconnect_sheet_signals) : no need to warn when shutting down hidden
+	  sheets.
+
+	* src/format-template.c (gnm_auto_fmt_filter_edges) : This is not
+	  correct, but at least it no longer causes a crash.  Rework things to
+	  rationalize the handling of edges at some point in the future.
+
+	* src/mstyle.c (gnm_style_set_shrink_to_fit) : cut-n-paste-o that
+	  would erase wrap text with shrink to fit.
+	(gnm_style_get_shrink_to_fit) : ditto.
+
+2005-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (resize_pane_pos) : handle motion in frozen
+	  areas.
+	(sheet_control_gui_new) : use a blank label as a space rather than a
+	  scrollbar.  Emmanuel's idea seems more consistent with frozen panes
+	  than reseting the pane.
+	(set_resize_pane_pos) : new utility to calculate the desired pane
+	  position and block the signal.
+	(resize_pane_finish) : renamed from cb_resize_pane_finish to be more
+	  consistent.  Round the pane position to the col/row bound using
+	  set_resize_pane_pos.
+	(scg_set_panes) : position the resize panes.  Change the behavior not
+	  to short circuit if the freeze status is unchanged.  This seems safe
+	  and makes sue that set_resize_pane_pos is called.
+
+	* src/dependent.c : warning suppression.
+
+2005-09-22  Jody Goldberg <jody@gnome.org>
+
+	* src/selection.c (sv_selection_to_plot) : Use the total number of
+	  rows and cols to decide row vs col major.  Using just the first
+	  range had the potential for problems with a singleton followed by a
+	  full col.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=314867
+	* src/dependent.c (workbook_recalc) : queue an update to the auto
+	  expr.
+
+2005-09-20  Jody Goldberg <jody@gnome.org>
+
+	* src/position.c : Add some gnm_ to the api.
+	(gnm_cellref_set_col_ar) : new
+	(gnm_cellref_set_row_ar) : new.
+
+2005-09-20  Morten Welinder  <terra@gnome.org>
+
+	* src/cell-draw.c: Don't use gdk_draw_layout_with_colors -- it
+	breaks rich text.  (We might be able to use it if we can somehow
+	deduce that rich text is not present, but that is a patch for
+	later.)  Unset clip explicitly in the rotation case.
+
+2005-09-19  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=316597
+	* src/cell-draw.c (cell_draw) : gtk-2.8 clips more vigorously.
+	  Don't clip at all for rotation rather than setting a clip of
+	  0..maxint
+
+2005-09-18  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in: Fix the way GCONF_SCHEMAS_INSTALL is set.
+	  Update obsolete macros.
+
+2005-09-17  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_press) : add a quick guard
+	  around gtk_im_context_reset to avoid starting an edit for no reason.
+
+2005-09-16  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_destroy_contents) : destroy filters and pivots
+	  before remaining objects.  Those are higher order objects and may
+	  contain objects themselves.  [#316533]
+
+2005-09-15  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c (gnumeric_table_link) : new incomplete.
+	(gnumeric_table_unlink) : new incomplete.
+	(gnumeric_table) : implement 1d iteration.
+
+2005-09-15  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_is_local_drag) : new.
+	(cb_wbcg_drag_motion) : check for object drags here.
+	(cb_wbcg_drag_leave) : here.
+	(cb_wbcg_drag_data_received) : and here.
+	(wbcg_set_toplevel) : include the local object targets.
+
+	* src/gnumeric-canvas.c (cb_obj_autoscroll) : new.
+	(gnm_canvas_object_autoscroll) : new.  A kludge to get sheet objects
+	  to autoscroll again.
+
+2005-09-15  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (check_pango_attr_list_splice_bug): New
+	function.
+	(main): Call check_pango_attr_list_splice_bug.
+
+2005-09-13  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=316026
+	* src/sheet-control-gui.c (drag_object) : type 8 movement (sliding
+	  full object) in rtl mode should snap coord 2, the right side.
+
+2005-09-13  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dep_hash_destroy): Don't start changing
+	dependencies until we are done looking at containers.
+
+2005-09-10  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/main-application.c (main): Change the type of variable "args"
+	  to "gchar const **", call go_shell_argv_to_glib_encoding_free at
+	  the end of the day.
+	* src/ssconvert.c, src/ssindex.c: Likewise.
+	* configure.in: Require goffice 0.1.0.
+
+	* src/workbook.c (workbook_sheet_state_diff): It seems that the last
+	  chunk of the change from 2005-08-27 was a mistake.  Remove it.
+
+2005-09-09  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (link_expr_dep) : honor new DEPENDENT_IGNORE_ARGS
+	  flag which instructs the linker not to depend on the arguments to
+	  the function.
+
+2005-09-08  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump, prep for 1.6.0

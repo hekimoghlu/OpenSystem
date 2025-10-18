@@ -1,0 +1,1180 @@
+2005-05-10  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.5.1
+
+2005-05-09  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_sheet_attach_at_pos): Add a ref to
+	sheet to balance the unref in workbook_sheet_detach.
+	(workbook_sheet_attach): Counter the above ref here.
+	(workbook_sheet_add): Counter the above ref here.  Document that
+	the returned sheet's ref is owned by the workbook.
+	(workbook_sheet_detach): Get rid of sheet views here.  Replace
+	almost all uses of this with workbook_sheet_delete.  (It was
+	typically used to get rid of sheets that got created during a load
+	which then failed.)
+
+	* src/workbook-control-gui.c (wbcg_insert_sheet,
+	wbcg_append_sheet): Use new cmd_reorganize_sheets2.
+
+	* src/sheet.c (sheet_set_name): Fix logic to determine if a sheet
+	is attached.
+	(sheet_cell_destroy): Don't get rid of view here.
+
+	* src/commands.c (command_undo): Hold a ref to cmd so it doesn't
+	go away underneath us.  Don't crash if the undo command clears the
+	undo queue.
+
+	* src/workbook.c (workbook_sheet_state_diff): Implement.
+
+	* src/workbook-control-gui.c (cb_sheet_label_drag_begin): Fix
+	multihead issue.  Plug leak.
+
+	* src/application.c (gnm_app_get_pixbuf): Remove.  All callers
+	fixed.
+	(add_icon): Don't install both a scalable and a fixed-sized icon.
+	Fixes #302902.
+
+2005-05-08  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_styleregion_start) : work around use of
+	  negative rotations which are used to indicate vertical text.
+	* src/xml-io.c (xml_read_style) : ditto.
+
+2005-05-07  Jody Goldberg <jody@gnome.org>
+
+	* src/style.h : Add a 'VALIGN_DISTRIBUTED' that was added in XP
+	  dunno what it does yet.
+	* src/dialogs/dialog-cell-format.c : Add an entry for DISTRIBUTED
+
+	* src/mstyle.h : document the range of rotation
+
+	* src/workbook-view.c : remove pointless include
+	* src/hlink.c : remove pointless include
+
+2005-05-07  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/dialogs/dialog-about.c: (dialog_about): add NULL third arg
+	to go_data_vector_val_new and go_data_vector_str_new.
+	* src/stf-parse.c: use go_setlocale instead of gnm_setlocale.
+	* src/xml-io.c: (xml_workbook_write), (xml_workbook_read): ditto.
+	* src/xml-sax-read.c: (gnm_xml_file_open): ditto.
+	* src/xml-sax-write.c: (gnm_xml_file_save),
+	(gnm_cellregion_to_xml): ditto.
+
+2005-05-06  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_sheet_move): Public again.  Fix docs.
+
+	* src/workbook-control-gui.c (gnm_notebook_page_num_by_label):
+	Renamed from gtk_notebook_page_num_by_label.
+	(cb_sheet_label_drag_data_received): Fix this in the presence of
+	hidden sheets.
+	(wbcg_sheet_move): Change to take old_pos, not new_pos which is
+	trivial to get.  All callers changed.  Fix for the case where some
+	sheets are hidden.
+
+	* src/workbook.c (workbook_unref): Remove and replace calls with
+	simple g_object_unref
+
+2005-05-05  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_focus_other_sheet): New function.
+	(workbook_sheet_hide_controls, workbook_sheet_delete): Use
+	workbook_focus_other_sheet.
+	(workbook_sheet_unhide_controls): Do nothing if sheet is already
+	shown.
+	(workbook_sheet_add): Take a numerical position, not a sheet
+	pointer for placement.  All callers changed.
+	(workbook_sheet_attach_at_pos): New function extracted from
+	workbook_sheet_attach.
+	(workbook_sheet_attach): Make this not take a placement parameter.
+	All callers changed.
+	(workbook_sheet_move): Make static, don't return a value, and make
+	3d references.
+	(workbook_sheet_state_new, workbook_sheet_state_free,
+	workbook_sheet_state_restore, workbook_sheet_state_diff): New
+	functions.
+
+	* src/commands.c (cmd_reorganize_sheets2): New function.
+	(cmd_rename_sheet): Use cmd_reorganize_sheets2.
+
+	* src/dependent.c (do_deps_destroy): Fix sheet-remove crash.
+
+2005-05-04  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_show_menu_tip): Don't translate a space.
+
+	* src/commands.c (cmd_rename_sheet): Simplify calling convention.
+	Single caller fixed.
+
+	* src/gui-util.c (gnumeric_popup_menu): If we have an event
+	anchor, use that to figure out what screen to show the popup on.
+
+2005-05-03  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (cb_zoom_change): New function,
+	extracted from wbcg_zoom_feedback.
+	(wbcg_zoom_feedback): Remove zoom_feedback method.
+	(wbcg_sheet_add): Don't attach to sheet notify signals here.
+	(wbcg_sheet_focus): Do it here so we only watch one sheet at a
+	time.
+	(wbcg_sheet_remove, wbcg_sheet_remove_all): Disconnect here too.
+
+	* src/sheet.c (sheet_set_zoom_factor): Make static and add
+	zoom-factor property.  All callers changed.
+
+	* src/workbook-view.c (wb_view_prefs_update): Remove.
+
+	* src/workbook-control-priv.h: Remove prefs_update member.
+
+	* src/sheet-control-priv.h: Remove adjust_preferences and
+	direction_changed members.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new): Also hook up to
+	sheet:text-is-rtl.
+
+	* src/workbook-control-gui-priv.h: Remove rtl property.  All users
+	changed to use sheet's text_is_rtl (and some already were).
+
+	* src/sheet-control-gui-priv.h: Remove text_is_rtl property.  All
+	users changed to use sheet's text_is_rtl (and some already were).
+
+	* src/xml-sax-read.c (xml_sax_sheet_name): Use g_object_set to set
+	sheet properties.
+
+	* src/workbook-control-gui.c (wbcg_sheet_add): Connect to more
+	sheet properties.
+	(workbook_control_gui_class_init): Eliminate
+	wbc_class->menu_state.sheet_prefs.
+
+	* src/sheet.c (gnm_sheet_set_property): Add properties
+	"display-outlines-below" and "display-outlines-right".
+	(sheet_adjust_preferences): No need to call
+	wb_control_menu_state_sheet_prefs anymore.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new): Connect to
+	notify signals for all the sheet properties that cause changed
+	display.
+
+2005-05-02  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_sheet_add): Connect to
+	sheet::name, sheet:tab-foregound, sheet:tab-background.
+	(wbcg_sheet_remove): Disconnect.
+	(wbcg_sheet_rename): Remove this method from the class.
+
+	* src/commands.c (cmd_reorganize_sheets_finalize): Plug leak.
+
+	* src/workbook-control-gui.c (cb_sheet_label_drag_end): Plug leak.
+
+	* src/workbook.c (workbook_detach_view): Call sv_dispose to break
+	circular links.
+	(workbook_sheet_hide_controls): Fix search for focus and thus
+	return value.
+	(workbook_set_dirty, workbook_is_dirty, workbook_is_pristine):
+	Walk the sheet array, not the hash.
+
+	* src/sheet.c (sheet_destroy): Call sv_dispose to break circular
+	links.
+
+	* src/sheet-view.c (sheet_view_new): Keep a ref to the sheet.
+	(sv_dispose): New function.
+	(sv_real_dispose): Renamed from s_view_finalize (and made proper
+	for a dispose function).
+
+2005-05-02  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-view.c (sv_direction_changed): Make static and change
+	to a notification handler.
+
+	* src/sheet.c (sheet_attach_view): Fold into sheet_view_new.
+	(sheet_detach_view): Fold into s_view_finalize.
+	(gnm_sheet_init): Setup ->sheet_views properly here.
+
+	* src/style-color.c (gnm_style_color_get_type): New function
+	defining the type as a boxed type.
+
+	* src/sheet.c: Add "name", "tab-foreground", and "tab-background"
+	properties.
+	(sheet_set_tab_color): Remove.  All callers changed to use
+	g_object_set.
+	(sheet_rename): Make static.  All callers changed to use
+	g_object_set.
+
+2005-04-21  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object.[ch]: Add sheet_object_get_target_list.
+
+	* src/sheet-object-image.c (sheet_object_image_get_target_list): 
+	New. Gets targets object is able render itself as.
+	(soi_imageable_init): Register get_target_list virtual.
+
+	* src/sheet-object-graph.c (sheet_object_graph_get_target_list):
+	New. Gets targets object is able render itself as.
+	(sog_imageable_init): Register get_target_list virtual.
+
+	* src/sheet-control-gui.c (scg_drag_send_image): Use
+	go_mime_to_image_format to get format.
+
+	* src/gui-clipboard.c (image_write): Use go_mime_to_image_format
+	to get image format.
+	(target_list_to_entries): New. Convert a target list to an array
+	of GtkTargetEntries.
+	(x_claim_clipboard): Use sheet_object_get_target_list to get
+	targets for images.
+
+	* src/gnumeric-pane.c (cb_test_so_imageable): Remove
+	(target_list_add_list): New. Add targets from "added_targets" to
+	"targets".
+	(gnm_pane_drag_begin): Use sheet_object_get_target_list to get
+	targets for images.
+
+2005-04-29  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_class_init): Make lots of things
+	properties.
+	(sheet_set_visibility, sheet_toggle_show_formula,
+	sheet_toggle_hide_zeros): Make static (and make the toggle ones
+	actually toggle).
+
+	* src/commands.c (cmd_toggle_rtl_redo): Use go_object_toggle.
+
+	* src/sheet.c (sheet_set_direction): Make static.  Change all
+	existing callers to use g_object_set.
+	(gnm_sheet_class_init): Install PROP_RTL.
+
+2005-04-28  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (AC_CANONICAL_HOST): Call explicitly, we use $host.
+	(WITH_WIN32): Small changes to make more the same as in goffice.
+	(--disable-plugins): Support this.
+	(WINDRES): Add an AC_ARG_VAR declaration.
+	And some whitespace changes.
+
+2005-04-26  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (hf_format_render): If format is NULL, simply
+	return NULL.
+
+	* src/print.c (print_hf_element): Handle NULL text from
+	hf_format_render same as "".
+
+	* src/gui-file.c (gui_file_save_as): Add a little crash safety.
+
+2005-04-21  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/Makefile.am (gnumeric-paths.h): Rewrite the rule,
+	  gnumeric-paths.sh* is no longer used.
+	* src/gnumeric-paths.sh.in: Removed.
+	* src/.cvsignore: Remove src/gnumeric-paths.sh.
+	* configure.in: Don't generate gnumeric-paths.sh, rearrange the
+	  gnumeric_* AC_SUBSTs.
+	(gnumeric_gladedir, gnumeric_autoformatdir): Nuke.
+	* src/dialogs/Makefile.am (gnumeric_gladedir): Replace by value.
+	* templates/autoformat/Makefile.am (autoformatdir): New variable.
+	(EXTRA_DIST): Don't use "%" when replacing suffixes; it's GNU make
+	  specific.
+
+2005-04-20  Stepan Kasal  <kasal@ucw.cz>
+
+	gnm_sys_lib_dir() and such now just return the string;
+	they don't take any parameter and don't allocate anything.
+
+	* src/libgnumeric.h (gnumeric_lib_dir, gnumeric_data_dir):
+	  Move to gutils.h; #include "gutils.h".
+	(gnumeric_icon_dir, gnumeric_locale_dir): Move to gutils.c
+	  and make static.
+	* src/libgnumeric.c: Likewise.
+	(gnm_pre_parse_init): Call gutils_init instead of doing it.
+	(gnm_shutdown): Call gutils_shutdown instead of doing it.
+	* gutils.h:
+	* gutils.c (gutils_init, gutils_shutdown): New functions.
+	(gnumeric_usr_dir): New static variable, set up in gutils_init.
+	(gnm_sys_lib_dir, gnm_sys_data_dir, gnm_usr_dir): Just return
+	  the static string; all callers fixed.
+	(gnm_sys_glade_dir, gnm_sys_plugin_dir, gnm_usr_plugin_dir):
+	  Nuked; callers fixed to build the string themselves.
+	(gnm_icon_dir, gnm_locale_dir): New wrappers; callers fixed.
+	(PLUGIN_SUFFIX): Renamed to ...
+	(PLUGIN_SUBDIR): ..., and moved to .h.
+	* src/gui-util.c (gnumeric_icondir): This function was removed;
+	  callers fixed to use gnm_icon_dir.
+
+	* src/sheet-object-image.c: Include goffice/utils/go-glib-extras.h
+
+2005-04-20  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* src/wbc-gtk.c (wbc_gtk_init_font_name): Set
+	"case-sensitive" to FALSE. Fix #161382.
+
+2005-04-19  Morten Welinder  <terra@gnome.org>
+
+	* src/clipboard.c (clipboard_init, clipboard_shutdown): New
+	functions.
+	(gnm_cell_copy_new): Alloc in pool.
+	(cellregion_unref): Free from pool.
+
+	* src/libgnumeric.c (gnm_common_init): Call clipboard_init.
+	(gnm_shutdown): Call clipboard_shutdown.
+
+	* */*.c: #include fixes.
+
+	* src/rangefunc.c (range_mode): Fix the case where multiple
+	different values occur equally often.
+
+2005-04-18  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/libgnumeric.h (gnumeric_lib_dir, gnumeric_data_dir):
+	(gnumeric_icon_dir, gnumeric_locale_dir): Declare as "const char*",
+	  not "const char[]"; we use "&gnumeric_lib_dir" sometimes.
+	* src/libgnumeric.c: Likewise.
+
+2005-04-19  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/Makefile.am (SUFFIXES): Remove, Automake (at least >= 1.7)
+	  deduces this.
+
+2005-04-18  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/libgnumeric.h (gnumeric_lib_dir, gnumeric_data_dir):
+	(gnumeric_icon_dir, gnumeric_locale_dir): Declare as "const char[]"
+	to get rid of some warnings (unless we are on OS/2). 
+	* src/libgnumeric.c: Likewise.
+
+2005-04-18  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in: Call PKG_PROG_PKG_CONFIG explicitly.
+	* Makefile.am (dist-hook): Don't handle gnumeric.spec here, ...
+	(EXTRA_DIST): ... it's enough to add it here.
+	  I tested this change with automake versions 1.7.9, 1.8.5 and 1.9.5.
+	* schemas/Makefile.am: To silence `automake -Wall', don't use
+	pattern rules (with %.reg), use portable suffix rules instead.
+
+2005-04-16  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* configure.in:
+	* Makefile.am: New subdir 'tools', we now have a win32
+	binary to build.
+
+	* schemas/Makefile.am: Install .reg files into
+	$prefix/etc/win32/reg. Two versions are served, i.e.
+	.hkcu.reg and .reg. When the user chooses to install
+	gnumeric/win32 for the "current user" only, use .hkcu.reg
+	and otherwise .reg.
+
+	* src/tools/Makefile.am:
+	* src/tools/gconf-schemas-to-win32-reg.c: Moved to tools/;
+	see tools/ChangeLog for details.
+
+2005-04-15  Stepan Kasal  <kasal@ucw.cz>
+
+	* schemas/Makefile.am (CLEANFILES): Add $(reg_DATA), if we are
+	  building .reg files.
+	Don't distribute $(schema_DATA).
+
+2005-04-13  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pfuncinverter): Handle Newton search when log_p
+	is TRUE.
+	(dgamma1, dbeta1): Don't bail out for log_p.
+
+2005-04-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_claim_clipboard): Don't clear clipboard
+	if we still own CLIPBOARD.
+
+	* src/sheet-control-gui.c (scg_drag_receive_uri_list): Handle a
+	bunch of extra mime types for dropped files.
+	(scg_drag_receive_cellregion, 
+	(scg_drag_receive_same_proc_other_scg,
+	(scg_drag_send_clipboard_objects): Check that cell region is non
+	null before using it.
+
+2005-04-12  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_sendto): Fix setting of "problem".
+	Handle failure of mkdtemp.
+
+2005-04-11  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (qf): Make our own version of this.
+
+2005-04-10  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* src/dialogs/dialog-preferences.c (cb_pref_font_hf_set_fonts,
+	cb_pref_font_set_fonts):
+	They were broken by my changes in 2005-04-08.
+
+2005-04-09  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (qf): Make our own version of this.  It's quite
+	simple now that we have a working qbeta.
+
+2005-04-05  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162951 : trivial
+	* src/sheet-control-gui.c (scg_comment_display) : remove some
+	  unnecessary code now that a gtk bug has been fixed.
+
+2005-04-09  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* configure.in: Determine whether we are cross-compiling.
+
+	* src/libgnumeric.[ch]: Path variables should not be const.
+
+2005-04-08  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* schemas/Makefile.am: Convert .schemas to .reg if host_os ==
+	win32 and we are not cross-compiling.
+
+	* src/application.c (gnm_app_history_add):
+	* src/libgnumeric.c (gnm_shutdown):
+	* src/print-info.c:
+	* src/dialogs/dialog-function-select.c
+	(dialog_function_write_recent_func):
+	* src/dialogs/dialog-preferences.c:
+	* src/tools/auto-correct.c: adopt to the modified
+	gnumeric-gconf's api.
+
+	* src/tools/Makefile.am:
+	* src/tools/gconf-schemas-to-win32-reg.c: New. The name
+	explains itself.
+
+	* src/gnumeric-gconf-priv.h:
+	* src/gnumeric-gconf.[ch]: Introduce the concept of a
+	"node". Implement the win32 backend.
+
+2005-04-08  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pfuncinverter): Improve in the special case
+	where one of the interval endpoints is 0.
+
+	* src/xml-sax-write.c (gnm_xml_file_save): Untangle the
+	do-we-compress logic and make it work.  Fixes #173030.
+	* src/xml-io.c (gnumeric_xml_write_workbook): Ditto.
+
+	* src/xml-sax-write.c (xml_write_cell_and_position): Fix crash.
+	* src/xml-io.c (xml_write_cell_and_position): Ditto.
+
+2005-04-04  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c (stf_export_cell): Introduce "auto" mode and do
+	something sensible with dates and times.  (Fixes #128936)
+
+2005-04-04  Stepan Kasal  <kasal@ucw.cz>
+
+	s/INCLUDES/AM_CPPFLAGS/  "automake -Wall" has told me this.
+
+	* src/Makefile.am (non-intermediate): New dummy rule; see
+		http://bugzilla.gnome.org/show_bug.cgi?id=172211 and
+		http://bugzilla.gnome.org/show_bug.cgi?id=172212
+	(.list.c, .list.h): Remove $(GLIB_GENMARSHAL); it didn't work
+	  anyway, the prerequisities of an implicit rule are ignored.
+	* Makefile.am: Use $(POFILES_FULL), not GNU-specific $(wildcard...).
+	* configure.in (GLIB_GENMARSHAL): Full path is not needed.
+	(POFILES_FULL): New AC_SUBSTed variable, contains full paths to
+	  po/*.po files.
+	(perl): Fix a typo, and a few cosmetic changes.
+	(AC_OUTPUT): Remove plugins/perl/*.
+	* plugins/perl/*: Removed.
+
+2005-04-04  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c: Derive from GsfOutputCsv.
+
+2005-04-04  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-write.c (gnm_cellregion_to_xml) : add a namespace decl
+
+2005-04-04  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c : moved into the core from a plugin
+	* src/xml-sax-write.c : ditto.
+	(gnm_cellregion_to_xml) : new.
+
+	* src/xml-io.c (xml_cellregion_write) : delete the DOM based version.
+	(xml_init) : register the sax in/out routines
+
+2005-04-04  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-clipboard.c (cellregion_to_string) : remove offset.
+
+2005-04-02  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (perl): Fix perl checks.  (I hope.)
+
+2005-04-02  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/style.c: (style_init), (style_shutdown): removed calls to 
+	number_format_init/shutdown (moved to goffice).
+
+2005-04-01  Steve Murphy  <murf@e-tools.com>
+
+	* configure.in: Added "rw" to ALL_LINGUAS.
+
+2005-04-01  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (csv_tsv_probe): In the content phase, decode to UTF-8
+	before testing.  (Fixes #167191.)
+
+2005-04-01  Jon K Hellan  <hellan@acm.org>
+
+	* src/gnm-so-filled.c (gnm_so_polygon_write_xml_dom) 
+	(gnm_so_polygon_write_xml_sax): Fix warnings.
+
+2005-04-01  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (wbcg_sheet_add): Make the
+	GNUMERIC_SHEET target GTK_TARGET_SAME_APP. 
+	(cb_wbcg_drag_data_received): Added source_widget parameter.
+
+	* src/sheet-object.c (sheet_object_rubber_band_directly): Always
+	return FALSE.
+
+	* src/gnumeric-pane.c (drag_types_in, drag_types_out):
+	New. Supported drag targets.
+	(cb_pane_drag_data_received): Pass source widget to
+	scg_drag_data_received. 
+	(cb_gnm_pane_drag_data_get): New. drag-data-get callback.
+	(cb_gnm_pane_drag_motion): New. drag-motion callback.
+	(cb_gnm_pane_drag_leave): New. drag-leave callback.
+	(gnm_pane_drag_dest_init): New. Factor out of gnm_pane_init and
+	Connect drag-data-get, drag-motion and drag-leave callbacks. 
+	(gnm_pane_init): Use it.
+	(gnm_pane_objects_drag): New. Factored out of gnm_pane_object_move.
+	(gnm_pane_object_move): Use it.
+	(cb_test_so_imageable): New. Check if object is imageable.
+	(gnm_pane_drag_begin): New. Start gtk drag.
+	(cb_control_point_event): Use it.
+
+	* src/sheet-control-gui.c (scg_paste_cellregion): New. Paste
+	a cellregion.
+	(scg_drag_receive_cellregion): New. Receive a dropped cellregion.
+	(scg_drag_receive_uri_list): New. Receive a dropped uri list.
+	(scg_drag_receive_same_scg): New. Receive a drop from same scg.
+	(scg_drag_receive_same_proc_other_scg): New. Receive a drop from
+	another scg in same process.
+	(scg_drag_receive_same_process): New. Receive a drop from this
+	gnumeric process.
+	(scg_drag_data_received): Added source_widget parameter. Handling
+	of each target moved to a separate function. Added support for gnumeric
+	gtk clipboard format. Added support for process internal dnd which
+	shortcuts the selection.
+	(scg_drag_send_image): New. Send an image over the dnd selection.
+	(scg_drag_send_clipboard_objects): New. Send selected objects over
+	the dnd selection. Gnumeric gtk clipboard format is used.
+	(scg_drag_data_get): New. Send selected objects over the dnd
+	selection in requested format.
+
+2005-04-01  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c: Gut.  Use GsfOutputCsv.  (Fixes #126513.)
+
+2005-03-31  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (regenerate_window_menu): Clean up and allow more
+	windows in the menu.
+
+	* src/search.c (gnm_search_replace_class_init): Make scope a
+	property too.
+
+	* src/commands.c (cmd_set_text): Improve undo description.  Fixes
+	#171637.
+
+	* src/workbook-view.c (wbv_save_to_uri): Don't set the error if we
+	already have one.  Together with libgsf and goffice changes, this
+	fixes #168581.
+
+2005-03-31  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=87528
+	* src/commands.c (cmd_paste_copy) : When not transposing and pasting
+	  into a single cell, be more flexible and allow full cols/rows.
+
+2005-03-31  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=87477
+	* src/commands.c (cmd_paste_copy) : Use a nice simple tiling approach.
+
+2005-03-30  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (search_collect_cells): Drop sheet argument.  We
+	already have it.  All callers changed.
+
+	* src/commands.c (cmd_search_replace_do): Drop unused sheet and
+	workbook arguments.  All callers changed.
+	(cmd_search_replace): Drop sheet argument.  All	callers changed.
+
+	* src/search.c: Adapt to goffice changes.  (Aka make it an object
+	and cut most of it.)
+	(gnm_search_replace_class_init): Define a pile of properties.
+
+2005-03-29  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (tokenized_help_new) : warning suppression.
+
+	* src/expr.c (gnm_expr_is_array) : new.
+
+2005-03-29  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_write_cell_and_position) : Take a value and
+	  expression directly rather than a Cell to allow re-use between the
+	  new clipboard data structure GnmCellCopy and GnmCell.
+
+	* src/gui-clipboard.c (text_to_cell_region) : store data directly.
+	(cellregion_to_string) : moved from clipboard.c and tweaked to support
+	  the new data structure.
+	(x_clipboard_get_cb) : no need for a pango context, we ignore variable
+	  width formats when exporting.
+
+	* src/sheet-style.c (style_list_get_style) : Use col & rol vs CellPos.
+
+	* src/clipboard.c : Simplify GnmCellCopy and remove the ancient bogus
+	  notion of keeping a copy of a full cell.
+	(contents_as_expr) : renamed from cell_get_contents_as_expr, and
+	  changed to take the expr and val directly.
+	(apply_paste_oper_to_values) : deleted and merged into.
+	(paste_cell_with_operation) : here.
+	(gnm_cell_copy_new) : new.
+	(paste_cell) : add some const.
+	(clipboard_paste_region) : const and adjust to the changes.
+	  We can test for pasting content here rather than per-cell.
+	(cb_clipboard_prepend_cell) : use gnm_cell_copy_new.
+	(cellregion_unref) : adjust to data structure change.
+	(cellregion_to_string) : moved into gui-clipboard.c.  It's not really
+	  gui specific but that is the only thing that uses it for now.
+
+2005-03-29  Jon K Hellan  <hellan@acm.org>
+
+	* src/xml-io.c (xml_cellregion_read): Silence warning.
+
+2005-03-29  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.c (col_name_internal): Handle nagative column
+	numbers a bit saner.
+
+2005-03-29  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (--with-perl): Mention bug #171957.
+
+2005-03-28  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (image_write): Look harder for selected
+	imageable objects.
+
+	* src/item-grid.c (drag_start): Remove.
+	(item_grid_button_press): Don't call drag_start.
+
+	* src/xml-io.c (xml_cellregion_read): Make param 'buffer' const.
+
+2005-03-28  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_auto_expr_precision): New function.
+
+	* src/workbook-control-gui.c (cb_auto_expr_precision_toggled): New
+	function.
+	(cb_select_auto_expr): Add a check item to control whether maximum
+	precision is used.
+
+2005-03-28  Jon K Hellan  <hellan@acm.org>
+
+	* src/clipboard.[ch]: (clipboard_copy_obj): New. Returns a cell
+	region with copies of objects in list. Factored out of
+	gnm_app_clipboard_cut_copy_obj.
+
+	* src/application.c (gnm_app_clipboard_cut_copy_obj): Use
+	clipboard_copy_obj. 
+
+2005-03-28  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc): Take format from
+	auto-format.
+	(wb_view_auto_expr_recalc): Plug leak.
+
+	* src/xml-io.c: Don't include <goffice/utils/go-locale.h> which
+	just went away and wasn't needed anyway.
+
+	* src/*.c src/*/*.c plugins/*/*.c: Use canonical object property
+	names.
+
+2005-03-24  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=171503
+	* src/gnumeric-gconf.c (gnm_gconf_set_printer_config) : take control
+	  of the string.
+
+2005-03-24  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/style-border.c (style_border_hash): use GPOINTER_TO_UINT
+	  rather than just casting.
+
+2005-03-24  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_clipboard_get_cb): Plug leak.
+
+2005-03-24  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (tdistexp): Take a log_p flag.  Improve accuracy
+	a tiny bit, mostly in the log case.
+	(binApprox): Move logs earlier and improve log case's accuracy.
+
+	* src/application.c (gnm_app_get_pixbuf): Use non-zero size.
+
+	* src/print.c (print_hf_element): If we have no format, don't
+	print anything.
+
+2005-03-23  Morten Welinder  <terra@gnome.org>
+
+	* src/numbers.h: For long double support, include sunmath.c if we
+	have it.
+	* configure.in: Check for sunmath.h
+
+2005-03-23  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-graph.c (sheet_object_graph_write_image): 
+	New. Implements SheetObjectImageable. Extracted from
+	sog_cb_save_as. 
+	(sog_cb_save_as): Use sheet_object_write_image.
+	(sog_imageable_init): SheetObjectImageable gobject voodoo.
+
+	* src/application.c (gnm_app_clipboard_cut_copy_obj): Save sheet
+	object points dimensions as object data.
+
+2005-03-23  Morten Welinder  <terra@gnome.org>
+
+	* src/io-context-gtk.c (icg_processing_file): Fix for Win32.
+	* src/main-application.c (warn_about_ancient_gnumerics): Fix for
+	Win32.
+
+	* src/workbook-view.c (wb_view_sendto): Use g_mkdir, not mkdir.
+	(cb_cleanup_sendto): Use g_unlink and g_rmdir, not unlink and
+	rmdir.
+
+	* src/mathfunc.c (random_01): Use g_open, not open.
+
+	* src/main-application.c (warn_about_ancient_gnumerics): use
+	g_stat, not stat.
+
+	* src/func.c (function_dump_defs): Use g_fopen, not fopen.
+
+	* src/file-autoft.c (category_list_get_from_dir_list): Use
+	g_file_test, not stat.
+
+2005-03-23  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (HAVE_LIBZ): Don't define it, noone uses it, since
+	  zlib is mandatory.
+
+2005-03-22  Morten Welinder  <terra@gnome.org>
+
+	* templates/autoformat/Makefile.am (install-data-local): Don't use
+	${var#pat} and ${var%pat}; it's POSIX feature, but it doesn't work
+	with Solaris' /bin/sh.
+
+2005-03-22  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_update_action_sensitivity): Set
+	editability of sheet tabs too.  Fixes #170958.
+	(sheet_menu_label_run): If we have only one sheet, keep "Remove"
+	in the menu, but make it inactive.  Disable everything when we
+	have a guru.  Use an enum, not a define for bit fields.
+
+2005-03-22  Stepan Kasal  <kasal@ucw.cz>
+
+	* autogen.sh: REQUIRED_AUTOCONF_VERSION=2.54  We already required
+	  that indirectly, by asking for Automake >= 1.7.2.
+	* configure.in: AC_PREREQ(2.54)
+	  - don't default to --without-gtk even if the reqs are not met;
+	  - fail if someone tries --with-python=/path;
+	  - when searching for $PYTHON, try python2.4 and such; 
+	  - don't generate stamp.h; the issue is solved by Automake 1.7.2;
+	    see info '(autoconf)Automatic Remaking' for details.
+	* stamp.h.in: Nuke.
+	* .cvsignore: Remove stamp.h and stamp-h.in.
+
+2005-03-21  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_dispose): Simplify using
+	workbook_set_saveinfo.  Move destruction of local functions to
+	here.
+	(workbook_finalize): From here.
+	(workbook_sheet_name_strip_number): Fix docs; handle overflow;
+	return unsigned value.
+	(workbook_sheet_get_free_name): Adapt to changes in
+	workbook_sheet_name_strip_number.
+
+2005-03-21  Stepan Kasal  <kasal@ucw.cz>
+
+	* autogen.sh: Remove the unfortunate TRANSL_ONLY; fix the explanation
+	  why we need our own copy of po/Makefile.in.in; use a nicer code to
+	  generate po-functions/POTFILES.*.
+	* README: Fix the Debian package name for pango, remove the intltool
+	  requirement.
+	* gnumeric.spec.in: Update the dependencies.
+
+2005-03-17  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_claim_clipboard): Check for content == NULL.
+
+2005-03-17  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (maybe_convert): Use go_guess_encoding.
+
+2005-03-17  Stepan Kasal  <kasal@ucw.cz>
+
+	* autogen.sh: Use egrep, not awk; there is a system which distributes
+	  a very broken version of it.  Thanks to Morten for noting this.
+
+2005-03-16  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (maybe_convert): Explicitly try ISO-8859-1 if
+	locale fails.
+
+	* src/workbook-control.c (wb_control_update_title): Handle NULL
+	basename.
+
+	* src/wbc-gtk.c (regenerate_window_menu): Ignore workbooks where
+	we don't get a valid basename.
+
+	* src/workbook-priv.h (struct Workbook): Remove .basename.
+
+	* src/workbook.c (workbook_get_basename): Delete, it's unused.
+
+	* src/parse-util.c (row_parse): Fix parsing problem.  [#170465]
+
+2005-03-13  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=169830
+	* src/gnumeric-pane.c (gnm_pane_init) : init the zoom.
+	(gnumeric_pane_header_init) : ditto.
+
+2005-03-16  Stepan Kasal  <kasal@ucw.cz>
+
+	* autogen.sh: require intltool >= 0.29; fix IFS handling;
+	  create po*/Makefile.in.in and po-functions/POTFILES.* ---
+	  and if the traslators don't want anything but these files, they
+	  can just run "TRANSL_ONLY=1 ./autogen.sh".
+	* acinclude.m4: Nuked, it shouldn't be needed.
+	* Makefile.am (ACLOCAL_AMFLAGS): Remove.
+	* configure.in: Do AC_SUBST(ACLOCAL_AMFLAGS, $ACLOCAL_FLAGS);
+	  don't show --with-guile in the help, don't configure
+	  directories plugins/gb/ and plugins/guile/.
+	* plugins/Makefile.am (SUBDIRS): Simplify the conditional
+	  assignments; omit subdirs gb and guile.
+	* plugins/gb/Makefile.am, plugins/guile/Makefile.am: Add a text to
+	  the top, warning about POTFILES.skip.
+	* src/pixmaps/Makefile.am (STRIP_BEGIN, STRIP_END, STRIP_DUMMY):
+	  Remove these, I see no need for them; the cosmetic advantage
+	  can be achieved with one echo.
+	* configure.in (STRIP_BEGIN, STRIP_END, STRIP_DUMMY): Don't detect.
+
+	In many files, fix the typo contraint --> constraint.
+
+2005-03-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (image_write): New. Write an object as image
+	to the clipboard.
+	(x_clipboard_get_cb): Analyze clipboard content and advertise
+	image formats when appropriate.
+
+2005-03-15  Morten Welinder  <terra@gnome.org>
+
+	* src/search.h (struct SearchFilterResult): Don't store cell and
+	comment.
+
+	* src/workbook.c (workbook_sheet_detach): Emit sheet_deleted
+	signal here.
+	(workbook_sheet_delete): Not here.
+	(workbook_dispose): New function, extracted from
+	workbook_finalize.
+	(workbook_class_init): Install ->dispose.
+
+2005-03-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-image.c (sheet_object_image_write_image):
+	New. Implements SheetObjectImageable. Extracted from
+	soi_cb_save_as. 
+	(soi_cb_save_as): Use sheet_object_write_image.
+	(soi_imageable_init): SheetObjectImageable gobject voodoo.
+
+	* src/sheet-object.[ch] (sheet_object_imageable_get_type): New. For
+	the SheetObjectImageable interface.
+	(sheet_object_write_image): New. Method of SheetObjectImageable.
+
+	* src/sheet-object-impl.h: Add _SheetObjectImageableIface
+
+	* src/gnumeric.h: Add SheetObjectImageableIface
+
+2005-03-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_finalize): New function, split out from
+	sheet_destroy.
+	(sheet_destroy): Just unref objects we hold refs for, i.e., no
+	longer finalize.  All callers changed to unref sheet also.
+	(gnm_sheet_class_init): Install sheet_finalize.  Define
+	detached_from_workbook signal.
+
+	* src/workbook-control-gui.c (wbcg_validation_msg): Fix arg order
+	of go_gtk_dialog_run call.
+
+	* src/gui-file.c (gui_file_save_as): Don't force local-only file
+	chooser.
+
+2005-03-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/wbcg-actions.c: Add <Ctrl>+P accelerator for print.
+
+	* src/gui-clipboard.c (table_content_received): Paste selection
+	with only objects, no cells.
+
+2005-03-10  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_cell): Pretend to have zoom=100%.
+
+	* src/sheet-control-gui.h (scg_get_style_font): Delete.  Expand
+	into all callers.
+
+	* src/rendered-value.c (rendered_value_new,
+	rendered_value_render): Take zoom as a parameter.  All callers
+	changed.
+	(calc_indent): Take zoom instead of sheet as parameter.
+
+2005-03-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/gnumeric-pane.c (gnm_pane_init): Add drag action
+	GDK_ACTION_MOVE. Needed for drag receive from konqueror.
+
+2005-03-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (text_content_received): New. Split out of
+	complex_content_received.
+	(image_content_received): New. Receive image data.
+	(table_content_received): Renamed from complex_content_received
+	and split.
+	(x_targets_received): Renamed from x_clipboard_received.
+	(x_request_clipboard): Use gtk_clipboard_request_targets-
+
+2005-03-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-control-gui.c (scg_image_create): New. The parts which
+	are common to scg_paste_image and scg_drag_receive_img_data.
+	(scg_paste_image): New. Create an image at natural size and place
+	it  at position given by range.
+	(scg_drag_receive_img_data): Move parts to scg_image_create.
+
+2005-03-09  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (with-long-double): ride on top of libgoffice's
+	stuff.  That kills all the ugly stuff here.
+
+2005-03-07  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-control-gui.c (scg_drag_data_received): Check for NULL.
+
+2005-03-07  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (cb_wbcg_drag_data_received):
+	Delegate text/uri-list to scg_drag_data_received.
+
+	* src/sheet-control-gui.c (scg_drag_receive_img_data): New. Receive
+	dragged image data.
+	* src/sheet-control-gui.c (scg_drag_receive_img_uri): New. Receive
+	dragged image uri.
+	(scg_drag_receive_spreadsheet): New. Receive dragged spreadsheet
+	uri.
+	(scg_drag_data_received): New. Receive drag data.
+
+	* src/gnumeric-pane.c (cb_pane_drag_data_received): New. Receive
+	drag data.
+	(gnm_pane_init): Register as drag destination.
+
+2005-03-07  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: We no longer need the "finite" hackery.
+
+	* src/mathfunc.c (mathfunc_init): Use goffice's nan etc.
+
+2005-03-04  Jon K Hellan  <hellan@acm.org>
+
+	* src/ssindex.c (main): Plugin api renamed.
+
+	* src/ssconvert.c (main): Ditto.
+
+2005-03-04  Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+
+	* src/sheet-control-gui.c (apply_move): don't get rtl flag from 
+	gcanvas, since it can be not fully initialized.
+	
+2005-03-03  Jon K Hellan  <hellan@acm.org>
+
+	* src/session.c (interaction_function): Deiconify toplevel before
+	displaying save/cancel dialog.
+
+2005-03-03  Morten Welinder  <terra@gnome.org>
+
+	* src/item-cursor.c (item_cursor_target_region_ok): Fix
+	go_gtk_query_yes_no arg order.
+	* src/gui-file.c (check_multiple_sheet_support_if_needed): Ditto.
+	(gui_file_save_as): Ditto.
+
+2005-03-02  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (gnumeric_gtk_reqs): Get rid of GnomeCanvas.
+
+2005-03-01  Jody Goldberg <jody@gnome.org>
+
+	* (all plugins) :
+	    s/GNUMERIC_MODULE_PLUGIN_INFO_DECL/
+	    GOFFICE_MODULE_PLUGIN_INFO_DECL(GNUMERIC_VERSION)/
+
+	* configure.in : Add the libgoffice depend and remove the
+	  src/cut-n-paste/goffice dirs
+	remove test for gnome_print_pango_create_layout.
+	    pango_layout_set_ellipsize,
+	    pango_context_set_matrix,
+	    pango_context_get_font_map
+
+	* src/Makefile.am : drop the built in libgoffice and pcre libraries
+	  we pull them externally now.
+
+2005-03-01  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_glade_group_value): Constify.
+	* src/mstyle.c (mstyle_names): Constify.
+	* src/summary.c (summary_item_name): Constify.
+
+2005-02-28  Morten Welinder  <terra@gnome.org>
+
+	* src/rendered-value.c (rendered_value_render): For numbers, map
+	'-' to U2212 which has same width as "+".
+
+	* src/gnm-format.h: Define a bunch of unicode characters by name.
+	* src/parser.y (yylex): Use these.
+	* src/cell-draw.c (cell_calc_layout): Ditto.
+
+2005-02-25  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Properly get rid of wbcgs when
+	using --quit.
+
+	* src/workbook-control-gui.c (wbcg_create_status_area): Keep a ref
+	for ->auto_expr_label in case the idle handler for updating it
+	triggers at an inconvenient time.
+	(wbcg_finalize): Unref.
+
+	* src/main-application.c (main): Fix leak.
+
+	* src/gnumeric-gconf.c (gnm_conf_shutdown): Fix crash with --quit.
+
+2005-02-24  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_save_as): Fix arg order for
+	go_url_check_extension.
+
+	* src/wbcg-actions.c: Mark action arrays const now that 142334 has
+	been fixed.  Assume GTK_STOCK_ABOUT.
+
+2005-02-23  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (cb_sheet_label_drag_data_received, 
+	cb_sheet_label_drag_leave, cb_sheet_label_drag_motion): Don't
+	crash or complain if drag source is in a different process.
+
+2005-02-22  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in: Fix creation of po-functions/POTFILES.
+	* src/Makefile.am: Fix declarations for generated sources.
+	* src/cut-n-paste-code/goffice/utils/Makefile.am: Likewise.
+	* plugins/corba/Makefile.am: Likewise.
+	* idl/Makefile.am: Likewise.
+
+2005-02-18  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (count_character): Ignore completely empty
+	lines.  They aren't telling us anything about separators.
+
+2005-02-17  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (cb_generate_po) : more validation in preparation for
+	  regenerating the help and po.
+
+2005-02-16  Jody Goldberg <jody@gnome.org>
+
+	* src/libgnumeric.c (gnm_pre_parse_init) : set the path for the new
+	  gnumeric-functions message catalog
+
+	* src/gnumeric-gconf.c : Add an ifdef to silence the gconf warnings
+	* src/io-context.[ch], src/io-context-priv.h : move into goffice/app
+
+2005-02-15  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c: Typo.  [#167495]
+
+	* src/gui-file.c (do_save_as): Expand into lone caller.  Destroy
+	dialog right after we're done with it, so there user doesn't get
+	to press Save while we save.
+
+2005-02-14  Stepan Kasal  <kasal@ucw.cz>
+
+	Don't use #include <src/xyz.h>, as `-I $(top_srcdir)' is not
+	always in the flags; none of these headers is duplicate in the
+	tree, so we can safely omit the dirname.
+
+2005-02-14  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/solver.h: Define most of the structures even if !ENABLE_SOLVER.
+	* src/xml-io.c (xml_read_solver, xml_write_solver): Compile these two
+	  functions even if !ENABLE_SOLVER, so that we don't cripple the
+	  files we open and save; the only thing we really cannot do is to
+	  to compute the text presentation of the constraints.
+
+2005-02-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/stf-parse.c (stf_parse_sheet): Don't crash if parsing
+	doesn't return lines.
+
+2005-02-12  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : move function docs into a distinct message catalog
+	* */*.c : modify all function docs to start using the new format.
+	* src/func.c (gnm_func_load_stub) : adjust to new GnmFuncHelp type
+	(gnm_func_add) : ditto
+	(tokenized_help_new) : ditto
+
+2005-02-10  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=165982
+	* src/gnm-plugin.c (gnm_plugins_init) : Use G_SEARCHPATH_SEPARATOR in
+	  place of hard coding ':' to be more portable.
+	* src/dialogs/dialog-plugin-manager.c (pm_gui_load_directory_page) :
+	  ditto.
+
+2005-02-09  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_sheet_add) : don't create a control
+	  for a hidden sheet.
+
+2005-02-09  Jody Goldberg <jody@gnome.org>
+
+	For david@arabidopsis.info (David J Craigon):
+	* src/ssconvert.c : Add -I flag to specify importer
+
+2005-02-09  Jon K Hellan  <hellan@acm.org>
+
+	* src/Makefile.am (GNUMERIC_BASE): Remove error-info.c.
+
+2005-02-09  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/error-info.h: Nuke, we are using <goffice/app/error-info.h>.
+	* src/Makefile.am: Remove it.
+
+2005-02-09  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (TPUT_CMD, marker_ok, marker_fail, marker_no): Nuke.
+	(BIG_CHECKING): New m4 macro, used to emphasize some of the checks.
+
+2005-02-08  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release bump
+

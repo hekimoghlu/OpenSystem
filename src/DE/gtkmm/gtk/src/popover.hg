@@ -1,0 +1,105 @@
+/* Copyright (C) 2013 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/native.h>
+#include <gtkmm/shortcutmanager.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** Context dependent bubbles.
+ *
+ * %Gtk::Popover is a bubble-like context window, primarily meant to
+ * provide context-dependent information or options. Popovers are
+ * attached to a widget, set with Gtk::Widget::set_parent(). By
+ * default they will point to the whole widget area, although this
+ * behavior can be changed through Gtk::Popover::set_pointing_to().
+ *
+ * The position of a popover relative to the widget it is attached to
+ * can also be changed through Gtk::Popover::set_position().
+ *
+ * By default, %Gtk::Popover performs a GTK grab, in order to ensure
+ * input events get redirected to it while it is shown, and also so
+ * the popover is dismissed in the expected situations (clicks outside
+ * the popover, or the Esc key being pressed). If no such modal behavior
+ * is desired on a popover, Gtk::Popover::set_autohide() may be called on it
+ * to tweak its behavior.
+ *
+ * @ingroup Widgets
+ * @newin{3,12}
+ */
+class GTKMM_API Popover : public Widget, public ShortcutManager, public Native
+{
+  _CLASS_GTKOBJECT(Popover, GtkPopover, GTK_POPOVER, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(ShortcutManager)
+  _IMPLEMENTS_INTERFACE(Native)
+public:
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_popover_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_popover_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_popover_get_child, constversion)
+
+  //This cannot take NULL to mean unset.
+#m4 _CONVERSION(`const GdkRectangle*',`const Gdk::Rectangle&',`Glib::wrap($3)')
+  _WRAP_METHOD(void set_pointing_to(const Gdk::Rectangle& rect), gtk_popover_set_pointing_to)
+#m4 _CONVERSION(`GdkRectangle*',`Gdk::Rectangle&',`Glib::wrap($3)')
+  _WRAP_METHOD(bool get_pointing_to(Gdk::Rectangle& rect) const, gtk_popover_get_pointing_to)
+
+  _WRAP_METHOD(void set_position(PositionType position = PositionType::TOP), gtk_popover_set_position)
+  _WRAP_METHOD(PositionType get_position() const, gtk_popover_get_position)
+
+  _WRAP_METHOD(void set_autohide(bool autohide = true), gtk_popover_set_autohide)
+  _WRAP_METHOD(bool get_autohide() const, gtk_popover_get_autohide)
+
+  _WRAP_METHOD(void set_has_arrow(bool has_arrow = true), gtk_popover_set_has_arrow)
+  _WRAP_METHOD(bool get_has_arrow() const, gtk_popover_get_has_arrow)
+
+  _WRAP_METHOD(void set_mnemonics_visible(bool mnemonics_visible = true), gtk_popover_set_mnemonics_visible)
+  _WRAP_METHOD(bool get_mnemonics_visible() const, gtk_popover_get_mnemonics_visible)
+
+  _WRAP_METHOD(void popup(), gtk_popover_popup)
+  _WRAP_METHOD(void popdown(), gtk_popover_popdown)
+
+  _WRAP_METHOD(void set_offset(int x_offset, int y_offset), gtk_popover_set_offset)
+  _WRAP_METHOD(void get_offset(int& x_offset, int& y_offset) const, gtk_popover_get_offset)
+
+  _WRAP_METHOD(void set_cascade_popdown(bool cascade_popdown = true), gtk_popover_set_cascade_popdown)
+  _WRAP_METHOD(bool get_cascade_popdown() const, gtk_popover_get_cascade_popdown)
+
+  _WRAP_METHOD(void set_default_widget(Widget& widget), gtk_popover_set_default_widget)
+
+  _WRAP_METHOD(void present(), gtk_popover_present)
+
+  _WRAP_PROPERTY("pointing-to", Gdk::Rectangle)
+  _WRAP_PROPERTY("position", PositionType)
+  _WRAP_PROPERTY("autohide", bool)
+  _WRAP_PROPERTY("has-arrow", bool)
+  _WRAP_PROPERTY("default-widget", Widget*)
+  _WRAP_PROPERTY("mnemonics-visible", bool)
+  _WRAP_PROPERTY("child", Widget*)
+  _WRAP_PROPERTY("cascade-popdown", bool)
+
+  _WRAP_SIGNAL(void closed(), "closed")
+  _IGNORE_SIGNAL("activate-default")dnl// action signal
+};
+
+} // namespace Gtk

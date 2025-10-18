@@ -1,0 +1,93 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/systemclock.h>
+#include <memory>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** A Helper object for implementing audio clocks.
+ * Gst::AudioClock makes it easy for elements to implement a Gst::Clock,
+ * they simply need to provide a slot that returns the current clock time.
+ *
+ * This object is internally used to implement the clock in
+ * Gst::AudioBaseSink.
+ *
+ * Last reviewed on 2016-04-23 (1.8.0).
+ */
+class AudioClock : public Gst::SystemClock
+{
+  _CLASS_GOBJECT(AudioClock, GstAudioClock, GST_AUDIO_CLOCK, Gst::SystemClock, GstSystemClock)
+
+public:
+  /** For example,
+   * Gst::ClockTime on_get_time(const Glib::RefPtr<Gst::Clock>& clock);.
+   * This function will be called whenever the current clock time needs to be
+   * calculated. If this function returns Gst::CLOCK_TIME_NONE, the last
+   * reported time will be returned by the clock.
+   *
+   * @param clock The Gst::AudioClock.
+   */
+  typedef sigc::slot< Gst::ClockTime, const Glib::RefPtr<Gst::Clock>& > SlotGetTime;
+
+protected:
+  AudioClock(const Glib::ustring& name, const SlotGetTime& time_slot);
+
+public:
+  /** Create a new Gst::AudioClock instance. Whenever the clock time should
+   * be calculated it will call @a time_slot. When @a time_slot returns
+   * Gst::CLOCK_TIME_NONE, the clock will return the last reported time.
+   * 
+   * @param name The name of the clock.
+   * @param time_slot A slot that returns the time.
+   *
+   * @return a new Gst::AudioClock.
+   */
+  _WRAP_CREATE(const Glib::ustring& name, const SlotGetTime& time_slot)
+
+  _WRAP_METHOD(void reset(Gst::ClockTime time), gst_audio_clock_reset)
+
+  // TODO methods below get GstClock as a first argument,
+  // so have to be wrapped manually. It has been fixed in
+  // GStreamer (https://bugzilla.gnome.org/show_bug.cgi?id=756628)
+  // but patch is not available in 1.8.0 version.
+  _WRAP_METHOD_DOCS_ONLY(gst_audio_clock_adjust)
+  Gst::ClockTime adjust(Gst::ClockTime time);
+
+  _WRAP_METHOD_DOCS_ONLY(gst_audio_clock_get_time)
+  Gst::ClockTime get_time() const;
+
+  _WRAP_METHOD_DOCS_ONLY(gst_audio_clock_invalidate)
+  void invalidate();
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+private:
+  // TODO this slot should be moved in move constructor, but for now it's
+  // impossible to provide custom move constructor
+  // (see https://bugzilla.gnome.org/show_bug.cgi?id=756593).
+  // However, task should be managed by RefPtr class, so move constructor
+  // and move assignment operator will never be called.
+  std::unique_ptr<SlotGetTime> m_slot;
+#endif
+};
+
+} // namespace Gst

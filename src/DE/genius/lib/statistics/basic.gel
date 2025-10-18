@@ -1,0 +1,150 @@
+# Basic statistics
+
+SetHelp("RowMedian","statistics","Calculate median of each row in a matrix");
+function RowMedian(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("RowMedian: argument not value-only matrix");bailout);
+	r = zeros(rows(m),1);
+	if columns(m)%2 == 1 then (
+		for k = 1 to rows(m) do (
+			s = SortVector(m@(k,));
+			r@(k,1) = s@(1,trunc(columns(m)/2)+1)
+		)
+	) else (
+		for k = 1 to rows(m) do (
+			s = SortVector(m@(k,));
+			r@(k,1) = (s@(1,columns(m)/2) +
+				   s@(1,(columns(m)/2)+1))/2
+		)
+	);
+	r
+);
+
+SetHelp("Median","statistics","Calculate median of an entire matrix");
+function Median(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("Median: argument not value-only matrix");bailout);
+	s = zeros(1,rows(m)*columns(m));
+	k = 0;
+	for n in m do
+		s@(1,k=k+1)=n;
+	s = SortVector(s);
+	
+	if columns(s)%2 == 1 then
+		s@(1,trunc(columns(s)/2)+1)
+	else
+		(s@(1,columns(s)/2) +
+		 s@(1,(columns(s)/2)+1))/2
+);
+SetHelpAlias ("Median", "median")
+median = Median
+
+SetHelp("RowAverage","statistics","Calculate average of each row in a matrix");
+function RowAverage(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("RowAverage: argument not value-only matrix");bailout);
+	r = zeros(rows(m),1);
+	for k = 1 to rows(m) do (
+		for j = 1 to columns(m) do
+			r@(k,1) = r@(k,1) + m@(k,j);
+		r@(k,1) = r@(k,1)/columns(m)
+	);
+	r
+);
+SetHelpAlias("RowAverage", "RowMean")
+RowMean = RowAverage
+
+SetHelp("Average","statistics","Calculate average of an entire matrix");
+function Average(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("Average: argument not value-only matrix");bailout);
+	MatrixSum (m) / elements (m)
+);
+SetHelpAlias ("Average", "average")
+average = Average
+SetHelpAlias ("Average", "Mean")
+Mean = Average
+SetHelpAlias ("Average", "mean")
+mean = Average
+
+SetHelp("RowStandardDeviation", "statistics", "Calculate the standard deviations of rows of a matrix and return a vertical vector")
+function RowStandardDeviation(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("rowstdev: argument not value-only matrix");bailout)
+	else if columns(m)<2 then
+		(error("rowstdev: there must be at least two columns");bailout);
+	r = rowaverage(m);
+	for k = 1 to rows(m) do (
+		rr = 0;
+		for j = 1 to columns(m) do
+			rr = rr + (m@(k,j)-r@(k,1))^2;
+		
+		r@(k,1) = sqrt(rr/(columns(m)-1))
+	);
+	r
+);
+SetHelpAlias ("RowStandardDeviation", "rowstdev")
+rowstdev = RowStandardDeviation
+
+SetHelp("RowPopulationStandardDeviation", "statistics", "Calculate the population standard deviations of rows of a matrix and return a vertical vector")
+function RowPopulationStandardDeviation(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("rowstdevp: argument not value-only matrix");bailout);
+	r = rowaverage(m);
+	for k = 1 to rows(m) do (
+		rr = 0;
+		for j = 1 to columns(m) do
+			rr = rr + (m@(k,j)-r@(k,1))^2;
+		
+		r@(k,1) = sqrt(rr/columns(m))
+	);
+	r
+);
+SetHelpAlias ("RowPopulationStandardDeviation", "rowstdevp")
+rowstdevp = RowPopulationStandardDeviation
+
+SetHelp("StandardDeviation", "statistics", "Calculate the standard deviation of a whole matrix")
+function StandardDeviation(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("stdev: argument not value-only matrix");bailout)
+	else if elements(m)<2 then
+		(error("stdev: there must be at least two elements");bailout);
+	r = Average(m);
+	rr = 0;
+	for k in m do
+		rr = rr + (k-r)^2;
+	sqrt(rr/(elements(m)-1))
+);
+SetHelpAlias ("StandardDeviation", "stdev")
+stdev = StandardDeviation
+
+SetHelp("PopulationStandardDeviation", "statistics", "Calculate the population standard deviation of a whole matrix")
+function PopulationStandardDeviation(m) = (
+	if not IsMatrix(m) or not IsValueOnly(m) then
+		(error("stdevp: argument not value-only matrix");bailout);
+	r = Average(m);
+	rr = 0;
+	for k in m do
+		rr = rr + (k-r)^2;
+	sqrt(rr/elements(m))
+);
+SetHelpAlias ("PopulationStandardDeviation", "stdevp")
+stdevp = PopulationStandardDeviation
+
+SetHelp("GaussFunction", "statistics", "The normalized Gauss distribution function (the normal curve)")
+function GaussFunction(x,sigma) = (
+	(1/(sigma*sqrt(2*pi))) *
+	exp(-x^2 / (2*sigma^2))
+)
+
+SetHelp ("GaussDistributionTolerance", "parameters", "Tolerance of the GaussDistribution function")
+parameter GaussDistributionTolerance = 10.0^(-10)
+
+SetHelp("GaussDistribution", "statistics", "Integral of the GaussFunction from 0 to x (area under the normal curve)")
+function GaussDistribution(x,sigma) = (
+	function tmp(x)=GaussFunction(x,sigma);
+	CompositeSimpsonsRuleTolerance(tmp,0,x,
+				       #maximum of fourth derivative
+				       3/(sqrt(2*pi)*sigma^5),
+				       GaussDistributionTolerance)
+)

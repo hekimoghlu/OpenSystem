@@ -1,0 +1,22 @@
+include:
+  - project: "GNOME/citemplates"
+    file: "templates/default-rules.yml"
+  - component: gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master
+    inputs:
+      job-stage: "test"
+      meson-options: "-Denable_gtk_doc=true"
+  - component: "gitlab.gnome.org/GNOME/citemplates/basic-deploy-docs@master"
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "build-gnomeos"
+      tarball-artifact-path: "_builddir/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz"
+
+build:
+  image: fedora:latest
+  stage: test
+  script:
+    - sudo dnf install 'dnf-command(builddep)' -y
+    - sudo dnf builddep jsonrpc-glib-devel -y
+    - meson _build
+    - ninja -C _build 
+    - ninja -C _build test

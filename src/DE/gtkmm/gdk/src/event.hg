@@ -1,0 +1,169 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_DEFS(gdkmm,gdk)
+
+#include <glibmm/refptr.h>
+#include <glibmm/value.h>
+#include <gdkmm/enums.h>
+#include <gdkmm/timecoord.h>
+
+/* Shadow DELETE macro (from winnt.h).
+ * It interferes with Gdk::Event::Type::DELETE.
+ */
+#if defined(DELETE) && !defined(GTKMM_MACRO_SHADOW_DELETE)
+enum { GTKMM_MACRO_DEFINITION_DELETE = DELETE };
+#undef DELETE
+enum { DELETE = GTKMM_MACRO_DEFINITION_DELETE };
+#define DELETE DELETE
+#define GTKMM_MACRO_SHADOW_DELETE 1
+#endif
+
+namespace Gdk
+{
+class GDKMM_API Device;
+class GDKMM_API DeviceTool;
+class GDKMM_API Display;
+class GDKMM_API Drop;
+class GDKMM_API Seat;
+class GDKMM_API Surface;
+
+_WRAP_ENUM(KeyMatch, GdkKeyMatch, decl_prefix GDKMM_API)
+_WRAP_ENUM(ScrollRelativeDirection, GdkScrollRelativeDirection, decl_prefix GDKMM_API)
+
+/** Representing an event sequence.
+ * Used to differentiate between multiple touches on multitouch touchscreens.
+ * It's a hidden struct. You can test %EventSequence pointers for equality,
+ * but you can't do much more with them.
+ */
+struct EventSequence;
+
+/** Functions for handling events from the window system.
+ *
+ * In GTK applications the events are handled automatically by toplevel
+ * widgets and passed on to the event controllers of appropriate widgets,
+ * so these functions are rarely needed.
+ *
+ * Key values are the codes which are sent whenever a key is pressed or released.
+ * The complete list of key values can be found in the
+ * <a href="https://gitlab.gnome.org/GNOME/gtk/tree/main/gdk/gdkkeysyms.h">gdk/gdkkeysyms.h</a>
+ * header file. They are prefixed with <tt>GDK_KEY_</tt>.
+ */
+class GDKMM_API Event final
+{
+  // GdkEvent is registered as a fundamental type.
+  // It has custom reference-counting, so we use it via RefPtr.
+  _CLASS_OPAQUE_REFCOUNTED(Event, GdkEvent, NONE, gdk_event_ref, gdk_event_unref, GDKMM_API)
+  _IGNORE(gdk_event_ref, gdk_event_unref)
+
+public:
+  _WRAP_ENUM(Type, GdkEventType, decl_prefix GDKMM_API)
+
+  _WRAP_METHOD(Type get_event_type() const, gdk_event_get_event_type)
+
+  _WRAP_METHOD(Glib::RefPtr<Surface> get_surface(), gdk_event_get_surface, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Surface> get_surface() const, gdk_event_get_surface, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Seat> get_seat(), gdk_event_get_seat, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Seat> get_seat() const, gdk_event_get_seat, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Device> get_device(), gdk_event_get_device, refreturn, newin "3,94")
+  _WRAP_METHOD(Glib::RefPtr<const Device> get_device() const, gdk_event_get_device, refreturn, constversion, newin "3,94")
+
+  _WRAP_METHOD(Glib::RefPtr<DeviceTool> get_device_tool(), gdk_event_get_device_tool, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const DeviceTool> get_device_tool() const, gdk_event_get_device_tool, refreturn, constversion)
+
+  _WRAP_METHOD(guint32 get_time() const, gdk_event_get_time)
+
+  _WRAP_METHOD(Glib::RefPtr<Display> get_display(), gdk_event_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Display> get_display() const, gdk_event_get_display, refreturn, constversion)
+
+  _WRAP_METHOD(const EventSequence* get_event_sequence() const, gdk_event_get_event_sequence)
+  _WRAP_METHOD(ModifierType get_modifier_state() const, gdk_event_get_modifier_state)
+  _WRAP_METHOD(bool get_position(double& x, double& y) const, gdk_event_get_position)
+
+  /** Extracts all axis values from an event.
+   *
+   * @return A vector of values for all axes. An empty vector in case of failure.
+   */
+  std::vector<double> get_axes() const;
+  _IGNORE(gdk_event_get_axes)
+
+  _WRAP_METHOD(bool get_axis(Gdk::AxisUse axis_use, double& value) const, gdk_event_get_axis)
+  _WRAP_METHOD(bool get_pointer_emulated() const, gdk_event_get_pointer_emulated)
+  _WRAP_METHOD(guint get_button() const, gdk_button_event_get_button)
+  _WRAP_METHOD(ScrollDirection get_direction() const, gdk_scroll_event_get_direction)
+  _WRAP_METHOD(void get_deltas(double& delta_x, double& delta_y) const, gdk_scroll_event_get_deltas)
+  _WRAP_METHOD(ScrollUnit get_scroll_unit() const, gdk_scroll_event_get_unit)
+  _WRAP_METHOD(bool is_scroll_stop() const, gdk_scroll_event_is_stop)
+  //TODO: Remove this description when gdk_scroll_event_get_relative_direction()
+  // gets a description.
+  /** Get the direction relative to physical motion in a scroll event.
+   *
+   * @newin{4,20}
+   */
+  _WRAP_METHOD(ScrollRelativeDirection get_relative_direction() const,
+    gdk_scroll_event_get_relative_direction)
+  _WRAP_METHOD(guint get_keyval() const, gdk_key_event_get_keyval)
+  _WRAP_METHOD(guint get_keycode() const, gdk_key_event_get_keycode)
+  _WRAP_METHOD(ModifierType get_consumed_modifiers() const, gdk_key_event_get_consumed_modifiers)
+  _WRAP_METHOD(guint get_layout() const, gdk_key_event_get_layout)
+  _WRAP_METHOD(guint get_level() const, gdk_key_event_get_level)
+  _WRAP_METHOD(bool is_modifier() const, gdk_key_event_is_modifier)
+  _WRAP_METHOD(bool get_focus_in() const, gdk_focus_event_get_in)
+  _WRAP_METHOD(bool get_touch_emulating_pointer() const, gdk_touch_event_get_emulating_pointer)
+  _WRAP_METHOD(CrossingMode get_crossing_mode() const, gdk_crossing_event_get_mode)
+  _WRAP_METHOD(NotifyType get_crossing_detail() const, gdk_crossing_event_get_detail)
+  _WRAP_METHOD(bool get_crossing_focus() const, gdk_crossing_event_get_focus)
+  _WRAP_METHOD(TouchpadGesturePhase get_touchpad_gesture_phase() const, gdk_touchpad_event_get_gesture_phase)
+  _WRAP_METHOD(guint get_touchpad_n_fingers() const, gdk_touchpad_event_get_n_fingers)
+  _WRAP_METHOD(void get_touchpad_deltas(double& dx, double& dy) const, gdk_touchpad_event_get_deltas)
+  _WRAP_METHOD(double get_touchpad_pinch_angle_delta() const, gdk_touchpad_event_get_pinch_angle_delta)
+  _WRAP_METHOD(double get_touchpad_pinch_scale() const, gdk_touchpad_event_get_pinch_scale)
+  _WRAP_METHOD(guint get_pad_button() const, gdk_pad_event_get_button)
+  _WRAP_METHOD(void get_pad_axis_value(guint& index, double& value) const, gdk_pad_event_get_axis_value)
+  _WRAP_METHOD(void get_pad_group_mode(guint& group, guint& mode) const, gdk_pad_event_get_group_mode)
+
+  _WRAP_METHOD(Glib::RefPtr<Drop> get_dnd_drop(), gdk_dnd_event_get_drop, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Drop> get_dnd_drop() const, gdk_dnd_event_get_drop, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Surface> get_grab_broken_grab_surface(), gdk_grab_broken_event_get_grab_surface, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Surface> get_grab_broken_grab_surface() const, gdk_grab_broken_event_get_grab_surface, refreturn, constversion)
+  _WRAP_METHOD(bool get_grab_broken_implicit() const, gdk_grab_broken_event_get_implicit)
+
+  /** Retrieves the history of the event, as a vector of time and coordinates.
+   *
+   * The history includes events that are not delivered to the application
+   * because they occurred in the same frame as this event.
+   *
+   * Note that only motion and scroll events record history, and motion
+   * events only if one of the mouse buttons is down.
+   *
+   * @return A vector of time and coordinates.
+   */
+  std::vector<TimeCoord> get_history() const;
+  _IGNORE(gdk_event_get_history)
+
+  _WRAP_METHOD(bool triggers_context_menu() const, gdk_event_triggers_context_menu)
+  _WRAP_METHOD(bool get_distance(const Glib::RefPtr<const Event>& event2, double& distance) const, gdk_events_get_distance)
+  _WRAP_METHOD(bool get_angle(const Glib::RefPtr<const Event>& event2, double& angle) const, gdk_events_get_angle)
+  _WRAP_METHOD(bool get_center(const Glib::RefPtr<const Event>& event2, double& x, double& y) const, gdk_events_get_center)
+
+  _WRAP_METHOD(KeyMatch matches(guint keyval, ModifierType modifiers) const, gdk_key_event_matches)
+  _WRAP_METHOD(bool get_match(guint& keyval, ModifierType& modifiers) const, gdk_key_event_get_match)
+};
+
+} // namespace Gdk

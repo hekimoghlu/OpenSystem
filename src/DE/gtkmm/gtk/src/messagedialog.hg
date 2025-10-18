@@ -1,0 +1,92 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/dialog.h>
+#include <gtkmm/enums.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/dialog_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+_WRAP_ENUM(ButtonsType, GtkButtonsType, decl_prefix GTKMM_API)
+
+
+/** Convenient message window.
+ *
+ * Gtk::MessageDialog presents a dialog with an image representing the type
+ * of message (Error, Question, etc.) alongside some message text. It's
+ * simply a convenience widget; you could construct the equivalent of
+ * Gtk::MessageDialog from Gtk::Dialog without too much effort, but
+ * Gtk::MessageDialog saves typing.
+ *
+ * A MessageDialog looks like this:
+ * @image html messagedialog1.png
+ *
+ * @ingroup Dialogs
+ * @deprecated 4.10: Use Gtk::AlertDialog instead.
+ */
+class GTKMM_API MessageDialog : public Dialog
+{
+  _CLASS_GTKOBJECT(MessageDialog, GtkMessageDialog, GTK_MESSAGE_DIALOG, Gtk::Dialog, GtkDialog, , , GTKMM_API)
+  _UNMANAGEABLE
+public:
+  explicit MessageDialog(const Glib::ustring& message, bool use_markup = false, MessageType type = MessageType::INFO, ButtonsType buttons = ButtonsType::OK, bool modal = false);
+  MessageDialog(Gtk::Window& parent, const Glib::ustring& message, bool use_markup = false, MessageType type = MessageType::INFO, ButtonsType buttons = ButtonsType::OK, bool modal = false);
+  _IGNORE(gtk_message_dialog_new, gtk_message_dialog_new_with_markup)
+
+  _IGNORE(gtk_message_dialog_set_markup)
+
+  /** Sets the primary text of the message dialog.
+   *
+   * @param message The message.
+   * @param use_markup Whether @a message contains pango markup.
+   */
+  void set_message(const Glib::ustring& message, bool use_markup = false);
+  _IGNORE()
+
+  /** Sets the secondary text of the message dialog.
+   * Note that setting a secondary text makes the primary text become bold, unless you have provided explicit markup.
+   *
+   * @param text The message.
+   * @param use_markup Whether @a message contains pango markup.
+   */
+  void set_secondary_text(const Glib::ustring& text, bool use_markup = false);
+  _IGNORE(gtk_message_dialog_format_secondary_text, gtk_message_dialog_format_secondary_markup)
+
+  _WRAP_METHOD(Box* get_message_area(), gtk_message_dialog_get_message_area)
+  _WRAP_METHOD(const Box* get_message_area() const, gtk_message_dialog_get_message_area, constversion)
+
+  _WRAP_PROPERTY("message-type", MessageType)
+  //Not wrapped because it is write-only and construct: _WRAP_PROPERTY("buttons", ButtonsType)
+  _WRAP_PROPERTY("text", Glib::ustring)
+  _WRAP_PROPERTY("use-markup", bool)
+  _WRAP_PROPERTY("secondary-text", Glib::ustring)
+  _WRAP_PROPERTY("secondary-use-markup", bool)
+  _WRAP_PROPERTY("message-area", Box*)
+
+};
+
+} // namespace Gtk

@@ -1,0 +1,41 @@
+image: fedora:41
+
+variables:
+  XDG_CACHE_HOME: "$CI_PROJECT_DIR/.cache"
+
+before_script:
+  - >
+    dnf install -y git-core python3-pip python3-gobject flatpak-devel gobject-introspection-devel
+    gtk4-devel gtksourceview5-devel libadwaita-devel gcr-devel gstreamer1-devel
+    libshumate-devel libsoup3-devel vte291-gtk4-devel
+    libportal-devel libportal-gtk4-devel webkitgtk6.0-devel
+    libical
+    python3-devel
+  - pip --cache-dir $XDG_CACHE_HOME/pipcache install -e '.[dev]'
+
+test:
+  script:
+  - pip --cache-dir $XDG_CACHE_HOME/pipcache install pre-commit
+  - pre-commit run --all-files
+  - pytest --cov
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - .cache
+
+pages:
+  script:
+  - ls /usr/share/gir-1.0
+  - GNOME_VERSION=$(dnf info gnome-shell | grep '^Version' | cut -f2 -d:)
+  - python3 -m pygobject_docs.generate --build --gnome "$GNOME_VERSION" $(cat libraries.txt)
+  - mv build/html public
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - .cache
+  artifacts:
+    paths:
+      - public
+      - build/source
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2008-07-20 kost: added 'no'
+  2007-10-22 alex falappa: added 'it'
+  2007-10-09 ude: created 'en','de'
+-->
+<sect2 id="script-fu-xach-effect">
+  <title>Xach-Effect</title>
+
+  <indexterm>
+    <primary>Filters</primary>
+    <secondary>Light and Shadow</secondary>
+    <tertiary>Xach-Effect</tertiary>
+  </indexterm>
+  <indexterm>
+    <primary>Xach-Effect</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Example for the <quote>Xach-Effect</quote> filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/taj_orig.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/light-taj-xach-effect.jpg"/>
+        </imageobject>
+        <caption>
+          <para><quote>Xach-Effect</quote> applied</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      This filter adds a subtle translucent 3D effect to the selected region
+      or alpha channel. This 3D effect is achieved by
+    </para>
+    <orderedlist>
+      <listitem>
+        <para>
+          Highlighting the selection: a new layer (<quote>Highlight</quote>)
+          will be created above the active layer, filled with the highlight
+          color. Then a <link linkend="gimp-layer-mask">layer mask</link> will
+          be added to that layer making the unmasked pixel partially
+          transparent.
+        </para>
+        <mediaobject>
+          <imageobject>
+            <imagedata format="PNG"
+              fileref="images/filters/examples/xach-effect-layers.png"/>
+          </imageobject>
+          <caption>
+            <para>Highlight layer with layer mask</para>
+          </caption>
+        </mediaobject>
+      </listitem>
+      <listitem>
+        <para>
+          Painting the selection's left and top edges with the highlight
+          color: for that the <quote>Highlight</quote> layer will be extended
+          by one pixel left and up. These small areas will be opaque.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Creating a <link linkend="script-fu-drop-shadow">drop shadow</link>
+          at the bottom right side of the selection.
+        </para>
+      </listitem>
+    </orderedlist>
+    <para>
+      You may vary these default settings, for example select different colors
+      for highlight or shadow and change amount and directions of offsets.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Activating the Filter</title>
+    <para>
+      This filter is found in the main menu under
+      <menuchoice>
+        <guimenu>Filters</guimenu>
+        <guisubmenu>Light and Shadow</guisubmenu>
+        <guimenuitem>Xach-Effect…</guimenuitem>
+      </menuchoice>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <para>
+      There are two groups of options, each controlling the highlight or the
+      shadow, and a checkbox for the selection behaviour.
+    </para>
+    <figure>
+      <title><quote>Xach-Effect</quote> options</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/light-and-shadow/xach-effect.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Highlight X offset</term>
+        <term>Highlight Y offset</term>
+        <listitem>
+          <para>
+            The selection's left and top edge are painted with the highlight
+            color. The highlight offset is the size (width or height) of the
+            respective area. If offset is less than 0 (this is the default),
+            the left (X offset &lt; 0) or top (Y offset &lt; 0) area will be
+            colored. If offset is greater than 0, the right (X offset &gt; 0)
+            or bottom (Y offset &gt; 0) area will be painted.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Highlight color</term>
+        <listitem>
+          <para>
+            This is the color used to highlight the selected area. It defaults
+            to white, but clicking on the swatch button brings up a color
+            selector and you may select any other color.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Highlight opacity</term>
+        <listitem>
+          <para>
+            The selection will be covered by a partially transparent area
+            filled with the highlight color. This option lets you set the
+            level of transparency. Since a
+            <link linkend="gimp-layer-mask">layer mask</link> will be used,
+            the value ranges from 0 (full transparency) to 255 (full opacity).
+          </para>
+          <para>
+            The highlight opacity defaults to 66, which is equivalent to 26%.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Drop shadow options</term>
+        <listitem>
+          <para>
+            These options work like the respective
+            <link linkend="script-fu-drop-shadow">Drop Shadow</link> options
+            (without resizing). Briefly:
+          </para>
+          <variablelist>
+            <varlistentry>
+              <term>Drop shadow color</term>
+              <listitem>
+                <para>
+                  Click on the button to open a color selector.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Drop shadow opacity</term>
+              <listitem>
+                <para>
+                  The opacity (0% - 100%) of the layer containing the shadow.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Drop shadow blur radius</term>
+              <listitem>
+                <para>
+                  The radius used by the
+                  <link linkend="gimp-filter-gaussian-blur">Gaussian blur</link> filter,
+                  which will be applied to the shadow.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Drop shadow X offset</term>
+              <term>Drop shadow Y offset</term>
+              <listitem>
+                <para><!--TODO check: is this correct English?-->
+                  Direction and amount, by which the shadow will be moved from
+                  the selection.
+                </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Keep selection</term>
+        <listitem>
+          <para>
+            If checked, the active selection will remain active when the
+            filter has been applied.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

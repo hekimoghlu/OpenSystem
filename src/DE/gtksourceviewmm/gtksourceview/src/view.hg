@@ -1,0 +1,401 @@
+/* view.h
+ *
+ * Copyright (C) 2004-2005 Jae Jang
+ * Copyright (C) 2005-2006 Rob Page
+ * Copyright (C) 2005-2006 Dodji Seketeli
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gtkmm/textview.h>
+#include <gtksourceviewmm/buffer.h>
+#include <gtksourceviewmm/gutter.h>
+#include <gtksourceviewmm/completion.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(gtkmm/private/textview_p.h)
+
+namespace Gsv
+{
+
+class Completion;
+class Gutter;
+class MarkAttributes;
+
+/** Defines a behaviour of smart Home/End keys.
+ */
+_WRAP_ENUM(SmartHomeEndType, GtkSourceSmartHomeEndType, s#^SOURCE_##)
+/** @var SmartHomeEndType SMART_HOME_END_DISABLED
+ * Smart-home-end disabled.
+ */
+/** @var SmartHomeEndType SMART_HOME_END_BEFORE
+ * Move to the first/last non-whitespace character on the first press of the
+ * HOME/END keys and to the beginning/end of the line on the second press.
+ */
+/** @var SmartHomeEndType SMART_HOME_END_AFTER
+ * Move to the beginning/end of the line on the first press of the HOME/END keys
+ * and to the first/last non-whitespace character on the second press.
+ */
+/** @var SmartHomeEndType SMART_HOME_END_ALWAYS
+ * Always move to the first/last non-whitespace character when the HOME/END keys
+ * are pressed.
+ */
+
+_WRAP_ENUM(BackgroundPatternType, GtkSourceBackgroundPatternType, s#^SOURCE_##)
+/** @var BackgroundPatternType BACKGROUND_PATTERN_TYPE_NONE
+ * no pattern
+ */
+/** @var BackgroundPatternType BACKGROUND_PATTERN_TYPE_GRID
+ * grid pattern
+ */
+
+/** The view object.
+ *
+ * View is the main object of the gtksourceviewmm library. It provides
+ * a text view which has syntax highlighting, undo/redo and text marks. Use a
+ * Buffer to display text with a GtkSourceView.
+ */
+class View : public Gtk::TextView
+{
+  _CLASS_GTKOBJECT(View, GtkSourceView, GTK_SOURCE_VIEW, Gtk::TextView, GtkTextView)
+
+public:
+  /// The gutter position of the lines renderer.
+  static const int gutter_position_lines = -30;
+  /// The gutter position of the marks renderer.
+  static const int gutter_position_marks = -20;
+
+  /** Creates a new View.
+   *
+   * An empty default buffer will be created for you. If you want to specify
+   * your own buffer, consider the other constructor.
+   *
+   * @return A new View.
+   */
+  explicit View () ;
+
+  /** Creates a new View widget displaying the buffer @a buffer.
+   *
+   * One buffer can be shared among many widgets.
+   *
+   * @param buffer A Buffer.
+   *
+   * @return: A new View.
+   **/
+  explicit View (const Glib::RefPtr<Buffer> &buffer) ;
+
+  /** Returns the GtkTextBuffer being displayed by this text view.
+   *
+   * @return A Buffer.
+   */
+  Glib::RefPtr<const Buffer> get_source_buffer () const ;
+
+  /** Returns the GtkTextBuffer being displayed by this text view.
+   *
+   * @return A Buffer.
+   */
+  Glib::RefPtr<Buffer> get_source_buffer () ;
+
+  /** Sets a source_buffer as the buffer being displayed by source view.
+   *
+   * The previous buffer displayed by the text view is unreferenced, and a
+   * reference is added to buffer.
+   *
+   * @param source_buffer A Buffer.
+   */
+  void set_source_buffer (const Glib::RefPtr<Buffer> &source_buffer) ;
+
+  _WRAP_METHOD(void set_show_line_numbers(bool show=true), gtk_source_view_set_show_line_numbers)
+
+  /** Returns whether line numbers are displayed beside the text.
+   *
+   * @return @c true if the line numbers are displayed.
+   */
+  _WRAP_METHOD(bool get_show_line_numbers() const, gtk_source_view_get_show_line_numbers)
+
+  _WRAP_METHOD(void set_tab_width(guint width), gtk_source_view_set_tab_width)
+
+  /** Returns the width of tabulation in characters.
+   *
+   * @return Width of tab.
+   */
+  _WRAP_METHOD(guint get_tab_width() const, gtk_source_view_get_tab_width)
+
+  _WRAP_METHOD(void set_auto_indent(bool enable=true), gtk_source_view_set_auto_indent)
+
+  /** Returns whether auto indentation of text is enabled.
+   *
+   * @return @c true if auto indentation is enabled.
+   */
+  _WRAP_METHOD(bool get_auto_indent() const, gtk_source_view_get_auto_indent)
+
+  _WRAP_METHOD(void set_insert_spaces_instead_of_tabs(bool enable=true), gtk_source_view_set_insert_spaces_instead_of_tabs)
+
+  /** Returns whether when inserting a tabulator character it should
+   *  be replaced by a group of space characters.
+   *
+   * @return @c true if spaces are inserted instead of tabs.
+   */
+  _WRAP_METHOD(bool get_insert_spaces_instead_of_tabs() const, gtk_source_view_get_insert_spaces_instead_of_tabs)
+
+  _WRAP_METHOD(void set_show_right_margin(bool show = true), gtk_source_view_set_show_right_margin)
+
+  /** Returns whether a right margin is displayed.
+   *
+   * @return @c true if the right margin is shown.
+   */
+  _WRAP_METHOD(bool get_show_right_margin() const, gtk_source_view_get_show_right_margin)
+
+  /** If @a highlight is @c true the current line is highlighted.
+   *
+   * @param highlight Whether to highlight the current line.
+   */
+  _WRAP_METHOD(void set_highlight_current_line(bool highlight = true), gtk_source_view_set_highlight_current_line)
+
+  /** Returns whether the current line is highlighted.
+   *
+   * @return @c true if the current line is highlighted.
+   */
+  _WRAP_METHOD(bool get_highlight_current_line() const, gtk_source_view_get_highlight_current_line)
+
+  /** Sets the position of the right margin.
+   *
+   * @param margin The width in characters where to position the right margin.
+   */
+  _WRAP_METHOD(void set_right_margin_position(guint margin), gtk_source_view_set_right_margin_position)
+
+  /** Gets the position of the right margin.
+   *
+   * @return The position of the right margin.
+   */
+  _WRAP_METHOD(guint get_right_margin_position() const, gtk_source_view_get_right_margin_position)
+
+  /** Set the desired movement of the cursor when HOME and END keys are pressed.
+   *
+   * @param smart_he The desired behavior among SmartHomeEndType.
+   */
+  _WRAP_METHOD(void set_smart_home_end(SmartHomeEndType smart_he), gtk_source_view_set_smart_home_end)
+
+  /** Returns a SmartHomeEndType end value specifying how the cursor will
+   *  move when HOME and END keys are pressed.
+   *
+   * @return A SmartHomeEndType value.
+   */
+  _WRAP_METHOD(SmartHomeEndType get_smart_home_end() const, gtk_source_view_get_smart_home_end)
+
+  /** If @c true line marks will be displayed beside the text.
+   *
+   * @param show Whether line marks should be displayed.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(void set_show_line_marks(bool show = true), gtk_source_view_set_show_line_marks)
+
+  /** Returns whether line marks are displayed beside the text.
+   *
+   * @return @c true if the line marks are displayed.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(bool get_show_line_marks() const, gtk_source_view_get_show_line_marks)
+
+  /** If @c true, when the tab key is pressed and there is a selection, the
+   *  selected text is indented of one level instead of being replaced with
+   *  the @\t characters. Shift+Tab unindents the selection.
+   *
+   * @param enable Whether to indent a block when tab is pressed.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(void set_indent_on_tab(bool enable = true), gtk_source_view_set_indent_on_tab)
+
+  /** Returns whether when the tab key is pressed the current selection
+   *  should get indented instead of replaced with the @\t character.
+   *
+   * @return @c true if the selection is indented when tab is pressed.
+   *
+   * @newin{2,2}
+   */
+  _WRAP_METHOD(bool get_indent_on_tab() const, gtk_source_view_get_indent_on_tab)
+
+  /** Sets the number of spaces to use for each step of indent.
+   *
+   * If @a width is -1, the value of the View::property_tab_width property
+   * will be used.
+   *
+   * @param width Indent width in characters.
+   */
+  _WRAP_METHOD(void set_indent_width(gint width), gtk_source_view_set_indent_width)
+
+  /** Returns the number of spaces to use for each step of indent.
+   *
+   * See set_indent_width() for details.
+   *
+   * @return Indent width.
+   */
+  _WRAP_METHOD(gint get_indent_width() const, gtk_source_view_get_indent_width)
+
+#m4 _CONVERSION(`const Gtk::TextBuffer::iterator&',`const GtkTextIter*',`($3).gobj()')
+  /** Determines the visual column at @a iter taking into consideration the indent
+   *  width of @a view.
+   *
+   * @param iter: a position in this view.
+   *
+   * @return the visual column at @a iter.
+   *
+   * @newin{3,0}
+   */
+  _WRAP_METHOD(guint get_visual_column(const Gtk::TextBuffer::iterator& iter) const, gtk_source_view_get_visual_column)
+
+  /** Returns the Gutter object associated with @a window_type for this
+   *  view.
+   *
+   * Only Gtk::TEXT_WINDOW_LEFT and Gtk::TEXT_WINDOW_RIGHT are supported,
+   * respectively corresponding to the left and right gutter. The line numbers
+   * and mark category icons are rendered in the gutter corresponding to
+   * Gtk::TEXT_WINDOW_LEFT.
+   *
+   * @param window_type The gutter window type
+   *
+   * @return The Gutter.
+   *
+   * @newin{2,10}
+   **/
+  _WRAP_METHOD(Glib::RefPtr<Gutter> get_gutter(Gtk::TextWindowType window_type), gtk_source_view_get_gutter, refreturn)
+
+  /** Returns the Gutter object associated with @a window_type for this
+   *  view.
+   *
+   * Only Gtk::TEXT_WINDOW_LEFT and Gtk::TEXT_WINDOW_RIGHT are supported,
+   * respectively corresponding to the left and right gutter. The line numbers
+   * and mark category icons are rendered in the gutter corresponding to
+   * Gtk::TEXT_WINDOW_LEFT.
+   *
+   * @param window_type The gutter window type
+   *
+   * @return The Gutter.
+   *
+   * @newin{2,10}
+   **/
+  _WRAP_METHOD(Glib::RefPtr<const Gutter> get_gutter(Gtk::TextWindowType window_type) const, gtk_source_view_get_gutter, refreturn, constversion)
+
+  /** Gets the Completion associated with this view.
+   *
+   * @return The Completion associated with this view.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(Glib::RefPtr<Completion> get_completion(), gtk_source_view_get_completion, refreturn)
+
+  /** Gets the Completion associated with this view.
+   *
+   * @return The Completion associated with this view.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(Glib::RefPtr<const Completion> get_completion() const, gtk_source_view_get_completion, refreturn, constversion)
+
+  _WRAP_METHOD(void set_mark_attributes(const Glib::ustring& category, const Glib::RefPtr<MarkAttributes>& attributes, int priority), gtk_source_view_set_mark_attributes)
+
+  _WRAP_METHOD(Glib::RefPtr<MarkAttributes> get_mark_attributes(const Glib::ustring& category, int& priority), gtk_source_view_get_mark_attributes, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<const MarkAttributes> get_mark_attributes(const Glib::ustring& category, int& priority) const, gtk_source_view_get_mark_attributes, constversion)
+
+  /** Set if and how the background pattern should be displayed.
+   *
+   * @param background_pattern the GtkSourceBackgroundPatternType.
+   *
+   * @newin {3,16}
+   */
+  _WRAP_METHOD(void set_background_pattern(BackgroundPatternType background_pattern), gtk_source_view_set_background_pattern)
+
+  /** Returns the GtkSourceBackgroundPatternType specifying if and how the background pattern should be displayed for this view .
+   *
+   * @return the GtkSourceBackgroundPatternType.
+   *
+   * @newin {3,16}
+   */
+  _WRAP_METHOD(BackgroundPatternType get_background_pattern() const, gtk_source_view_get_background_pattern)
+
+  /** Emitted when redo action is requested.
+   */
+  _WRAP_SIGNAL(void redo(), "redo")
+
+  /** Emitted when undo action is requested.
+   */
+  _WRAP_SIGNAL(void undo(), "undo")
+
+#m4 _CONVERSION(`GtkTextIter*',`Gtk::TextBuffer::iterator&',`Glib::wrap_iter($3)')
+#m4 _CONVERSION(`Gtk::TextBuffer::iterator&',`GtkTextIter*',`($3).gobj()')
+  /** Emitted when a line mark has been activated (for instance when there
+   *  was a button press in the line marks gutter).
+   *
+   * You can use @a iter to determine on which line the activation took place.
+   *
+   * @par Handler parameters:
+   * iter A Gtk::TextBuffer::iterator.
+   * event The GdkEvent that activated the event.
+   */
+  _WRAP_SIGNAL(void line_mark_activated(Gtk::TextBuffer::iterator& mark, GdkEvent* event), "line-mark-activated")
+
+  /** Emitted when a the cursor was moved according to the smart home end setting.
+   *
+   * The signal is emitted after the cursor is moved, but during the
+   * Gtk::TextView::move-cursor action. This can be used to find out whether the
+   * cursor was moved by a normal home/end or by a smart home/end.
+   *
+   * @par Handler parameters:
+   * iter A Gtk::TextBuffer::iterator
+   * count The count
+   *
+   * @newin{3,0}
+   */
+  _WRAP_SIGNAL(void smart_home_end(Gtk::TextBuffer::iterator& iter, int count), "smart-home-end", no_default_handler)
+
+  // these are keybinding signals, so we ignore them.
+  _IGNORE_SIGNAL(show-completion)
+  _IGNORE_SIGNAL(move-lines)
+  _IGNORE_SIGNAL(move-words)
+
+  _WRAP_PROPERTY("show-line-numbers", bool)
+
+  _WRAP_PROPERTY("show-line-marks", bool)
+
+  _WRAP_PROPERTY("tab-width", guint)
+
+  _WRAP_PROPERTY("indent-width", int)
+
+  _WRAP_PROPERTY("auto-indent", bool)
+
+  _WRAP_PROPERTY("insert-spaces-instead-of-tabs", bool)
+
+  _WRAP_PROPERTY("show-right-margin", bool)
+
+  _WRAP_PROPERTY("right-margin-position", guint)
+
+  _WRAP_PROPERTY("smart-home-end", SmartHomeEndType)
+
+  _WRAP_PROPERTY("highlight-current-line", bool)
+
+  _WRAP_PROPERTY("indent-on-tab", bool)
+
+  _WRAP_PROPERTY("completion", Glib::RefPtr<Completion>)
+
+  _WRAP_PROPERTY("background-pattern", BackgroundPatternType)
+};
+
+} /* namespace Gsv */
+

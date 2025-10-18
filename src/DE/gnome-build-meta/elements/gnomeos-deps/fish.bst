@@ -1,0 +1,368 @@
+kind: cmake
+
+sources:
+- kind: tar
+  url: 
+    github_files:fish-shell/fish-shell/releases/download/4.1.2/fish-4.1.2.tar.xz
+  ref: 52873934fc1ee21a1496e9f4521409013e540f77cbf29142a1b17ab93ffaafac
+- kind: cargo2
+  ref:
+  - kind: registry
+    name: allocator-api2
+    version: 0.2.21
+    sha: 683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923
+  - kind: registry
+    name: autocfg
+    version: 1.4.0
+    sha: ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26
+  - kind: registry
+    name: bitflags
+    version: 2.6.0
+    sha: b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de
+  - kind: registry
+    name: block-buffer
+    version: 0.10.4
+    sha: 3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71
+  - kind: registry
+    name: cc
+    version: 1.2.7
+    sha: a012a0df96dd6d06ba9a1b29d6402d1a5d77c6befd2566afdc26e10603dc93d7
+  - kind: registry
+    name: cfg-if
+    version: 1.0.0
+    sha: baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd
+  - kind: registry
+    name: cfg_aliases
+    version: 0.2.1
+    sha: 613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724
+  - kind: registry
+    name: cpufeatures
+    version: 0.2.16
+    sha: 16b80225097f2e5ae4e7179dd2266824648f3e2f49d9134d584b76389d31c4c3
+  - kind: registry
+    name: crypto-common
+    version: 0.1.6
+    sha: 1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3
+  - kind: registry
+    name: digest
+    version: 0.10.7
+    sha: 9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292
+  - kind: registry
+    name: equivalent
+    version: 1.0.1
+    sha: 5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5
+  - kind: registry
+    name: errno
+    version: 0.3.11
+    sha: 976dd42dc7e85965fe702eb8164f21f450704bdde31faefd6471dba214cb594e
+  - kind: registry
+    name: fastrand
+    version: 2.3.0
+    sha: 37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be
+  - kind: registry
+    name: fnv
+    version: 1.0.7
+    sha: 3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1
+  - kind: registry
+    name: foldhash
+    version: 0.1.4
+    sha: a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f
+  - kind: registry
+    name: generic-array
+    version: 0.14.7
+    sha: 85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a
+  - kind: registry
+    name: hashbrown
+    version: 0.15.2
+    sha: bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289
+  - kind: registry
+    name: jobserver
+    version: 0.1.32
+    sha: 48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0
+  - kind: registry
+    name: libc
+    version: 0.2.172
+    sha: d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa
+  - kind: registry
+    name: lock_api
+    version: 0.4.12
+    sha: 07af8b9cdd281b7915f413fa73f29ebd5d55d0d3f0155584dade1ff18cea1b17
+  - kind: registry
+    name: log
+    version: 0.4.22
+    sha: a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24
+  - kind: registry
+    name: lru
+    version: 0.13.0
+    sha: 227748d55f2f0ab4735d87fd623798cb6b664512fe979705f829c9f81c934465
+  - kind: registry
+    name: memchr
+    version: 2.7.4
+    sha: 78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3
+  - kind: registry
+    name: minimal-lexical
+    version: 0.2.1
+    sha: 68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a
+  - kind: registry
+    name: nix
+    version: 0.30.1
+    sha: 74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6
+  - kind: registry
+    name: nom
+    version: 7.1.3
+    sha: d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a
+  - kind: registry
+    name: num-traits
+    version: 0.2.19
+    sha: 071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841
+  - kind: registry
+    name: once_cell
+    version: 1.20.2
+    sha: 1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775
+  - kind: registry
+    name: parking_lot
+    version: 0.12.3
+    sha: f1bf18183cf54e8d6059647fc3063646a1801cf30896933ec2311622cc4b9a27
+  - kind: registry
+    name: parking_lot_core
+    version: 0.9.10
+    sha: 1e401f977ab385c9e4e3ab30627d6f26d00e2c73eef317493c4ec6d468726cf8
+  - kind: git
+    commit: 85b7afba1a9d9bd445779800e5bcafeb732e4421
+    repo: github:fish-shell/rust-pcre2
+    query:
+      tag: 0.2.9-utf32
+    name: pcre2
+    version: 0.2.9
+  - kind: git
+    commit: 85b7afba1a9d9bd445779800e5bcafeb732e4421
+    repo: github:fish-shell/rust-pcre2
+    query:
+      tag: 0.2.9-utf32
+    name: pcre2-sys
+    version: 0.2.9
+  - kind: registry
+    name: phf
+    version: 0.11.3
+    sha: 1fd6780a80ae0c52cc120a26a1a42c1ae51b247a253e4e06113d23d2c2edd078
+  - kind: registry
+    name: phf
+    version: 0.12.1
+    sha: 913273894cec178f401a31ec4b656318d95473527be05c0752cc41cdc32be8b7
+  - kind: registry
+    name: phf_codegen
+    version: 0.11.3
+    sha: aef8048c789fa5e851558d709946d6d79a8ff88c0440c587967f8e94bfb1216a
+  - kind: registry
+    name: phf_codegen
+    version: 0.12.1
+    sha: efbdcb6f01d193b17f0b9c3360fa7e0e620991b193ff08702f78b3ce365d7e61
+  - kind: registry
+    name: phf_generator
+    version: 0.11.3
+    sha: 3c80231409c20246a13fddb31776fb942c38553c51e871f8cbd687a4cfb5843d
+  - kind: registry
+    name: phf_generator
+    version: 0.12.1
+    sha: 2cbb1126afed61dd6368748dae63b1ee7dc480191c6262a3b4ff1e29d86a6c5b
+  - kind: registry
+    name: phf_shared
+    version: 0.11.3
+    sha: 67eabc2ef2a60eb7faa00097bd1ffdb5bd28e62bf39990626a582201b7a754e5
+  - kind: registry
+    name: phf_shared
+    version: 0.12.1
+    sha: 06005508882fb681fd97892ecff4b7fd0fee13ef1aa569f8695dae7ab9099981
+  - kind: registry
+    name: pkg-config
+    version: 0.3.31
+    sha: 953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2
+  - kind: registry
+    name: portable-atomic
+    version: 1.10.0
+    sha: 280dc24453071f1b63954171985a0b0d30058d287960968b9b2aca264c8d4ee6
+  - kind: registry
+    name: proc-macro2
+    version: 1.0.95
+    sha: 02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778
+  - kind: registry
+    name: quote
+    version: 1.0.40
+    sha: 1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d
+  - kind: registry
+    name: rand
+    version: 0.8.5
+    sha: 34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404
+  - kind: registry
+    name: rand_core
+    version: 0.6.4
+    sha: ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c
+  - kind: registry
+    name: redox_syscall
+    version: 0.5.8
+    sha: 03a862b389f93e68874fbf580b9de08dd02facb9a788ebadaf4a3fd33cf58834
+  - kind: registry
+    name: rsconf
+    version: 0.2.2
+    sha: bd2af859f1af0401e7fc7577739c87b0d239d8a5da400d717183bca92336bcdc
+  - kind: registry
+    name: rust-embed
+    version: 8.7.2
+    sha: 025908b8682a26ba8d12f6f2d66b987584a4a87bc024abc5bbc12553a8cd178a
+  - kind: registry
+    name: rust-embed-impl
+    version: 8.7.2
+    sha: 6065f1a4392b71819ec1ea1df1120673418bf386f50de1d6f54204d836d4349c
+  - kind: registry
+    name: rust-embed-utils
+    version: 8.7.2
+    sha: f6cc0c81648b20b70c491ff8cce00c1c3b223bb8ed2b5d41f0e54c6c4c0a3594
+  - kind: registry
+    name: same-file
+    version: 1.0.6
+    sha: 93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502
+  - kind: registry
+    name: scc
+    version: 2.3.0
+    sha: 28e1c91382686d21b5ac7959341fcb9780fa7c03773646995a87c950fa7be640
+  - kind: registry
+    name: scopeguard
+    version: 1.2.0
+    sha: 94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49
+  - kind: registry
+    name: sdd
+    version: 3.0.5
+    sha: 478f121bb72bbf63c52c93011ea1791dca40140dfe13f8336c4c5ac952c33aa9
+  - kind: registry
+    name: serial_test
+    version: 3.2.0
+    sha: 1b258109f244e1d6891bf1053a55d63a5cd4f8f4c30cf9a1280989f80e7a1fa9
+  - kind: registry
+    name: serial_test_derive
+    version: 3.2.0
+    sha: 5d69265a08751de7844521fd15003ae0a888e035773ba05695c5c759a6f89eef
+  - kind: registry
+    name: sha2
+    version: 0.10.8
+    sha: 793db75ad2bcafc3ffa7c68b215fee268f537982cd901d132f89c6343f3a3dc8
+  - kind: registry
+    name: shlex
+    version: 1.3.0
+    sha: 0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64
+  - kind: registry
+    name: siphasher
+    version: 1.0.1
+    sha: 56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d
+  - kind: registry
+    name: smallvec
+    version: 1.13.2
+    sha: 3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67
+  - kind: registry
+    name: syn
+    version: 2.0.95
+    sha: 46f71c0377baf4ef1cc3e3402ded576dccc315800fbc62dfc7fe04b009773b4a
+  - kind: registry
+    name: terminfo
+    version: 0.9.0
+    sha: d4ea810f0692f9f51b382fff5893887bb4580f5fa246fde546e0b13e7fcee662
+  - kind: registry
+    name: typenum
+    version: 1.17.0
+    sha: 42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825
+  - kind: registry
+    name: unicode-ident
+    version: 1.0.14
+    sha: adb9e6ca4f869e1180728b7950e35922a7fc6397f7b641499e8f3ef06e50dc83
+  - kind: registry
+    name: unicode-segmentation
+    version: 1.12.0
+    sha: f6ccf251212114b54433ec949fd6a7841275f9ada20dddd2f29e9ceea4501493
+  - kind: registry
+    name: unicode-width
+    version: 0.2.0
+    sha: 1fc81956842c57dac11422a97c3b8195a1ff727f06e85c84ed2e8aa277c9a0fd
+  - kind: registry
+    name: unix_path
+    version: 1.0.1
+    sha: af8e291873ae77c4c8d9c9b34d0bee68a35b048fb39c263a5155e0e353783eaf
+  - kind: registry
+    name: unix_str
+    version: 1.0.0
+    sha: 2ace0b4755d0a2959962769239d56267f8a024fef2d9b32666b3dcd0946b0906
+  - kind: registry
+    name: version_check
+    version: 0.9.5
+    sha: 0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a
+  - kind: registry
+    name: walkdir
+    version: 2.5.0
+    sha: 29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b
+  - kind: registry
+    name: widestring
+    version: 1.2.0
+    sha: dd7cf3379ca1aac9eea11fba24fd7e315d621f8dfe35c8d7d2be8b793726e07d
+  - kind: registry
+    name: winapi-util
+    version: 0.1.9
+    sha: cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb
+  - kind: registry
+    name: windows-sys
+    version: 0.59.0
+    sha: 1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b
+  - kind: registry
+    name: windows-targets
+    version: 0.52.6
+    sha: 9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973
+  - kind: registry
+    name: windows_aarch64_gnullvm
+    version: 0.52.6
+    sha: 32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3
+  - kind: registry
+    name: windows_aarch64_msvc
+    version: 0.52.6
+    sha: 09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469
+  - kind: registry
+    name: windows_i686_gnu
+    version: 0.52.6
+    sha: 8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b
+  - kind: registry
+    name: windows_i686_gnullvm
+    version: 0.52.6
+    sha: 0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66
+  - kind: registry
+    name: windows_i686_msvc
+    version: 0.52.6
+    sha: 240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66
+  - kind: registry
+    name: windows_x86_64_gnu
+    version: 0.52.6
+    sha: 147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78
+  - kind: registry
+    name: windows_x86_64_gnullvm
+    version: 0.52.6
+    sha: 24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d
+  - kind: registry
+    name: windows_x86_64_msvc
+    version: 0.52.6
+    sha: 589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec
+build-depends:
+- freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
+- freedesktop-sdk.bst:components/rust.bst
+- freedesktop-sdk.bst:components/sed.bst
+
+depends:
+- freedesktop-sdk.bst:public-stacks/runtime-minimal.bst
+
+runtime-depends:
+- freedesktop-sdk.bst:components/gawk.bst
+
+variables:
+  cmake-local: >-
+    -DCMAKE_INSTALL_SYSCONFDIR=%{sysconfdir}
+    -DCURSES_NEED_NCURSES=TRUE
+
+public:
+  bst:
+    integration-commands:
+    - echo %{bindir}/fish >> /etc/shells
+

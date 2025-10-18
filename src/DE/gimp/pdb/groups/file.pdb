@@ -1,0 +1,463 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995, 1996, 1997 Spencer Kimball and Peter Mattis
+# Copyright (C) 1997 Josh MacDonald
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+sub file_load {
+    $blurb = 'Loads an image file by invoking the right load handler.';
+
+    $help = <<'HELP';
+This procedure invokes the correct file load handler using magic if
+possible, and falling back on the file's extension and/or prefix if
+not.
+HELP
+
+    &josh_pdb_misc('1997');
+
+    @inargs = (
+        { name => 'run_mode',
+          type => 'enum GimpRunMode (no GIMP_RUN_WITH_LAST_VALS)',
+          desc => 'The run mode' },
+        { name => 'file', type => 'file',
+          desc => 'The file to load' }
+    );
+
+    @outargs = (
+        { name => 'image', type => 'image',
+          desc => 'The output image' }
+    );
+
+    %invoke = (
+        no_marshalling => 1,
+        code => <<'CODE'
+{
+  GimpValueArray      *new_args;
+  GimpValueArray      *return_vals;
+  GimpPlugInProcedure *file_proc;
+  GimpProcedure       *proc;
+  GFile               *file;
+  gint                 i;
+
+  file = g_value_get_object (gimp_value_array_index (args, 1));
+
+  if (! file)
+    return gimp_procedure_get_return_values (procedure, FALSE,
+                                             error ? *error : NULL);
+
+  file_proc = gimp_plug_in_manager_file_procedure_find (gimp->plug_in_manager,
+                                                        GIMP_FILE_PROCEDURE_GROUP_OPEN,
+                                                        file, error);
+
+  if (! file_proc)
+    return gimp_procedure_get_return_values (procedure, FALSE,
+                                             error ? *error : NULL);
+
+  proc = GIMP_PROCEDURE (file_proc);
+
+  new_args = gimp_procedure_get_arguments (proc);
+
+  g_value_transform (gimp_value_array_index (args, 0),
+		     gimp_value_array_index (new_args, 0));
+  g_value_transform (gimp_value_array_index (args, 1),
+		     gimp_value_array_index (new_args, 1));
+
+  for (i = 2; i < proc->num_args; i++)
+    if (GIMP_IS_PARAM_SPEC_CHOICE (proc->args[i]))
+      {
+        GParamSpecString *string_spec = G_PARAM_SPEC_STRING (proc->args[i]);
+
+        g_value_set_static_string (gimp_value_array_index (new_args, i),
+                                   string_spec->default_value);
+      }
+    else if (G_IS_PARAM_SPEC_STRING (proc->args[i]))
+      {
+        g_value_set_static_string (gimp_value_array_index (new_args, i), "");
+      }
+
+  return_vals =
+    gimp_pdb_execute_procedure_by_name_args (gimp->pdb,
+                                             context, progress, error,
+                                             gimp_object_get_name (proc),
+                                             new_args);
+
+  gimp_value_array_unref (new_args);
+
+  if (g_value_get_enum (gimp_value_array_index (return_vals, 0)) ==
+      GIMP_PDB_SUCCESS)
+    {
+      if (gimp_value_array_length (return_vals) > 1 &&
+          GIMP_VALUE_HOLDS_IMAGE (gimp_value_array_index (return_vals, 1)))
+        {
+          GimpImage *image =
+            g_value_get_object (gimp_value_array_index (return_vals, 1));
+
+          if (! gimp_image_get_load_proc (image))
+            /* Leave the initial load procedure if it already exists as
+             * it will give information about the source format. See
+             * similar code in file_open_image().
+             */
+            gimp_image_set_load_proc (image, file_proc);
+
+          if (! gimp_image_get_file (image))
+            gimp_image_set_imported_file (image, file);
+        }
+    }
+
+  return return_vals;
+}
+CODE
+    );
+}
+
+sub file_load_layer {
+    $blurb = 'Loads an image file as a layer for an existing image.';
+
+    $help = <<'HELP';
+This procedure behaves like the file-load procedure but opens the specified
+image as a layer for an existing image. The returned layer needs to be
+added to the existing image with gimp_image_insert_layer().
+HELP
+
+    &neo_pdb_misc('2005', '2.4');
+
+    @inargs = (
+        { name => 'run_mode',
+          type => 'enum GimpRunMode (no GIMP_RUN_WITH_LAST_VALS)',
+          desc => 'The run mode' },
+        { name => 'image', type => 'image',
+          desc => 'Destination image' },
+        { name => 'file', type => 'file',
+          desc => 'The file to load' }
+    );
+
+    @outargs = (
+        { name => 'layer', type => 'layer',
+          desc => 'The layer created when loading the image file' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GList             *layers;
+  GimpPDBStatusType  status;
+
+  layers = file_open_layers (gimp, context, progress,
+                             image, FALSE, FALSE,
+                             file, run_mode, NULL, &status, error);
+
+  if (layers)
+    {
+      layer = layers->data;
+      g_list_free (layers);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub file_load_layers {
+    $blurb = 'Loads an image file as layers for an existing image.';
+
+    $help = <<'HELP';
+This procedure behaves like the file-load procedure but opens the specified
+image as layers for an existing image. The returned layers needs to be
+added to the existing image with gimp_image_insert_layer().
+HELP
+
+    &mitch_pdb_misc('2006', '2.4');
+
+    @inargs = (
+        { name => 'run_mode',
+          type => 'enum GimpRunMode (no GIMP_RUN_WITH_LAST_VALS)',
+          desc => 'The run mode' },
+        { name => 'image', type => 'image',
+          desc => 'Destination image' },
+        { name => 'file', type => 'file',
+          desc => 'The file to load' }
+    );
+
+    @outargs = (
+        { name => 'layers', type => 'layerarray',
+          desc => 'The list of loaded layers' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GList             *layer_list;
+  GimpPDBStatusType  status;
+
+  layer_list = file_open_layers (gimp, context, progress,
+                                 image, FALSE, FALSE,
+                                 file, run_mode, NULL, &status, error);
+
+  if (layer_list)
+    {
+      GList *list;
+      gsize  num_layers;
+      gint   i;
+
+      num_layers = g_list_length (layer_list);
+
+      layers = g_new0 (GimpLayer *, num_layers + 1);
+
+      for (i = 0, list = layer_list;
+           i < num_layers;
+           i++, list = g_list_next (list))
+        {
+          layers[i] = list->data;
+        }
+
+      g_list_free (layer_list);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub file_save {
+    $blurb = 'Saves to XCF or export @image to any supported format by extension.';
+
+    $help = <<'HELP';
+This procedure invokes the correct file save/export handler according to
+@file's extension and/or prefix.
+
+
+The @options argument is currently unused and should be set to %NULL
+right now.
+HELP
+
+    &josh_pdb_misc('1997');
+
+    @inargs = (
+        { name => 'run_mode', type => 'enum GimpRunMode',
+          desc => 'The run mode' },
+        { name => 'image', type => 'image',
+          desc => 'Input image' },
+        { name => 'file', type => 'file',
+          desc => 'The file to save or export the image in' },
+        { name => 'options', type => 'export_options',
+          desc => 'Export option settings' }
+    );
+
+    %invoke = (
+        headers => [ qw(<string.h>) ],
+        no_marshalling => 1,
+        code => <<'CODE'
+{
+  GimpValueArray      *new_args;
+  GimpValueArray      *return_vals;
+  GimpPlugInProcedure *file_proc;
+  GFile               *file;
+  GimpProcedure       *proc;
+  gint                 custom_args_start = 3;
+  gint                 i;
+
+  file = g_value_get_object (gimp_value_array_index (args, 2));
+
+  file_proc = gimp_plug_in_manager_file_procedure_find (gimp->plug_in_manager,
+                                                        GIMP_FILE_PROCEDURE_GROUP_SAVE,
+                                                        file, NULL);
+
+  if (! file_proc)
+    file_proc = gimp_plug_in_manager_file_procedure_find (gimp->plug_in_manager,
+                                                          GIMP_FILE_PROCEDURE_GROUP_EXPORT,
+                                                          file, error);
+
+  if (! file_proc)
+    return gimp_procedure_get_return_values (procedure, FALSE,
+                                             error ? *error : NULL);
+
+  proc = GIMP_PROCEDURE (file_proc);
+
+  new_args = gimp_procedure_get_arguments (proc);
+
+  g_value_transform (gimp_value_array_index (args, 0),
+                     gimp_value_array_index (new_args, 0));
+  g_value_transform (gimp_value_array_index (args, 1),
+                     gimp_value_array_index (new_args, 1));
+  g_value_transform (gimp_value_array_index (args, 2),
+                     gimp_value_array_index (new_args, 2));
+  if (proc->num_args > 3)
+    {
+      custom_args_start++;
+      g_value_transform (gimp_value_array_index (args, 3),
+                         gimp_value_array_index (new_args, 3));
+    }
+
+  for (i = custom_args_start; i < proc->num_args; i++)
+    if (GIMP_IS_PARAM_SPEC_CHOICE (proc->args[i]))
+      {
+        GParamSpecString *string_spec = G_PARAM_SPEC_STRING (proc->args[i]);
+
+        g_value_set_static_string (gimp_value_array_index (new_args, i),
+                                   string_spec->default_value);
+      }
+    else if (G_IS_PARAM_SPEC_STRING (proc->args[i]))
+      {
+        g_value_set_static_string (gimp_value_array_index (new_args, i), "");
+      }
+
+  return_vals =
+    gimp_pdb_execute_procedure_by_name_args (gimp->pdb,
+                                             context, progress, error,
+                                             gimp_object_get_name (proc),
+                                             new_args);
+
+  if (g_value_get_enum (gimp_value_array_index (return_vals, 0)) ==
+      GIMP_PDB_SUCCESS)
+    {
+      GimpImage *image =
+        g_value_get_object (gimp_value_array_index (new_args, 1));
+
+      if (! strcmp (gimp_object_get_name (proc), "gimp-xcf-save"))
+        {
+          gimp_image_set_file (image, file);
+
+          gimp_image_set_imported_file (image, NULL);
+          gimp_image_clean_all (image);
+        }
+      else
+        {
+          gimp_image_set_exported_file (image, file);
+          gimp_image_set_export_proc (image, file_proc);
+
+          gimp_image_set_imported_file (image, NULL);
+          gimp_image_export_clean_all (image);
+        }
+    }
+  gimp_value_array_unref (new_args);
+
+  return return_vals;
+}
+CODE
+    );
+}
+
+sub file_load_thumbnail {
+    $blurb = 'Loads the thumbnail for a file.';
+
+    $help = <<'HELP';
+This procedure tries to load a thumbnail that belongs to the given file.
+The returned data is an array of colordepth 3 (RGB), regardless of the
+image type. Width and height of the thumbnail are also returned. Don't
+use this function if you need a thumbnail of an already opened image,
+use gimp_image_thumbnail() instead.
+HELP
+
+    $author = $copyright = 'Adam D. Moss, Sven Neumann';
+    $date = '1999-2003';
+
+    @inargs = (
+        { name => 'file', type => 'file',
+          desc => 'The file that owns the thumbnail to load' }
+    );
+
+    @outargs = (
+        { name => 'width', type => 'int32',
+          desc => 'The width of the thumbnail' },
+        { name => 'height', type => 'int32',
+          desc => 'The height of the thumbnail' },
+        { name => 'thumb_data', type => 'bytes',
+          desc => 'The thumbnail data' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GdkPixbuf *pixbuf = file_utils_load_thumbnail (file);
+
+  if (pixbuf)
+    {
+      width            = gdk_pixbuf_get_width (pixbuf);
+      height           = gdk_pixbuf_get_height (pixbuf);
+      thumb_data       = g_bytes_new (gdk_pixbuf_get_pixels (pixbuf),
+                                      3 * width * height);
+
+      g_object_unref (pixbuf);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub file_create_thumbnail {
+    $blurb = 'Creates a thumbnail of @image for the given @file';
+
+    $help = <<'HELP';
+This procedure creates a thumbnail for the given @file and stores it
+according to relevant standards.
+
+In particular, it will follow the [Free Desktop Thumbnail Managing
+Standard](https://specifications.freedesktop.org/thumbnail-spec/latest/thumbsave.html)
+when relevant.
+
+
+The thumbnail is stored so that it belongs to the given @file. This
+means you have to save @image under this name first. As a fallback, the
+call will work if @image was exported or imported as @file. In any other
+case, this procedure will fail.
+HELP
+
+    &josh_pdb_misc('1997');
+
+    @inargs = (
+        { name => 'image', type => 'image',
+          desc => 'The image' },
+        { name => 'file', type => 'file',
+          desc => 'The file the thumbnail belongs to' },
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  success = file_utils_save_thumbnail (image, file);
+}
+CODE
+    );
+}
+
+
+@headers = qw("core/gimp.h"
+              "plug-in/gimppluginmanager-file.h"
+              "file/file-open.h"
+              "file/file-save.h"
+              "file/file-utils.h");
+
+@procs = qw(file_load
+            file_load_layer
+            file_load_layers
+            file_save
+            file_load_thumbnail
+            file_create_thumbnail);
+
+%exports = (app => [@procs], lib => [@procs[0..3,5]]);
+
+$desc = 'File Operations';
+$doc_title = 'gimpfile';
+$doc_short_desc = 'Image file operations (load, export, etc.)';
+$doc_long_desc = 'Image file operations (load, export, etc.)';
+
+1;

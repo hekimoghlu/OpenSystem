@@ -1,0 +1,334 @@
+2009-06-20  Morten Welinder <terra@gnome.org>
+
+	* Release 1.9.9
+
+2009-06-19  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (parse_criteria): Return a GnmCriteria.  All callers
+	changed.
+
+2009-06-18  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_call_with_exprs): Make sure we can tell
+	skipped arguments from present arguments that return empty values.
+	Fixes #586312.
+
+	* src/expr.c (gnm_expr_is_empty): New function.
+
+	* src/func-builtin.c (gnumeric_if2): Allow empty and array results
+	results.  Map NULL into value_new_empty() if the argument that
+	produced it is not empty.  (That prevents them from being treated
+	as zero.)  Fixes #586218.
+
+2009-06-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr.h (gnm_func_lookup_or_add_placeholder): new
+	* src/expr.c (gnm_func_lookup_or_add_placeholder): new
+
+2009-06-17  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (gnm_coth, gnm_acoth): New functions.
+
+2009-06-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr.h (gnm_expr_list_as_string): new
+	* src/expr.c (gnm_expr_list_as_string): make non-static
+	(do_expr_as_string): use convs->output.func
+	* src/parse-util.h (_GnmConventions): add func field
+	* src/parse-util.c (std_expr_func_handler): new
+	(gnm_conventions_new_full): initialize func field
+
+2009-06-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_define_name_undo): we have to update the 
+	  printarea menu items
+	(cmd_define_name_redo): ditto
+	* src/wbc-gtk.c (wbcg_menu_state_update): update the printarea menu
+	  items
+	* src/workbook-control.h: add enum for printarea menu item update
+
+2009-06-16  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-so-filled.c (gnm_so_filled_write_xml_sax): be rather safe
+	  than sorry and check whether sof->text is NULL
+	(gnm_so_filled_set_property): make sure sof->text does not become
+	  NULL. (If it is NULL the foocanvas items don't notice it changing.)
+	
+2009-06-16  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (dump_externals): New function for creating what will
+	become http://projects.gnome.org/gnumeric/func-doc.shtml
+	(function_dump_defs): Call dump_externals for type 4.
+
+	* src/main-application.c (gnumeric_options): Introduce hidden
+	option for generating web page.
+
+	* src/gnm-pane.c (cb_control_point_event): Remove debug code.
+
+	* src/mstyle.c (gnm_style_update): Verify that empty styles have
+	hash values all zero.
+
+	* src/sstest.c (test_insdel_rowcol_names): Explicitly define
+	Print_Area to be whole sheet.  Fixes test again.
+
+	* src/go-data-slicer-field.c (go_data_slicer_field_init): Don't
+	assign to ->field_type_pos[-1].
+
+2009-06-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_equal): check first for pointer equality
+
+2009-06-14  Morten Welinder  <terra@gnome.org>
+
+	Implement New-From-Template (#303657):
+
+	* src/wbc-gtk.c (wbc_gtk_reload_templates, wbc_gtk_load_templates,
+	cb_new_from_template): New functions.
+	(wbc_gtk_new): Arrange to load templates later.
+	(wbcg_update_title, regenerate_window_menu): Handle NULL uri.
+
+	* src/wbc-gtk-actions.c (cb_file_menu): New handler to ensure that
+	templates have been loaded.
+
+	* src/gui-file.c (gui_file_template): New function.
+
+	* src/workbook-view.c (wb_view_set_attribute): Handle problem with
+	old .gnumeric files.
+
+2009-06-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-general.schemas.in: remove sort header default
+	* src/GNOME_Gnumeric-gtk.xml.in move preferences menu item
+	* src/gnumeric-gconf.h: remove sort_default_has_header
+	* src/gnumeric-gconf.c: remove sort_default_has_header
+	(gnm_gconf_set_sort_has_header): deleted
+	* src/wbc-gtk-actions.c: sort_by_rows, trust the automatic
+	  detection and don't try to use the default too
+	(actions): move preferences, goto and fill menus 
+	
+2009-06-11  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_fixed_line): Make sure we have the
+	right number of columns, even if we need to add empty items.
+	Fixes #135523.
+
+2009-06-10  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+	for Almer S. Tigelaar
+	
+	* src/wbc-gtk.c (cb_scroll_wheel): make sure we are acting on 
+	  the top visible sheet
+
+2009-06-10  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (yylex): Return LEFT_EXP_TOKEN or RIGHT_EXP_TOKEN
+	for '^'.
+	(yyparse): Handle LEFT_EXP_TOKEN and RIGHT_EXP_TOKEN instead of
+	'^'.
+
+	* src/parse-util.h (struct _GnmConventions): Add associativity
+	switch for '^'.
+
+	* src/parse-util.c (gnm_conventions_new_full): Init it.
+
+	* src/parser.y: Change x^y^z into x^(y^z) to indicate how we
+	parsed it.
+
+	* src/expr.c (do_expr_as_string): Ditto.
+
+2009-06-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/ranges.c (range_clip_to_finite): adjust limits and add 
+	  explanatory comment
+
+2009-06-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.h (sheet_get_nominal_printarea): change return type
+	* src/sheet.c (gnm_sheet_constructor): change initialization
+	  of print area
+	(sheet_get_nominal_printarea): change return type
+	(sheet_get_printarea): adjust for changes in 
+	  sheet_get_nominal_printarea
+	* src/wbc-gtk-actions.c (cb_file_print_area_clear): change to
+	  match changed print area interpretation
+	(cb_file_print_area_show): ditto
+	* src/xml-io.c (xml_read_names): since existing files will assume 
+	  the old meaning of print area we should adjust upon loading.
+	* src/xml-sax-read.c (xml_sax_named_expr_end): ditto
+	
+2009-06-09  Jody Goldberg <jody@gnome.org>
+
+	* src/go-string.c (go_string_shutdown) : don't leak the shared string
+	  table.
+
+2009-06-09  Morten Welinder  <terra@gnome.org>
+
+	* src/go-string.c: Avoid lots of casts.  Use unsigned values for
+	flag constants to match the flags.
+	(go_string_ERROR): Fix prototype.
+
+	* src/mathfunc.c (gnm_cot, gnm_acot): New functions.
+
+	* src/sheet-style.c (sheet_style_find): Keep style hash entries
+	unique.  Fixes #585178.
+
+	* src/mstyle.c (gnm_style_dup): Copy pango_attrs_zoom too.
+
+2009-06-09 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (gnm_page_breaks_get_next_break): new
+	* src/print-info.h (gnm_page_breaks_get_next_break): new
+	* src/xml-io.c (xml_read_breaks): adjust to cahnge in enum 
+	  interpretation
+	* src/xml-sax-read.c (xml_sax_page_break): ditto
+	* src/xml-sax-write.c (xml_write_breaks): also write soft breaks
+
+2009-06-08  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sample_styles): Check equality using
+	gnm_style_equal to match the optimizer, if even == ought to be
+	good enough.
+	(sheet_style_optimize): Add no-style-optimize debug flag doing the
+	obvious.
+
+2009-06-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_sheet_pages): make sure we have
+	  page breaks allocated before we try to save any.
+
+2009-06-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (gnm_page_breaks_get_next_manual_break):
+	  fix unsigned issue
+	(gnm_page_breaks_set_break): ditto
+	(gnm_page_breaks_clean): ditto
+
+2009-06-08  Jody Goldberg <jody@gnome.org>
+
+	* src/go-data-slicer-field.c (go_data_slicer_field_init) : adjust to
+	  GDS_FIELD_TYPE_ re-org
+
+2009-06-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (gnm_page_breaks_clean): new
+	* src/print-info.c(gnm_page_breaks_clean): new
+	* src/print.c (paginate): store page breaks if requested
+	(compute_sheet_pages): clear page breaks if storage of new ones 
+	  is requested
+
+2009-06-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (gnm_page_breaks_set_break): new
+	(gnm_page_breaks_get_break): new
+	(gnm_page_breaks_get_next_manual_break): new
+	(gnm_page_breaks_dup_non_auto_breaks): new
+	* src/print-info.c (gnm_page_breaks_set_break): new
+	(gnm_page_breaks_get_break): new
+	(gnm_page_breaks_get_next_manual_break): new
+	(gnm_page_breaks_dup_non_auto_breaks): new
+	(gnm_page_break_type_from_str): default to GNM_PAGE_BREAK_NONE
+	* src/print.h (GNUMERIC_PRINT_SETTING_IGNORE_PAGE_BREAKS_KEY):
+	  new key
+	* src/print.c (PrintingInstance): add new fields
+	(paginate): add arguments and change all callers
+	(gnm_begin_print_cb): handle ignoring of manual page breaks
+	(gnm_create_widget_cb): add ignore page break chackbox
+	(gnm_custom_widget_apply_cb): and handle the checkbox
+
+2009-06-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: add ChiSquareTests
+	* src/wbc-gtk-actions.c add MenuContingencyTests and
+	  Tools -> Chi Square Tests items
+
+2009-06-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* expr.h (gnm_expr_new_funcall5): new
+	* src/expr.c (gnm_expr_new_funcall5): new
+
+2009-06-04  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (cb_set_cell_content): Fix critical when overwriting
+	a non-singular array formula with non-array contents.  [#584746]
+
+2009-06-03  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (cellref_boundingbox, gnm_expr_get_boundingbox,
+	gnm_expr_top_get_boundingbox): Add sheet parameter for size.
+	All callers changed.
+
+2009-06-02  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (cb_format_as_currency): Deal with goffice
+	changes.
+
+2009-05-30  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Don't check
+	go_format_unref.
+
+2009-05-29  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Honour geometry even when we are
+	not loading a file from the command line.
+
+2009-05-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c (toggle_font_attr): when we toggle sub or 
+	  subscript we should also toggle the size.
+
+2009-05-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: add super and subscript buttons
+	  to format toolbar. Remove Label button from the object toolbar
+	  since it is functionally equivalent to the rectangle button.
+
+2009-05-28  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (cb_format_as_currency): Fix.
+
+2009-05-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-so-filled.c (so_filled_view_set_bounds): don't check for
+	  text to be non-null and is_oval to be false
+	(gnm_so_filled_user_config): ditto
+	(cb_gnm_so_filled_style_changed): ditto
+	(gnm_so_filled_draw_cairo): ditto
+	(gnm_so_filled_write_xml_sax): ditto
+	(gnm_so_filled_init): Iniitalize with the empty string rather than NULL
+	  since something in FOOCANVAS doesn't update when we change from NULL to 
+	  text.
+
+2009-05-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-cell-comment.c (cell_comment_prep_sax_parser):
+	  make sure we are having markup before retrieving it
+
+2009-05-26  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dependent_changed): Handle NULL dep->sheet.
+
+2009-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: increase goffice requirement to 0.7.8
+	
+2009-05-26  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (gnm_search_match_value): Accept a very small
+	range.
+
+2009-05-25  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (gnm_search_replace_set_property,
+	gnm_search_replace_get_property, gnm_search_replace_class_init):
+	Add new is-number property.
+	(gnm_search_replace_comment): Comments are not numbers.
+	(gnm_search_replace_cell, gnm_search_replace_value): Handle number
+	search.
+
+2009-05-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: increase libgsf requirement to 1.14.15
+
+2009-05-23  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Post-release bump.

@@ -1,0 +1,1 @@
+Please read our [Documentation for Contributors to Vala](https://docs.vala.dev/contributor-guide/)

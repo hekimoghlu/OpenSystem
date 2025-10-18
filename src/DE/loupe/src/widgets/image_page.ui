@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <menu id="image_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Open With…</attribute>
+        <attribute name="action">win.open-with</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Print…</attribute>
+        <attribute name="action">win.print</attribute>
+      </item>
+    </section>
+    <section>
+      <attribute name="label" translatable="yes">Rotate</attribute>
+      <attribute name="display-hint">inline-buttons</attribute>
+      <item>
+        <attribute name="custom">rotate-left</attribute>
+      </item>
+      <item>
+        <attribute name="custom">rotate-right</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Set as Background…</attribute>
+        <attribute name="action">win.set-background</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Delete</attribute>
+        <attribute name="action">win.trash</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Copy</attribute>
+        <attribute name="action">win.copy-image</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="LpImagePage" parent="AdwBin">
+    <property name="hexpand">True</property>
+    <property name="vexpand">True</property>
+    <property name="child">
+      <object class="GtkStack" id="stack">
+        <property name="transition-type">crossfade</property>
+        <child>
+          <object class="AdwBin" id="spinner_page">
+            <property name="hexpand">true</property>
+            <property name="vexpand">true</property>
+            <child>
+              <object class="GtkRevealer" id="spinner_revealer">
+                <property name="reveal-child">false</property>
+                <property name="transition-type">crossfade</property>
+                <child>
+                  <object class="AdwSpinner" id="spinner" />
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwStatusPage" id="error_page">
+            <property name="icon-name">image-missing-symbolic</property>
+            <property name="title" translatable="yes">Could not Load Image</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="halign">center</property>
+                <child>
+                  <object class="GtkButton" id="error_more_info">
+                    <property name="label" translatable="yes">More _Information</property>
+                    <property name="use-underline">true</property>
+                    <style>
+                      <class name="suggested-action" />
+                      <class name="pill" />
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton">
+                    <property name="label" translatable="yes">_Reload</property>
+                    <property name="use-underline">true</property>
+                    <property name="action-name">win.reload</property>
+                    <style>
+                      <class name="pill" />
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="image_stack_page">
+            <child>
+              <object class="GtkScrolledWindow" id="scrolled_window">
+                <property name="propagate-natural-height">True</property>
+                <property name="propagate-natural-width">True</property>
+                <property name="child">
+                  <object class="LpImage" id="image">
+                    <child>
+                      <object class="GtkGestureClick" id="right_click_gesture">
+                        <property name="button">3</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkGestureLongPress" id="press_gesture">
+                        <property name="touch-only">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkPopoverMenu" id="popover">
+                <property name="halign">start</property>
+                <property name="has-arrow">False</property>
+                <property name="menu-model">image_menu</property>
+                <child type="rotate-left">
+                  <object class="GtkButton">
+                    <property name="icon-name">object-rotate-left-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">Rotate Left</property>
+                    <property name="action-name">win.rotate-ccw</property>
+                    <style>
+                      <class name="flat" />
+                    </style>
+                  </object>
+                </child>
+                <child type="rotate-right">
+                  <object class="GtkButton">
+                    <property name="icon-name">object-rotate-right-symbolic</property>
+                    <property name="tooltip-text" translatable="yes">Rotate Right</property>
+                    <property name="action-name">win.rotate-cw</property>
+                    <style>
+                      <class name="flat" />
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </property>
+  </template>
+</interface>

@@ -1,0 +1,182 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+
+#include <gdk/gdk.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+
+namespace
+{
+extern "C"
+{
+static void pixbuf_destroy_data_callback(guint8* pixels, void* user_data)
+{
+  const auto slot = static_cast<Gdk::Pixbuf::SlotDestroyData*>(user_data);
+  g_return_if_fail(slot != nullptr);
+
+  try
+  {
+    (*slot)(pixels); // invoke callback
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  delete slot;
+}
+} // extern "C"
+} // anonymous namespace
+
+
+namespace Gdk
+{
+_DEPRECATE_IFDEF_START
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+Pixbuf::Pixbuf(const ::Cairo::RefPtr< ::Cairo::Surface>& src,
+         int src_x, int src_y, int width, int height)
+:
+  Object((GObject*) gdk_pixbuf_get_from_surface(
+    src->cobj(), src_x, src_y, width, height))
+{
+  if (!gobj())
+    throw PixbufError(PixbufError::FAILED, "Could not construct Pixbuf from Cairo::Surface");
+}
+
+Glib::RefPtr<Pixbuf> Pixbuf::create(const ::Cairo::RefPtr< ::Cairo::Surface>& src,
+  int src_x, int src_y, int width, int height)
+{
+  return Glib::make_refptr_for_instance<Pixbuf>(new Pixbuf(src, src_x, src_y, width, height));
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+_DEPRECATE_IFDEF_END
+
+Glib::RefPtr<Pixbuf> Pixbuf::create_from_data(const guint8* data, Colorspace colorspace,
+                                              bool has_alpha, int bits_per_sample,
+                                              int width, int height, int rowstride)
+{
+  const auto pixbuf = gdk_pixbuf_new_from_data(
+      data, (GdkColorspace) colorspace, has_alpha, bits_per_sample, width, height, rowstride,
+      nullptr, nullptr);
+
+  return Glib::wrap(pixbuf);
+}
+
+Glib::RefPtr<Pixbuf> Pixbuf::create_from_data(const guint8* data, Colorspace colorspace,
+                                              bool has_alpha, int bits_per_sample,
+                                              int width, int height, int rowstride,
+                                              const Pixbuf::SlotDestroyData& destroy_slot)
+{
+  const auto pixbuf = gdk_pixbuf_new_from_data(
+      data, (GdkColorspace) colorspace, has_alpha, bits_per_sample, width, height, rowstride,
+      &pixbuf_destroy_data_callback, new SlotDestroyData(destroy_slot));
+
+  return Glib::wrap(pixbuf);
+}
+
+Glib::RefPtr<Pixbuf> Pixbuf::create_from_stream(const Glib::RefPtr<Gio::InputStream>& stream)
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::wrap(gdk_pixbuf_new_from_stream(const_cast<GInputStream*>(Glib::unwrap(stream)), nullptr, &(gerror)));
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+Glib::RefPtr<Pixbuf> Pixbuf::create_from_stream_at_scale(const Glib::RefPtr<Gio::InputStream>& stream, int width, int height, bool preserve_aspect_ratio)
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::wrap(gdk_pixbuf_new_from_stream_at_scale(const_cast<GInputStream*>(Glib::unwrap(stream)), width, height, static_cast<int>(preserve_aspect_ratio), nullptr, &(gerror)));
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+void Pixbuf::save(const std::string& filename, const Glib::ustring& type) const
+{
+  GError* gerror = nullptr;
+  gdk_pixbuf_savev(const_cast<GdkPixbuf*>(gobj()),
+                   filename.c_str(), type.c_str(), nullptr, nullptr, &gerror);
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+}
+
+void Pixbuf::save(const std::string& filename, const Glib::ustring& type,
+                  const std::vector<Glib::ustring>& option_keys,
+                  const std::vector<Glib::ustring>& option_values) const
+{
+  GError* gerror = nullptr;
+
+  gdk_pixbuf_savev(
+      const_cast<GdkPixbuf*>(gobj()), filename.c_str(), type.c_str(),
+      const_cast<char**>(Glib::ArrayHandler<Glib::ustring>::vector_to_array(option_keys).data ()),
+      const_cast<char**>(Glib::ArrayHandler<Glib::ustring>::vector_to_array(option_values).data ()),
+      &gerror);
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+}
+
+void Pixbuf::save_to_buffer(gchar*& buffer, gsize& buffer_size,
+                            const Glib::ustring& type) const
+{
+  GError* gerror = nullptr;
+
+  gdk_pixbuf_save_to_buffer(
+      const_cast<GdkPixbuf*>(gobj()), &buffer, &buffer_size,
+      type.c_str(),
+      &gerror, nullptr);
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+}
+
+void Pixbuf::save_to_buffer(gchar*& buffer, gsize& buffer_size,
+                            const Glib::ustring& type,
+                            const std::vector<Glib::ustring>& option_keys,
+                            const std::vector<Glib::ustring>& option_values) const
+{
+  GError* gerror = nullptr;
+
+  gdk_pixbuf_save_to_bufferv(
+      const_cast<GdkPixbuf*>(gobj()),
+      &buffer, &buffer_size,
+      type.c_str(),
+      const_cast<char**>(Glib::ArrayHandler<Glib::ustring>::vector_to_array(option_keys).data ()),
+      const_cast<char**>(Glib::ArrayHandler<Glib::ustring>::vector_to_array(option_values).data ()),
+      &gerror);
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+}
+
+std::vector<PixbufFormat> Pixbuf::get_formats()
+{
+  return Glib::SListHandler<PixbufFormat, PixbufFormatTraits>::slist_to_vector(gdk_pixbuf_get_formats(), Glib::OWNERSHIP_SHALLOW);
+}
+
+const guint8* Pixbuf::get_pixels(guint& length) const {
+  length = get_byte_length();
+  return gdk_pixbuf_read_pixels(const_cast<GdkPixbuf*>(gobj()));
+}
+
+} // namespace Gdk

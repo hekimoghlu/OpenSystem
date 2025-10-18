@@ -1,0 +1,51 @@
+image: fedora:latest
+
+variables:
+  DEPENDENCIES:
+    json-glib-devel
+    glib2-devel
+    glib-networking
+    libxml2-devel
+    gtk3-devel
+    libsoup-devel
+    gcr-devel
+    gnome-online-accounts-devel
+    uhttpmock-devel
+    gtk-doc
+    gobject-introspection-devel
+    meson
+    redhat-rpm-config
+    gcc
+    gcc-c++
+    glibc-devel
+    vala
+    libabigail
+  OLD_ABI_DEPENDENCIES:
+    liboauth-devel
+  LAST_ABI_BREAK: 772d061e9f8bb2b6086d9b25f6fcc9db51447996
+
+build_stable:
+  tags:
+    - ipv6
+  before_script:
+    - dnf update -y --nogpgcheck
+    - dnf install -y --nogpgcheck $DEPENDENCIES
+    - git clone --branch=0.5.5 --depth=1 https://gitlab.freedesktop.org/pwithnall/uhttpmock.git
+    - cd uhttpmock && meson . _build --prefix=/usr && meson install -C _build && cd ..
+  script:
+    - meson . _build --prefix=/usr
+        -Dgtk=enabled
+        -Dgnome=enabled
+        -Dgoa=enabled
+        -Dalways_build_tests=true
+        -Dinstalled_tests=false
+        -Dman=true
+        -Dgtk_doc=true
+        -Dintrospection=true
+        -Dvapi=true
+    - ninja -C _build
+    - ninja -C _build install
+    - ninja -C _build test
+    - curl https://gitlab.freedesktop.org/hadess/check-abi/-/raw/main/contrib/check-abi-fedora.sh | bash
+    - dnf install -y $OLD_ABI_DEPENDENCIES
+    - check-abi --suppr=.ci/gdata.suppr --parameters="-Dgtk=enabled -Dgnome=enabled -Dgoa=enabled -Dgtk_doc=false -Dintrospection=false" ${LAST_ABI_BREAK} $(git rev-parse HEAD)

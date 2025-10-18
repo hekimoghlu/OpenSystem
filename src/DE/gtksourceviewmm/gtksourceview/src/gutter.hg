@@ -1,0 +1,84 @@
+/* gutter.h
+ *
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+/// \file
+/// \brief Gutter class
+
+#include <glibmm/object.h>
+#include <glibmm/refptr.h>
+#include <gtksourceviewmm/gutterrenderer.h>
+#include <gtksourceviewmm/view.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gsv
+{
+
+class GutterRenderer;
+class View;
+
+// TODO: update docs.
+/** Gutter object for View
+ *
+ * The Gutter object represents the left and right gutters of the text
+ * view. It is used by View to draw the line numbers and category marks
+ * that might be present on a line. By packing additional CellRenderer objects
+ * in the gutter, you can extend the gutter with your own custom drawings.
+ *
+ * The gutter works very much the same way as cells rendered in a Gtk::TreeView.
+ * The concept is similar, with the exception that the gutter does not have an
+ * underlying Gtk::TreeModel. Instead, you should use set_cell_data_func() to
+ * set a callback to fill in any of the cell renderers properties, given the
+ * line for which the cell is to be rendered. Renderers are inserted into the
+ * gutter at a certain position. The builtin line number renderer is at position
+ * View::gutter_position_lines (-30) and the marks renderer is at
+ * View::gutter_position_marks (-20). You can use these values to
+ * position custom renderers accordingly. The width of a cell renderer can be
+ * specified as either fixed (using Gtk::CellRenderer::set_fixed_size()) or
+ * dynamic, in which case you @e must set set_cell_size_func(). This callback is
+ * used to set the properties of the renderer such that
+ * Gtk::CellRenderer::get_size() yields the maximum width of the cell.
+ *
+ * @newin{2,10}
+ */
+class Gutter : public Glib::Object
+{
+  _CLASS_GOBJECT(Gutter, GtkSourceGutter, GTK_SOURCE_GUTTER, Glib::Object, GObject)
+
+public:
+  _WRAP_METHOD(void insert(GutterRenderer* renderer, int position), gtk_source_gutter_insert)
+
+  _WRAP_METHOD(void remove(GutterRenderer* renderer), gtk_source_gutter_remove)
+
+  _WRAP_METHOD(void reorder(GutterRenderer* renderer, int position), gtk_source_gutter_reorder)
+
+  _WRAP_METHOD(void queue_draw(), gtk_source_gutter_queue_draw)
+
+  _WRAP_METHOD(GutterRenderer* get_renderer_at_pos(int x, int y), gtk_source_gutter_get_renderer_at_pos, refreturn)
+
+  _WRAP_METHOD(const GutterRenderer* get_renderer_at_pos(int x, int y) const, gtk_source_gutter_get_renderer_at_pos, constversion, refreturn)
+
+  _WRAP_PROPERTY("view", View*)
+  _WRAP_PROPERTY("window-type", Gtk::TextWindowType)
+};
+
+} // namespace Gsv
+
+

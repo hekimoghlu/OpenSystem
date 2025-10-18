@@ -1,0 +1,111 @@
+GXml provides a GObject API for manipulating XML and a Serializable
+framework from GObject to XML.
+
+GXml provide a DOM level 4 API and CSS Selectors Level 3 for XML with multiple backends.
+
+* A backend wrapping around libxml2 for read/write, the GNode class series
+* A GObject based tree backend, a more closed DOM4 implementation support is present,
+  the GomNode class series.
+
+GXml also provides a powerful XML to/from GObject automatic serialization. It uses
+GObject and "The Power of Nick"(C). Consider visit the Wiki documentation in order to
+find how this is archived and how you can map XML to GObject properties using Vala's
+simple syntax. Visit: https://gitlab.gnome.org/GNOME/gxml/-/wikis/element
+
+Compile:
+  Requirements:
+   * vala
+   * libgee
+   * libxml2
+
+  Optional Requirements:
+    * valadoc: we generate documentation using valadoc.  If it's not
+      packaged for your distro (like Fedora) follow the instructions
+      at:
+
+      https://live.gnome.org/Valadoc
+
+
+  Meson build system:
+
+  $ meson _build
+  $ cd _build
+  $ ninja
+  $ ninja install
+  
+  NOTE : GXml can be used as meson subproject for others projects
+    * create a file named 'gxml.wrap' (or another name, but keep .wrap extension) with this content:
+        [wrap-git]
+        directory=gxml
+        url=https://gitlab.gnome.org/GNOME/gxml.git
+        revision=master
+    * put .wrap file inside 'subprojects' folder (folder at the root of project)
+    * in your meson.build file, call this subproject like this:
+        subproject('gxml').get_variable('any_variable_inside_build_files') (replace 'gxml' with the name of your .wrap file)
+        subproject('gxml').get_variable('libgxml_build_dir')
+      or, as dependency:
+        gxml = dependency('gxml-0.20', fallback : [ 'gxml', 'any_variable_inside_build_files' ]) (replace 'gxml' with the name of your .wrap file)
+        gxml = dependency('gxml-0.20', fallback : [ 'gxml', 'libgxml_dep' ]) (replace 'gxml' with the name of your .wrap file)
+
+
+  You can use some common ./configure options like --prefix=$SOMEPATH to specify
+  where to install it.
+
+Test: You can run the test suite, which is gxml_test, which you may
+  have installed into your $PATH.  You should actually run it from
+  test/, though, as it requires .xml files that are currently just
+  relatively referenced.
+
+  $ cd test/
+  $ ./gxml_test
+
+  Autotools build system:
+
+  $ make test
+
+  Meson build system:
+
+  $ meson test
+
+
+
+Writing documentation
+
+  We use Valadoc, http://www.valadoc.org/, which is probably the best
+  solution to generate both valadoc documentation and HTML gtk-doc
+  documentation.
+
+  Installation for DevHelp:
+
+  Make sure you have valadoc installed, documentation is automatically
+  generated, then install it, your documentation will be available in
+  DevHelp.
+
+  Some notes:
+
+  - Documentation for overriding functions/methods is shown in
+    valadoc, but not in gtkdoc.  For gtkdoc, you can only go up to the
+    original superclass to see what's been available, even if it's
+    been overridden.  (Would we want this to be any different for
+    gtkdoc?)
+
+  - We don't get an Object Hierarchy in our gtkdoc with valadoc :(
+    TODO: write a patch to valadoc :D
+
+  - We can't highlight special macro values like NULL/null, TRUE/true,
+    or FALSE/false consistently.  For gtkdoc, you can use #NULL, but
+    then in the vala code, we see "#NULL" instead of "null", and the
+    reverse.
+    TODO: write a patch to valadoc :D
+
+  - Multi-line descriptions will only have the first line appear in
+    valadoc.
+
+  - For the gtkdoc or valadoc to be visible in devhelp and you're installing into
+    an abnormal prefix, consider placing a symlink to your prefix
+    installed gtk-doc in /usr/share/gtk-doc/html/.  For example,
+    $ ln -s ~/.local/share/gtk-doc/html/gxml /usr/share/gtk-doc/html
+
+  - Valadoc's documentation use JavaScript to navigate over inherited
+    methods and properties, but DevHelp have no support for that.
+    TODO: write a patch to DevHelp to support Valadoc's JavaScript

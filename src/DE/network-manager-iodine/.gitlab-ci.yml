@@ -1,0 +1,23 @@
+variables:
+    DEBIAN_DEPS:
+        libnm-dev
+        libnma-dev
+        intltool
+        libgtk-3-dev
+        libglib2.0-dev
+        libsecret-1-dev
+        autoconf
+        automake
+        libtool
+
+build-debian:
+  image: debian:bookworm
+  stage: build
+  before_script:
+    - apt-get update
+    - apt-get -y --no-install-recommends install $DEBIAN_DEPS
+    - apt-get -y --no-install-recommends install build-essential
+  script:
+    - ./autogen.sh
+    - make
+

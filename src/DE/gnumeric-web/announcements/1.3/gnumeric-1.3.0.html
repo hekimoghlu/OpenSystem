@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+  <title>Gnumeric 1.3.0 Release Notes</title>
+</head>
+<body text="#000000" bgcolor="#ffffff">
+<h3>Gnumeric 1.3.0 aka &quot;a porting we will go&quot; is now available.</h3>
+
+<blockquote>
+    <p>This release is an combination of new features, porting to gtk-2.4 and bug
+    fixing.  Emmanuel, Jean and the new addition Michael Devine have added
+    single point formatting, bubble plots, error bars, and radar plots to the
+    charting engine.  They're not quite feature complete, but it's moving in
+    the right direction.  I did a fair amount of cleanup porting to GtkAction
+    in gtk-2.4.  That made it possible to start work on rich text editing for
+    cells.  It doesn't persist yet, but the editing should work smoothly.
+    Morten did a nice job of jumping us over to the new file selector.  It
+    looks alot nicer than the old one.  He also threw in a bone for Eugenia and
+    made the autoscroll speed a continuous function.  Throw in the usual pile
+    of patches and this release looks very usable for something so early in the
+    development cycle.
+    <br>
+    <p>The win32 port is almost complete.  The gconf depend is getting
+    compartmentalized and should be ready to drop out for the next release.
+    <br>
+WARNING  WARNING WARNING
+<br>
+NOTE : This is a DEVELOPMENT RELEASE it is not supposed to be stable.
+       May cause nausea, vomiting, abdominal pain or severe eye strain.
+<br>
+WARNING  WARNING WARNING
+<br>
+</blockquote>
+
+<h4>Details</h4>
+<ul>
+<li>Andreas:
+    <ul>
+    <li>Make new strings translatable.</li>
+    <li>Use new widget for output page of analysis tools.</li>
+    <li>Add display indicating why the okay button is disabled to selected analysis tools.</li>
+    <li>Use the paper selected in the print dialog [backported]
+	http://bugzilla.gnome.org/show_bug.cgi?id=131343
+    </li>
+    <li>Fix argument names for RATE.
+	http://bugzilla.gnome.org/show_bug.cgi?id=132347
+    </li>
+    <li>Some HIGfication in the print setup dialog</li>
+    <li>Make sure that when printing to a file we don't accidentally overwrite an existing one.</li>
+    <li>Don't close the print dialog if a user wants to look at a preview.</li>
+    <li>Remove last use of gnome-config</li>
+    <li>Fix GtkFileChooser crash (133069)</li>
+</ul></li>
+<br>
+
+<li>Emmanuel Pacaud:
+    <ul>
+    <li>Work on single point formating for charts.</li>
+    <li>Fix rounding issue for markers in xy plots and for axis ticks.
+	http://bugzilla.gnome.org/show_bug.cgi?id=135621
+    </li>
+    </ul></li>
+    <br>
+
+<li>Jean Brefort:
+    <ul>
+    <li>Add error bars in scatter and bubble plots.</li>
+    </ul></li>
+    <br>
+
+<li>Jody:
+    <ul>
+    <li>Drop gnome-app-helper in favour of GtkAction</li>
+    <li>COUNTRY record position is xls version specific [backported]
+	http://bugzilla.gnome.org/show_bug.cgi?id=128524
+    </li>
+    <li>Generate an SST record even without strings to placate french version of MS Excel [backported]</li>
+    <li>Fix memory error introduced in 1.2.3 when saving to xls [backported]</li>
+    <li>Move to glib/gi18n.h and delete the gnumeric specific equivalent</li>
+    <li>We only need selection info in the primary pane
+	http://bugzilla.gnome.org/show_bug.cgi?id=130579
+    </li>
+    <li>Export multiple selections to xls for frozen panes
+	http://bugzilla.gnome.org/show_bug.cgi?id=130577
+    </li>
+    <li>Rangesel doesn't bind the panes during cursor movements either
+	http://bugzilla.gnome.org/show_bug.cgi?id=130582
+    </li>
+    <li>Recalc new expressions even when manual recalc is set
+	http://bugzilla.gnome.org/show_bug.cgi?id=130424
+    </li>
+    <li>Better compatibility with MS Excel's handling of minus sign
+	http://bugzilla.gnome.org/show_bug.cgi?id=130700
+    </li>
+	http://bugzilla.gnome.org/show_bug.cgi?id=130835
+	* ISNUMBER() should return false for blank references
+	http://bugzilla.gnome.org/show_bug.cgi?id=130172
+	* Do not convert blanks to int(0) for string args
+	* Allow optional args to receive empty even for booleans
+	* Install the executable as gnumeric-$version
+	http://bugzilla.gnome.org/show_bug.cgi?id=132017
+	* Support double underline when importing from applix
+	http://bugzilla.gnome.org/show_bug.cgi?id=127138
+	* Handle freezing when top or left is non 0
+	http://bugzilla.gnome.org/show_bug.cgi?id=132448
+	* Silly crash fix
+	http://bugzilla.gnome.org/show_bug.cgi?id=131933
+	* Handle mismatched locales with decimal pt == thousands sep
+	http://bugzilla.gnome.org/show_bug.cgi?id=132060
+	* update axis labels when a plot changes a source
+	http://bugzilla.gnome.org/show_bug.cgi?id=125886
+	* Data points define the axis, not the number of labels
+	http://bugzilla.gnome.org/show_bug.cgi?id=132390
+	* Fix crash when updating chart style combos
+	http://bugzilla.gnome.org/show_bug.cgi?id=132017
+	* Support double underline when importing from applix
+	* Fix our exported xls with macros with named sheets
+	* Use theme colours in plot type selector
+	* New about box
+	* Reorg the text exporter
+	http://bugzilla.gnome.org/show_bug.cgi?id=74205
+	* Display the blue range designator even in other panes
+	http://bugzilla.gnome.org/show_bug.cgi?id=126563
+	* Fix col/row sizes when copying a sheet with default zoom != 1
+	http://bugzilla.gnome.org/show_bug.cgi?id=135946
+	* Add support for mmmmm formats
+	* persist combos and lists (to gnumeric xml)
+	* Fix xls import of external 3d references
+	http://bugzilla.gnome.org/show_bug.cgi?id=136088
+	* Persist vary-style-by-color for pie plots
+	* Do not theme colours when using image fills
+	* Recalc autosized row heights when a font size changes
+	http://bugzilla.gnome.org/show_bug.cgi?id=135977
+	* Fix xls import of font and font colours for XL95/XL97 text/labels
+	* Fix xls import of label outlines for XL95 textboxes
+	* Make the text probe routine a bit more relaxed
+	* Fix xls import of cursor position for frozen panes
+	* Fix xls export of h/v only frozen panes
+	* Fix xls 97 export of named expressions without addins
+	http://bugzilla.gnome.org/show_bug.cgi?id=137818
+	* For immediate rerender, even for simple font changes.
+	* Support editing rich text in cells (incomplete)
+	http://bugzilla.gnome.org/show_bug.cgi?id=138533
+	* handle insufficient data in moving average tool
+	</ul></li>
+	<br>
+
+<li>J.H.M. Dassen (Ray):
+    <ul>
+	http://bugzilla.gnome.org/show_bug.cgi?id=135044
+	* Incorrect undo label for row autosize
+	</ul></li>
+	<br>
+
+<li>John Gill:
+    <ul>
+	* Tool tips for the sort dialog.
+	</ul></li>
+	<br>
+
+<li>Michael Devine:
+    <ul>
+	* Radar plots.
+	</ul></li>
+	<br>
+
+<li>Morten:
+    <ul>
+	* Clean out work-arounds for old GTK+.
+	* Turn on multi-head support.
+	* Switch to file chooser.
+	* Eliminate use of GnomeEntry.
+	* Fit scale-fit problem.
+	* Fix FLOOR and CEILING error case.
+	* Fix problem with typing in the "decimals" spin button in the
+	  cell format dialog.
+	http://bugzilla.gnome.org/show_bug.cgi?id=135609
+	* Fix pretty-print (and thus saving) problem with ranges like
+	  $B$1:$B1.
+	http://bugzilla.gnome.org/show_bug.cgi?id=136639
+	* Work around theme engine crash. [backported]
+	http://bugzilla.gnome.org/show_bug.cgi?id=135000
+	* Set accessibility role for save-before-exit dialog.
+	* Improve auto-scrolling when dragging the cursor outside the
+	  window.
+	* Improve pgeom (and thus GEODIST) accuracy.
+	* Make filename history UTF-8 safe.
+	</ul></li>
+</ul>
+
+<big>Availability</big>
+<blockquote><blockquote>
+<a href="http://ftp.gnome.org/pub/GNOME/sources/gnumeric/1.3">
+http://ftp.gnome.org/pub/GNOME/sources/gnumeric/1.3/</a><br>
+</blockquote></blockquote>
+</body>
+</html>

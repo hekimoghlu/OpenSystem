@@ -1,0 +1,105 @@
+# Category: Differential Equations
+# Name: Heat equation solved using Explicit Finite Difference Method (line plot)
+#
+# Solve heat equation using explicit FDM.  We try to animate as different
+# times are solved for, though of course we must skip graphing some times when
+# there are too many steps.  The plot is an animated line plot.
+#
+# The equation is u_t = u_{xx} where 0 < x < 1
+# Boundary conditions by default are
+# The boundary conditions are insulated on x=0, u_x(0,t) = 0
+# and Dirichlet condition on x=1, u(1,t) = 0
+# But this can be changed below.
+
+# Initial value, u(x,0) = ?
+function initialf(x) = sin(2*pi*x);
+#function initialf(x) = 1.0;
+#function initialf(x) = 0.0;
+#function initialf(x) = x;
+#function initialf(x) = 1-x;
+#function initialf(x) = if x < 0.5 then 2*x else 2-2*x;
+#function initialf(x) = if x < 0.5 then 4*x^2 else 4*(x-1)^2;
+#function initialf(x) = if x < 0.5 then -1 else 1;
+
+
+# Left hand (x=0) endpoint insulated by default
+leftendinsulated := true;
+leftenddirichlet := 0.0;
+
+# Right hand (x=1) endpoint Dirichlet condition set at 0
+# by default
+rightendinsulated := false;
+rightenddirichlet := 0.0;
+
+# How long to wait after each animation step.  Lowering the number will
+# make things go faster, increasing it will make things go slower.
+waitinterval := 0.05;
+
+# Plot every so many steps.  Setting it to a higher value makes the
+# animation faster.
+plotevery := 1;
+
+# plot range is x between 0 and 1, and y between -1.1 and 1.1
+LinePlotWindow = [0,1,-1.1,1.1];
+
+# The number of intervals on the x axis
+n := 60;
+h := float(1/n);
+
+# The value of k/h^2 must be less than or equal 0.5 for the method to be
+# stable.  We use 0.4 to ensure even the step function is stable.
+# Try using 0.55 instead of 0.4, or even try 0.5 with the step function.
+# Or set it to less. See what it does to accuracy.
+k := 0.4*h^2;
+
+# Maximum t to go up to.  maxt=1 will go for a quite a while
+maxt := 1.0;
+
+m := round(maxt/k);
+
+#Set up initial value
+u := null;
+x := null;
+for j=1 to n+1 do (
+  xx := (j-1)*h;
+  u@(j) := initialf(xx);
+  x@(j) := xx;
+);
+
+# Make sure u and x are column vectors not row vectors;
+u := u.';
+x := x.';
+
+LinePlotDrawLegends := true;
+PlotWindowPresent(); # Make sure the window is raised
+
+toplot := 0;
+
+for i=1 to m do (
+  v := u;
+  for j=2 to n do (
+    u@(j) := v@(j) + (k/(h^2))*(v@(j+1)+v@(j-1)-2*v@(j))
+  );
+  if leftendinsulated then (
+    u@(1) := u@(2)
+  ) else (
+    u@(1) := leftenddirichlet
+  );
+  if rightendinsulated then (
+    u@(n+1) := u@(n)
+  ) else (
+    u@(n+1) := rightenddirichlet
+  );
+  
+  increment toplot;
+  if toplot == plotevery then (
+    toplot := 0;
+
+    PlotCanvasFreeze();
+    LinePlotClear();
+    LinePlotDrawLine([x,u],"legend","u","color","blue");
+    PlotCanvasThaw();
+  
+    wait(waitinterval)
+  )
+);

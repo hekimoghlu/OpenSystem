@@ -1,0 +1,100 @@
+/* Copyright (C) 2013 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/actionable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** See the description of ListBox.
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ *
+ * @newin{3,10}
+ */
+class GTKMM_API ListBoxRow : public Widget, public Actionable
+{
+  _CLASS_GTKOBJECT(ListBoxRow, GtkListBoxRow, GTK_LIST_BOX_ROW, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Actionable)
+public:
+  _CTOR_DEFAULT()
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_list_box_row_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_list_box_row_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_list_box_row_get_child, constversion)
+
+  /** Sets the current header of the ListBoxRow. This is only allowed to be called
+   * from a ListBox::SlotUpdateHeader. It will replace any existing
+   * header in the row, and be shown in front of the row in the ListBox.
+   *
+   * @newin{3,10}
+   *
+   * @param header The header.
+   */
+  _WRAP_METHOD(void set_header(Widget& header), gtk_list_box_row_set_header)
+
+  /** Removes the current header, if any. This is only allowed to be called
+   * from a ListBox::SlotUpdateHeader.
+   *
+   * @newin{3,10}
+   */
+  void unset_header();
+
+  /** Returns the current header of the ListBoxRow. This can be used
+   * in a ListBox::SlotUpdateHeader to see if there is a header
+   * set already, and if so to update the state of it.
+   *
+   * @newin{3,10}
+   *
+   * @return The current header, or <tt>0</tt> if none.
+   */
+  _WRAP_METHOD(Widget* get_header(), gtk_list_box_row_get_header)
+
+  /** Returns the current header of the ListBoxRow. This can be used
+   * in a ListBox::SlotUpdateHeader to see if there is a header
+   * set already, and if so to update the state of it.
+   *
+   * @newin{3,10}
+   *
+   * @return The current header, or <tt>0</tt> if none.
+   */
+  _WRAP_METHOD(const Widget* get_header() const, gtk_list_box_row_get_header, constversion)
+
+  _WRAP_METHOD(int get_index() const, gtk_list_box_row_get_index)
+  _WRAP_METHOD(void changed(), gtk_list_box_row_changed)
+
+  _WRAP_METHOD(bool is_selected() const, gtk_list_box_row_is_selected)
+
+  _WRAP_METHOD(void set_selectable(bool selectable = true), gtk_list_box_row_set_selectable)
+  _WRAP_METHOD(bool get_selectable() const, gtk_list_box_row_get_selectable)
+
+  _WRAP_METHOD(void set_activatable(bool activatable = true), gtk_list_box_row_set_activatable)
+  _WRAP_METHOD(bool get_activatable() const, gtk_list_box_row_get_activatable)
+
+  _WRAP_PROPERTY("selectable", bool)
+  _WRAP_PROPERTY("activatable", bool)
+  _WRAP_PROPERTY("child", Widget*)
+
+  _IGNORE_SIGNAL(activate) // Action signal
+};
+
+} // namespace Gtk

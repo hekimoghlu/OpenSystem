@@ -1,0 +1,12 @@
+SELECT ?album ?title ?snippet
+WHERE {
+  GRAPH tracker:Audio {
+    ?album a nmm:MusicAlbum ;
+      nie:title ?title ;
+      fts:match ~match .
+    BIND (IF (~detailed^^xsd:boolean, fts:snippet(?album, "\u001b[0;1;39m", "\u001b[0m"), "") AS ?snippet)
+  }
+}
+ORDER BY ASC(?title)
+OFFSET ~offset
+LIMIT ~limit

@@ -1,0 +1,29 @@
+---
+variables:
+  PYTHON_VERSION: '3.10'
+  PELICAN_SITE_URL: https://gnome.pages.gitlab.gnome.org/gnome-browser-integration/
+
+stages:
+  - build
+  - deploy
+
+build website:
+  image: docker.io/python:$PYTHON_VERSION
+  stage: build
+  before_script:
+    - pip install -r requirements.txt
+  script:
+    - python -m pelican
+  artifacts:
+    paths:
+      - output/
+
+pages:
+  stage: deploy
+  script:
+    - mv output public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

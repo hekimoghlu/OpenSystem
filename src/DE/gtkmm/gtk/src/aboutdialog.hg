@@ -1,0 +1,169 @@
+/* Copyright (C) 2004 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <vector>
+
+#include <gtkmm/window.h>
+#include <gdkmm/paintable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/window_p.h)
+
+// Shadow BSD macro (from sys/param.h in MacOS).
+// It interferes with Gtk::License::BSD.
+// This trick works because the BSD macro expands to an integer.
+// See https://gitlab.gnome.org/GNOME/gtkmm/-/issues/157
+#if defined(BSD) && !defined(GTKMM_MACRO_SHADOW_BSD)
+enum { GTKMM_MACRO_DEFINITION_BSD = BSD };
+#undef BSD
+enum { BSD = GTKMM_MACRO_DEFINITION_BSD };
+#define BSD BSD
+#define GTKMM_MACRO_SHADOW_BSD 1
+#endif
+
+namespace Gtk
+{
+_WRAP_ENUM(License, GtkLicense, s#^0BSD$#BSD_0#, decl_prefix GTKMM_API)
+
+/** The %AboutDialog offers a simple way to display information about a program like its logo, name, copyright,
+ * website and license. It is also possible to give credits to the authors, documenters, translators and artists
+ * who have worked on the program. An about dialog is typically opened when the user selects the About option
+ * from the Help menu. All parts of the dialog are optional.
+ *
+ * About dialogs often contain links and email addresses. %Gtk::AboutDialog displays these as clickable links.
+ * By default, it calls Gtk::FileLauncher::launch() when a user clicks one.
+ * The behaviour can be overridden with signal_activate_link().
+ * Email addresses in the authors, documenters and artists properties are recognized by looking
+ * for \<user\@host\>, URLs are recognized by looking for %http://url, with the URL extending to the next space,
+ * tab or line break.
+ *
+ * An %AboutDialog looks like this:
+ * @image html aboutdialog1.png
+ *
+ * @ingroup Dialogs
+ */
+class GTKMM_API AboutDialog : public Window
+{
+  _CLASS_GTKOBJECT(AboutDialog, GtkAboutDialog, GTK_ABOUT_DIALOG, Gtk::Window, GtkWindow, , , GTKMM_API)
+  _UNMANAGEABLE
+public:
+  _CTOR_DEFAULT()
+
+#ifndef GTKMM_DISABLE_DEPRECATED
+  /** Constructor.
+   *
+   * @param use_header_bar <tt>true</tt> if the dialog shall use a HeaderBar
+   *        for action buttons instead of the action-area.
+   *
+   * @newin{3,24}
+   * @deprecated 4.12: GTK4 removed :use-header-bar; this does nothing but warn.
+   */
+  explicit AboutDialog(bool use_header_bar);
+#endif // GTKMM_DISABLE_DEPRECATED
+
+  _WRAP_METHOD(Glib::ustring get_program_name() const, gtk_about_dialog_get_program_name)
+  _WRAP_METHOD(void set_program_name(const Glib::ustring& name), gtk_about_dialog_set_program_name)
+
+  _WRAP_METHOD(Glib::ustring get_version() const, gtk_about_dialog_get_version)
+  _WRAP_METHOD(void set_version(const Glib::ustring& version), gtk_about_dialog_set_version)
+  _WRAP_METHOD(Glib::ustring get_copyright() const, gtk_about_dialog_get_copyright)
+  _WRAP_METHOD(void set_copyright(const Glib::ustring& copyright), gtk_about_dialog_set_copyright)
+  _WRAP_METHOD(Glib::ustring get_comments() const, gtk_about_dialog_get_comments)
+  _WRAP_METHOD(void set_comments(const Glib::ustring& comments), gtk_about_dialog_set_comments)
+  _WRAP_METHOD(Glib::ustring get_license() const, gtk_about_dialog_get_license)
+  /** Sets the license information to be displayed in the secondary license dialog.
+   * If @a license is an empty string, the license button is hidden.
+   *
+   * @param license The license information.
+   */
+  _WRAP_METHOD(void set_license(const Glib::ustring& license{NULL}), gtk_about_dialog_set_license)
+  _WRAP_METHOD(License get_license_type() const, gtk_about_dialog_get_license_type)
+  _WRAP_METHOD(void set_license_type(License license_type), gtk_about_dialog_set_license_type)
+  _WRAP_METHOD(Glib::ustring get_system_information() const, gtk_about_dialog_get_system_information)
+  /** Sets the system information to be displayed in the about dialog.
+   * If @a system_information is an empty string, the system information tab is hidden.
+   *
+   * See Gtk::Aboutdialog::property_system_information().
+   *
+   * @newin{3,92}
+   *
+   * @param system_information System information.
+   */
+  _WRAP_METHOD(void set_system_information(const Glib::ustring& system_information{NULL}), gtk_about_dialog_set_system_information)
+  _WRAP_METHOD(Glib::ustring get_website() const, gtk_about_dialog_get_website)
+  _WRAP_METHOD(void set_website(const Glib::ustring& website), gtk_about_dialog_set_website)
+  _WRAP_METHOD(Glib::ustring get_website_label() const, gtk_about_dialog_get_website_label)
+  _WRAP_METHOD(void set_website_label(const Glib::ustring& website_label), gtk_about_dialog_set_website_label)
+
+#m4 _CONVERSION(`const char* const*',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_authors() const, gtk_about_dialog_get_authors)
+
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char**',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data ()')
+  _WRAP_METHOD(void set_authors(const std::vector<Glib::ustring>& authors) const, gtk_about_dialog_set_authors)
+
+  _WRAP_METHOD(std::vector<Glib::ustring> get_documenters() const, gtk_about_dialog_get_documenters)
+
+  _WRAP_METHOD(void set_documenters(const std::vector<Glib::ustring>& documenters), gtk_about_dialog_set_documenters)
+  _WRAP_METHOD(std::vector<Glib::ustring> get_artists() const, gtk_about_dialog_get_artists)
+  _WRAP_METHOD(void set_artists(const std::vector<Glib::ustring>& artists), gtk_about_dialog_set_artists)
+  _WRAP_METHOD(Glib::ustring get_translator_credits() const, gtk_about_dialog_get_translator_credits)
+  _WRAP_METHOD(void set_translator_credits(const Glib::ustring& translator_credits), gtk_about_dialog_set_translator_credits)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Paintable> get_logo(), gtk_about_dialog_get_logo, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Paintable> get_logo() const, gtk_about_dialog_get_logo, refreturn, constversion)
+  _WRAP_METHOD(void set_logo(const Glib::RefPtr<const Gdk::Paintable>& logo), gtk_about_dialog_set_logo)
+
+  /** Sets the surface to be displayed as logo in the about dialog.
+   * The logo is set to the default window icon set with
+   * Gtk::Window::set_default_icon() or Gtk::Window::set_default_icon_list().
+   *
+   * @newin{3,4}
+   */
+  void set_logo_default();
+
+  _WRAP_METHOD(Glib::ustring get_logo_icon_name() const, gtk_about_dialog_get_logo_icon_name)
+  _WRAP_METHOD(void set_logo_icon_name(const Glib::ustring& icon_name), gtk_about_dialog_set_logo_icon_name)
+
+  _WRAP_METHOD(bool get_wrap_license() const, gtk_about_dialog_get_wrap_license)
+  _WRAP_METHOD(void set_wrap_license(bool wrap_license), gtk_about_dialog_set_wrap_license)
+
+  _WRAP_METHOD(void add_credit_section(const Glib::ustring& section_name, const std::vector<Glib::ustring>& people), gtk_about_dialog_add_credit_section)
+
+  _WRAP_PROPERTY("program-name", Glib::ustring)
+
+  _WRAP_PROPERTY("version", Glib::ustring)
+  _WRAP_PROPERTY("copyright", Glib::ustring)
+  _WRAP_PROPERTY("comments", Glib::ustring)
+  _WRAP_PROPERTY("website", Glib::ustring)
+  _WRAP_PROPERTY("website_label", Glib::ustring)
+  _WRAP_PROPERTY("license", Glib::ustring)
+  _WRAP_PROPERTY("license-type", License)
+  _WRAP_PROPERTY("system-information", Glib::ustring, newin "3,92")
+  _WRAP_PROPERTY("authors", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("documenters", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("translator_credits", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("artists", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("logo", Glib::RefPtr<Gdk::Paintable>)
+  _WRAP_PROPERTY("logo_icon_name", Glib::ustring)
+  _WRAP_PROPERTY("wrap_license", bool)
+
+  // no_default_handler because GtkAboutDialogClass is private.
+  _WRAP_SIGNAL(bool activate_link(const std::string& uri), "activate-link", no_default_handler)
+};
+
+} // namespace Gtk

@@ -1,0 +1,69 @@
+/* Copyright (C) 2016 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+/** Displays a keyboard shortcut.
+ *
+ * %Gtk::ShortcutLabel is a widget that represents a single keyboard shortcut
+ * or gesture in the user interface.
+ *
+ * @see CellRendererAccel
+ * @newin{3,22}
+ * @deprecated 4.18: libadwaita (a C library) has a replacement for GtkShortcutsWindow.
+ * @ingroup Widgets
+ */
+class GTKMM_API ShortcutLabel : public Widget
+{
+  _CLASS_GTKOBJECT(ShortcutLabel, GtkShortcutLabel, GTK_SHORTCUT_LABEL, Widget, GtkWidget, , , GTKMM_API)
+
+public:
+  _CTOR_DEFAULT
+
+  /** Creates a %ShortcutLabel with accelerator set.
+   *
+   * @param accelerator The initial accelerator.
+   *   See ShortcutsShortcut::property_accelerator() for the accepted syntax.
+   *
+   * @newin{3,22}
+   */
+  _WRAP_CTOR(ShortcutLabel(const Glib::ustring& accelerator), gtk_shortcut_label_new)
+
+  _WRAP_METHOD(Glib::ustring get_accelerator() const, gtk_shortcut_label_get_accelerator)
+  _WRAP_METHOD(void set_accelerator(const Glib::ustring& accelerator), gtk_shortcut_label_set_accelerator)
+  _WRAP_METHOD(Glib::ustring get_disabled_text() const, gtk_shortcut_label_get_disabled_text)
+  _WRAP_METHOD(void set_disabled_text(const Glib::ustring& disabled_text), gtk_shortcut_label_set_disabled_text)
+
+  _WRAP_PROPERTY("accelerator", Glib::ustring)
+  _WRAP_PROPERTY("disabled-text", Glib::ustring)
+
+  // There are no signals or vfuncs.
+};
+
+} // namespace Gtk

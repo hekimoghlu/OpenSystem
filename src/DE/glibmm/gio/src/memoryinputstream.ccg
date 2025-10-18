@@ -1,0 +1,78 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+
+namespace
+{
+
+class SlotWithData
+{
+public:
+  SlotWithData(const Gio::MemoryInputStream::SlotDestroyData& slot, void* data)
+  : m_slot(new Gio::MemoryInputStream::SlotDestroyData(slot)), m_data(data)
+  {
+  }
+
+  SlotWithData(const SlotWithData& src) = delete;
+  SlotWithData& operator=(const SlotWithData& src) = delete;
+
+  ~SlotWithData() { delete m_slot; }
+
+  void operator()() { (*m_slot)(m_data); }
+
+private:
+  Gio::MemoryInputStream::SlotDestroyData* m_slot;
+  void* m_data;
+};
+
+extern "C"
+{
+// Shall be static. Non-static functions with C linkage get external linkage,
+// even if they are defined in an anonymous namespace.
+static void
+destroy_data_callback(void* user_data)
+{
+  auto slot_with_data = static_cast<SlotWithData*>(user_data);
+  g_return_if_fail(slot_with_data != nullptr);
+
+  try
+  {
+    (*slot_with_data)(); // Invoke callback
+  }
+  catch (...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  delete slot_with_data;
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gio
+{
+
+void
+MemoryInputStream::add_data(const void* data, gssize len, const SlotDestroyData& destroy_slot)
+{
+  auto slot_with_data = new SlotWithData(destroy_slot, const_cast<void*>(data));
+  auto bytes = g_bytes_new_with_free_func(data, len, &destroy_data_callback, slot_with_data);
+  g_memory_input_stream_add_bytes(gobj(), bytes);
+  g_bytes_unref(bytes); // g_memory_input_stream_add_bytes() takes a reference
+}
+
+} // namespace Gio

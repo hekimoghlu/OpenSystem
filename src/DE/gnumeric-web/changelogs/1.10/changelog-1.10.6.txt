@@ -1,0 +1,244 @@
+2010-06-16  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.6
+
+2010-06-16 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.h (gnm_func_convert_markup_to_pango): new
+	* src/func.c (gnm_func_convert_markup_to_pango): new
+
+2010-06-16 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_paste_copy): check with user if more than
+	  10000 copies are to be pasted.
+
+2010-06-16  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_create_tooltip): Set type hint and
+	gravity.
+
+2010-06-16 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/colrow.h (colrow_index_list_destroy): turn into a define
+	(colrow_state_list_destroy) : ditto
+	(colrow_vis_list_destroy): ditto
+	(colrow_vis_list_length): new
+	* src/colrow.c (colrow_index_list_destroy): delete
+	(colrow_state_list_destroy) : ditto
+	(colrow_vis_list_destroy): ditto
+	(colrow_vis_list_length): new
+	(cb_colrow_index_counter): new
+	* src/commands.c (cmd_selection_colrow_hide): check whether this
+	  would hide the whole sheet.
+
+2010-06-16  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dependent_managed_init): Zero the right amount
+	of data.
+
+2010-06-16 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: check for gtk_widget_get_allocation
+	* src/dead-kittens.h (gtk_widget_get_allocation): new
+
+2010-06-16 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: add new menu items
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* component/Gnumeric-embed.xml.in: ditto
+	* src/sheet-utils.c (gnm_sheet_guess_data_range): new
+	* src/sheet-utils.h (gnm_sheet_guess_data_range): new
+	* src/wbc-gtk-actions.c (cb_edit_goto_*): new
+	(EditGoto*): new
+	* src/wbc-gtk.c (cb_cs_go_*): new
+	(wbc_gtk_cell_selector_popup): new
+	(wbc_gtk_create_edit_area): connect the above (for gtk 2.16+)
+	* src/workbook-control.h (wb_control_navigate_to_cell): new
+	* src/workbook-control.c (wb_control_navigate_to_cell): new
+
+2010-06-15 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.h (tokenized_help_*): deleted
+	(gnm_func_get_arg_description): new
+	* src/func.c (tokenized_help_*): deleted
+	(gnm_func_get_arg_description): new
+	(gnm_func_sanity_check1): check for empty arg descriptions
+
+2010-06-15  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (collect_float_pairs): New function, extracted
+	from float_range_function2d.
+	(float_range_function2d): simplify and plug leak.
+
+	* src/gnm-datetime.c (datetime_value_to_seconds): Improve sanity
+	check.
+
+	* src/mathfunc.c (pbeta): Simplify.
+
+2010-06-14 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mathfunc.c (pbinom2): pbinom's right tail calculation
+	  does not include the lower limit.
+
+2010-06-14 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): close the tooltips of
+	  the entry
+
+2010-06-14 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func-builtin.c (help_if): fix argument description
+	* src/func.c (gnm_func_sanity_check1): add checks
+
+2010-06-14  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pbinom2): New function extracted from
+	gnumeric_binom_dist_range and improved.
+
+2010-06-13  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (check_help_expression): New function.
+
+	* src/parser.y (yylex): Fix parsing of calls to LOG2 and LOG10 in
+	sheets with more than ~8500 columns.
+
+	* src/func.c (copy_hash_table_to_ptr_array): Don't test perl
+	samples.
+	(gnm_func_sanity_check1): Check for unwanted space after colon and
+	for unwanted period at end.
+
+	* src/wbc-gtk.c (cb_sheet_visibility_change): Set visibility of
+	both label and page.  Fixes #621463.
+
+2010-06-11 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr.c (gnm_insert_unique_value_cmp): new
+	(gnm_insert_unique_value): new
+	(do_gnm_expr_get_ranges): use gnm_insert_unique_value rather than
+	  gnm_insert_unique which only compares pointers
+
+2010-06-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-edit.c (item_edit_draw):	Fixed multi-line item edit
+	selection. [#621235]
+
+2010-06-11 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-pane-impl.h: make cursor.expr_range into a GSList
+	* src/gnm-pane.h (gnm_pane_expr_cursor_bound_set): add main_colour arg
+	* src/gnm-pane.c (gnm_pane_expr_cursor_bound_set): add main_colour
+	  arg and don't delete existing cursors
+
+2010-06-10 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func-builtin.c (help_if): remove inconsistent period
+
+2010-06-10  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_set_property): Mark sheet dirty in more
+	circumstances.  Fixes #621191.
+
+2010-06-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_notebook_tabs_visibility): Use
+	gtk_widget_set_visible and simplify.
+
+	* src/dead-kittens.h: New file for kittens killed by gtk.
+
+2010-06-09 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add Function Help
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/wbc-gtk-actions.c (cb_help_function): new
+	(permanent_actions): attach cb_help_function
+
+2010-06-07 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+	for Konstantin Tokarev
+
+	* src/parse-util.c (gnm_expr_char_start_p): allow blanks after
+	the initial operator symbol or = in an expression.
+
+2010-06-07 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr-name.h (expr_name_validate): drop Sheet argument
+	* src/commands.c (cmd_define_name): change the caller here
+	* src/expr-name.c (expr_name_validate): and the definition
+	  here; use the following two functions
+	(expr_name_validate_r1c1): new
+	(expr_name_validate_a1): new
+
+2010-06-06 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr-name.h (expr_name_in_use): new
+	* src/expr-name.c (expr_name_in_use): new
+	(do_expr_name_loop_check): add argument and change all callers
+	(cb_expr_name_check_for_name): new
+	(cb_expr_name_check_for_name_eq): new
+	(expr_name_check_for_name): new
+
+2010-06-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_define_name): be clearer with the error
+	  messages.
+	(cmd_rescope_name_redo): watch out for returned error strings
+
+2010-06-04  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_display_obj_size_tip): Fix critical.
+
+	* src/commands.c (cmd_generic): Rename from cmd_solver.
+	(cmd_generic_with_size): New function.
+
+2010-06-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: check for gtk_entry_set_icon_from_stock
+
+2010-06-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_rescope_name): new
+	* src/commands.c (cmd_rescope_name): new
+	(cmd_rescope_name_*): new
+
+2010-06-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: check for gtk_entry_get_text_length
+
+2010-06-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c: make PasteNames action permanent
+	* src/wbc-gtk.c (wbcg_menu_state_update): update PasteNames
+
+2010-06-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add Paste Names
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/wbc-gtk-actions.c: add ...
+
+2010-06-02  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-bar.c (item_bar_button_released): do not ungrab a not grabbed
+	item. [#620369]
+
+2010-05-31 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: added Wilcoxon Signed-Rank items
+      and rearrange into separate statistics menu.
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/wbc-gtk-actions.c: ditto
+    (cb_tools_sign_test_two_medians): use new tool
+    (cb_tools_wilcoxon_signed_rank_two_medians): new
+    (cb_tools_wilcoxon_signed_rank_two_medians): new
+
+2010-05-31  Morten Welinder  <terra@gnome.org>
+
+	* src/hlink.c (gnm_hlink_external_activate): Use go_gtk_url_show.
+
+	* src/wbc-gtk-actions.c (cb_help_web, cb_help_irc, cb_help_bug):
+	use go_gtk_url_show so we get the right screen.
+
+2010-05-30  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

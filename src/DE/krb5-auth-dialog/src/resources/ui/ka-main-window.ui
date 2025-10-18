@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  <menu id="menu_main">
+    <section>
+      <item>
+        <attribute name="action">app.preferences</attribute>
+        <attribute name="label" translatable="yes">Prefere_nces</attribute>
+      </item>
+      <item>
+        <attribute name="action">app.about</attribute>
+        <attribute name="label" translatable="yes">_About</attribute>
+      </item>
+      <item>
+        <attribute name="action">app.help</attribute>
+        <attribute name="label" translatable="yes">_Help</attribute>
+      </item>
+      <item>
+        <attribute name="action">app.quit</attribute>
+        <attribute name="label" translatable="yes">_Quit</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <template class="KaMainWindow" parent="GtkApplicationWindow">
+    <property name="title" translatable="yes">Service Tickets</property>
+    <property name="default-width">700</property>
+    <property name="hide-on-close">True</property>
+    <child>
+      <object class="GtkStack" id="stack">
+        <property name="margin-bottom">5</property>
+        <property name="margin-end">5</property>
+        <property name="margin-start">5</property>
+        <property name="margin-top">5</property>
+        <property name="transition_type">slide-down</property>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">tickets</property>
+            <property name="child">
+              <object class="GtkTreeView" id="tickets_view">
+                <child internal-child="selection">
+                  <object class="GtkTreeSelection" id="treeview-selection">
+                    <property name="mode">none</property>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">message</property>
+            <property name="child">
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Your ticket cache is currently empty</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="header">
+        <child>
+          <object class="GtkButton" id="get_ticket_btn">
+            <property name="label" translatable="yes">Get Ticket</property>
+            <property name="action-name">app.acquire-ticket</property>
+          </object>
+        </child>
+        <child type="end">
+          <object class="GtkMenuButton">
+            <property name="receives-default">True</property>
+            <property name="menu-model">menu_main</property>
+            <child>
+              <object class="GtkImage">
+                <property name="icon_name">open-menu-symbolic</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>>
+</interface>

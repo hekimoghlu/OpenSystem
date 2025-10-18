@@ -1,0 +1,56 @@
+{% extends "default.html" %}
+{% block title %}Review Activity (month){% endblock %}
+
+{% block content %}
+<script src="/static/js/Chart.js"></script>
+<script>
+Chart.defaults.global.animation = false;
+</script>
+
+<a href="{{url_for('.admin_graph_month')}}">Show the graphs for the last month...</a>
+
+<h2>Review Requests</h2>
+<canvas id="reviewsChart" width="900" height="400"></canvas>
+<script>
+var ctx = document.getElementById("reviewsChart").getContext("2d");
+var data = {
+    labels: {{labels|safe}},
+    datasets: [
+        {
+            label: "Requests",
+            fillColor: "rgba(20,120,220,0.2)",
+            strokeColor: "rgba(20,120,120,0.1)",
+            pointColor: "rgba(20,120,120,0.3)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(220,220,220,1)",
+            data: {{data_requests|safe}}
+        },
+    ]
+};
+var myLineChartDays = new Chart(ctx).Line(data, null);
+</script>
+
+<h2>Submitted Reviews</h2>
+<canvas id="reviewsChart2" width="900" height="400"></canvas>
+<script>
+var ctx = document.getElementById("reviewsChart2").getContext("2d");
+var data = {
+    labels: {{labels|safe}},
+    datasets: [
+        {
+            label: "Submitted",
+            fillColor: "rgba(251,14,5,0.2)",
+            strokeColor: "rgba(151,14,5,0.1)",
+            pointColor: "rgba(151,14,5,0.3)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(151,187,205,1)",
+            data: {{data_submitted|safe}}
+        },
+    ]
+};
+var myLineChartDays2 = new Chart(ctx).Line(data, null);
+</script>
+
+{% endblock %}

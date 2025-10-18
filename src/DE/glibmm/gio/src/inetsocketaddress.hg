@@ -1,0 +1,66 @@
+/* Copyright (C) 2009 jonathon jongsma
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/socketaddress.h>
+#include <giomm/inetaddress.h>
+#include <giomm/enums.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/socketaddress_p.h)
+
+namespace Gio
+{
+
+/** Internet SocketAddress
+ *
+ * An IPv4 or IPv6 socket address; that is, the combination of a
+ * InetAddress and a port number.
+ *
+ * An IPv4 or IPv6 socket address, corresponding to a struct sockaddr_in or
+ * struct sockaddr_in6.
+ *
+ * @newin{2,24}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API InetSocketAddress
+: public SocketAddress
+{
+  _CLASS_GOBJECT(InetSocketAddress, GInetSocketAddress, G_INET_SOCKET_ADDRESS, SocketAddress, GSocketAddress, , , GIOMM_API)
+
+protected:
+ _WRAP_CTOR(InetSocketAddress(const Glib::RefPtr<InetAddress>& address, guint16 port), g_inet_socket_address_new)
+
+public:
+ _WRAP_CREATE(const Glib::RefPtr<InetAddress>& address, guint16 port)
+
+ _WRAP_METHOD(Glib::RefPtr<InetAddress> get_address(), g_inet_socket_address_get_address, refreturn)
+ _WRAP_METHOD(Glib::RefPtr<const InetAddress> get_address() const, g_inet_socket_address_get_address, refreturn, constversion)
+
+ _WRAP_METHOD(guint16 get_port() const, g_inet_socket_address_get_port)
+
+ _WRAP_METHOD(guint32 get_flowinfo() const, g_inet_socket_address_get_flowinfo)
+ _WRAP_METHOD(guint32 get_scope_id() const, g_inet_socket_address_get_scope_id)
+
+  _WRAP_PROPERTY("address", Glib::RefPtr<InetAddress>)
+  // Don't use guint16 or guint32 in _WRAP_PROPERTY().
+  // There are no Glib::Value<> specializations for those types.
+  // Glib::Value<unsigned int> exists, and guint is a typedef of unsigned int.
+  _WRAP_PROPERTY("port", guint)
+  _WRAP_PROPERTY("flowinfo", guint)
+  _WRAP_PROPERTY("scope-id", guint)
+};
+
+} // namespace Gio

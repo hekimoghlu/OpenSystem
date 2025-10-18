@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!-- MARKER: start-header -->
+<head>
+<title>Gnumeric</title>
+<link rel="stylesheet" href="/style/style.css" type="text/css" />
+<link rel="icon" type="image/png" href="/logo.png" />
+</head>
+<body>
+<div id="wrap">
+  <a href="/"><div id="header">
+    <h1 id="logo-text"><span>Gnumeric</span></h1>
+    <p id="slogan">Free, Fast, Accurate &mdash; Pick Any Three!</p>
+    <img id="logo" src="/gnumeric.png" alt="logo" class="float-right"/>
+    </div></a>
+
+  <div id="nav">
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/development.html">Development</a></li>
+      <li><a href="/contact.html">Contact</a></li>
+    </ul>
+  </div>
+
+  <div id="content-wrap">
+    <!-- MARKER: start-main -->
+    <div id="fullmain">
+      <div class="generalitem">
+	<h2><span class="gnumeric-bullet"></span>Calculation</h2>
+	<p>This technical note describes how Gnumeric does
+	  calculations internally and why certain simple calculations
+	  like 0.3-(3*0.1) give unexpected non-zero results.</p>
+      </div>
+      <div class="generalitem">
+	<h2><span class="gnumeric-bullet"></span>Number System</h2>
+	<p>Numbers in Gnumeric are so-called floating-point numbers
+	  described in the
+	  <a href="http://en.wikipedia.org/wiki/IEEE_floating_point">IEEE-754
+	  standard</a>.  Specifically we are using the
+	  <a href="http://en.wikipedia.org/wiki/Double_precision">double
+	  precision</a> format described therein.  (It is possible to
+	  set up Gnumeric to use another format, but it is very rarely
+	  done.  Unless you have worked hard on doing that, you may
+	  assume that you are indeed using "double precision".)</p>
+	<p>This choice of number system has consequences just like
+	making another choice of number system would have come with a
+	different set of consequences.  Here are some of the
+	consequences of using "double precision":</p>
+	<ul>
+	  <li>Gnumeric can only work with numbers whose magnitude are
+	  less than about 10<sup>300</sup>.  This does not normally
+	  cause any problems.</li>
+	  <li>Numbers that are too close to zero will be rounded to
+	  zero.  The limit is about 10<sup>-300</sup>.  Such a
+	  rounding to zero is called underflow.</li>
+	  <li><strong>Not all numbers can be precisely
+	  represented.</strong>  When a number that cannot be
+	  represented is used, it will be internally rounded to the
+	  nearest number that can be represented.  The distance
+	  between representable numbers is much smaller for numbers
+	  close to zero than it is for large numbers.</li>
+	  <li>All integers up to about 10<sup>16</sup> can be
+	  precisely represented.  That is the good news.</li>
+	  <li><strong>The numbers 0.1, 0.01, ... cannot be precisely
+	  represented.</strong>  This is for the same reason that a
+	  desk calculator cannot precisely represent 1/3 but uses
+	  something like 0.33333333 instead.</li>
+	</ul>
+	<p>"Double precision" has some special values like "Infinity"
+	and "Not-a-number".  When encountered, these are turned into
+	error values in Gnumeric.  We also do our best to hide the
+	value "-0" from users.</p>
+	<p>Note: "double precision" is what pretty much every program
+	uses because it is what the hardware works
+	with.  <a href="http://en.wikipedia.org/wiki/Microsoft_Excel">Microsoft
+	Excel</a>, <a href="http://en.wikipedia.org/wiki/LibreOffice_Calc">LibreOffice</a>, <a href="http://en.wikipedia.org/wiki/OpenOffice_Calc">OpenOffice</a>,
+	and <a href="http://en.wikipedia.org/wiki/R_%28programming_language%29">R</a>
+	all are based on "double precision".</p>
+      </div>
+      <div class="generalitem">
+	<h2><span class="gnumeric-bullet"></span>Operations of Numbers</h2>
+	<p>When an operation like addition is performed in Gnumeric,
+	that operation will get a number of argument values and
+	produce one or more output values.  It is important to realize
+	that the argument values that the operation gets are always
+	representable numbers, i.e., <em>any rounding needed to make
+	numbers representable has already taken place.</em>  The job of
+	the operation is to calculate its result using the arguments
+	and round the result to the nearest representable number.</p>
+
+	<p>For example, for the division 1/10 where the arguments ("1"
+	and "10") are both precisely representable, we calculate the
+	mathematical value one-tenth and round that into the nearest
+	representable value which happens to be exactly
+	0.1000000000000000000013552527156068805425093160010874271392822265625.
+	That value clearly is a tiny bit bigger than one tenth in the
+	same way the desk calculator's 0.33333333 is a tiny bit
+	smaller than one third.</p>
+
+	<p>Rounding errors tend to add up.  Computing 0.3-(3*0.1), for
+	example, one does not get zero as one might have hoped for.
+	Each individual sub-result is subject to rounding to
+	representable values, so we are really computing
+	r(r(0.3)-r(r(3)*r(0.1))) where "r" is the rounding operation.
+	The end result is about -6*10<sup>-17</sup>.  That is an
+	unpleasant result of working with finite-precision math.</p>
+
+	<p>For more complex operations, like ERF(0.25), the goal is
+	still to produce the exact result rounded to nearest
+	representable value.  Again, the term "exact result" is based
+	on the argument value as already rounded to a representable
+	number.  We do not always achieve this goal, i.e., we
+	sometimes calculate a value that is slightly off from the
+	nearest representable value.  If we have at least about 15
+	correct significant digits we are not too concerned by this,
+	but anything less is worth reporting as a bug.  Note, however,
+	that Gnumeric in general produces results that are far more
+	accurate than other spreadsheets.</p>
+      </div>
+      <div class="generalitem">
+	<h2><span class="gnumeric-bullet"></span>Difference to Microsoft Excel</h2>
+	<p>Microsoft Excel uses the same number system as Gnumeric,
+	but Microsoft Excel does some operations differently.</p>
+
+	<p>If the top-level operand of an expression is a subtraction
+	and the result of the subtraction is very close to zero
+	compared to the two arguments, then the result will be rounded
+	to zero.  This operation, called <em>snap-to-zero</em>, is
+	also performed for addition and the subtraction implied by
+	comparisons.  Is is not performed for operations deeper in an
+	expression, not even for subtractions surrounded by nothing
+	but parentheses.</p>
+
+	<p>Snap-to-zero has the effect of hiding the small rounding
+	errors that arise by the representation error on 0.01.  That
+	is, accounting calculations on amounts of dollars and cents
+	will appear to be accurate most of the time.</p>
+
+	<p>But snap-to-zero comes at a price:</p>
+	<ul>
+	  <li>Snap-to-zero will take place even if the difference
+	    between two numbers is not the cause of representation
+	    errors.  Excel will claim that two numbers are equal even
+	    when they are not.</li>
+	  <li>It becomes possible to have three numbers A1, A2, and
+	    A3, where A1=A2 and A2=A3, but A1&lt;&gt;A3.</li>
+	  <li>It is possible for A1-5005=0 and at the same time
+	    A1-5004-1&lt;&gt;0.</li>
+	  <li>It is possible to have A1=A2, but (say)
+	    TAN(A1)&lt;&gt;TAN(A2).</li>
+	  <li>Snap-to-zero can greatly increase rounding errors in
+	    scientific calculations.</li>
+	</ul>
+	<p>Gnumeric does not do snap-to-zero.  We recommend an
+	explicit rounding operation where it matters.</p>
+      </div>
+      <div class="generalitem">
+	<h2><span class="gnumeric-bullet"></span>Difference to LibreOffice/OpenOffice</h2>
+	<p>LibreOffice and OpenOffice both use the same number system
+	as Gnumeric.  These programs both use snap-to-zero (see
+	above), but use it much more aggressively than Microsoft
+	Excel.  In particular, every subtraction is subject to
+	snap-to-zero and there are no easy ways of performing a
+	subtraction that does not snap-to-zero.  Snap-to-zero is also
+	done internally in many sheet functions, for example in VAR.
+	There does not seem to be any accurate and complete
+	documentation for snap-to-zero.</p>
+
+	<p>The lack of an honest subtraction operation makes it hard
+	to even test the accuracy of sheet-level functions.
+	LibreOffice and OpenOffice will claim that a result matches a
+	  reference value even when they do not.  (Update: LibreOffice
+	nowadays has a function that allows raw subtraction.)</p>
+      </div>
+      <div class="generalitem">
+	<h2><span class="gnumeric-bullet"></span>Alternate Number Systems</h2>
+	<p>We sometimes get asked why Gnumeric is not using some other
+	number system that would avoid a particular problem a user is
+	seeing.</p>
+	<ul>
+	  <li><strong>Arbitrary precision:</strong> computers are
+	    powerful today and should be able to just using enough
+	    precision that all these rounding issues would go away,
+	    right?  Well, no.  If one tried that, an immediate
+	    consequence would be that sometimes basic operators like "+"
+	    and comparisons like "&lt;" would take an unbounded amount
+	    of time, i.e., the program would "hang" instead of producing
+	    an answer.  This is a consequence
+	    of <a href="http://en.wikipedia.org/wiki/Halting_problem">the
+	      undecidable halting problem</a> and there is no escaping
+	    it.</li>
+	  <li><strong>A base-10 format:</strong> if we used a base-10
+	    ("decimal") format then 0.1 and 0.01 would be precisely
+	    representable, even if some other set of numbers would not
+	    be.  We could, in fact, do that.  We do not do so because
+	    we have no support from the compiler and lower-level
+	    libraries that we use.  Until they support such a number
+	    system, we cannot.  To do this right would be a fantastic
+	    amount of work and we do not expect it to happen.</li>
+	  <li><strong>As entered:</strong> some people believe we
+	    should keep values precisely as entered, i.e., basically as
+	    strings.  This is severely misguided.  It would have the
+	    same problems as for arbitrary precision above, and on top
+	    of that it would have extra problems.  For example, if a
+	    value of "999,123" is entered into a spreadsheet somewhere
+	    in Europe and that file is subsequently sent to The United
+	    States, then the initial value of a little less than one
+	    thousand might be interpreted as a value of a little less
+	    than one million.  Clearly that is madness.  (There are
+	    further problems that are outside the scope of this
+	    note.)</li>
+	</ul>
+      </div>
+    </div>
+    <!-- MARKER: end-main -->
+    <!-- MARKER: start-sidebar -->
+    <!-- MARKER: end-sidebar -->
+  </div>
+</div>
+</body>
+</html>

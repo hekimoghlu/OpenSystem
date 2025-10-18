@@ -1,0 +1,54 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/exceptionhandler.h>
+
+namespace Gio
+{
+
+extern "C"
+{
+// Non-static functions with C linkage get external linkage, even if they are
+// defined in an anonymous namespace.
+//TODO: Declare 'static' when we can break ABI.
+void
+delete_slot(gpointer data)
+{
+  Cancellable::SlotCancelledCallback* callback =
+    reinterpret_cast<Cancellable::SlotCancelledCallback*>(data);
+  delete callback;
+}
+
+//TODO: Declare 'static' when we can break ABI.
+void
+slot_cancelled_proxy(GCancellable* /*cancellable*/, gpointer data)
+{
+  Cancellable::SlotCancelledCallback* callback =
+    reinterpret_cast<Cancellable::SlotCancelledCallback*>(data);
+  (*callback)();
+}
+
+} // extern "C"
+
+gulong
+Cancellable::connect(const SlotCancelledCallback& slot)
+{
+  auto slot_copy = new SlotCancelledCallback(slot);
+  return g_cancellable_connect(gobj(), G_CALLBACK(slot_cancelled_proxy), slot_copy, &delete_slot);
+}
+
+} // namespace Gio

@@ -1,0 +1,34 @@
+{{name_}}_sources = [
+{{if language == "c"}}
+  'main.c',
+  '{{prefix}}-application.c',
+  '{{prefix}}-window.c',
+{{else if language == "vala"}}
+  'main.vala',
+  'application.vala',
+  'window.vala',
+{{end}}
+]
+
+{{name_}}_deps = [
+{{if language == "vala"}}
+  config_dep,
+{{end}}
+  dependency('gtk4'),
+{{if is_adwaita}}
+  dependency('libadwaita-1', version: '>= 1.4'),
+{{end}}
+]
+
+{{name_}}_sources += gnome.compile_resources('{{prefix}}-resources',
+  '{{prefix}}.gresource.xml',
+  c_name: '{{prefix_}}'
+)
+
+executable('{{name}}', {{name_}}_sources,
+  dependencies: {{name_}}_deps,
+{{if language == "vala"}}
+  include_directories: config_inc,
+{{end}}
+       install: true,
+)

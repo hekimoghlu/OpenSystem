@@ -1,0 +1,749 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<sect2 id="DDLIntro">
+  <title>General words about DDL queries</title>
+  <para>
+    On the contrary to data manipulation (DML) queries, data definition queries are not very well standardized (the SQL varies a 
+    lot from one DBMS to the other), and &LIBGDA; proposes to bypass the SQL usage and uses a different approach based on the 
+    information required to perform a task (or operation, thus the <link linkend="GdaServerOperation">GdaServerOperation</link>
+    object).
+  </para>
+  <para>
+    Here is an overview the steps involved:
+    <itemizedlist>
+      <listitem>
+        <para>Make sure the database provider (associated to the connection)  supports the requested operation using the 
+	  <link linkend="gda-server-provider-supports-operation">gda_server_provider_supports_operation()</link> method</para>
+      </listitem>
+      <listitem>
+        <para>Ask the provider to create a <link linkend="GdaServerOperation">GdaServerOperation</link> object
+	  using the <link linkend="gda-server-provider-create-operation">gda_server_provider_create_operation()</link> method. 
+	  The resulting new object will hold all the information required (and some optional) to perform the requested
+	  operation. For example to create a table, the required information will be the table name and the description of its
+	  columns, and the optional information might be the schema in which to create the table for a PostgreSQL provider.</para>
+	<para>
+	  Additionally some options can be passed when using that function in the form of named parameters, see <link linkend="gda-server-op-information-std">this section</link> for more information.
+	</para>
+      </listitem>
+      <listitem>
+        <para>Fill in the values (required or optional) of the <link linkend="GdaServerOperation">GdaServerOperation</link> 
+	  object (see the GdaServerOperation object's <link linkend="GdaServerOperation">documentation</link> for more information).
+	</para>
+      </listitem>
+      <listitem>
+        <para>Use that object to request the actual operation to be done using the 
+	  <link linkend="gda-server-provider-perform-operation">gda_server_provider_perform_operation()</link> method.
+	Afterwards that object can be discarded using <link linkend="g-object-unref">g_object_unref()</link></para>
+      </listitem>
+    </itemizedlist>
+    
+    The information stored within a <link linkend="GdaServerOperation">GdaServerOperation</link> object can also be stored within 
+    an XML structure and re-loaded later, which for example allows to create "scripts" of operations to do.
+  </para>
+
+  <sect3>
+    <title>Organization of the required information</title>
+    <para>
+      The required information to perform an operation is stored entirely in a 
+      <link linkend="GdaServerOperation">GdaServerOperation</link> object using named paths which are strings like 
+      "/TABLE_DEF_P/TABLE_NAME" or "/TABLE_CONSTRAINTS_S/0/CONSTRAINT_STRING" (for details about the path format, refer to the
+      <link linkend="gda-server-operation-set-value-at">gda_server_operation_set_value_at()</link> method). 
+      Each path is similar to a Unix file path
+      (names separated by a '/'). Each part of the path corresponds to a node (represented as a 
+      <link linkend="GdaServerOperationNode">GdaServerOperationNode</link> structure) which has a type listed as 
+      a <link linkend="GdaServerOperationNodeType">GdaServerOperationNodeType</link>; basically the types of node are:
+      <itemizedlist>
+	<listitem>
+          <para>a node containing a <link linkend="GdaHolder">GdaHolder</link> object which just contains one value</para>
+	</listitem>
+	<listitem>
+          <para>a node containing a <link linkend="GdaSet">GdaSet</link> object which is just a list
+	    of named parameters (for example all the attributes of the table to create such as the table's name and 
+	    storage type for a MySQL provider)</para>
+	</listitem>
+	<listitem>
+          <para>a node containing a <link linkend="GdaDataModel">GdaDataModel</link> object when the needed information
+	  is tabular (rows and columns), for example the definition of all the columns to create in a table, each column having 
+	  a name, type, CHECK constraint, etc</para>
+	</listitem>
+	<listitem>
+          <para>a node defining a sequence of items: the sequence node can have zero or more items composed of nodes. 
+	    For example when 
+	  defining the foreign keys for a new table, a sequence node can be created which can contain zero or more foreign key
+	  definition items (each composed of the referenced table, the referenced fields, the referential integrity rules, etc)
+	  </para>
+	</listitem>
+	<listitem>
+          <para>a node representing an 'item' in a sequence node (that is a list of nodes).</para>
+	</listitem>
+	<listitem>
+          <para>a node representing a data model's column.</para>
+	</listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      Note: the list and complete structure of the information required to perform an operation is imposed by each provider and cannot
+      be modified. The information stored in each node can be modified (depending on the node's type):
+    </para>
+  </sect3>
+
+  <sect3 id="gda-server-op-information-specif">
+    <title>Provider specific information</title>
+    <para>
+      To list the possible/required parameters for each provider, use the 
+      <link linkend="libgda-list-server-op">gda-list-server-op</link> tool.
+    </para>
+  </sect3>
+  <sect3 id="gda-server-op-information-std">
+    <title>Standard named information</title>
+    <para>
+      For most of the possible operations, the required information from one provider to the other does not vary, only the
+      optional features correspond to optional information, so &LIBGDA; imposes the names of the required information for
+      some of the most common operations, which is shown next. Some optional information which is shared by several providers
+      is also named but not enforced.
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_CREATE_DB:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/DB_DEF_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Database's description</entry>
+		</row>
+		<row>
+                  <entry>/DB_DEF_P/DB_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Database name (string)</entry>
+		</row>
+                <row>
+                  <entry>/DB_DEF_P/DB_CSET</entry>
+                  <entry>PARAM</entry>
+                  <entry></entry>
+                  <entry>Character set (string)</entry>
+                </row>
+		<row>
+                  <entry>/DB_DEF_P/DB_OWNER</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Database owner (string)</entry>
+		</row>
+		<row>
+                  <entry>/DB_DEF_P/DB_TABLESPACE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Tablespace the database is in (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	  Note also that if creating a database requires an access to a server, then the access parameters to that server
+	  will all be in the "/SERVER_CNX_P" PARAMLIST, as shown:
+	  <table frame="all">
+            <tgroup cols="3" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/SERVER_CNX_P</entry>
+                  <entry>PARAMLIST</entry>
+                  <entry>Parameters to connect to a server</entry>
+		</row>
+		<row>
+                  <entry>/SERVER_CNX_P/HOST</entry>
+                  <entry>PARAM</entry>
+                  <entry>Name of the server (string)</entry>
+		</row>
+                <row>
+                  <entry>/SERVER_CNX_P/PORT</entry>
+                  <entry>PARAM</entry>
+                  <entry>Port number on the server (gint)</entry>
+                </row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_DROP_DB:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/DB_DESC_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Database's description</entry>
+		</row>
+		<row>
+                  <entry>/DB_DESC_P/DB_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Database name (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	  Note also that if creating a database requires an access to a server, then the access parameters to that server
+	  will all be in the "/SERVER_CNX_P" PARAMLIST, as for the GDA_SERVER_OPERATION_CREATE_DB operation.
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_CREATE_TABLE:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/TABLE_DEF_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's description</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DEF_P/TABLE_TABLESPACE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Tablespace in which to create the table (string)</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DEF_P/TABLE_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Table name (string)</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DEF_P/TABLE_TEMP</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>TRUE if the table to create is temporary (boolean)</entry>
+		</row>
+                <row>
+                  <entry>/TABLE_DEF_P/TABLE_COMMENT</entry>
+                  <entry>PARAM</entry>
+                  <entry></entry>
+                  <entry>Comment on a table (string)</entry>
+                </row>
+		<row>
+                  <entry>/FIELDS_A</entry>
+                  <entry>DATA_MODEL</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's fields description</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_NAME</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry>Yes</entry>
+                  <entry>A table's field name (string)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_TYPE</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry>Yes</entry>
+                  <entry>A table's field type (string)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_SIZE</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>A table's field defined size (unsigned integer)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_SCALE</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>A table's field number of decimals (unsigned integer)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_NNUL</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>TRUE if table's field can't be NULL (boolean)</entry>
+		</row>
+                <row>
+                  <entry>/FIELDS_A/@COLUMN_AUTOINC</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+                  <entry></entry>
+                  <entry>TRUE if table's field must be auto incremented (boolean)</entry>
+                </row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_UNIQUE</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>TRUE if table's field must be unique (boolean)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_PKEY</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>TRUE if table's field is a primary key (boolean)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_DEFAULT</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>A table's field default value (string)</entry>
+		</row>
+		<row>
+                  <entry>/FIELDS_A/@COLUMN_CHECK</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>A table's field CHECK condition (string)</entry>
+		</row>
+                <row>
+                  <entry>/FIELDS_A/@COLUMN_COMMENT</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+                  <entry></entry>
+                  <entry>A comment on the table's field (string)</entry>
+                </row>
+		<row>
+                  <entry>/FKEY_S</entry>
+                  <entry>DATA_SEQUENCE</entry>
+		  <entry></entry>
+                  <entry>Sequence representing foreign keys description</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_REF_TABLE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>The foreign key's referenced table (string)</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_FIELDS_A</entry>
+                  <entry>DATA_MODEL</entry>
+		  <entry></entry>
+                  <entry>The foreign key's field's being used</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_FIELDS_A/@FK_FIELD</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>A foreign key's field's from the table to create</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_FIELDS_A/@FK_REF_PK_FIELD</entry>
+                  <entry>DATA_MODEL_COLUMN</entry>
+		  <entry></entry>
+                  <entry>A foreign key's field's from the referenced table</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_ONUPDATE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>The action to take when the referenced field is updated (string)</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_ONDELETE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>The action to take when the referenced field is deleted (string)</entry>
+		</row>
+		<row>
+                  <entry>/FKEY_S/FKEY_DEFERRABLE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>TRUE if the foreign key is deferrable until the end of a transaction (boolean)</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_CONSTRAINTS_S</entry>
+                  <entry>SEQUENCE</entry>
+		  <entry></entry>
+                  <entry>Sequence representing table constraints</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_CONSTRAINTS_S/CONSTRAINT_STRING</entry>
+                  <entry>SEQUENCE</entry>
+		  <entry></entry>
+                  <entry>A table constraint (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_DROP_TABLE:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/TABLE_DESC_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's description</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DESC_P/TABLE_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's name (string)</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DESC_P/REFERENCED_ACTION</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Action to perform for objects referencing the table to drop (CASCADE, RESTRICT, ...) (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	<para>
+	  Optional parameters for the creation of a GdaServerOperation object for such an operation type:
+	  <table frame="all">
+            <tgroup cols="3" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Id</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>TABLE_DESC_P/TABLE_NAME</entry>
+                  <entry>string</entry>
+                  <entry>Name of the table to delete</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_RENAME_TABLE:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/TABLE_DESC_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's description</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DESC_P/TABLE_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's name (string)</entry>
+		</row>
+		<row>
+                  <entry>/TABLE_DESC_P/TABLE_NEW_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Table's new name (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_ADD_COLUMN:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/COLUMN_DEF_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Column's description</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DEF_P/TABLE_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Name of the table to add a column to (string)</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DEF_P/COLUMN_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>New column's name (string)</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DEF_P/COLUMN_TYPE</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>New column's type (string)</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DEF_P/COLUMN_SIZE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>New column's defined size (unsigned integer)</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DEF_P/COLUMN_SCALE</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>New column's number of decimals (unsigned integer)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+	<para>
+	  The other bits of information for the column description, which are not required, are the same as for "/FIELDS_A" array of 
+	  the GDA_SERVER_OPERATION_CREATE_TABLE (replace "/FIELDS_A" with "/COLUMN_DEF_P").
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_DROP_COLUMN:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/COLUMN_DESC_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Column's description</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DESC_P/TABLE_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Name of the table to remove a column from (string)</entry>
+		</row>
+		<row>
+                  <entry>/COLUMN_DESC_P/COLUMN_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Name of the column to remove (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_CREATE_INDEX:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/INDEX_DEF_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Index's description</entry>
+		</row>
+		<row>
+                  <entry>/INDEX_DEF_P/INDEX_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Index name (string)</entry>
+		</row>
+                <row>
+                  <entry>/INDEX_DEF_P/INDEX_TYPE</entry>
+                  <entry>PARAM</entry>
+                  <entry></entry>
+                  <entry>Index type: UNIQUE, etc (string)</entry>
+                </row>
+		<row>
+                  <entry>/INDEX_DEF_P/INDEX_ON_TABLE</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Table on which the index is applied (string)</entry>
+		</row>
+		<row>
+                  <entry>/INDEX_FIELDS_S</entry>
+                  <entry>SEQUENCE</entry>
+		  <entry>Yes</entry>
+                  <entry>List of fields on which the index is applied (min: 1 item)</entry>
+		</row>
+		<row>
+                  <entry>/INDEX_FIELDS_S/INDEX_FIELD</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>A field on which the index is applied (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_DROP_INDEX:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/INDEX_DESC_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>Index's description</entry>
+		</row>
+		<row>
+                  <entry>/INDEX_DESC_P/INDEX_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>Index's name (string)</entry>
+		</row>
+                <row>
+                  <entry>/INDEX_DEF_P/INDEX_ON_TABLE</entry>
+                  <entry>PARAM</entry>
+                  <entry></entry>
+                  <entry>Table on which the index is applied (string)</entry>
+                </row>
+		<row>
+                  <entry>/INDEX_DESC_P/REFERENCED_ACTION</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Action to perform for objects referencing the index to drop (CASCADE, RESTRICT, ...) (string)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+      <listitem>
+        <para>Named and required information for GDA_SERVER_OPERATION_CREATE_USER:
+	  <table frame="all">
+            <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+              <thead>
+		<row>
+                  <entry>Path</entry>
+                  <entry>Type</entry>
+                  <entry>Required?</entry>
+                  <entry>Description</entry>
+		</row>
+              </thead>
+              <tbody>
+		<row>
+                  <entry>/USER_DEF_P</entry>
+                  <entry>PARAMLIST</entry>
+		  <entry>Yes</entry>
+                  <entry>User's description</entry>
+		</row>
+		<row>
+                  <entry>/USER_DEF_P/USER_NAME</entry>
+                  <entry>PARAM</entry>
+		  <entry>Yes</entry>
+                  <entry>User name (string)</entry>
+		</row>
+                <row>
+                  <entry>/USER_DEF_P/PASSWORD</entry>
+                  <entry>PARAM</entry>
+                  <entry></entry>
+                  <entry>User's password (string)</entry>
+                </row>
+		<row>
+                  <entry>/USER_DEF_P/CAP_CREATEDB</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Set to TRUE if the user is allowed to create databases (boolean)</entry>
+		</row>
+		<row>
+                  <entry>/USER_DEF_P/CAP_CREATEUSER</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Set to TRUE if the user is allowed to create users (boolean)</entry>
+		</row>
+		<row>
+                  <entry>/USER_DEF_P/VALIDITY</entry>
+                  <entry>PARAM</entry>
+		  <entry></entry>
+                  <entry>Set the expiration timestamp (timestamp)</entry>
+		</row>
+	      </tbody>
+	    </tgroup>
+	  </table>
+	</para>
+      </listitem>
+
+    </itemizedlist>
+  </sect3>
+  
+</sect2>

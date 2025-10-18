@@ -1,0 +1,5 @@
+subdir('calendar')
+subdir('documents')
+subdir('picasaweb')
+subdir('tasks')
+subdir('youtube')

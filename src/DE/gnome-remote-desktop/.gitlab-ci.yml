@@ -1,0 +1,251 @@
+include:
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    file: 'templates/fedora.yml'
+    ref: '145b1bc7ef1702d2bd71584010d7113c6786a506'
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    file: 'templates/ci-fairy.yml'
+    ref: '34f4ade99434043f88e164933f570301fd18b125'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      job-stage: deploy
+      dist-job-name: "dist-gnome-remote-desktop-tarball"
+      tarball-artifact-path: $TARBALL_ARTIFACT_PATH
+
+stages:
+  - review
+  - prepare
+  - build
+  - test
+  - deploy
+
+variables:
+  TARBALL_ARTIFACT_PATH: build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
+
+.skip-git-clone:
+  variables:
+    GIT_STRATEGY: none
+
+.only-merge-requests:
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^$/'
+      when: never
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+      when: on_success
+
+.gnome-remote-desktop.fedora@common:
+  variables:
+    FDO_DISTRIBUTION_VERSION: 42
+    BASE_TAG: '2025-06-26.0.distro-upgrade'
+    FDO_UPSTREAM_REPO: GNOME/gnome-remote-desktop
+    FDO_DISTRIBUTION_EXEC: |
+      dnf -y update && dnf -y upgrade &&
+
+      dnf install -y 'dnf-command(builddep)' &&
+
+      # To build
+      dnf install -y meson &&
+      dnf builddep -y gnome-remote-desktop &&
+      dnf install -y 'pkgconfig(epoxy)' 'pkgconfig(libdrm)' 'pkgconfig(gbm)' \
+                     'pkgconfig(gudev-1.0)' &&
+      dnf install -y 'pkgconfig(ffnvcodec)' &&
+      dnf install -y 'pkgconfig(fuse3)' &&
+      dnf install -y 'pkgconfig(fdk-aac)' &&
+      dnf install -y 'pkgconfig(libva)' &&
+      dnf install -y 'pkgconfig(opus)' &&
+      dnf install -y 'pkgconfig(polkit-gobject-1)' &&
+      dnf install -y 'pkgconfig(tss2-esys)' \
+                     'pkgconfig(tss2-mu)' 'pkgconfig(tss2-rc)' \
+                     'pkgconfig(tss2-tctildr)' &&
+      dnf install -y 'pkgconfig(vulkan)' &&
+      dnf install -y asciidoc &&
+      dnf install -y glslc &&
+      dnf install -y spirv-tools &&
+      dnf builddep -y mutter --setopt=install_weak_deps=False &&
+      dnf install -y git cmake gcc-c++ libusb1-devel &&
+      dnf install -y pkcs11-helper-devel 'pkgconfig(krb5)' 'pkgconfig(libcjson)' \
+                     ffmpeg-free-devel &&
+
+      # To test
+      dnf install -y openssl &&
+      dnf install -y 'pkgconfig(libvncclient)' &&
+      dnf remove -y pipewire0.2-devel pipewire0.2-libs &&
+      dnf install -y 'pkgconfig(libpipewire-0.3)' &&
+      dnf install -y dbus-daemon python3-dbus python3-gobject \
+                     gnome-settings-daemon mesa-dri-drivers mutter &&
+
+      ./.gitlab-ci/install-cmake-project.sh \
+          -DWITH_CHANNELS=ON \
+          -DWITH_CLIENT_CHANNELS=ON \
+          -DWITH_CUPS=OFF \
+          -DWITH_ICU=ON \
+          -DWITH_PROXY=OFF \
+          -DWITH_SERVER=ON \
+          -DWITH_SERVER_CHANNELS=ON \
+          -DWITH_SHADOW=OFF \
+          -DWITHOUT_FREERDP_3x_DEPRECATED=ON \
+          https://github.com/FreeRDP/FreeRDP \
+          3.15.0 . &&
+
+      dnf clean all
+
+.gnome-remote-desktop.fedora@x86_64:
+  extends: .gnome-remote-desktop.fedora@common
+  variables:
+    FDO_DISTRIBUTION_TAG: "x86_64-${BASE_TAG}"
+
+default:
+  # Cancel jobs if newer commits are pushed to the branch
+  interruptible: true
+  # Auto-retry jobs in case of infra failures
+  retry:
+    max: 1
+    when:
+      - 'runner_system_failure'
+      - 'stuck_or_timeout_failure'
+      - 'scheduler_failure'
+      - 'api_failure'
+
+workflow:
+  rules:
+    # Allow to switch from branch pipelines to MR pipelines seamlessly
+    # https://docs.gitlab.com/ee/ci/jobs/job_control.html#avoid-duplicate-pipelines
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE == "push"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Don't trigger a branch pipeline if there is an open MR
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+repo-sanity:
+  extends:
+    - .fdo.ci-fairy
+  stage: review
+  variables:
+    GIT_DEPTH: "1"
+  script:
+    - >
+      if [[ -z "$CI_REGISTRY_IMAGE" ]] ;
+      then
+        .gitlab-ci/simple-junit-report.sh check-junit-report.xml \
+          repo-sanity "The container registry should be enabled in the project general settings panel at $CI_PROJECT_URL/edit" ;
+        exit 1 ;
+      fi
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - check-junit-report.xml
+    reports:
+      junit: check-junit-report.xml
+  rules:
+    - !reference [.only-merge-requests, rules]
+
+check-commit-log:
+  extends:
+    - .fdo.ci-fairy
+  stage: review
+  variables:
+    GIT_DEPTH: "100"
+  script:
+    ci-fairy check-commits --junit-xml=commit-message-junit-report.xml
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - commit-message-junit-report.xml
+    reports:
+      junit: commit-message-junit-report.xml
+  rules:
+    - !reference [.only-merge-requests, rules]
+
+check-merge-request:
+  extends:
+    - .fdo.ci-fairy
+    - .skip-git-clone
+  stage: review
+  script:
+    ci-fairy check-merge-request --require-allow-collaboration --junit-xml=check-merge-request-report.xml
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - check-merge-request-report.xml
+    reports:
+      junit: check-merge-request-report.xml
+  rules:
+    - !reference [.only-merge-requests, rules]
+
+build-fedora-container@x86_64:
+  extends:
+    - .fdo.container-build@fedora@x86_64
+    - .gnome-remote-desktop.fedora@x86_64
+    - .skip-git-clone
+  stage: prepare
+
+build-gnome-remote-desktop:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gnome-remote-desktop.fedora@x86_64
+  stage: build
+  script:
+    - meson setup . build -Dbuildtype=debugoptimized -Dvnc=true --werror
+    - ninja -C build
+    - ninja -C build install
+  needs:
+    - build-fedora-container@x86_64
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - build
+
+test-gnome-remote-desktop:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gnome-remote-desktop.fedora@x86_64
+  stage: test
+  dependencies:
+    - build-gnome-remote-desktop
+  script:
+    - meson test -C build --no-rebuild --verbose --no-stdsplit -t 10
+  needs:
+    - build-gnome-remote-desktop
+
+dist-gnome-remote-desktop:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gnome-remote-desktop.fedora@x86_64
+  stage: deploy
+  needs:
+    - job: build-fedora-container@x86_64
+      artifacts: false
+  script:
+    - meson setup . build -Dvnc=true --werror
+    - meson dist -C build --include-subprojects
+  artifacts:
+    expire_in: 7 day
+    name: "gnome-remote-desktop-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - build/meson-private/dist-build/meson-logs
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/meson.build"
+        - meson/*
+      when: on_success
+    - if: '$GITLAB_USER_LOGIN == "marge-bot"'
+      when: on_success
+    - if: '$CI_MERGE_REQUEST_ASSIGNEES == "marge-bot"'
+      when: on_success
+
+dist-gnome-remote-desktop-tarball:
+  extends: dist-gnome-remote-desktop
+  artifacts:
+    expose_as: 'Get tarball here'
+    name: "${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - $TARBALL_ARTIFACT_PATH
+  rules:
+    - if: '$CI_COMMIT_TAG'

@@ -1,0 +1,319 @@
+2002-08-25  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.8
+
+2002-08-25  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c : tweak page setup label to match bonobo.
+
+	* src/sheet-object-image.c (sheet_object_image_print) : slight tweak
+	  to get thing spartially working.  placement is still off.
+
+	* configure.in : bump the gal req to get the new cursor.
+
+2002-08-23  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c: Include gsf-input-bonobo.h from gsf-gnome dir
+	rather than gsf.
+
+2002-08-21  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* module-plugin-defs.h:
+	Define PLUGIN_CLASS only if PLUGIN_ID is defined
+
+2002-08-20  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add config message about python
+
+2002-08-20  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/plugin-loader.[ch]: Inherit from GObject, not GtkObject.
+	(gnumeric_plugin_loader_unload_service): Removed FIXME - unload plugin
+	after unloading all services.
+
+	* src/plugin-loader-module.h: Moved all typedefs with plugin
+	structures...
+
+	* src/module-plugin-defs.h: ... here, added some comments and
+	  PLUGIN_CLASS macro
+
+	* src/plugin-loader-module.c: Adjusted to plugin-loader.h
+
+	* src/plugin.c:
+	Inherit GnmPlugin from GModuleType, not GObject.
+	(gnm_plugin_type_module_load, gnm_plugin_type_module_unload):
+	New, GTypeModule methods.
+	(gnm_plugin_deactivate): Destroy loader after deactivating plugin
+	(GnmPlugin): Removed is_base_loaded,
+	use gnumeric_plugin_loader_is_base_loaded to check this.
+	(gnm_plugin_use_ref, gnm_plugin_use_unref):
+	Added assertions (plugin must be active).
+
+2002-08-19  Jon K Hellan  <hellan@acm.org>
+
+	* src/stf.c (stf_read_default_probe): Use glib's seek enum instead
+	of the enum which used to be in libgsf.
+
+2002-08-19  Jody Goldberg <jody@gnome.org>
+
+	* src/value.c (value_new_float) : return #NUM rather than #VALUE
+
+2002-08-19  Jon K Hellan  <hellan@acm.org>
+
+	* src/file-priv.h: include <bonobo/bonobo-storage.h>
+
+2002-08-18  Jody Goldberg <jody@gnome.org>
+
+	* A pile of header cleanups.
+
+	* src/gui-clipboard.c (x_claim_clipboard) : fix warnings.
+
+2002-08-18  Jon K Hellan  <hellan@acm.org>
+
+	* src/print.c: Fix typo.
+
+2002-08-18  Morten Welinder  <terra@diku.dk>
+
+	* src/hlink.c (gnm_hlink_url_activate, ...): Use "lnk", not "link"
+	as identifier.
+
+2002-08-15  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/gnumeric-i18n.[ch]: New
+
+	* src/Makefile.am: Added gnumeric-i18n.[ch]
+
+	* src/gutils.[ch]
+	(g_lang_score_in_lang_list, g_lang_score_is_better): Removed
+
+	* src/format-template.h
+	(FormatTemplateCategoryGroup, FormatTemplateCategory): Removed lang_score
+
+	* src/xml-io-autoft.c (gnumeric_xml_read_format_template_category):
+	Don't assign category->lang_score
+
+	* src/file-autoft.c
+	(category_compare_orig_name): Renamed to
+	category_compare_orig_name_and_dir, compare by both name and directory
+	(category_group_list_get): Don't use lang_score, get translation from
+	the first category in a group. Sorting by name and directory guarantees
+	deterministic results
+
+	* plugins/applix/applix-read.c, plugins/derivatives/options.c,
+	plugins/dif/dif.c, plugins/excel/boot.c, plugins/excel/ms-excel-read.c,
+	plugins/excel/ms-excel-write.c, plugins/excel/ms-formula-read.c,
+	plugins/excel/ms-formula-write.c, plugins/fn-complex/functions.c,
+	plugins/fn-complex/gsl-complex.c, plugins/fn-database/functions.c,
+	plugins/fn-date/functions.c, plugins/fn-eng/functions.c,
+	plugins/fn-financial/functions.c, plugins/fn-info/functions.c,
+	plugins/fn-logical/functions.c, plugins/fn-lookup/functions.c,
+	plugins/fn-math/functions.c, plugins/fn-random/functions.c,
+	plugins/fn-stat/functions.c, plugins/fn-string/functions.c
+	plugins/gb/plugin.c, plugins/gda/plugin-gda.c, plugins/guile/plugin.c,
+	plugins/guile/smob-value.c, plugins/html/html_read.c,
+	plugins/html/roff.c, plugins/lotus-123/lotus.c, plugins/mps/mps.c,
+	plugins/mps/parser.c, plugins/numtheory/numtheory.c,
+	plugins/oleo/oleo.c, plugins/plan-perfect/pln.c,
+	plugins/psiconv/psiconv-read.c, plugins/python/python.c,
+	plugins/python-loader/py-gnumeric.c,
+	plugins/python-loader/python-loader.c, plugins/qpro/qpro-read.c,
+	plugins/sample_datasource/sample_datasource.c, plugins/sc/sc.c,
+	plugins/sylk/sylk.c, plugins/uihello/uihello.c, plugins/xbase/boot.c,
+	plugins/xml_sax/xml-sax-read.c, src/bonobo-io.c, src/clipboard.c,
+	src/cmd-edit.c, src/command-context-stderr.c, src/command-context.c,
+	src/commands.c, src/corba-args.c, src/dates.c,
+	src/dialogs/dao-gui-utils.c, src/dialogs/dialog-about.c,
+	src/dialogs/dialog-advanced-filter.c,
+	src/dialogs/dialog-analysis-tools.c, src/dialogs/dialog-autocorrect.c,
+	src/dialogs/dialog-autoformat.c, src/dialogs/dialog-autosave.c,
+	src/dialogs/dialog-cell-comment.c, src/dialogs/dialog-cell-format.c,
+	src/dialogs/dialog-cell-sort.c, src/dialogs/dialog-col-width.c,
+	src/dialogs/dialog-consolidate.c, src/dialogs/dialog-define-names.c,
+	src/dialogs/dialog-delete-cells.c, src/dialogs/dialog-formula-guru.c,
+	src/dialogs/dialog-function-select.c, src/dialogs/dialog-goal-seek.c,
+	src/dialogs/dialog-goto-cell.c, src/dialogs/dialog-graph-guru.c,
+	src/dialogs/dialog-insert-cells.c, src/dialogs/dialog-merge.c,
+	src/dialogs/dialog-paste-special.c, src/dialogs/dialog-plugin-manager.c,
+	src/dialogs/dialog-preferences.c, src/dialogs/dialog-printer-setup.c,
+	src/dialogs/dialog-random-generator.c, src/dialogs/dialog-row-height.c,
+	src/dialogs/dialog-search-replace.c, src/dialogs/dialog-search.c,
+	src/dialogs/dialog-sheet-order.c, src/dialogs/dialog-simulation.c,
+	src/dialogs/dialog-solver.c, src/dialogs/dialog-stf-export-sheet-page.c,
+	src/dialogs/dialog-stf-export.c, src/dialogs/dialog-stf-fixed-page.c,
+	src/dialogs/dialog-stf-format-page.c,
+	src/dialogs/dialog-stf-main-page.c, src/dialogs/dialog-stf-preview.c,
+	src/dialogs/dialog-stf.c, src/dialogs/dialog-summary.c,
+	src/dialogs/dialog-tabulate.c, src/dialogs/dialog-workbook-attr.c,
+	src/dialogs/dialog-zoom.c, src/expr-name.c, src/expr.c,
+	src/file.c, src/format-template.c, src/format.c, src/formats.c,
+	src/func-builtin.c, src/func.c, src/gnumeric-canvas.c,
+	src/gnumeric-graph.c, src/gui-clipboard.c, src/gui-file.c,
+	src/gui-util.c, src/history.c, src/hlink.c, src/item-bar.c,
+	src/item-cursor.c, src/item-edit.c, src/libgnumeric.c,
+	src/main-application.c, src/number-match.c, src/parser.y,
+	src/plugin-loader-module.c, src/plugin-loader.c, src/plugin-service.c,
+	src/plugin-util.c, src/plugin.c, src/print-info.c, src/print.c,
+	src/search.c, src/selection.c, src/sheet-autofill.c,
+	src/sheet-control-gui.c, src/sheet-merge.c, src/sheet-object-bonobo.c,
+	src/sheet-object-container.c, src/sheet-object-graphic.c,
+	src/sheet-object-widget.c, src/sheet-object.c, src/sheet-view.c,
+	src/sheet.c, src/stf-parse.c, src/stf-parse.h, src/stf.c, src/style.c,
+	src/tools/analysis-tools.c, src/tools/auto-correct.c, src/tools/dao.c,
+	src/tools/filter.c, src/tools/random-generator.c,
+	src/tools/simulation.c, src/tools/solver/api.c,
+	src/tools/solver/reports-write.c, src/tools/solver/reports.c,
+	src/tools/solver/solver.c, src/validation.c, src/value-sheet.c,
+	src/value.c, src/widgets/gnumeric-expr-entry.c,
+	src/widgets/widget-font-selector.c, src/workbook-cmd-format.c,
+	src/workbook-control-gui.c, src/workbook-control.c, src/workbook-edit.c,
+	src/workbook-format-toolbar.c, src/workbook-object-toolbar.c,
+	src/workbook-view.c, src/workbook.c, src/xml-io.c:
+	Use <gnumeric-i18n.h> everywhere
+
+2002-08-18  Jody Goldberg <jody@gnome.org>
+
+	* src/item-grid.c (item_grid_draw) : hmm, we didn't notice the typo
+	  because it did not matter.  Simplify the code.
+	* src/print-cell.c (print_cell_range) : ditto.
+
+2002-08-17  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (custom_uic_destroy): #ifdef
+	WITH_BONOBO.
+
+	* src/item-grid.c (item_grid_draw): Fix typo.
+
+	* src/print-cell.c (print_cell_range): Ditto.
+
+2002-08-17  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Make bonobo version link with libgsf-gnome-1.
+
+	* src/Makefile.am (gnumeric_LDADD): Ditto.
+
+2002-08-17  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Reintroduce stuff accidentaly clobbered by my
+	commit 2002-08-15.
+
+2002-08-17  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/position.[ch]: Added cellref_set.
+
+2002-08-17  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_probe) : clear the sax routines so that it is
+	  actually quiet.
+
+2002-08-16  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-clipboard.c (x_clipboard_received) : tidy up a bit and
+	  prepare to receive utf8.
+
+2002-08-16  Jon K Hellan  <hellan@acm.org>
+
+	* src/xml-io.h (gnumeric_xml_read_workbook): Declare.
+
+	* src/mathfunc.c (random_gaussian_pdf): Make static.
+
+	* src/hlink.h (gnm_hlink_get_type, gnm_hlink_cur_wb_get_type,
+	gnm_hlink_url_get_type): s/foo bar ()/foo bar (void)/
+
+	* src/file.c (gnum_file_saver_save_to_stream_real): ifdef out
+	currently unused code.
+
+2002-08-15  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Require libgsf 1.3.
+
+	* src/xml-io.c (gnumeric_xml_read_workbook): Check for
+	overflow from gsf_input_remaining.
+
+	* src/stf.c (stf_open_and_read, stf_read_default_probe): Check for
+	overflow from gsf_input_size.
+
+2002-08-14  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.keys.in (application) : convert to use gnumeric_icondir
+
+	* src/workbook-control-gui.c (workbook_control_gui_ctor_class) : move
+	  the default icon init here.
+	* src/libgnumeric.c (gnm_common_init) : from here.  I'd like to make
+	  this non-gui.  That will take a fair amount of cleanup, but it
+	  should be doable.
+
+2002-08-14  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (gnumeric_load_image) : Use gtk_image_new_from_file
+	  directly.
+
+	* src/xml-io.c (xml_read_cell) : make the warning more informative.
+
+	* src/workbook-control-component.c (wbcc_set_sensitive) : fix warning.
+
+	* src/rendered-value.c (rendered_value_calc_size_ext) : some utf8
+	  cleanliness.  Should probably use pango layout directly ?
+
+	* src/cell-draw.c (draw_overflow) : Use the cached measurement of '#'
+	  and draw the entire string in 1 go.
+	(draw_text) : use the cached layout.
+	(cell_split_text) : same as rendered_value_calc_size_ext.
+
+	* src/print-cell.c (print_overflow) : use the same method as
+	  draw_overflow.
+
+2002-08-14  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=87833
+	Patch from dorami@bu.iij4u.or.jp to do an initial pass at supporting
+	pango in cells.
+
+	* src/cell-draw.c : first pass at using pango.
+	* src/rendered-value.c : ditto.
+	* src/style.c : ditto.
+	* src/item-edit.c : ditto.
+
+2002-08-14  Christian Meyer  <chrisime@gnome.org>
+
+	* src/workgroup-control-component.c: Renamed to Page Setup accordingly.
+	* src/workgroup-control-gui.c: ditto.
+	* src/commands.c: ditto.
+	* src/GNOME_Gnumeric.xml: Set mnemonic to Page Set_up (as proposed by
+	HIG)
+	* src/GNOME_Gnumeric.xml: ditto.
+	* doc/C/menus.xml: Renamed Print Setup to Page Setup in the whole file.
+	* doc/C/printing.xml: ditto.
+	* doc/C/toolbars.xml: ditto.
+
+2002-08-14  Christian Meyer  <chrisime@gnome.org>
+
+	* src/GNOME_Gnumeric.xml: Renamed Print Setup to Page Setup.
+	* src/GNOME_Gnumeric_Componente.xml: ditto.
+
+2002-08-13  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/sheet.h (struct _Sheet): Added name_unquoted_collate_key.
+
+	* src/sheet.c
+	(sheet_rename, sheet_new): Generate collation key for unquoted name
+	(sheet_destroy): g_free it here
+
+	* src/search.c (cb_order_sheet_row_col, cb_order_sheet_col_row):
+	Compare sheet names using strcmp() on collation keys
+
+2002-08-13  Peteris Krisjanis <peteris.krisjanis@os.lv>
+
+	* configure.in: (ALL_LINGUAS) Latvian (lv) language support.
+
+2002-08-13  Morten Welinder  <terra@diku.dk>
+
+	* src/regutf8.h (REG_EPAREN, REG_EBRACE, REG_EESCAPE, REG_OK):
+	Move macros here.
+
+2002-08-13  Jody Goldberg <jody@gnome.org>
+
+	* src/regutf8.c : Add REG_OK
+
+2002-08-12  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump

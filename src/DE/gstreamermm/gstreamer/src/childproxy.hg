@@ -1,0 +1,119 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gstchildproxy.h>
+#include <glibmm/interface.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Object;
+
+/**
+ * Interface for multi child elements.
+ *
+ * This interface abstracts handling of property sets for elements with
+ * children. Imagine elements such as mixers or polyphonic generators. They all
+ * have multiple Gst::Pad or some kind of voice objects. Another use case are
+ * container elements like Gst::Bin.
+ * The element implementing the interface acts as a parent for those child
+ * objects.
+ *
+ * By implementing this interface the child properties can be accessed from the
+ * parent element by using get_proxy_property() and set_proxy_property().
+ *
+ * Property names are written as "child-name::property-name". The whole naming
+ * scheme is recursive. Thus "child1::child2::property" is valid too, if
+ * "child1" and "child2" implement the Gst::ChildProxy interface.
+ *
+ * Last reviewed on 2016-05-16 (1.8.0)
+ *
+ * @ingroup GstInterfaces
+ */
+class ChildProxy : public Glib::Interface
+{
+  _CLASS_INTERFACE(ChildProxy, GstChildProxy, GST_CHILD_PROXY, GstChildProxyInterface)
+
+public:
+  _WRAP_METHOD(guint get_children_count() const, gst_child_proxy_get_children_count)
+
+#m4 _CONVERSION(`GObject*',`Glib::RefPtr<Gst::Object>',`Glib::wrap(GST_OBJECT($3), true)')
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Object> get_child(const Glib::ustring& name), gst_child_proxy_get_child_by_name)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Object> get_child(const Glib::ustring& name) const, gst_child_proxy_get_child_by_name, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Glib::Object> get_child(guint index), gst_child_proxy_get_child_by_index)
+  _WRAP_METHOD(Glib::RefPtr<const Glib::Object> get_child(guint index) const, gst_child_proxy_get_child_by_index, constversion)
+
+  _WRAP_METHOD_DOCS_ONLY(gst_child_proxy_lookup)
+  //TODO: Maybe GParamSpec should be wrapped in glibmm?
+  bool lookup(const Glib::ustring& name, Glib::RefPtr<Glib::Object>& target, GParamSpec*& pspec);
+
+  /** Gets a single property using the Gst::ChildProxy mechanism.
+   * @param name The property to get.
+   * @param value An empty Glib::ValueBase in which to store the property.
+   * @return This Gst::ChildProxy so more properties can be retrieved if
+   * needed.
+   */
+  Glib::RefPtr<Gst::ChildProxy> get_proxy_property(const Glib::ustring& name, Glib::ValueBase& value);
+  _IGNORE(gst_child_proxy_get_property, gst_child_proxy_get, gst_child_proxy_get_valist)
+
+  /** Gets a single property using the Gst::ChildProxy mechanism.
+   * @param name The property to get.
+   * @param value An empty Glib::ValueBase in which to store the property.
+   * @return This Gst::ChildProxy so more properties can be retrieved if
+   * needed.
+   */
+  Glib::RefPtr<const Gst::ChildProxy> get_proxy_property(const Glib::ustring& name, Glib::ValueBase& value) const;
+
+
+  /** Sets a single property using the Gst::ChildProxy mechanism.
+   * @param name The property to get.
+   * @param value The Glib::ValueBase to set the property to (non-empty).
+   * @return This Gst::ChildProxy so more properties can be set.
+   */
+  Glib::RefPtr<Gst::ChildProxy> set_proxy_property(const Glib::ustring& name, const Glib::ValueBase& value);
+  _IGNORE(gst_child_proxy_set_property, gst_child_proxy_set, gst_child_proxy_set_valist)
+
+#m4 _CONVERSION(`const Glib::RefPtr<Gst::Object>&',`GObject*',`G_OBJECT(Glib::unwrap($3))')
+
+  _WRAP_METHOD(void child_added(const Glib::RefPtr<Gst::Object>& child, const Glib::ustring& name), gst_child_proxy_child_added)
+  _WRAP_METHOD(void child_removed(const Glib::RefPtr<Gst::Object>& child, const Glib::ustring& name), gst_child_proxy_child_removed)
+
+#m4 _CONVERSION(`GObject*',`const Glib::RefPtr<Gst::Object>&',`Glib::wrap(GST_OBJECT($3), true)')
+
+  _WRAP_SIGNAL(void child_added(const Glib::RefPtr<Gst::Object>& object, const Glib::ustring& name), "child-added")
+  _WRAP_SIGNAL(void child_removed(const Glib::RefPtr<Gst::Object>& object, const Glib::ustring& name), "child-removed")
+
+  /** Virtual method to fetch the child by name.
+   */
+  _WRAP_VFUNC(Glib::RefPtr<Glib::Object> get_child_by_name(const Glib::ustring& name) const, "get_child_by_name")
+
+  /** Virtual method to fetch the child by index.
+   */
+  _WRAP_VFUNC(Glib::RefPtr<Glib::Object> get_child_by_index(guint index) const, "get_child_by_index")
+
+  /** Virtual method to get the children count.
+   */
+  _WRAP_VFUNC(guint get_children_count() const, "get_children_count")
+};
+
+} // namespace Gst

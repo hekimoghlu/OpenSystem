@@ -1,0 +1,47 @@
+effects = ['bulge.effect',
+           'cartoon.effect',
+           'cheguevara.effect',
+           'chrome.effect',
+           'dicetv.effect',
+           'distortion.effect',
+           'edgetv.effect',
+           'flip.effect',
+           'heat.effect',
+           'historical.effect',
+           'hulk.effect',
+           'inversion.effect',
+           'kaleidoscope.effect',
+           'mauve.effect',
+           'mirror.effect',
+           'noir.effect',
+           'optv.effect',
+           'pinch.effect',
+           'quarktv.effect',
+           'radioactv.effect',
+           'revtv.effect',
+           'ripple.effect',
+           'saturation.effect',
+           'scanlines.effect',
+           'sepia.effect',
+           'shagadelictv.effect',
+           'sobel.effect',
+           'square.effect',
+           'streaktv.effect',
+           'stretch.effect',
+           'timedelay.effect',
+           'twirl.effect',
+           'vertigotv.effect',
+           'warptv.effect',
+           'xray.effect']
+
+foreach effect : effects
+  # FIXME: effect files use the *.desktop.in suffix so gettext can find them
+  i18n.merge_file(
+    input: effect + '.desktop.in',
+    output: effect,
+    po_dir: '../po',
+    install: true,
+    install_dir: pkgdatadir,
+    type: 'desktop'
+  )
+endforeach

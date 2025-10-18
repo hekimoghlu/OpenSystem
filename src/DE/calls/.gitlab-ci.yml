@@ -1,0 +1,180 @@
+include:
+ - 'https://source.puri.sm/Librem5/librem5-ci/raw/master/librem5-pipeline-definitions.yml'
+ - 'https://gitlab.gnome.org/GNOME/citemplates/raw/master/flatpak/flatpak_ci_initiative.yml'
+ - project: 'guidog/meta-phosh'
+   ref: '2aeb9bfe2b230ca3aeda8275e42c95f94f6723ca'
+   file: '/ci/phosh-common-jobs.yml'
+ - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+   inputs:
+     job-stage: "deploy"
+     dist-job-name: "build:tarball"
+     tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+stages:
+ - build
+ - test
+ - package
+ - test-package
+ - deploy
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    # Don't trigger a branch pipeline if there is an open MR
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH
+
+variables:
+  DEBIAN_IMAGE: $CI_REGISTRY/gnome/calls/debian:v0.0.2025-09-08
+  GIT_SUBMODULE_STRATEGY: normal
+  MESON_BUILD_DIR: "_build"
+
+build:native:
+  stage: build
+  artifacts:
+    paths:
+      - _build
+  variables:
+    COMMON_BUILD_OPTS: -Db_coverage=true
+    BUILD_OPTS: -Dgtk_doc=true ${COMMON_BUILD_OPTS}
+    WANT_BUILD_DEPS: "true"
+  except:
+    variables:
+      - $PKG_ONLY == "1"
+  image: "${DEBIAN_IMAGE}"
+  tags: []
+  script:
+    - 'echo "Build opts: ${BUILD_OPTS}"'
+    - meson ${BUILD_OPTS} . _build
+    - ninja -C _build
+
+build:tarball:
+  stage: build
+  image: "${DEBIAN_IMAGE}"
+  tags: []
+  artifacts:
+    name: "${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${MESON_BUILD_DIR}/meson-dist"
+    reports:
+      dotenv: build.env
+  script:
+    - meson setup . "${MESON_BUILD_DIR}"
+    - xvfb-run -s -noreset meson dist --include-subprojects -C "${MESON_BUILD_DIR}"
+    - echo "TARBALL_ARTIFACT_PATH=$(ls ${MESON_BUILD_DIR}/meson-dist/*.tar.xz)" >> build.env
+  only:
+    - tags
+
+test:native:
+  extends: build:native
+  stage: test
+  dependencies:
+    - build:native
+  script:
+    - export LC_ALL=C.UTF-8
+    - xvfb-run -s -noreset ninja -C _build test
+    - cp _build/src/libcalls-vala.a.p/*.c _build
+    - ninja -C _build coverage
+  coverage: '/^lines:\s+([\d.]+\%)\s+/'
+
+build-gtkdoc:
+  extends: build:native
+  stage: test
+  dependencies:
+    - build:native
+  script:
+    - ninja -C _build calls-doc
+    - mv _build/doc/html/ _reference/
+  artifacts:
+    paths:
+      - _reference
+
+check-po:
+  stage: test
+  extends: .phosh-check-po
+  dependencies:
+    - build:native
+
+check-consistency:
+  stage: test
+  extends: .phosh-check-consistency
+
+package:deb-debian-trixie:arm64:
+  variables:
+    L5_DOCKER_IMAGE: debian:trixie
+    DEB_BUILD_PROFILES: nodoc
+  tags:
+    - aarch64
+  extends: .l5-build-debian-package
+
+.vars-devel:
+  variables:
+    MANIFEST_PATH: "org.gnome.Calls.json"
+    FLATPAK_MODULE: "calls"
+    APP_ID: "org.gnome.Calls"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    BUNDLE: "calls.flatpak"
+    CONFIG_OPTS: >-
+      -Dmanpages=false
+    TEST_RUN_ARGS: >-
+      "calls:Validate desktop file"
+      "calls:Validate daemon desktop file"
+      calls:util
+      calls:settings
+      calls:origin
+      calls:provider
+      calls:call
+      calls:plugins
+      calls:contacts
+      calls:ui-call
+      calls:manager
+      calls:ringer
+      calls:media
+      calls:srtp
+      calls:sdp-crypto
+      # Disable test because it fails in flatpak
+      #calls:sip
+
+# Build Flatpak for x86_64
+flatpak@x86_64:
+  stage: package
+  extends: ['.flatpak@x86_64', '.vars-devel']
+  allow_failure: true
+  except:
+    variables:
+      - $PKG_ONLY == "1"
+
+# Build Flatpak for aarch64
+flatpak@aarch64:
+  stage: package
+  extends: ['.flatpak@aarch64', '.vars-devel']
+  allow_failure: true
+  except:
+    variables:
+      - $PKG_ONLY == "1"
+
+# Publish Flatpak for x86_64
+nightly@x86_64:
+  extends: '.publish_nightly'
+  allow_failure: true
+  needs: ['flatpak@x86_64']
+
+# Publish Flatpak for aarch64
+nightly@aarch64:
+  extends: '.publish_nightly'
+  allow_failure: true
+  needs: ['flatpak@aarch64']
+
+pages:
+  stage: deploy
+  needs:
+    - build-gtkdoc
+  script:
+    mv _reference/ public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

@@ -1,0 +1,60 @@
+KEY_* name="KEY_(.+)" type="uint" parent="Gdk.Key"
+
+*.ref unowned
+*.unref destroys_instance=false
+
+// Event API
+events_*#function parent="Gdk.Event" name="events_(.+)"
+
+Clipboard
+        .set* skip=false
+ContentProvider
+        .get_value.value ref
+Cursor	abstract=false
+Device
+        .get_surface_at_position skip=false
+Event
+        ._get_angle skip
+        ._get_center skip
+        ._get_distance skip
+Paintable
+        .new_empty name="empty"
+        .get_current_image#virtual_method virtual
+        .get_flags#virtual_method virtual
+        .get_intrinsic_width#virtual_method virtual
+        .get_intrinsic_height#virtual_method virtual
+        .get_intrinsic_aspect_ratio#virtual_method virtual
+PaintableFlags cprefix="GDK_PAINTABLE_"
+        .size name="STATIC_SIZE"
+        .contents name="STATIC_CONTENTS"
+Surface abstract=false
+Rectangle struct
+        .x skip
+        .y skip
+        .width skip
+        .height skip
+RGBA struct
+pango_layout_get_clip_region skip=false
+        .index_ranges array array_length_idx=4
+Texture
+        // Factory method
+        .new_* symbol_type="function" name="new_(.+)"
+Surface
+        .destroy destroys_instance
+        .translate_coordinates.x ref
+        .translate_coordinates.y ref
+ToplevelSize type_id="gdk_toplevel_size_get_type ()"
+toplevel_size_get_type skip
+
+// Bug #: confused girparser
+content_register_deserializer
+  .deserialize closure=-1 destroy=-1 owned=false
+content_register_serializer
+  .serialize closure=-1 destroy=-1 owned=false
+
+// g-i doesn't support nullable fields and properties (bug #730479)
+Device
+        .name nullable
+
+// vapigen actually generates the correctly, but in away that breaks BC
+Rectangle.union return_void

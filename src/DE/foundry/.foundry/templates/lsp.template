@@ -1,0 +1,71 @@
+[Template]
+Name=lsp
+Description=Create a new Foundry LSP plugin
+
+[Input name]
+Type=Text
+Title=Name
+Validate=^[-\w]+$
+Default=my-lsp
+
+[Input Class]
+Type=Text
+Title=Class Name
+Validate=^\w+$
+Default=MyLsp
+
+[Input Command]
+Type=Text
+Title=Command
+Subtitle=The command to run the language server
+Default=my-lsp --stdio
+
+[Input Language]
+Type=Text
+Title=Language
+Subtitle=The programming language identifier
+Default=js
+
+```{{name}}/plugin.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include <foundry.h>
+
+FOUNDRY_PLUGIN_DEFINE (_plugin_{{Class.mangle()}}_register_types,
+                       FOUNDRY_PLUGIN_REGISTER_TYPE (FOUNDRY_TYPE_LSP_PROVIDER, FOUNDRY_TYPE_PLUGIN_LSP_PROVIDER))
+```
+
+```{{name}}/meson.build
+foundry_private_sources += files([
+  'plugin.c',
+])
+```
+
+```{{name}}/{{name}}.plugin
+[Plugin]
+Name={{name.title()}}
+Builtin=true
+Embedded=_plugin_{{Class.mangle()}}_register_types
+Module={{name}}
+X-LSP-Command={{Command}}
+X-LSP-Languages={{Language}}
+X-Category=lsp
+```
+
+```{{name}}/README.md
+To integrate your new plugin, you'll need to add '{{name}}' to the list
+of LSP plugins in `../meson.build`. Look for `lsp_plugins` variable.
+
+Additionally, you'll need to add an option to disable your new plugin in
+the `meson.options` in the root of the project. Add the following stanza
+to that file:
+
+option('plugin-{{name}}',
+       type: 'boolean',
+       value: true,
+       description: 'Provide integration with {{name}} language server')
+
+After that, remove this file.
+```

@@ -1,0 +1,448 @@
+2002-03-25  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.2
+
+2002-03-26  Morten Welinder  <terra@diku.dk>
+
+	* src/rendered-value.c (rendered_value_new): Just peek directly
+	into the approx_width structure -- everyone else does that.  Take
+	worst case of "e", signs, and decimal points into account.
+
+	* src/style.h (StyleFont): Change floats to doubles.  Add more
+	approx_width fields.
+
+	* src/style.c (style_font_get_width_pts): Remove.
+
+2002-03-26  Morten Welinder  <terra@diku.dk>
+
+	* src/style.c (style_font_new_simple): Translate pixels to points
+	properly.
+
+	* src/style.c (style_font_new_simple): Fix misplaced #endif.
+
+	* src/format.c (format_value): Fix general display of floats.
+	Oops.
+
+	* src/value.c (value_release): Use the fact that VALUE_TERMINATE
+	is an error value.
+
+2002-03-26  Morten Welinder  <terra@diku.dk>
+
+	* src/value.c (value_new_bool, value_new_int, value_release): Use
+	int/bool pool.
+	(value_init): Initialise int/bool pool.
+	(value_shutdown): Free int/bool pool.
+
+	* src/gutils.c (gnm_mem_chunk_new): Use smaller alignment when
+	known to be possible.
+
+2002-03-26  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c : added insert-function menu item
+
+2002-03-26  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/ : new directory for schema files
+	* schemas/gnumeric-dialogs.schemas : file for gconf configuration
+	  variables used by the gnumeric dialogs
+	
+2002-03-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* gui-util.[ch] (focus_on_entry) : new
+	* src/workbook-control-gui.c (cb_file_summary) : delete unused
+	  variable
+
+2002-03-25  Morten Welinder  <terra@diku.dk>
+
+	* src/format.c (format_value): Strip signs when conditional
+	formats are in use.
+
+2002-03-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.[hc] : implement cmd_change_summary
+	* src/summary.[hc] : constify arguments
+	(summary_item_free) : make public, handle NULL argument
+	(summary_item_copy) : new
+	(summary_item_by_name) : new
+	(summary_item_as_text_by_name) : new
+	* src/workbook-control-gui.c (cb_file_summary) : delete unused
+	  variable, add argument to dialog_summary_update
+	* src/workbook.c (workbook_set_filename) : update summary dialog
+
+2002-03-25  Morten Welinder  <terra@diku.dk>
+
+	* src/format.c (StyleFormatEntry): Make the value field a
+	gnum_float at intended.
+
+	* src/main.c (main): Call g_set_prgname.
+	(main): Call value_init and value_shutdown appropriately.
+
+	* src/value.c (value_terminate_err): New value.
+	(value_terminate): Replace this function by the value
+	VALUE_TERMINATE.  All callers changed.
+	(value_hash): Be smarter about arrays.
+	(value_new_float): Use chunk allocator.
+	(value_release): Release floats properly.
+	(value_init, value_shutdown): New functions.
+
+	* src/gutils.c (gnm_mem_chunk_destroy): Add new argument for leak
+	tracking.
+
+2002-03-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* workbook-control-gui.c : change arguments in call of
+	  dialog_summary_update
+
+2002-03-24  Morten Welinder  <terra@diku.dk>
+
+	* src/gutils.c (gnm_mem_chunk_new, gnm_mem_chunk_destroy,
+ 	gnm_mem_chunk_alloc, gnm_mem_chunk_alloc0, gnm_mem_chunk_free):
+ 	New functions implementing a sane and fast chunk allocated.
+  	(Maybe use Evolution's later.)
+
+	* src/dependent.h (struct _GnmDepContainer): add members
+ 	range_pool and single_pool for allocation.
+
+	* src/dependent.c (link_single_dep): Allocate from pool.
+	(unlink_single_dep): Free using pool.
+	(link_range_dep): Allocate from pool.
+	(unlink_range_dep): Free using pool.
+	(do_deps_destroy): Destroy pools.
+	(gnm_dep_container_new): Allocate pools.
+	(cb_dep_hash_invalidate): Don't free at all -- we're about to dump
+ 	both pools anyway.
+
+	* src/cell.c (cell_new): New function.  (About time.)
+	(cell_copy): Use cell_new.
+	(cell_destroy): Free from pool if we allocated that way.
+	(cell_init, cell_shutdown): New functions.
+
+	* src/xml-io.c (cell_copy_new): Use cell_new.
+	* src/sheet.c (sheet_cell_new): Use cell_new.
+	* src/main.c (main): Initialise and shutdown cells.
+
+2002-03-22  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_cell_insert) : delete.
+	(cb_sheet_cell_copy) : use sheet_cell_new instead of
+	  cell_copy + sheet_cell_insert.
+
+	* src/gnumeric.h (CellList) : delete.
+
+2002-03-22  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/format-template.h: Extend FormatTemplate struct with
+	edge related flags.
+
+	* src/format-template.c (formate_template_new): Initialize
+	new edge related members.
+	(format_template_clone): Clone new edge related members and
+	constify.
+	(format_template_transform_edges): Transforms the templates
+	by removing edges if so desired.
+	(format_template_calculate): Use format_template_transform_edges.
+
+2002-03-21  Jody Goldberg <jody@gnome.org>
+
+	* Massive rename
+	ExprTree -> GnmExpr
+	eval.[ch] -> dependent.[ch]
+	DependentContainer -> GnmDepContainer
+
+	* src/print-info.c (load_formats) : suppress some warnings.
+
+	* src/func.c (function_def_call_with_values) : use g_alloca.
+
+2002-03-21  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* AUTHORS: Added the authors of the LP Solve algorithm.
+
+2002-03-20  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-style.c (cell_tile_apply_pos) : a simple optimization.
+	  Don't split a tile to apply the existing style.
+
+	* src/cellspan.c (cell_calc_span) : Fix span calc when spanning
+	  through hidden columns with content there was a typo, and a logic
+	  error.  No need to change the margin for an invisible column.
+
+2002-03-19  Jody Goldberg <jody@gnome.org>
+
+	* src/eval.c (cell_eval_content) : move here from cell.c and
+	  privatize.
+	(dependent_changed) : remove useless argument.
+
+2002-03-19  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/func.[ch] (function_def_get_arg_type_string) : new
+	(function_def_get_arg_name) : new
+	* src/gui-util.[ch] (gnumeric_dialog_raise_if_exists) :
+	  change return type from gboolean to gpointer
+	* src/workbook-control-gui.c : add argument to call to
+	  dialog_formula_guru
+
+2002-03-19  Morten Welinder  <terra@diku.dk>
+
+	* src/position.c (cellref_equal): Change the order of comparisons
+	a bit.  This works around a purify problem.  (I.e., a problem with
+	purify, not with the gnumeric code.)
+
+	* src/style.c (style_font_new_simple): Work harder at getting widest character.
+
+	* src/format.c (format_number): Fix format breakage.  (Extra "E".)
+
+	* src/parser.y (parse_string_as_value): Clean up.
+
+2002-03-19  Juan Pablo Mendoza <jpablo@gnome.org>
+
+	* src/Makefile.am: Changue subdirs order to build pixmaps before
+	  dialogs. This fix the cvs build.
+
+2002-03-18  Morten Welinder  <terra@diku.dk>
+
+	* src/rangefunc.c (float_hash): Fix for long double case (which
+	has six padding bytes on gcc/ix86).  Also be smarter.
+
+	* src/value.c (value_hash): Scale by a power of two for speed.
+
+2002-03-18  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-control-gui.c (cb_workbook_debug_info): Add code to
+	share cells in workbook.
+
+	* src/main.c: Add --debug_share=1 option.
+
+	* src/expr.c (expr_list_eq): New function.
+	(expr_tree_sharer_new, expr_tree_sharer_destroy)
+	(expr_tree_sharer_share): New functions.
+
+	* src/position.c (cellref_hash): New function.
+
+	* src/value.c (value_hash): New function.
+
+2002-03-18  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_analysis_tool) : set me->parent.size
+
+2002-03-18  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c : typo. (Thanks frob)
+
+2002-03-18  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump canvas req to pull in the canvas fixes
+	changes.
+
+	* src/xml-io.c (xml_sheet_read) : look for sheet names in the right
+	  place.
+
+2002-03-17  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c (style_font_get_height) : add some additional
+	  protection.
+	(style_font_new_simple) : be really really anal.
+
+2002-03-17  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-format-toolbar.c (cb_fore_color_changed): Handle
+	autocolors.
+	(cb_border_changed): Ditto.
+	(workbook_create_format_toolbar): Ditto.
+
+2002-03-16  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_foreach_cell_in_range) : support 3d
+	  references.
+	(workbook_finalize) : free the 3d dep list if necessary.
+	(workbook_init) : initialize the list.
+	(cb_dep_unlink) : new.
+	(pre_sheet_index_change) : new.
+	(cb_dep_link) : new.
+	(post_sheet_index_change) : new.
+	(workbook_sheet_index_update) : privatize.
+	(workbook_sheet_attach) : add pre/post handling for 3d references.
+	(workbook_sheet_detach) : ditto.
+
+	* src/eval.c (link_cellrange_dep) : add support for 3d deps.
+	(unlink_cellrange_dep) : add support for 3d deps.
+	(workbook_link_3d_dep) : new.
+	(workbook_unlink_3d_dep) : new.
+	(dependent_link) : called here.
+	(dependent_unlink) : and here.
+
+	* configure.in : bump libcanvas req to getthe no auto-center patch.
+
+2002-03-16  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_{insert,delete}_{cols,rows}) : don't recalc the
+	  entire sheet.  We'll queue what we need when relocating.
+
+	* src/cell.c (cell_set_expr_unsafe) : don't relink.
+
+	* src/eval.c (micro_hash_resize) : minor optimization.
+	(dependents_unrelocate_free) : moved here and renamed from
+	(workbook_unrelocate_free) : moved here and renamed from
+	  workbook_expr_unrelocate_free.
+	(workbook_unrelocate) : moved here and renamed from
+	  workbook_expr_unrelocate.
+	(cb_range_contained_collect) : new.
+	(cb_single_contained_collect) : new.
+	(dependents_relocate) : moved here and renamed from
+	  workbook_expr_relocate.  Then changed to operate on the actual
+	  depenents of the region rather than everything, clarified the
+	  handling of linking/unlinking.
+	(dependents_unrelocate) : relink deps and queue them for recalc.
+
+	* src/cell.c (cell_relocate) : clean out a bit now that we are not
+	  using it without reloc info.
+
+	* src/expr.c (cellref_relocate) : don't use the ultra safe reference
+	  checks here, we WANT to know if things are out of bounds.
+	(cellref_shift) : ditto.
+
+2002-03-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-control-gui-priv.h : added label field
+	* src/workbook-control-gui.c (cb_sheet_name) : call
+	  editable_label_start_editing rather than dialog_sheet_name
+	(sheet_action_rename_sheet) : ditto
+	(wbcg_sheet_add) : store editable label ref for future ref
+
+2002-03-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c : support tab color changes in cmd_reorganize_sheets
+	* src/commands.h (cmd_reorganize_sheets) : add arguments
+	* src/sheet.c (sheet_set_tab_color) : add third argument
+	(sheet_new) : initialize tab_text_color
+	(sheet_destroy) : free tab_text_color
+	* src/sheet.h : add tab_text_color to _Sheet
+	(sheet_set_tab_color) : add third argument
+	* src/workbook-control-gui.c (wbcg_sheet_add) : also set tab_text_color
+	(wbcg_sheet_rename) : add arguments to call of cmd_reorganize_sheets
+	(cb_insert_sheet) : ditto
+	* src/workbook.c (workbook_sheet_reorganize) : support changing of tab
+	  colors
+	* src/workbook.h (workbook_sheet_reorganize) : add arguments
+	* src/xml-io.c : read and write TabTextColor
+
+2002-03-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_merge_data_redo) : use cell_assign_value rather
+	  than copy/paste to preserve merged target fields.
+	* src/commands.c (cmd_merge_data_redo) : don't create unnecessary cells
+	* src/sheet-object.[ch] (sheet_object_clone_sheet) : delete
+	* src/sheet-object.[ch] (sheet_object_clone_sheet_in_range) : rename
+	  sheet_object_clone_sheet
+	* src/sheet.c : change sheet_object_clone_sheet calls
+
+2002-03-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c : use cell_assign_value rather than copy/paste to
+	  preserve merged target fields.
+
+2002-03-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-object-widget.[ch] (sheet_widget_checkbox_switch_link_sheet) :
+	  delete again (unnecessary after Jody's fix of the root problem)
+	* src/colrow.c (colrow_set_states) : preserve the
+	  ColRowStateList, it possibly should also be applied to other sheets
+	(colrow_restore_state_group) : ditto.
+	* src/sheet.c : delete the ColRowStateList after colrow_set_states
+	* src/commands.c : delete the ColRowStateList after colrow_set_states
+	(cmd_merge_data_redo) : preserve column and row widths, etc.
+
+2002-03-13  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_press) : disable object
+	  movement while guru is up.
+
+	* src/sheet-object-widget.c (sheet_widget_scrollbar_get_ref) : Add a
+	  force_sheet parameter.
+	(sheet_widget_checkbox_get_ref) : ditto.
+	(sheet_widget_scrollbar_clone) : do not force a fully qualified ref here.
+	  It would incorrectly cause the new object to link to the old sheet.
+	(sheet_widget_checkbox_clone) : ditto.
+
+	* src/parser.y : support the applix #AND# #OR# #NOT# operators.
+
+2002-03-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_merge_data_redo) : handle sheet objects
+	  and change ref in checkboxes
+	* src/sheet-object-widget.c (sheet_widget_checkbox_switch_link_sheet) :
+	  new
+	* src/sheet-object-widget.h (sheet_widget_checkbox_switch_link_sheet) :
+	  new
+	* src/sheet-object.c (sheet_object_clone_sheet_in_range) : new
+	* src/sheet-object.h (sheet_object_clone_sheet_in_range) : new
+	* src/workbook-control-gui.c (cb_tools_merge) : remove unused var
+
+2002-03-12  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_sheet_label_edit_finished) : renamed
+	  from cb_sheet_label_changed and handle NULL text as cancel.
+	(cb_sheet_label_edit_stopped) : deleted.
+
+	* configure.in : Generate GNOME_Gnumeric.server.in
+	* Generate GNOME_Gnumeric.server : start to think about this.
+
+	* src/expr-name.c (expr_name_unlink_deps) : handle delayed hash
+	  creation.
+	(expr_name_new) : dont init the hash table.
+	(expr_name_add_dep) : until here.
+
+	* src/sheet.c (sheet_destroy_contents) : free the primary array too.
+
+	* src/xml-io.c (cell_copy_new) : set comment to NULL.
+	* src/gui-clipboard.c (x_selection_to_cell_region) : ditto.
+	* src/stf-parse.c (stf_parse_region) : ditto.
+
+2002-03-12  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* workbook-control-gui.c : add Merge to the Edit/Fill menu
+	(cb_tools_merge) : new
+	* commands.h (cmd_merge_data) : new
+	* commands.c : implement the cmd_merge_data command
+	(cmd_set_comment_finalize) : simplify
+
+2002-03-12  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet.c (sheet_destroy_contents): Plug leak.
+	* src/workbook.c (workbook_finalize): Free the sheets member.
+	* src/sheet-control-gui.c (scg_finalize): Plug leak.
+
+2002-03-11  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_new) : make public.
+
+2002-03-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/format.c: silence	warning.
+
+2002-03-11  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (ynl, erfl, erfcl): Check that these actually work.
+	(glibc defines these, they just don't work.)
+
+2002-03-11  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (delete_pristine_sheets) : rename to
+	  cmd_reorganize_sheets_delete_sheets and use command_undo_sheet_delete
+	  rather than workbook_sheet_delete.
+	(cmd_analysis_tool_finalize) : shorten code.
+
+2002-03-11  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (color_combo_get_style_color) : changes to color combo.
+	* src/sheet-object-graphic.c (cb_fill_color_changed) : ditto.
+	* src/workbook-format-toolbar.c (cb_fore_color_changed) : ditto.
+	(cb_back_color_changed) : ditto.
+	(workbook_create_format_toolbar) : ditto.
+
+2002-03-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump gal req to pull in the colour combo changes.
+
+2002-03-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

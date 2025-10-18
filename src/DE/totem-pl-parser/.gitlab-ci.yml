@@ -1,0 +1,49 @@
+image: fedora:latest
+
+variables:
+  DEPENDENCIES:
+    redhat-rpm-config
+    meson
+    git
+    gettext
+    gtk-doc
+    meson
+    glib2-devel
+    libxml2-devel
+    gobject-introspection-devel
+    libgcrypt-devel
+    libarchive-devel
+    uchardet-devel
+  DEPS_ABI_CHECK:
+    libsoup-devel
+    gmime-devel
+  TEST_DEPS:
+    gvfs
+    dbus-daemon
+    shared-mime-info
+  LAST_ABI_BREAK: "9ccc3c78a5a41b86bdd2c9fb63ad4963e65e4f63"
+
+build-fedora:
+  before_script:
+    # Update
+    - dnf -y update && dnf install -y $DEPENDENCIES
+  script:
+    - meson _build
+    - dnf install -y $TEST_DEPS
+    - GIO_USE_VOLUME_MONITOR=unix dbus-run-session ninja -C _build test
+    - ninja -C _build install
+    # dist also runs the tests
+    - GIO_USE_VOLUME_MONITOR=unix dbus-run-session ninja -C _build dist
+  artifacts:
+    when: always
+    paths:
+    - _build/meson-logs/*
+    - _build/meson-dist/totem-pl-parser-*.tar.xz
+
+check_abi:
+  before_script:
+    # ABI check, the deps are needed to build the old version of totem-pl-parser
+    - dnf update -y --nogpgcheck && dnf install -y --nogpgcheck $DEPENDENCIES $DEPS_ABI_CHECK
+  script:
+    - curl https://gitlab.freedesktop.org/hadess/check-abi/-/raw/main/contrib/check-abi-fedora.sh | bash
+    - check-abi ${LAST_ABI_BREAK} $(git rev-parse HEAD)

@@ -1,0 +1,48 @@
+{% extends "default.html" %}
+{% block title %}Moderators{% endblock %}
+
+{% block content %}
+
+<h2>Moderators</h2>
+<table class="table table-hover table-responsive">
+  <tr>
+    <th>ID</th>
+    <th>Username</th>
+    <th>Display Name</th>
+    <th>Is Enabled</th>
+    <th>Is Admin</th>
+    <th>User Hashes</th>
+  </tr>
+{% for u in mods %}
+  <tr>
+    <td>{{u.moderator_id}}</td>
+    <td><a href="{{url_for('.odrs_moderator_show', moderator_id=u.moderator_id)}}">{{u.username}}</a></td>
+    <td>{{u.display_name}}</td>
+    <td>{{u.is_enabled}}</td>
+    <td>{{u.is_admin}}</td>
+    <td>{{u.user.user_hash}}</td>
+  </tr>
+{% endfor %}
+</table>
+
+<h3>Create new</h3>
+<form method="post" action="{{url_for('admin_moderator_add')}}" class="form">
+<input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+<table>
+  <tr>
+    <th>Username:</th>
+    <td><input type="text" class="form-control" name="username_new" required></td>
+  </tr>
+  <tr>
+    <th>Password:</th>
+    <td><input type="password" class="form-control" name="password_new" required></td>
+  </tr>
+  <tr>
+    <th>Display Name:</th>
+    <td><input type="text" class="form-control" name="display_name" required></td>
+  </tr>
+</table>
+  <button class="btn btn-action btn-large" type="submit">Add</button>
+</form>
+
+{% endblock %}

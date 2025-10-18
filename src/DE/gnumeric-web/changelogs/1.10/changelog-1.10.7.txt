@@ -1,0 +1,159 @@
+2010-06-28  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.7
+
+2010-06-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_area_set_text): handle markup
+	* src/sheet.h (sheet_range_set_markup_undo): new
+	* src/sheet.c (sheet_range_set_markup_undo): new
+	(cb_set_markup): new
+	(sheet_range_set_markup_cb): new
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): pass the amrkup also to
+	  cmd_area_set_text
+	
+2010-06-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (CMD_AREA_SET_TEXT): deleted 
+	(cmd_area_set_text_*): deleted
+	(cmd_area_set_text): rewritten using GO_UNDO
+	* src/sheet.h (sheet_range_set_text_undo): new
+	(sheet_range_set_expr_undo): new
+	(sheet_apply_style_undo): new
+	* src/sheet.c (sheet_range_set_text_undo): new
+	(sheet_range_set_expr_undo): new
+	(sheet_apply_style_undo): new
+	(sheet_apply_style_cb): new
+	(sheet_range_set_expr_cb): new
+	(sheet_range_set_text_cb): new
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): provide initialization to
+	  quieten gcc
+
+2010-06-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_area_set_text): change arguments
+	* src/commands.c (cmd_area_set_text): this will not be
+	  called for array functions any longer
+	(cmd_create_data_table): rewrite using cmd_generic
+	* src/ranges.c (undo_cell_pos_name): correct comment
+	* src/test-pango.c (cb_exercise_pango): adjust the cmd_area_set_text
+	  call
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): ditto
+
+2010-06-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell.h (gnm_cell_set_array_formula_undo): new
+	* src/cell.c (gnm_cell_set_array_formula_undo): new
+	(gnm_cell_set_array_formula_cb): new
+	* src/commands.h (cmd_cell_range_is_locked_effective): new
+	(cmd_selection_is_locked_effective): new
+	(cmd_area_set_array_expr): new
+	* src/commands.c (cmd_cell_range_is_locked_effective): publish
+	(cmd_selection_is_locked_effective): publish
+	(cmd_area_set_array_expr): new
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): check whether the range 
+	  is locked; call cmd_area_set_array_expr when appropriate
+	
+2010-06-25  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): don't hide a varaible by 
+	  using the same name.
+
+2010-06-25  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (table_content_received): Skip headers for
+	MS HTML Format.
+	(parse_ms_headers): New function.
+
+2010-06-25  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/Makefile.am (undo.[ch]): added
+	* src/commands.h: formatting
+	* src/commands.c (cmd_resize_colrow_*): deleted
+	(cmd_resize_colrow): reimplement using GOUndo.
+	* src/colrow.h (colrow_get_sizes): new
+	(colrow_index_list_copy): new
+	* src/colrow.c (colrow_restore_state_group): don't destroy the indexlist.
+	  Adjust all callers
+	(colrow_get_sizes): new
+	(colrow_index_list_copy): new
+	* src/undo.[ch]: new
+
+2010-06-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (gnm_cmd_trunc_descriptor): new
+	* src/commands.c (gnm_cmd_trunc_descriptor): publish and add optional
+	  'truncated' argument. Change all callers.
+	* src/ranges.c (max_range_name_width): deleted
+	(undo_range_name): use gnm_cmd_trunc_descriptor
+	(range_list_name_try): change arguments, use gnm_cmd_trunc_descriptor
+	(undo_range_list_name): adjust to changes to range_list_name_try
+	
+2010-06-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): don't free memory until we
+	  are done with it.
+
+2010-06-24  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet): Untangle old
+	fall-through mess and make BackSpace work as delete when we are
+	not editing a cell.
+
+	* src/func.c (gnm_func_convert_markup_to_pango): Remove reference
+	to g_string_overwrite which wouldn't work right.
+
+2010-06-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/stf-parse.h: add field to parseoptions
+	* src/stf-parse.c (stf_parse_options_new): handle new field
+	(stf_parse_options_free): handle new field
+	(stf_parse_sheet): autofit columns
+	
+2010-06-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/validation.h (validation_eval_range): new
+	* src/validation.c (validation_eval_range): new
+	(validation_eval_range_cb): new
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): use validation_eval_range
+
+2010-06-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): only call a cmd_...
+	  when we have validated.
+	
+2010-06-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (make_undo_text): modify to use GString and
+	  change all callers
+	(cmd_resize_colrow): use make_undo_text
+	(cmd_zoom): use make_undo_text
+
+2010-06-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_so_rename): deleted
+	* src/commands.c (cmd_so_rename*): deleted
+
+2010-06-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnumeric_create_tooltip): windows should have names
+
+2010-06-17  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_popup_menu): We have passed gtk+ 2.8 by
+	now.
+	* src/wbc-gtk.c (cb_sheet_label_drag_begin): Ditto.
+
+2010-06-17 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.h (gnm_func_convert_markup_to_pango): drop highlight arg
+	* src/func.c (gnm_func_convert_markup_to_pango): ditto
+	* src/gui-util.h (gnumeric_create_tooltip_rc_style): new
+	(gnumeric_create_tooltip_widget): new
+	* src/gui-util.c  (gnumeric_create_tooltip_rc_style): new
+	(gnumeric_create_tooltip_widget): new
+	(gnumeric_create_tooltip): split off teh above two
+
+2010-06-16  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

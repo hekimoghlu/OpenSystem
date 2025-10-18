@@ -1,0 +1,780 @@
+--- ods-schema/OpenDocument-v1.2-os-schema.rng	2015-04-08 21:49:54.000000000 -0600
++++ ods-schema/OpenDocument-v1.2-os-ext-schema.rng	2016-01-01 19:47:48.204868483 -0700
+@@ -62,6 +62,12 @@
+ 	xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"
+ 	xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"
+ 	xmlns:smil="urn:oasis:names:tc:opendocument:xmlns:smil-compatible:1.0"
++
++	xmlns:gnm="http://www.gnumeric.org/odf-extension/1.0"
++	xmlns:css3t="http://www.w3.org/TR/css3-text/"
++	xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0"
++	xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0"
++	xmlns:tableooo="http://openoffice.org/2009/table"
+ >
+ 	<define name="office-process-content">
+ 		<optional>
+@@ -2484,6 +2490,11 @@
+ 						<ref name="string"/>
+ 					</attribute>
+ 				</optional>
++				<optional>
++					<attribute name="gnm:error-value">
++						<ref name="string"/>
++					</attribute>
++				</optional>
+ 			</group>
+ 		</choice>
+ 	</define>
+@@ -3380,6 +3391,9 @@
+ 			<optional>
+ 				<ref name="table-named-expressions"/>
+ 			</optional>
++			<optional>
++				<ref name="gnm-selections"/>
++			</optional>
+ 		</element>
+ 	</define>
+ 	<define name="table-columns-and-groups">
+@@ -3670,6 +3684,11 @@
+ 				</attribute>
+ 			</optional>
+ 			<optional>
++				<attribute name="gnm:columns-spanned-fake">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="table:number-rows-spanned">
+ 					<ref name="positiveInteger"/>
+ 				</attribute>
+@@ -6369,6 +6388,26 @@
+ 	</define>
+ 	<define name="common-draw-position-attlist">
+ 		<optional>
++			<attribute name="gnm:is-position-manual">
++				<ref name="boolean"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:position">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:anchor">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:compass">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
+ 			<attribute name="svg:x">
+ 				<ref name="coordinate"/>
+ 			</attribute>
+@@ -8354,9 +8393,14 @@
+ 	<define name="chart-title-attlist">
+ 		<interleave>
+ 			<optional>
+-				<attribute name="table:cell-range">
+-					<ref name="cellRangeAddressList"/>
+-				</attribute>
++			        <choice>
++				        <attribute name="table:cell-range">
++					        <ref name="cellRangeAddressList"/>
++				        </attribute>
++				        <attribute name="gnm:expression">
++					        <ref name="string"/>
++				        </attribute>
++				</choice>
+ 			</optional>
+ 			<ref name="common-draw-position-attlist"/>
+ 			<optional>
+@@ -8638,6 +8682,9 @@
+ 			<optional>
+ 				<ref name="chart-data-label"/>
+ 			</optional>
++			<zeroOrMore>
++				<ref name="gnm-droplines"/>
++			</zeroOrMore>
+ 		</element>
+ 	</define>
+ 	<define name="chart-series-attlist">
+@@ -8648,9 +8695,14 @@
+ 				</attribute>
+ 			</optional>
+ 			<optional>
+-				<attribute name="chart:label-cell-address">
+-					<ref name="cellRangeAddressList"/>
+-				</attribute>
++			        <choice>
++				        <attribute name="chart:label-cell-address">
++					        <ref name="cellRangeAddressList"/>
++				        </attribute>
++				        <attribute name="gnm:label-cell-expression">
++					        <ref name="string"/>
++				        </attribute>
++				</choice>
+ 			</optional>
+ 			<optional>
+ 				<attribute name="chart:class">
+@@ -10473,6 +10525,7 @@
+ 			<ref name="common-data-field-attlist"/>
+ 			<ref name="list-source"/>
+ 			<ref name="list-source-type"/>
++			<ref name="gnm-list-linkage-type"/>
+ 			<ref name="common-linked-cell"/>
+ 			<ref name="common-source-cell-range"/>
+ 			<optional>
+@@ -10637,6 +10690,7 @@
+ 		<ref name="selected"/>
+ 		<ref name="common-tab-attlist"/>
+ 		<ref name="common-title-attlist"/>
++		<ref name="gnm-value-type-attlist"/>
+ 		<ref name="common-value-attlist"/>
+ 		<ref name="common-data-field-attlist"/>
+ 		<ref name="common-form-visual-effect-attlist"/>
+@@ -12676,11 +12730,28 @@
+ 		</element>
+ 	</define>
+ 	<define name="number-scientific-number-attlist">
+-		<optional>
+-			<attribute name="number:min-exponent-digits">
+-				<ref name="integer"/>
+-			</attribute>
+-		</optional>
++		<interleave>
++			<optional>
++				<attribute name="number:min-exponent-digits">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:forced-exponent-sign">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:engineering">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:literal-E">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++		</interleave>
+ 	</define>
+ 	<define name="number-fraction">
+ 		<element name="number:fraction">
+@@ -12702,10 +12773,22 @@
+ 				</attribute>
+ 			</optional>
+ 			<optional>
++				<attribute name="gnm:max-denominator-digits">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="number:denominator-value">
+ 					<ref name="integer"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:display-factor">
++					<choice>
++						<value>pi</value>
++					</choice>
++				</attribute>
++			</optional>
+ 		</interleave>
+ 	</define>
+ 	<define name="number-currency-style">
+@@ -12997,14 +13080,17 @@
+ 		</element>
+ 	</define>
+ 	<define name="number-hours-attlist">
+-		<optional>
+-			<attribute name="number:style">
+-				<choice>
+-					<value>short</value>
+-					<value>long</value>
+-				</choice>
+-			</attribute>
+-		</optional>
++		<interleave>
++			<ref name="gnm-truncate-on-overflow"/>
++			<optional>
++				<attribute name="number:style">
++					<choice>
++						<value>short</value>
++						<value>long</value>
++					</choice>
++				</attribute>
++			</optional>
++		</interleave>
+ 	</define>
+ 	<define name="number-minutes">
+ 		<element name="number:minutes">
+@@ -13013,14 +13099,17 @@
+ 		</element>
+ 	</define>
+ 	<define name="number-minutes-attlist">
+-		<optional>
+-			<attribute name="number:style">
+-				<choice>
+-					<value>short</value>
+-					<value>long</value>
+-				</choice>
+-			</attribute>
+-		</optional>
++		<interleave>
++			<ref name="gnm-truncate-on-overflow"/>
++			<optional>
++				<attribute name="number:style">
++					<choice>
++						<value>short</value>
++						<value>long</value>
++					</choice>
++				</attribute>
++			</optional>
++		</interleave>
+ 	</define>
+ 	<define name="number-seconds">
+ 		<element name="number:seconds">
+@@ -13030,6 +13119,7 @@
+ 	</define>
+ 	<define name="number-seconds-attlist">
+ 		<interleave>
++			<ref name="gnm-truncate-on-overflow"/>
+ 			<optional>
+ 				<attribute name="number:style">
+ 					<choice>
+@@ -13047,7 +13137,16 @@
+ 	</define>
+ 	<define name="number-am-pm">
+ 		<element name="number:am-pm">
+-			<empty/>
++			<optional>
++				<attribute name="gnm:am-suffix">
++					<ref name="string"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:pm-suffix">
++					<ref name="string"/>
++				</attribute>
++			</optional>
+ 		</element>
+ 	</define>
+ 	<define name="number-boolean-style">
+@@ -13097,7 +13196,15 @@
+ 	</define>
+ 	<define name="number-text">
+ 		<element name="number:text">
+-			<text/>
++			<zeroOrMore>
++				<optional>
++					<ref name="gnm-invisible"/>
++				</optional>
++				<optional>
++					<ref name="gnm-repeated"/>
++				</optional>
++				<text/>
++			</zeroOrMore>
+ 		</element>
+ 	</define>
+ 	<define name="number-text-content">
+@@ -13169,6 +13276,11 @@
+ 					</choice>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:format-magic">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
+ 		</interleave>
+ 	</define>
+ 	<define name="common-auto-reorder-attlist">
+@@ -13203,6 +13315,11 @@
+ 				</attribute>
+ 			</optional>
+ 			<optional>
++				<attribute name="gnm:min-integer-chars">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="number:grouping">
+ 					<ref name="boolean"/>
+ 				</attribute>
+@@ -14101,6 +14218,22 @@
+ 					<ref name="string"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<group>
++					<attribute name="gnm:arrow-type">
++						<ref name="integer"/>
++					</attribute>
++					<attribute name="gnm:arrow-a">
++						<ref name="double"/>
++					</attribute>
++					<attribute name="gnm:arrow-b">
++						<ref name="double"/>
++					</attribute>
++					<attribute name="gnm:arrow-c">
++						<ref name="double"/>
++					</attribute>
++				</group>
++			</optional>
+ 		</interleave>
+ 	</define>
+ 	<define name="draw-stroke-dash">
+@@ -14383,6 +14516,21 @@
+ 					<ref name="boolean"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:style-print">
++					<ref name="string"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:scale-to-X">
++					<ref name="positiveInteger"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:scale-to-Y">
++					<ref name="positiveInteger"/>
++				</attribute>
++			</optional>
+ 		</interleave>
+ 	</define>
+ 	<define name="style-page-layout-properties-elements">
+@@ -14874,11 +15022,33 @@
+ 				</attribute>
+ 			</optional>
+ 			<optional>
++				<attribute name="gnm:font-stretch-pango">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:font-gravity-pango">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:auto-font">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="style:text-underline-mode">
+ 					<ref name="lineMode"/>
+ 				</attribute>
+ 			</optional>
+ 			<optional>
++				<attribute name="gnm:text-underline-placement">
++					<choice>
++						<value>low</value>
++					</choice>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="style:text-line-through-mode">
+ 					<ref name="lineMode"/>
+ 				</attribute>
+@@ -15090,6 +15260,18 @@
+ 	<define name="style-paragraph-properties-attlist">
+ 		<interleave>
+ 			<optional>
++				<attribute name="gnm:GnmHAlign">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="css3t:text-justify">
++					<choice>
++						<value>distribute</value>
++					</choice>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="fo:line-height">
+ 					<choice>
+ 						<value>normal</value>
+@@ -15461,14 +15643,21 @@
+ 		</optional>
+ 	</define>
+ 	<define name="common-background-color-attlist">
+-		<optional>
+-			<attribute name="fo:background-color">
+-				<choice>
+-					<value>transparent</value>
++		<interleave>
++			<optional>
++				<attribute name="fo:background-color">
++					<choice>
++						<value>transparent</value>
++						<ref name="color"/>
++					</choice>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:background-colour">
+ 					<ref name="color"/>
+-				</choice>
+-			</attribute>
+-		</optional>
++				</attribute>
++			</optional>
++		</interleave>
+ 	</define>
+ 	<define name="style-background-image">
+ 		<optional>
+@@ -15564,6 +15753,36 @@
+ 				<ref name="string"/>
+ 			</attribute>
+ 		</optional>
++		<optional>
++			<attribute name="gnm:border-line-style-top">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:border-line-style-bottom">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:border-line-style-left">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:border-line-style-right">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:diagonal-bl-tr-line-style">
++				<ref name="string"/>
++			</attribute>
++		</optional>
++		<optional>
++			<attribute name="gnm:diagonal-tl-br-line-style">
++				<ref name="string"/>
++			</attribute>
++		</optional>
+ 	</define>
+ 	<define name="common-border-line-width-attlist">
+ 		<optional>
+@@ -15904,6 +16123,37 @@
+ 					<ref name="boolean"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:display-formulas">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:display-col-header">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:display-row-header">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:tab-color">
++					<ref name="color"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:tab-text-color">
++					<ref name="color"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="tableooo:tab-color">
++					<ref name="color"/>
++				</attribute>
++			</optional>
++			
+ 		</interleave>
+ 	</define>
+ 	<define name="style-table-properties-elements">
+@@ -16004,6 +16254,11 @@
+ 				</attribute>
+ 			</optional>
+ 			<optional>
++				<attribute name="gnm:GnmVAlign">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="style:text-align-source">
+ 					<choice>
+ 						<value>fix</value>
+@@ -16028,6 +16283,16 @@
+ 			<ref name="common-background-color-attlist"/>
+ 			<ref name="common-border-attlist"/>
+ 			<optional>
++				<attribute name="gnm:pattern-colour">
++					<ref name="color"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:pattern">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
+ 				<attribute name="style:diagonal-tl-br">
+ 					<ref name="string"/>
+ 				</attribute>
+@@ -16104,6 +16369,16 @@
+ 					<ref name="boolean"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:input-title">
++					<ref name="string"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:input-msg">
++					<ref name="string"/>
++				</attribute>
++			</optional>
+ 		</interleave>
+ 	</define>
+ 	<define name="common-style-direction-attlist">
+@@ -17060,6 +17335,46 @@
+ 					<ref name="nonNegativeInteger"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:auto-dash">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:auto-width">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:auto-color">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:auto-type">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:foreground-solid">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:pattern">
++					<ref name="integer"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:marker-outline-colour">
++					<ref name="color"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:marker-fill-colour">
++					<ref name="color"/>
++				</attribute>
++			</optional>
+ 		</interleave>
+ 	</define>
+ 	<define name="style-graphic-fill-properties-attlist">
+@@ -17388,6 +17703,10 @@
+ 						<value>none</value>
+ 						<value>cubic-spline</value>
+ 						<value>b-spline</value>
++						<value>gnm:closed-spline</value>
++						<value>gnm:parabolic-cspline</value>
++						<value>gnm:cubic-cspline</value>
++						<value>gnm:clamped-cspline</value>
+ 					</choice>
+ 				</attribute>
+ 			</optional>
+@@ -17661,6 +17980,10 @@
+ 						<value>logarithmic</value>
+ 						<value>exponential</value>
+ 						<value>power</value>
++						<value>gnm:polynomial</value>
++						<value>gnm:log-fit</value>
++						<value>gnm:moving-average</value>
++						<value>gnm:exponential-smoothed</value>
+ 					</choice>
+ 				</attribute>
+ 			</optional>
+@@ -17697,6 +18020,62 @@
+ 					<ref name="boolean"/>
+ 				</attribute>
+ 			</optional>
++			<optional>
++				<attribute name="gnm:outliers">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:multi-series">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:vary-style-by-element">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:show-negatives">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:radius-ratio">
++					<ref name="double"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:default-separation">
++					<ref name="percent"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:regression-affine">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="loext:regression-force-intercept">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="loext:regression-intercept-value">
++					<ref name="double"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="gnm:regression-polynomial-dims">
++					<ref name="nonNegativeInteger"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="loext:regression-max-degree">
++					<ref name="nonNegativeInteger"/>
++				</attribute>
++			</optional>
++
+ 		</interleave>
+ 	</define>
+ 	<define name="labelPositions">
+@@ -18124,4 +18503,85 @@
+ 			</element>
+ 		</zeroOrMore>
+ 	</define>
++
++	<define name="gnm-selections">
++		<element name="gnm:selections">
++			<attribute name="gnm:cursor-col">
++				<ref name="integer"/>
++			</attribute>
++			<attribute name="gnm:cursor-row">
++				<ref name="integer"/>
++			</attribute>
++			<zeroOrMore>
++				<ref name="gnm-selection"/>
++			</zeroOrMore>
++		</element>
++	</define>
++	<define name="gnm-selection">
++		<element name="gnm:selection">
++			<attribute name="gnm:start-col">
++				<ref name="integer"/>
++			</attribute>
++			<attribute name="gnm:start-row">
++				<ref name="integer"/>
++			</attribute>
++			<attribute name="gnm:end-col">
++				<ref name="integer"/>
++			</attribute>
++			<attribute name="gnm:end-row">
++				<ref name="integer"/>
++			</attribute>
++		</element>
++	</define>
++	<define name="gnm-list-linkage-type">
++		<optional>
++			<attribute name="gnm:list-linkage-type">
++				<choice>
++					<value>selection</value>
++					<value>selection-indices</value>
++				</choice>
++			</attribute>
++		</optional>
++	</define>
++	<define name="gnm-value-type-attlist">
++		<optional>
++			<attribute name="gnm:value-type">
++				<ref name="valueType"/>
++			</attribute>
++		</optional>
++	</define>
++	<define name="gnm-truncate-on-overflow">
++		<optional>
++			<attribute name="gnm:truncate-on-overflow">
++				<ref name="boolean"/>
++			</attribute>
++		</optional>
++	</define>
++	<define name="gnm-invisible">
++		<element name="gnm:invisible">
++			<optional>
++		  		<attribute name="gnm:char">
++					<ref name="string"/>
++				</attribute>
++			</optional>
++			<optional>
++				<attribute name="office:process-content">
++					<ref name="boolean"/>
++				</attribute>
++			</optional>
++			<empty/>
++		</element>
++	</define>
++	<define name="gnm-repeated">
++		<element name="gnm:repeated">
++			<text/>
++		</element>
++	</define>
++	<define name="gnm-droplines">
++		<element name="gnm:droplines">
++			<attribute name="chart:style-name">
++				<ref name="styleNameRef"/>
++			</attribute>			
++		</element>
++	</define>
+ </grammar>

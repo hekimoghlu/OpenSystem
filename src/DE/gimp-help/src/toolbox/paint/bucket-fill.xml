@@ -1,0 +1,550 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2019-04-23 j.h: update to v2.10.10
+  2017-04-29 j.h: added links to Diagonal neighbors and antialiasing
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-tool-bucket-fill">
+  <title>Bucket Fill</title>
+  <indexterm>
+    <primary>Tools</primary>
+    <secondary>Bucket Fill</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Bucket Fill</primary>
+  </indexterm>
+
+  <para>
+    This tool fills a selection with the current foreground color. If you
+    <keycap>Ctrl</keycap>+click and use the Bucket tool, it will use the
+    background color instead. Depending on how the tool options are set, the
+    Bucket Fill tool will either fill the entire selection, or only parts
+    whose colors are similar to the point you click on. The tool options also
+    affect the way transparency is handled.
+  </para>
+  <para>
+    The amount of fill depends on what Fill Threshold you have specified. The
+    fill threshold determines how far the fill will spread (similar to the way
+    in which the <link linkend="gimp-tool-fuzzy-select">Fuzzy Select</link>
+    tool works). The fill starts at the point where you
+    click and spreads outward until the color or alpha value becomes
+    <quote>too different</quote>.
+  </para>
+  <para>
+    When you fill objects in a transparent layer (such as letters in a text
+    layer) with a different color than before, you may find that a border of
+    the old color still surrounds the objects. This is due to a low
+    fill-threshold in the Bucket Fill options dialog. With a low threshold,
+    the bucket tool won't fill semi-transparent pixels, and they will stand
+    out against the fill because they have kept their original color.
+  </para>
+  <para>
+    If you want to fill areas that are totally transparent, you have to make
+    sure that the <quote>Lock</quote> option (in the Layers dialog) is
+    unchecked. If this option is checked, only the non-transparent parts of
+    the layer will be filled.
+  </para>
+
+  <sect3>
+    <title>Activating the Tool</title>
+    <para>
+      There are different possibilities to activate the tool:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          From the main menu:
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guisubmenu>Paint Tools</guisubmenu>
+            <guimenuitem>Bucket Fill</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By clicking the tool icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-tool-bucket-fill.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          in the Toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By pressing the <keycombo><keycap>Shift</keycap><keycap>B</keycap></keycombo>
+          keyboard shortcut.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+
+  <sect3>
+    <title>Key modifiers</title>
+    <itemizedlist>
+      <listitem>
+        <para>
+          <keycap>Ctrl</keycap>, similarly to paint tools, allows you to pick
+          surrounding colors on canvas without having to switch to
+          <emphasis>Color Picker tool</emphasis>.
+        </para>
+      </listitem>
+      <listitem>
+        <para><keycap>Shift</keycap> toggles the use of Fill Similar Color or
+          Fill Whole Selection on the fly.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          <keycap>Alt</keycap> toggles Fill type between FG and BG colors.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title>Tool Options Dialog</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/tool-options-bucket-fill.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <xi:include href="../about-common-options-display.xml"/>
+
+    <variablelist>
+      <varlistentry>
+        <term>Mode</term>
+        <term>Opacity</term>
+        <listitem>
+          <para>
+            See <link linkend="gimp-tool-brush">Paint Tools</link>
+            for help with options that are common to all these tools. Only
+            options that are specific to the Bucket Fill tool are
+            explained here.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Fill Type</term>
+        <listitem>
+          <para><acronym>GIMP</acronym> provides three fill types:
+          </para>
+          <variablelist>
+            <varlistentry>
+              <term>FG Color Fill</term>
+              <listitem>
+                <para>
+                  sets the fill color to the currently selected foreground
+                  color.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>BG Color Fill</term>
+              <listitem>
+                <para>
+                  sets the fill color to the currently selected background
+                  color.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Pattern Fill</term>
+              <listitem>
+                <para>
+                  sets the fill color to the currently selected pattern. You
+                  can select the pattern to use in a drop-down list.
+                </para>
+                <para>
+                  This drop-down list allows the user to select one of many
+                  fill patterns to use on the next fill operation. The manner
+                  in which the list is presented is controlled by the four
+                  buttons at the bottom of the selector.
+                </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Affected Area</term>
+        <listitem>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>Fill whole selection</guilabel> makes GIMP fill a
+                pre-existent selection or the whole layer. A quicker approach
+                to do the same thing could be to click and drag the
+                foreground, background or pattern color, leaving it onto the
+                selection. Also, pressing <keycap>Ctrl</keycap> key allows
+                you to pick a color on the image as foreground color.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Fill similar colors</guilabel>: this is the default
+                setting: the tool fills the area with a color near the pixel
+                onto you have clicked. The color similarity is defined by options
+                in Finding Similar Colors. Click and drag to fill.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Fill by line art detection</guilabel>: This allows
+                you to fill areas
+                surrounded by <quote>line arts</quote>, trying to leave no
+                unfilled pixels near the lines, and closing potential zones.
+              </para>
+              <para>
+                Line art detection is also known as Smart Colorization. The
+                author describes clearly problems he met in
+                  <ulink
+            url="https://girinstud.io/news/2019/02/smart-colorization-in-gimp/"/>.
+                Options are described below.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Finding Similar Colors</term>
+        <listitem>
+          <para>
+          These options appear when the <guilabel>Fill similar colors</guilabel>
+          option is checked:
+          </para>
+          <itemizedlist>
+            <listitem>
+              <para>
+                The option <guilabel>Fill Transparent Areas</guilabel>
+                offers the possibility of filling areas with low opacity.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Sample merged</guilabel>:
+                If you enable this option, sampling is not calculated only
+                from the values of the active layer, but from all visible layers.
+              </para>
+              <para>
+                For more information, see the
+                <link linkend="glossary-samplemerge">Glossary entry</link>.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                To understand what diagonal neighbors are, please refer to
+                <link linkend="diagonal-neighbors">Diagonal-neighbors</link>
+                in Fuzzy Select tool.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                Please refer to <link
+                linkend="glossary-antialiasing">Anti-aliasing</link> in
+                Glossary.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                The <guilabel>Threshold</guilabel> slider sets the level at
+                which color weights are measured for fill boundaries. A higher
+                setting will fill more of a multi colored image and conversely,
+                a lower setting will fill less area.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                With the <guilabel>Fill by</guilabel> option you can choose
+                which component of the image GIMP shall use to calculate the
+                similarity and to determine the borders of filling.
+              </para>
+              <para>
+                The components you can choose from are
+                <guimenuitem>Composite</guimenuitem>,
+                <guimenuitem>Red</guimenuitem>,
+                <guimenuitem>Green</guimenuitem>,
+                <guimenuitem>Blue</guimenuitem>,
+                <guimenuitem>HSV Hue</guimenuitem>,
+                <guimenuitem>HSV Saturation</guimenuitem>,
+                <guimenuitem>HSV Value</guimenuitem>,
+                <guimenuitem>LCh Lightness</guimenuitem>,
+                <guimenuitem>LCh Chroma</guimenuitem>,
+                <guimenuitem>LCh Hue</guimenuitem>,
+                <guimenuitem>Alpha</guimenuitem>.
+              </para>
+              <para>
+                This option is not easy to understand. You have chosen,
+                for example, the Red channel. When you click on any pixel,
+                the tool searches for contiguous pixels similar for
+                <emphasis>the red channel</emphasis> to the clicked pixel,
+                according to the set threshold. Here is an example:
+              </para>
+              <para>
+                Original image: three strips with gradients of pure
+                colors. Red (255;0;0), Green (0;255;0), Blue
+                (0;0;255). We are going to use the Bucket-fill tool
+                with the magenta color and a Threshold set to 15.
+              </para>
+              <para>
+                Image 1: Fill By = Composite. We successively clicked in the
+                three color strips. Every strip is filled according
+                to the threshold.
+              </para>
+              <para>
+                Image 2: Fill By = Red. We clicked in the red strip. The
+                tool searches for contiguous pixels which have a similar
+                value in the red channel, according to the set
+                threshold. Only a narrow area corresponds to these
+                standards. In the green and the blue strip, the value
+                of pixels in the red channel is 0, very much different from
+                the red channel value of the clicked pixel: the color
+                doesn't spread to them.
+              </para>
+              <para>
+                Image 3: Fill By = Red. We clicked in the green strip.
+                There, the value of the clicked pixel in the red channel is
+                0. All pixels in the green and the blue strips have the
+                same red channel value (0): they are all painted.
+              </para>
+              <figure>
+                <title>Example for <quote>Fill By</quote></title>
+                <mediaobject>
+                  <imageobject>
+                    <imagedata format="PNG"
+                      fileref="images/toolbox/fill-by-0.png"/>
+                  </imageobject>
+                  <caption>
+                    <para>Original image</para>
+                  </caption>
+                </mediaobject>
+                <mediaobject>
+                  <imageobject>
+                    <imagedata format="PNG"
+                      fileref="images/toolbox/fill-by-1.png"/>
+                  </imageobject>
+                  <caption>
+                    <para>Image 1</para>
+                  </caption>
+                </mediaobject>
+                <mediaobject>
+                  <imageobject>
+                    <imagedata format="PNG"
+                      fileref="images/toolbox/fill-by-2.png"/>
+                  </imageobject>
+                  <caption>
+                    <para>Image 2</para>
+                  </caption>
+                </mediaobject>
+                <mediaobject>
+                  <imageobject>
+                    <imagedata format="PNG"
+                      fileref="images/toolbox/fill-by-3.png"/>
+                  </imageobject>
+                  <caption>
+                    <para>Image 3</para>
+                  </caption>
+                </mediaobject>
+              </figure>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Line Art Detection</term>
+        <listitem>
+          <para>
+          These options appear when the <guilabel>Fill by line art detection</guilabel>
+          option is checked:
+          </para>
+          <figure>
+            <title><quote>Fill by line art detection</quote> example</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/bucket-fill-ex-origin.png"/>
+              </imageobject>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/bucket-fill-ex-default.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Bucket fill tool applied by click-and-drag with default
+                  options. They don't well fit this image, especially on
+                  eyebrows that are almost wiped off.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>Source</guilabel>: by default, information for line
+                art computation is taken from
+                <guilabel>All visible layers</guilabel>. You can also select
+                the <guilabel>Selected layer</guilabel>, the
+                <guilabel>Layer below the selected one</guilabel>, or the
+                <guilabel>Layer above the selected one</guilabel> as the source.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Detect opacity rather than grayscale</guilabel>: fills completely
+                transparent regions.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Line art detection threshold</guilabel>: threshold to
+                detect contour (higher values will detect more pixels).
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Line Art Closure</term>
+        <listitem>
+          <para>
+          These options appear when the <guilabel>Fill by line art detection</guilabel>
+          option is checked:
+          </para>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>Automatic closure</guilabel>: When this option is enabled,
+                <guilabel>Maximum gap length</guilabel> defines the maximum gap (in
+                pixels) in line art which can be closed.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Manual closure in fill layer</guilabel>: when
+                enabled, consider pixels of the selected line art source layer
+                that are using the selected fill color as line art closure.
+              </para>
+              <para>
+                This setting is only enabled when the line art source is
+                <guilabel>Layer below the selected one</guilabel>, or
+                <guilabel>Layer above the selected one</guilabel>.
+              </para>
+              <para>
+                When your line art sketch has holes, you can fill these holes
+                with a brush in the fill color on a layer above or below it,
+                before using bucket fill on your color layer. Especially on
+                larger images this can be faster than selecting
+                <guilabel>All visible layers</guilabel> as source.
+              </para>
+              <para>
+                <guilabel>Layer below the selected one</guilabel> would be
+                most useful when you are coloring a scanned sketch, while
+                <guilabel>Layer above the selected one</guilabel> can be used
+                when you are sketching yourself and filling the colors below
+                the sketch.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Fill borders</term>
+        <listitem>
+          <para>
+          These options appear when the <guilabel>Fill by line art detection</guilabel>
+          option is checked:
+          </para>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>Maximum growing size</guilabel>: maximum number of
+                pixels grown under the line art. Increasing this value makes
+                lines thinner.
+              </para>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="PNG"
+                    fileref="images/toolbox/bucket-fill-ex-grow.png"/>
+                </imageobject>
+                <caption>
+                  <para>
+                    To improve eyebrows in the example, <guilabel>Maximum
+                    growing size</guilabel> is reduced to 1.
+                  </para>
+                </caption>
+              </mediaobject>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Feather edges</guilabel>: feathers fill edges.
+              </para>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="PNG"
+                    fileref="images/toolbox/bucket-fill-ex-feather.png"/>
+                </imageobject>
+              </mediaobject>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Stroke borders</guilabel>: stroke fill borders with
+                the stroke options of the paint tool selected in the dropdown
+                below.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>Fill a feathered selection</title>
+    <para>
+      By clicking repeatedly in a selection with feathered edges, you
+      progressively fill the feathered border:
+    </para>
+    <figure>
+      <title>Example for <quote>Fill a feathered Selection</quote></title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/fill-feathered-1.png"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/fill-feathered-2.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            After clicking 3 times more with the Bucket-Fill tool
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+  </sect3>
+</sect2>

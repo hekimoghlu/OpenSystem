@@ -1,0 +1,61 @@
+#-*- mode: shell-script;-*-
+
+localsearch_cmds()
+{
+    local cur prev words cword
+    _init_completion -s || return
+
+    cur=${COMP_WORDS[COMP_CWORD]}
+
+    if [[ $cword == 1 ]]; then
+	possible=`localsearch | grep -E "   [a-z].*   " | awk '{ print ($1) }' | sort | uniq`
+	COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+	return 0;
+    fi
+
+    if [[ $cword == 3 ]] && [[ ${words[1]} == 'help' ]]; then
+	return 0;
+    fi
+
+    case $prev in
+	help)
+	    possible=`localsearch | grep -E "   [a-z].*   " | awk '{ print ($1) }' | grep -v help | sort | uniq`
+	    COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+	    return 0;
+	    ;;
+	-h|--help)
+	    return 0;
+	    ;;
+	extract|info)
+	    if [[ $cur != -* ]]; then
+		_filedir
+		return 0;
+	    fi
+	    ;;
+	-f|--file)
+	    if [[ ${words[1]} == 'reset' ]]; then
+		_filedir
+		return 0;
+	    fi
+	    ;;
+	-a|--add|-d|--remove)
+	    if [[ ${words[1]} == 'index' ]]; then
+		_filedir
+		return 0;
+	    fi
+	    ;;
+	*)
+	    ;;
+    esac
+
+    if [[ $cword -lt 2 ]]; then
+	return 0;
+    fi
+
+    if [[ -z $cur ]] || [[ $cur == -* ]]; then
+	possible=`${words[0]} ${words[1]} -h | grep -E "^ *-" | sed "s/^ *//" | sed "s/  [^-].*//" | sed "s/,/\n/g" | sed "s/=.*//"`
+	COMPREPLY=( $(compgen -W "$possible" -- $cur) )
+    fi
+}
+
+complete -F localsearch_cmds localsearch

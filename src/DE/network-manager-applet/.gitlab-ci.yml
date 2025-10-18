@@ -1,0 +1,127 @@
+# Quick syntax check:
+# python -c 'import sys, yaml; yaml.dump (yaml.load (sys.stdin), sys.stdout)' <.gitlab-ci.yml
+
+# If things don't seem to work, this can help:
+# https://gitlab.gnome.org/GNOME/network-manager-applet/-/ci/lint
+
+stages:
+  - build
+  - test
+  - triage
+
+.dist: &dist
+  dependencies:
+    - fedora42_dist
+
+fedora42_dist:
+  image: fedora:42
+  stage: build
+  before_script:
+    - ./scripts/gitlab-ci.sh fedora_install_full autotools
+  script:
+    - sh autogen.sh
+    - make -j$(nproc) distcheck
+  artifacts:
+    paths:
+      - "*.xz"
+
+fedora_meson_minimal:
+  <<: *dist
+  before_script:
+    - ./scripts/gitlab-ci.sh fedora_install_minimal meson
+  script:
+    - tar xJf network-manager-applet-*.tar.xz
+    - meson
+      -Dwwan=false
+      -Dselinux=false
+      -Dteam=false
+      -Dld_gc=false
+      -Dappindicator=no
+      -Dmore_asserts=no
+      network-manager-applet-*/ build
+    - ninja -v -C build
+    - ninja -v -C build test
+    - ninja -v -C build install
+    - ninja -v -C build uninstall
+  image: fedora:latest
+  stage: test
+  when: manual
+
+fedora_meson_full:
+  <<: *dist
+  before_script:
+    - ./scripts/gitlab-ci.sh fedora_install_full meson
+  script:
+    - tar xJf network-manager-applet-*.tar.xz
+    - meson
+      -Dwwan=true
+      -Dselinux=true
+      -Dteam=true
+      -Dld_gc=true
+      -Dappindicator=yes
+      -Dmore_asserts=yes
+      network-manager-applet-*/ build
+    - ninja -v -C build
+    - ninja -v -C build test
+    - ninja -v -C build install
+    - ninja -v -C build uninstall
+  image: fedora:latest
+  stage: test
+
+fedora_autotools_minimal:
+  <<: *dist
+  before_script:
+    - ./scripts/gitlab-ci.sh fedora_install_minimal make
+  script:
+    - tar xJf network-manager-applet-*.tar.xz
+    - cd network-manager-applet-*/
+    - ./configure
+      --disable-silent-rules
+      --with-more-asserts=no
+      --disable-nls
+      --disable-schemas-compile
+      --disable-more-warnings
+      --without-appindicator
+      --without-wwan
+      --without-selinux
+      --without-team
+    - make -j$(nproc)
+    - make -j$(nproc) check
+    - make -j$(nproc) install
+    - make -j$(nproc) uninstall
+  image: fedora:latest
+  stage: test
+  when: manual
+
+fedora_autotools_full:
+  <<: *dist
+  before_script:
+    - ./scripts/gitlab-ci.sh fedora_install_full make
+  script:
+    - tar xJf network-manager-applet-*.tar.xz
+    - cd network-manager-applet-*/
+    - ./configure
+      --disable-silent-rules
+      --with-more-asserts=yes
+      --enable-nls
+      --enable-schemas-compile
+      --enable-more-warnings
+      --with-appindicator
+      --with-wwan
+      --with-selinux
+      --with-team
+    - make -j$(nproc)
+    - make -j$(nproc) check
+    - make -j$(nproc) install
+    - make -j$(nproc) uninstall
+  image: fedora:latest
+  stage: test
+
+triage:issues:
+  stage: triage
+  image: ruby:2.7
+  script:
+    - gem install gitlab-triage
+    - gitlab-triage -d --token $API_TOKEN --source-id $SOURCE_ID
+  only:
+    - schedules

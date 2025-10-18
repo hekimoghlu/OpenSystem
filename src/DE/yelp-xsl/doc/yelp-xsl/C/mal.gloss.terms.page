@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<page xmlns="http://projectmallard.org/1.0/" style="xslt-template" id="mal.gloss.terms">
+ <info>
+  <link type="guide" xref="mal-gloss" group="templates"/>
+  <link type="guide" xref="templates" group="mal"/>
+  <desc>Output the glossary terms for a page or section.</desc>
+ </info>
+ <title>mal.gloss.terms</title>
+ <synopsis>
+  <title>Parameters</title>
+  <terms>
+   <item>
+    <title><code>$node</code></title>
+    <p>The glossary <sys>page</sys> or <sys>section</sys> to output terms for.</p>
+   </item>
+  </terms>
+ </synopsis>
+ <p>This template outputs the terms that should be displayed for <code>$node.This</code> output
+ is a result tree fragment. To use these results, call <sys>exsl:node-set</sys> on them.
+ This template locates all terms throughout all pages and filters them based on
+ any <sys>gloss:match</sys> elements in the <sys>info</sys> child of <code>$node</code>, and also excludes
+ terms that are matched by child sections of <code>$node</code>.</p>
+ <p>The filtered terms are then grouped by matching ID. For each unique ID, this
+ template outputs a <sys>gloss:term</sys> element with the corresponding <sys>id</sys> attribute.
+ Each of these elements contains <sys>title</sys> elements reflecting the titles in the
+ actual term definitions. These titles have duplicates removed, compared by the
+ space-normalized string value, and are sorted.</p>
+ <p>These <sys>gloss:term</sys> elements then contain further <sys>gloss:term</sys> elements, which
+ are copies of the actual terms with the same ID. These elements have an <sys>xref</sys>
+ attribute added containing the ID of the containing page.</p>
+ <p>The top-level <sys>gloss:term</sys> elements and the <sys>gloss:term</sys> elements they contain
+ are not sorted. Only the <sys>title</sys> elements in the top-level <sys>gloss:term</sys>
+ elements are sorted.</p>
+ <list style="compact">
+  <title>Calls Parameters</title>
+  <item>
+   <p><link xref="mal.cache"/></p>
+  </item>
+ </list>
+ <list style="compact">
+  <title>Calls Templates</title>
+  <item>
+   <p><link xref="mal.gloss.match"/></p>
+  </item>
+ </list>
+</page>

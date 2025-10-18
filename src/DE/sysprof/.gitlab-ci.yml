@@ -1,0 +1,46 @@
+include:
+  - project: "gnome/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+  
+  - component: "gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master"
+    inputs:
+      job-stage: "test"
+      meson-options: "-Ddevelopment=true -Dsysprofd=host"
+
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak@x86_64"
+
+stages:
+  - "test"
+  - "deploy"
+
+.flatpak_vars:
+  variables:
+    FLATPAK_MODULE: "sysprof"
+    MANIFEST_PATH: "org.gnome.Sysprof.Devel.json"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.Sysprof.Devel"
+  extends: ".flatpak"
+
+flatpak@x86_64:
+  extends:
+    - '.flatpak_vars'
+    - '.flatpak@x86_64'
+  variables:
+    BUNDLE: "org.gnome.Sysprof.Devel-x86_64.flatpak"
+
+flatpak@aarch64:
+  extends:
+    - '.flatpak_vars'
+    - '.flatpak@aarch64'
+  variables:
+    BUNDLE: "org.gnome.Sysprof.Devel-aarch64.flatpak"
+
+nightly@x86_64:
+  extends: ".publish_nightly"
+  needs: ["flatpak@x86_64"]
+
+nightly@aarch64:
+  extends: ".publish_nightly"
+  needs: ["flatpak@aarch64"]

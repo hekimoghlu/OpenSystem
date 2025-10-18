@@ -1,0 +1,208 @@
+spec:
+  inputs:
+    python_versions:
+      type: array
+      default:
+        - "python-3.9"
+        - "python-3.10"
+        - "python-3.11"
+        - "python-3.12"
+        - "python-3.13"
+        - "python-3.14.0rc2"
+        - "pypy-3.11"
+    default_version:
+      default: "python-3.13"
+    build_images:
+      options: ["never", "always"]
+      default: "never"
+
+---
+
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "sdist"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+stages:
+  - images
+  - pre-commit
+  - build
+  - coverage
+  - documentation
+  - build-release
+  - deploy
+
+variables:
+  REGISTRY: registry.gitlab.gnome.org/gnome/pygobject
+  CI_IMAGE: registry.gitlab.gnome.org/gnome/pygobject/ci
+  TARBALL_ARTIFACT_PATH: "dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.gz"
+
+# Normal build whenever Dockerfile has not changed
+default:
+  interruptible: true
+  cache:
+    paths:
+      - _ccache/
+
+
+# Build images if Dockerfile has changed
+build-image:
+  stage: images
+  image: quay.io/buildah/stable:latest
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "GNOME" && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - ".gitlab-ci.yml"
+        - ".gitlab-ci/Dockerfile"
+      when: always
+    - when: $[[ inputs.build_images ]]
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_ISOLATION: chroot
+  parallel:
+    matrix:
+      - IMAGE_TAG: $[[ inputs.python_versions ]]
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - IMG="$CI_IMAGE:$IMAGE_TAG"
+    - echo "Building image '$IMG'"
+    - buildah build --build-arg BASE=${IMAGE_TAG/-/:} -t $IMG -f Dockerfile .gitlab-ci
+    - buildah push $IMG
+  cache:
+    paths:
+
+pre-commit:
+  stage: pre-commit
+  image: $CI_IMAGE:$[[ inputs.default_version ]]
+  variables:
+    XDG_CACHE_HOME: "$CI_PROJECT_DIR/.cache"
+  script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - python -m pip install -q --no-warn-script-location pre-commit
+    - python -m pre_commit run --verbose --all-files
+  artifacts:
+    when: on_failure
+    paths:
+      - .cache/pre-commit/pre-commit.log
+  cache:
+    paths:
+      - .cache
+
+linux:
+  stage: build
+  image: $CI_IMAGE:$IMAGE_TAG
+  parallel:
+    matrix:
+      - IMAGE_TAG: $[[ inputs.python_versions ]]
+        TEST_GTK_VERSION: "3.0"
+      - IMAGE_TAG: $[[ inputs.default_version ]]
+        TEST_GTK_VERSION: "4.0"
+  artifacts:
+    when: always
+    paths:
+      - coverage/
+      - test-results.xml
+    reports:
+      junit: test-results.xml
+  script:
+   - bash -x ./.gitlab-ci/test-docker.sh
+
+windows:
+  stage: build
+  tags:
+    - win32-ps
+  parallel:
+    matrix:
+      - MSYSTEM:
+          - "MINGW32"
+          - "MINGW64"
+  artifacts:
+    when: always
+    paths:
+      - coverage/
+      - _build/meson-logs
+      - test-results.xml
+    reports:
+      junit: test-results.xml
+  script:
+    - $env:CHERE_INVOKING = 'yes'
+    - C:\msys64\usr\bin\pacman --noconfirm -Syyuu
+    - C:\msys64\usr\bin\bash -lc "bash -x ./.gitlab-ci/test-msys2.sh"
+
+gnome-master:
+  stage: build
+  image: quay.io/gnome_infrastructure/gnome-runtime-images:gnome-master
+  tags:
+    - flatpak
+  parallel:
+    matrix:
+      - TEST_GTK_VERSION:
+          - "3.0"
+          - "4.0"
+  artifacts:
+    paths:
+      - coverage/
+  script:
+    - bash -x ./.gitlab-ci/test-flatpak.sh
+
+linux-pdm:
+  stage: build
+  image: $CI_IMAGE:$[[ inputs.default_version ]]
+  variables:
+    TEST_GTK_VERSION: "3.0"
+  before_script:
+    - python -m pip install "pdm!=2.17.3"
+    - python -m pdm install -v
+  script:
+    - xvfb-run -a python -m pdm run pytest
+
+minimal-meson:
+  allow_failure: true
+  stage: build
+  image: quay.io/fedora/fedora:40
+  before_script:
+    - dnf install --assumeyes gcc meson git flex bison diffutils python3-devel python3-pytest gobject-introspection-devel
+  script:
+    - meson setup _build
+    - meson compile -C _build
+    - PYTEST_ADDOPTS="-sv -k 'not test_cairo'" meson test -C _build --suite pygobject --verbose
+
+coverage:
+  stage: coverage
+  image: $CI_IMAGE:$[[ inputs.default_version ]]
+  artifacts:
+    paths:
+      - coverage/
+  script:
+    - bash -x ./.gitlab-ci/coverage-docker.sh
+  coverage: '/^\s+lines\.+:\s+([\d.]+\%)\s+/'
+
+pages:
+  stage: documentation
+  image: $CI_IMAGE:$[[ inputs.default_version ]]
+  dependencies:
+    - coverage
+  before_script:
+    - python -m pip install "pdm!=2.17.3"
+    - python -m pdm install -v
+  script:
+    - python -m pdm run sphinx-build -T -E -W --keep-going -b html -d _build/doctrees -D language=en docs/ public
+    - mv coverage/ public/
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+
+sdist:
+  stage: build-release
+  image: $CI_IMAGE:$[[ inputs.default_version ]]
+  artifacts:
+    paths:
+      - dist/
+  script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - bash -x ./.gitlab-ci/build-sdists.sh

@@ -1,0 +1,81 @@
+<!ELEMENT dia:diagram (dia:diagramdata, (dia:layer)*) >
+<!ATTLIST dia:diagram
+   xmlns:dia CDATA #FIXED "http://www.lysator.liu.se/~alla/dia/">
+
+<!ELEMENT dia:diagramdata (dia:attribute)* >
+
+<!ELEMENT dia:layer (dia:object | dia:group)*>
+<!ATTLIST dia:layer
+   name CDATA #REQUIRED
+   visible (true|false) #REQUIRED 
+   active (true|false) #IMPLIED>
+
+<!ELEMENT dia:object ((dia:attribute)*, dia:connections?, dia:childnode?)>
+<!ATTLIST dia:object
+   type CDATA #REQUIRED
+   version NMTOKEN #REQUIRED
+   id ID #REQUIRED >
+
+<!ELEMENT dia:connections (dia:connection)*>
+
+<!ELEMENT dia:connection EMPTY>
+<!ATTLIST dia:connection
+   handle NMTOKEN #REQUIRED
+   to IDREF #REQUIRED
+   connection NMTOKEN #REQUIRED>
+
+<!ELEMENT dia:childnode EMPTY>
+<!ATTLIST dia:childnode
+   parent IDREF #REQUIRED>
+
+<!ELEMENT dia:group (dia:object | dia:group | dia:attribute)*>
+<!ATTLIST dia:group
+   matrix CDATA #IMPLIED>
+
+<!ELEMENT dia:attribute (dia:composite | dia:int | dia:enum | dia:real |
+		    dia:boolean | dia:color | dia:point | dia:rectangle | 
+		    dia:string | dia:font | dia:matrix | dia:data)*>
+<!ATTLIST dia:attribute  name CDATA #REQUIRED >
+
+<!ELEMENT dia:composite (dia:attribute|dia:composite)*>
+<!ATTLIST dia:composite  type CDATA #IMPLIED>
+
+<!ELEMENT  dia:int EMPTY>
+<!ATTLIST  dia:int  val NMTOKEN #REQUIRED>
+
+<!ELEMENT  dia:enum EMPTY>
+<!ATTLIST  dia:enum  val NMTOKEN #REQUIRED>
+
+<!ELEMENT  dia:real EMPTY>
+<!ATTLIST  dia:real  val CDATA #REQUIRED>
+
+<!ELEMENT  dia:boolean EMPTY>
+<!ATTLIST  dia:boolean  val (true|false) #REQUIRED>
+
+<!ELEMENT  dia:color EMPTY>
+<!ATTLIST dia:color  val CDATA #REQUIRED>
+
+<!ELEMENT  dia:matrix EMPTY>
+<!ATTLIST dia:matrix
+   x0 CDATA #IMPLIED
+   y0 CDATA #IMPLIED
+   xx CDATA #IMPLIED
+   xy CDATA #IMPLIED
+   yx CDATA #IMPLIED
+   yy CDATA #IMPLIED>
+
+<!ELEMENT dia:point EMPTY>
+<!ATTLIST dia:point  val CDATA #REQUIRED>
+
+<!ELEMENT dia:rectangle EMPTY>
+<!ATTLIST dia:rectangle  val CDATA #REQUIRED>
+
+<!ELEMENT dia:string (#PCDATA)>
+
+<!ELEMENT dia:data (#PCDATA)>
+
+<!ELEMENT dia:font EMPTY>
+<!ATTLIST dia:font 
+  name CDATA #REQUIRED
+  style CDATA #IMPLIED
+  family CDATA #IMPLIED>

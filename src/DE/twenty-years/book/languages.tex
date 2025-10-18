@@ -1,0 +1,149 @@
+\chapter{Programming Languages and Language Bindings}
+
+Miguel and I were very excited about the Scheme language when GNOME
+started.  We had both read \cite{sicp} and liked the conciseness and
+power of this little Lisp-like language.  In addition, two things had
+happened recently then:  the \GIMP\ had started using Scheme as a
+language to write plug-ins for image manipulation (or as it called
+them, Script-fu scripts); also, the GNU project had released Guile,
+its embeddable Scheme interpreter.
+
+Back then, the state of high-level languages was rather grim.  Perl
+already existed and was quite popular, but more for system
+administration and casual scripting.  Python was just beginning to get
+popular --- the first public version appeared in 1991, just a few
+years before \GNOME.
+
+We definitely wanted to write applications in a high-level language.
+There was good precedent for this:  the \GIMP\ allowed it in a
+rudimentary but interesting way, and of course Emacs was written as a
+small core in C, with a Lisp interpreter, and the majority of its code
+was actually written in Lisp.
+
+At first, GTK+ didn't have reference counting.  Widgets were owned by
+their parent containers, and containers were responsible for freeing
+their children recursively.  This worked reasonably well for minimal
+applications, like the \GIMP and its plug-ins, but it was not a good
+scheme for large-scale applications where tracking the lifetime of
+objects is complex.
+
+Also, if we were going to have high-level languages calling into GTK+,
+we would need a way for the language to hold references to GTK+
+widgets, possibly tied to the language's garbage collector, and also
+for GTK to have its own references to widgets.
+
+Marius Vollmer appeared and started adding reference-counting to
+GTK+.  The base class was GtkObject, and it had ref() and unref()
+functions.
+
+Before GTK+ had reference counting, code looked more or less like
+this:
+
+\begin{lstlisting}[basicstyle=\footnotesize]
+    GtkWidget *window;
+    GtkWidget *box;
+    GtkWidget *menubar;
+    GtkWidget *child;
+
+    window = gtk_window_new ("Window title");
+
+    box = gtk_vbox_new (...);
+    gtk_container_add (window, box);
+
+    menubar = gtk_menubar_new (...);
+    /* ... add menu items to menubar ... */
+    gtk_container_add (box, menubar);
+
+    child = gtk_button_new ("Click me");
+    gtk_container_add (box, child);
+
+    /* Hold on to window; when the program ends, just gtk_widget_destroy (window) */
+\end{lstlisting}
+
+At the end of the program, or when the user closed a window, the
+window would destroy itself and recursively destroy its children.  If
+any other part of the program needed to hold a reference to a widget
+that might be destroyed in the meantime... well, people had to be
+careful not to do that, or to really ensure that they wouldn't try to
+access an object that had already been freed.  C does not protect us
+from invalid accesses!
+
+Reference counting was a way to deal with the problem of holding more
+than one reference to a widget.  Also, it would allow garbage
+collectors to work on top of GTK+'s simple reference counting.
+
+Now, in a purely reference-counted scheme of things, the code would
+have to look something like this:
+
+\begin{lstlisting}[basicstyle=\footnotesize]
+    GtkWidget *window;
+    GtkWidget *box;
+    GtkWidget *menubar;
+    GtkWidget *child;
+
+    window = gtk_window_new ("Window title");
+
+    box = gtk_vbox_new (...);                   /* box has a single reference */
+    gtk_container_add (window, box);            /* box has two references */
+
+    menubar = gtk_menubar_new (...);            /* menubar has a single reference */
+    /* ... add menu items to menubar ... */
+    gtk_container_add (box, menubar);           /* menubar has two references */
+    gtk_object_unref (menubar);                 /* drop our ref; we don't need it anymore */
+
+    child = gtk_button_new ("Click me");        /* child has a single reference */
+    gtk_container_add (box, child);             /* child has two references */
+    gtk_object_unref (child);                   /* drop our ref */
+
+    gtk_object_unref (box);                     /* we don't need this anymore */ 
+
+    /* We keep only a reference to window */
+\end{lstlisting}
+
+Here, most of the times that we create a child widget, we add it to
+its parent container, and then unref() the widget if we don't need it
+to hold on to it ourselves anymore --- the container hierarchy owns
+the base references to widgets.  We only keep base references to our
+toplevel windows; for multi-window applications, it was common to have
+a GList of the program's main windows, and to exit the program when
+that list became empty.
+
+However, there was already a lot of code written for GTK+ when it did
+{\em not} have reference counting!  People would not want to carefully
+audit their code to add calls to unref() all over the place.
+
+To make it possible for people to keep their existing code unchanged,
+and still add reference counting, we added a quirk:  new objects would
+start out with a ``floating'' reference.  This basically meant, ``this
+object is unowned until it gets added to a container''.  Then, when a
+container was asked to add a child widget, the container would
+ref() the object and then ``sink'' the initial reference.  The child
+widget would end up with a reference count of 1, owned by its parent
+container --- and the calling code would not need to unref() the child
+it just created.
+
+And of course, this caused confusion for widget implementors since the
+beginning.  For application writers this was mostly fine:  create
+widgets, add them to containers, and don't worry about them; if part
+of the app needed to hold an extra reference to a widget, they would
+just ref() it.  However, writers of containers and libraries had to
+remember that they had to ref() {\bf and} then sink() a child widget
+that was being added to a container, {\bf or} just ref() a widget if
+they simply needed an extra reference to it.
+
+Backwards compatibility is great, but it grows the institutional
+memory...
+
+\section{Python}
+
+Python.  Pygtk.  Matt Wilson's Anaconda.  Hand-written bindings.
+
+GTK--
+
+\section{Mono}
+
+\section{Language bindings, the civilized way}
+
+Generating bindings from machine-readable descriptions of the API
+
+GObject Introspection

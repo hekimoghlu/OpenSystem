@@ -1,0 +1,60 @@
+/* Copyright (C) 2017 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gdkmm/cairoutils.h>
+#include <gdkmm/paintable.h>
+#include <gdkmm/rgba.h>
+#include <gdkmm/texture.h>
+#include <memory>
+
+// gdk_rect_to_graphene_rect() is called only from deprecated methods.
+_DEPRECATE_IFDEF_START
+namespace
+{
+std::unique_ptr<graphene_rect_t>
+gdk_rect_to_graphene_rect(const Gdk::Rectangle& gdk_rect)
+{
+  graphene_rect_t* graphene_rect = new graphene_rect_t;
+  graphene_rect_init(graphene_rect, gdk_rect.get_x(), gdk_rect.get_y(),
+    gdk_rect.get_width(), gdk_rect.get_height());
+  return std::unique_ptr<graphene_rect_t>(graphene_rect);
+}
+} // anonymous namespace
+_DEPRECATE_IFDEF_END
+
+namespace Gtk
+{
+
+void Snapshot::push_debug(const Glib::ustring& name)
+{
+  if (name.empty())
+    gtk_snapshot_push_debug(gobj(), nullptr);
+  else
+    gtk_snapshot_push_debug(gobj(),"%s", name.c_str());
+}
+
+} //namespace Gtk
+
+namespace Glib
+{
+
+Glib::RefPtr<Gtk::Snapshot> wrap_gtk_snapshot(GtkSnapshot* object, bool take_copy)
+{
+  return Glib::make_refptr_for_instance<Gtk::Snapshot>( dynamic_cast<Gtk::Snapshot*> (Glib::wrap_auto((GObject*)(object), take_copy)) );
+  //We use dynamic_cast<> in case of multiple inheritance.
+}
+
+} /* namespace Glib */

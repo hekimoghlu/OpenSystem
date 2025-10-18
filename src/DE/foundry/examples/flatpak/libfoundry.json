@@ -1,0 +1,227 @@
+{
+    "name" : "foundry",
+    "buildsystem" : "meson",
+    "config-opts" : [
+        "-Dgnome_sdk_version=master",
+        "-Dfreedesktop_sdk_version=25.08",
+        "-Ddevelopment=true",
+        "-Dintrospection=enabled",
+        "-Dgtk=true",
+        "-Dcommonmark=true",
+        "-Dwebkit=true"
+    ],
+    "sources" : [
+        {
+            "type" : "git",
+            "url" : "https://gitlab.gnome.org/GNOME/foundry.git",
+            "branch" : "main"
+        }
+    ],
+    "modules" : [
+        "libflatpak.json",
+        {
+            "name" : "libssh2",
+            "buildsystem" : "cmake-ninja",
+            "config-opts" : [
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DCMAKE_INSTALL_LIBDIR:PATH=/app/lib",
+                "-DBUILD_SHARED_LIBS:BOOL=ON"
+            ],
+            "cleanup" : [
+                "/share/doc"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/libssh2/libssh2.git",
+                    "tag" : "libssh2-1.11.1"
+                }
+            ]
+        },
+        {
+            "name" : "libgit2",
+            "buildsystem" : "cmake-ninja",
+            "config-opts" : [
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DCMAKE_INSTALL_LIBDIR:PATH=/app/lib",
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DUSE_SSH:BOOL=ON",
+                "-DUSE_THREADS:BOOL=ON"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/libgit2/libgit2.git",
+                    "tag" : "v1.9.1"
+                }
+            ]
+        },
+        {
+            "name" : "libyaml",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/yaml/libyaml.git",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "libdex",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "--buildtype=debugoptimized",
+                "-Ddocs=false",
+                "-Dintrospection=enabled",
+                "-Dexamples=false",
+                "-Dtests=false",
+                "-Dsysprof=true"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libdex.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "gom",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gom.git",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "libpeas",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dlua51=false",
+                "-Dpython3=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libpeas.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "cmark",
+            "buildsystem" : "cmake-ninja",
+            "builddir" : true,
+            "config-opts" : [
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DCMAKE_INSTALL_LIBDIR:PATH=/app/lib",
+                "-DCMARK_TESTS=OFF",
+                "-DCMARK_SHARED=OFF"
+            ],
+            "cleanup" : [
+                "/bin/cmark"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/commonmark/cmark",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "libeditorconfig",
+            "buildsystem" : "cmake-ninja",
+            "config-opts" : [
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DCMAKE_INSTALL_LIBDIR:PATH=/app/lib",
+                "-DBUILD_DOCUMENTATION=OFF",
+                "-DINSTALL_HTML_DOC=OFF"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/editorconfig/editorconfig-core-c.git",
+                    "tag" : "v0.12.9"
+                }
+            ]
+        },
+        {
+            "name" : "fast_float",
+            "buildsystem" : "cmake-ninja",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/fastfloat/fast_float.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "simdutf",
+            "buildsystem" : "cmake-ninja",
+            "config-opts" : [
+                "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
+                "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE",
+                "-DCMAKE_VISIBILITY_INLINES_HIDDEN=TRUE"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/simdutf/simdutf.git",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "vte",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dglade=false",
+                "-Dgtk3=false",
+                "-Dgtk4=true",
+                "-Dvapi=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/vte.git",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "template-glib",
+            "config-opts" : [
+                "--buildtype=debugoptimized",
+                "-Dtests=false"
+            ],
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/template-glib.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "libspelling",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddocs=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libspelling.git",
+                    "branch" : "main"
+                }
+            ]
+        }
+    ]
+}

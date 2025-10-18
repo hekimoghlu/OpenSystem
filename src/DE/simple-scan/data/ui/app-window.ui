@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="libadwaita" version="1.0"/>
+  
+  <menu id="context-menu">
+    <item>
+      <attribute name="label" translatable="yes" comments="Menu item to rotate page to left (anti-clockwise)">Rotate _Left</attribute>
+      <attribute name="action">app.rotate_left</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="yes" comments="Menu item to rotate page to right (clockwise)">Rotate _Right</attribute>
+      <attribute name="action">app.rotate_right</attribute>
+    </item>
+    <submenu>
+      <attribute name="label" translatable="yes" comments="Label for page crop submenu">_Crop</attribute>
+
+      <section>
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for no crop">_None</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">none</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping page to A4 size">A_4</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">A4</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping page to A5 size">A_5</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">A5</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping page to A6 size">A_6</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">A6</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping page to US letter size">_Letter</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">letter</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping to page to US legal size">Le_gal</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">legal</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping page to 4x6 inch">4×6</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">4x6</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping page to A3">A_3</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">A3</attribute>
+        </item>
+
+        <item>
+          <attribute name="label" translatable="yes" comments="Radio button for cropping to custom page size">_Custom</attribute>
+          <attribute name="action">crop.set</attribute>
+          <attribute name="target">custom</attribute>
+        </item>
+      </section>
+
+      <section>
+        <item>
+          <attribute name="label" translatable="yes" comments="Menu item to rotate the crop area">_Rotate Crop</attribute>
+          <attribute name="action">crop.rotate</attribute>
+        </item>
+      </section>
+
+    </submenu>
+    <item>
+      <attribute name="label" translatable="yes" comments="Menu item to move the selected page to the left">Move Left</attribute>
+      <attribute name="action">app.move_left</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="yes" comments="Menu item to move the selected page to the right">Move Right</attribute>
+      <attribute name="action">app.move_right</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="yes">Copy</attribute>
+      <attribute name="action">app.copy_page</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="yes">Delete</attribute>
+      <attribute name="action">app.delete_page</attribute>
+    </item>
+  </menu>
+
+  <menu id="scan-menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Single Page</attribute>
+        <attribute name="action">app.scan_type</attribute>
+        <attribute name="target">single</attribute>
+      </item>
+
+      <item>
+        <attribute name="label" translatable="yes">All Pages From _Feeder</attribute>
+        <attribute name="action">app.scan_type</attribute>
+        <attribute name="target">adf</attribute>
+      </item>
+
+      <item>
+        <attribute name="label" translatable="yes">_Multiple Pages From Flatbed</attribute>
+        <attribute name="action">app.scan_type</attribute>
+        <attribute name="target">batch</attribute>
+      </item>
+    </section>
+
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Text</attribute>
+        <attribute name="action">app.document_hint</attribute>
+        <attribute name="target">text</attribute>
+      </item>
+
+      <item>
+        <attribute name="label" translatable="yes">_Image</attribute>
+        <attribute name="action">app.document_hint</attribute>
+        <attribute name="target">photo</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <template class="AppWindow" parent="AdwApplicationWindow">
+    <property name="height_request">480</property>
+    <property name="title" translatable="yes" comments="Title of scan window">Document Scanner</property>
+    <property name="icon_name">org.gnome.SimpleScan</property>
+    <signal name="close-request" handler="window_close_request_cb" swapped="no"/>
+    <property name="content">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        
+        <child>
+          <object class="GtkPopoverMenu" id="page_menu">
+            <property name="menu-model">context-menu</property>
+            <property name="has_arrow">false</property>
+            <property name="halign">start</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwHeaderBar" id="header_bar">
+            <child type="start">
+              <object class="GtkBox" id="open_box">
+                <property name="valign">center</property>
+                <property name="margin-start">6</property>
+                <property name="spacing">6</property>
+                <child>
+                  <object class="GtkButton" id="stop_button">
+                    <property name="visible">0</property>
+                    <property name="tooltip_text" translatable="yes" comments="Tooltip for stop button">Stop</property>
+                    <property name="use_underline">True</property>
+                    <signal name="clicked" handler="stop_scan_button_clicked_cb" swapped="no"/>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="spacing">6</property>
+                        <property name="halign">center</property>
+                        <child>
+                          <object class="GtkSpinner" id="stop_button_spinner">
+                            <property name="spinning">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">S_top</property>
+                            <property name="use_underline">True</property>
+                            <property name="width_chars">6</property>
+                            <property name="xalign">0.33</property>
+                            <property name="halign">center</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <style>
+                      <class name="text-button"/>
+                      <class name="destructive-action"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="scan_button">
+                    <property name="sensitive">0</property>
+                    <property name="tooltip_text" translatable="yes" comments="Tooltip for scan toolbar button. Replaced by text associated with each scan type."></property>
+                    <property name="use_underline">True</property>
+                    <signal name="clicked" handler="scan_button_clicked_cb" swapped="no"/>
+
+                    <property name="child">
+                      <object class="AdwButtonContent" id="scan_button_content">
+                        <property name="icon-name">scanner-symbolic</property>
+                        <property name="label" translatable="yes">_Scan</property>
+                        <property name="use-underline">True</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkMenuButton" id="scan_options_menu">
+                    <property name="tooltip-text" translatable="yes">Scan Options</property>
+                    <property name="menu_model">scan-menu</property>
+                    <property name="icon_name">view-more-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkMenuButton" id="menu_button">
+                <property name="tooltip-text" translatable="yes">Main Menu</property>
+                <property name="primary">True</property>
+                <property name="icon_name">open-menu-symbolic</property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkButton" id="save_button">
+                <property name="sensitive">0</property>
+                <property name="tooltip_text" translatable="yes">Export</property>
+                <property name="use_underline">True</property>
+                <property name="action-name">app.save</property>
+                <property name="icon_name">document-save-symbolic</property>
+              </object>
+            </child>
+            <style>
+              <class name="titlebar"/>
+            </style>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkStack" id="stack">
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkStackPage">
+                <property name="name">startup</property>
+                <property name="child">
+                  <object class="AdwStatusPage" id="status_page">
+                    <property name="icon_name">org.gnome.SimpleScan-symbolic</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">12</property>
+
+                        <child>
+                          <object class="GtkLabel" id="status_secondary_label">
+                            <property name="visible">False</property>
+                            <property name="wrap">True</property>
+                            <property name="wrap-mode">word-char</property>
+                            <property name="justify">center</property>
+                            <property name="use-markup">True</property>
+                            <!-- <property name="track_visited_links">False</property> -->
+                            <signal name="activate-link" handler="status_label_activate_link_cb" swapped="no"/>
+                            <style>
+                              <class name="body"/>
+                              <class name="description"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox" id="device_buttons_box">
+                            <property name="visible">False</property>
+                            <property name="orientation">horizontal</property>
+                            <property name="halign">center</property>
+                            <property name="spacing">10</property>
+                            <child>
+                              <object class="GtkDropDown" id="device_drop_down">
+                                <property name="width_request">200</property>
+                                <signal name="notify::selected" handler="device_drop_down_changed_cb" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="refresh_devices">
+                                <property name="tooltip_text" translatable="yes" comments="Tooltip for stop button">Refresh Device List</property>
+                                <property name="icon_name">view-refresh-symbolic</property>
+
+                                <signal name="clicked" handler="redetect_button_clicked_cb" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkStackPage">
+                <property name="name">document</property>
+                <property name="child">
+                  <object class="GtkBox" id="main_vbox">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkActionBar" id="action_bar">
+                        <child type="start">
+                          <object class="GtkButton">
+                            <property name="margin-start">6</property>
+                            <signal name="clicked" handler="new_document_cb" swapped="no"/>
+
+                            <property name="child">
+                              <object class="AdwButtonContent">
+                                <property name="icon-name">list-add-symbolic</property>
+                                <property name="label" translatable="yes">New Document</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+
+                        <child type="center">
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">5</property>
+
+                            <child>
+                              <object class="GtkButton">
+                                <property name="icon-name">object-rotate-left-symbolic</property>
+                                <property name="tooltip-text" translatable="yes">Rotate Left (counter-clockwise)</property>
+                                <property name="action-name">app.rotate_left</property>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkButton">
+                                <property name="icon-name">object-rotate-right-symbolic</property>
+                                <property name="tooltip-text" translatable="yes">Rotate Right (clockwise)</property>
+                                <property name="action-name">app.rotate_right</property>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkToggleButton" id="crop_button">
+                                <property name="icon-name">crop-symbolic</property>
+                                <property name="tooltip-text" translatable="yes">Crop Selected Page</property>
+                                <signal name="toggled" handler="crop_toggle_cb" swapped="no"/>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkButton" id="delete_button">
+                                <property name="icon-name">user-trash-symbolic</property>
+                                <property name="tooltip-text" translatable="yes">Delete Selected Page</property>
+                                <property name="action-name">app.delete_page</property>
+                              </object>
+                            </child>
+
+                          </object>
+                        </child>
+
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </property>
+  </template>
+</interface>

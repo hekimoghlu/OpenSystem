@@ -1,0 +1,385 @@
+## 49.0 (2025-09-12)
+
+### Fixed
+
+- `F9 <Alt>Return` accel not being parsed correctly
+
+## 49.rc (2025-08-28)
+
+## 49.beta (2025-08-01)
+
+### Changed
+
+- Updated dependencies
+
+## 49.alpha (2025-07-02)
+
+### Changed
+
+- Use glycin loaders with API 2+
+
+## 48.1 (2025-04-11)
+
+### Fixed
+
+- Crash when closing the window, probably in the exact moment when the animnation for hiding controls starts.
+- Editing does not work correctly if PNGs or JPEGs are already rotated via an Exif orientation entry before editing.
+- Printed pages don't contain anything or garbled output. This is a temporary workaround for <https://gitlab.gnome.org/GNOME/gtk/-/issues/7464>, using the cairo renderer for the rotation and scaling of the image in the print preparation.
+
+## 48.0 (2025-03-14)
+
+### Fixed
+
+- edit/crop: Pre-select the portrait orientation for images that are taller than wide.
+
+## 48.rc (2025-02-28)
+
+### Fixed
+
+- Decide if an image has a format that supports editing based on the reliable mime-type. That way a wrong file extension will not impact the detection of the format being editable.
+- Set description instead of title for general errors, showing the complete and correct message.
+- Switch to consitently storing rotation with CCW convention.
+- editing/crop: Allow do decrease size of crop selection from edges when fixed aspect ratio is used.
+- editing: Don't show error if saving is aborted. Instead handle actual errors correctly.
+
+### Changed
+
+- editing/crop: Change icons for aspect ratio buttons for portrait orientation.
+- editing/crop: Disambiguate and tweak icons for crop selection aspect ratio buttons.
+
+## 48.beta (2025-01-31)
+
+### Added
+
+- edit/crop: Add back the selection of the aspect ratio for aspect ratios.
+- edit/crop: Added keyboard shortcuts for some editing operations.
+- edit/crop: Allow dragging selection from the edges, not only the corners.
+- edit/crop: Apply crop selections on operations like rotate/flip or save.
+- edit: Add menu with option to "Save As" or overwrite original.
+- edit: Allow to cancel saving operation via the "Cancel" button.
+- edit: Give visual feedback while saving image via spinner overlay.
+- edit: Show saved image after saving.
+- edit: `Ctrl+S` and `Ctrl+Shift+S` shortcuts save images and `Esc` to exit the editing view.
+
+### Fixed
+
+- Disable all zoom buttons and editing button if image fails to load.
+- Fix allocation warnings by not causing resizes during allocation.
+- edit/crop: Set aspect ratio to "Free" on reset.
+- edit/crop: Work around GTK gesture bug that blocks the drag gesture after clicking the apply button until one additional click has been done.
+- edit: Disable save actions when saving or no changes have been done.
+
+### Changed
+
+- edit/crop: Enable the "Reset" button when the crop selection change, even if not applied.
+- edit/crop: Move crop apply button into crop selection as small checkmark.
+- edit/crop: Refactor a lot of the inner working to make code simpler and more robust.
+- edit: Add an "(Edited)" suffix to the suggested filename when using "Save As"
+- edit: Various design and detail tweaks.
+- zoom: Allow zoom levels smaller than best fit via the zoom menu.
+
+## 47.4 (2025-01-13)
+
+### Fixed
+
+- Sometimes SVGs are not shown in the print preview.
+
+## 48.alpha (2025-01-07)
+
+### Added
+
+- Display XMP metadata for JPEG images.
+- Initial support for image editing of JPEGs and PNGs with crop, rotate, and flip.
+- Show the correct folder name in the properties view inside flatpaks if the file is only accessible via portal.
+- User comment field in metadata.
+
+### Fixed
+
+- The sort order is now also following the one found in Files (Nautilus) if the file name contains non-ascii characters.
+
+### Changed
+
+- The design of the overlay buttons, especially for zoom controls has been reworked. A new menu supports selecting from pre-defined zoom levels as well as entering a specific zoom level.
+
+## 47.2 (2024-11-22)
+
+### Fixed
+
+- Don't call style manager in application constructor since this is too early. Do it in startup instead. Without this fix, GTK 4.17.0 will terminate the app on startup.
+
+## 47.1 (2024-10-16)
+
+### Added
+
+- Add `<branding><color>`s instead of just using `GnomeSoftware::key-colors`. That they weren't set was an oversight.
+
+### Fixed
+
+- Make the string "Error Details" translatable.
+- Require glycin 2.0.1 crate to detect SVGZ files properly.
+
+## 47.0 (2024-09-13)
+
+### Fixed
+
+- Flickering while images are reloaded. Instead, keep the old textures around until a new texture is available.
+- Forcing the zoom to the center of the image is now working again. This is especially noticable when using the touchpads pinch gesture.
+- When disabling animations in the OS and using the buttons to change the image, the wrong image was shown, disabling features like zoom.
+
+## 47.beta.1 (2024-08-13)
+
+### Fixed
+
+- Don't force Flatpak sandbox SVGs. This fixes SVGs not loading outside of Flatpak.
+- Make the window wider when it would open with a bottom-sheet overlay for properties. That way, the properties can be shown in a sidebar.
+- Properly detect non-transparent images and down download a thumbnail for background detection for them. For some reason, the thumbnail download is using a lot of VRAM.
+- Rotating a freshly opened image would not follow the best-fit scaling.
+- Rotating by 0 degrees went through the complete rotation pipeline including a image reload. Now, 0 deg rotations are ignored.
+
+## 47.beta (2024-08-02)
+
+### Added
+
+- Add reload button to errors and F5 as reload shortcut
+
+### Fixed
+
+- Don't show error-screen if SVG has been loaded and only the rendering for tiles for other zoom levels fails. Instead, show the already loaded tiles.
+- Fixed that some actions are available on error pages and loading screens while they are not actually useful. This includes actions like zoom, rotate, and print.
+- No longer empty the animation buffer if next frame isn't available yet. This removes flickering for larger and high FPS animations on slower systems.
+- Zoom into viewport center via buttons. Before, the image center was used, which would cause a jump if the viewport had been changed.
+
+### Changed
+
+- Changed the drag and drop overlay to use accent colors instead of a fixed color. This also makes it follow the new adjustable accent colors.
+- Don't emmediately show the spinner for loading images. This avoids fresh spinners showing up each time when switching through images very quickly via keyboard.
+- Make strings that contain `\u{<hex>}` translatable
+- No longer overwrite GTKs default renderer with 'gl'. The latest patches in GTK seem to make the Vulkan renderer work fine.
+- The properties no longer use the deprecated AdwFlap widget. For very small windows, properties are now shown in an AdwBottomSheet.
+- Use AdwSpinner when loading images.
+- Use glycin's auto detection of development mode to disable sandbox.
+
+## 47.alpha (2024-06-28)
+
+### Added
+
+- New dialog to show and copy error details
+- Rotating JPEG images with an orientation Exif entry will now change that entry
+
+### Fixed
+
+- Disable markup in property rows
+
+### Changed
+
+- Follow the Rust Style Guide for Cargo.toml and .rs filenames
+- Image delete confirmation now uses AdwAlertDialog
+- Make error messages translatable and look nicer
+- Move many shortcuts to window level instead of using app accels
+- Replace AdwAboutWindow with AdwAboutDialog !376
+- Use new GtkPrintDialog API #144
+
+46.2
+====
+
+- Fix fractional scaling beeing blury by setting GDK_DEBUG=gl-no-fractional as default
+- Fix exposure times above 0.5 seconds not being displayed correctly in properties
+- Fix page orientation from print preview dialog is not honored for actual print
+
+46.1
+====
+
+- Fix fill-space option not being applied when changing the orientation in print preview
+- Fix PNGs not being available when browsing images on SMB shares
+- Don't animate switching between images with the mouse fwd/back buttons
+
+46.0
+====
+
+- Change to stable dependencies
+
+46.rc
+=====
+
+- Fix background color detection ignoring small lines in large images
+- Change to "gl" as GSK default renderer instead of "ngl" due to performance reasons
+- Change to sticking to the first error delivered during image loading
+
+46.beta.2
+=========
+
+- Change metainfo to include GNOME group
+- Change metainfo to use reversed name for the developer id
+- Change to use latest glycin beta for better metadata performance
+
+46.beta.1
+=========
+
+- Change .desktop file to not include "Slideshow" as keyword
+- Change help by regenerating pages
+- Change help to correctly represent zoom
+- Change to use zbus 4.0
+
+46.beta
+=======
+
+- Fix not reliably returning to restored image when undoing trash operation
+- Added Shift+Delete as shortcut for permanent image deletion
+- Added build option that makes X11 an optional dependency
+- Added button to copy coordinates for location in properties
+- Change to not using animation when changing images via keyboard shortcuts
+- Change to opening image in new window, occupy 40% of the screen instead of 30%
+- Change to using "stacked cards" animation when changing images via buttons
+- Changed to show city if it's less than 15km away instead of 100km before
+
+46.alpha
+========
+
+- Fix "Ctrl + C" copies image instead of metadata if text is selected
+- Fix "g_object_weak_unref" warnings
+- Fix changing image resets timeout for hiding controls if still visible
+- Fix long file names can newly opened window larger than required for image
+- Fix not always zooming into center when using overlay buttons on touchscreen
+- Fix opening image in different folder ends fullscreen mode
+- Fix scrollbars disappearing under certain conditions
+- Add zooming via touchpad scrolling while Ctrl button is pressed
+- Follow G_MESSAGES_DEBUG variable for logging
+- In print preview, base 100% image scale on physical dimensions of SVGs if specified
+- In print preview, fix wrong upper input limit in height
+- In print preview, scale SVGs correctly
+- More reliably zoom into image position below cursor
+- Pre-select current image's folder in file-chooser dialog
+- Remember image properties visibility state
+- Use GdkSurface:scale instead of scale factor, in theory supporting fractional scaling
+- Use glycin 1.0
+
+45.3
+====
+
+- Fix horizontal scrollbar sometimes jumping to center while zooming in
+
+45.2
+====
+
+- Fix order of images gets confused after deleting image
+- Fix image is not shown when sucessfully reloaded after error
+- Fix keyboard shortcuts shows the swipe gestures the wrong way round
+
+45.1
+=======
+
+- Fix sandbox for image decoding not enabled by default
+- Fix printing on different printer than selected
+- Fix print dialog crashes on confirmation
+- Fix print dialog needs second confirmation inside Flatpaks
+- Fix SVGs sometimes not re-rendering for zoom level
+- Fix animated image formats with variable frame length using only one length
+- Fix rotation getting applied twice to HEIF images
+
+45.0
+=======
+
+- Always ask which program to use for "Open With…"
+- SVG: Force minimum tile size of 1000x1000
+- SVG: Don't render first tiles with zoom=1
+- Empty state: Use flat headerbar
+- Fix non-native files with path cannot be deleted
+- Update screenshots
+- Drag and Drop: Only expect sources of type FileList
+- Update SlidingView after removing unsupported image
+
+45.beta.1
+=======
+
+- Reload images when the file is replaced by moving another file at it's place
+- Update dependencies
+
+45.beta
+=======
+- Newly designed print dialog
+- Added sandboxing for SVG rendering by using glycin
+- Use RaisedBorder for HeaderBar to avoid shadow over images
+- Fix browsing images on SMB shares not working
+- Fix touchscreen gestures not working when zoomed in
+- Fix touchscreen swipe only working on second attempt
+- Added JpegXL support via new glycin version
+- Added overshoot for swipe gesture
+- New custom style for drop targets
+- Changed name to Image Viewer
+
+45.alpha
+=======
+- Add help
+- Disable trashing for non-native files
+- Give toast for latest deleted file priority over the others
+- Only list supported image formats in file chooser
+- Do not guess a potentially different background color for opaque images
+- Fix incorrect updates when deleting or changing images
+- Fix SVG zooming with high-res scroll-wheels
+- Use glycin for sandboxed extendable image loading expect for SVG
+- Remove backspace as a trash shortcut
+- Change command line to open all given images in one window
+- Do not show "Set as Background" if operation was aborted
+- Let the user select multiple files to open in file chooser
+- Support forward and back mouse buttons
+- Correctly align right-click menu
+
+44.3
+=======
+- Hide cursor together with controls when fullscreened
+- Remove ctrl+x shortcut for deleting images
+- Fix 'delete' action appearing too long in help overlay
+- Split rotate actions making it possible to use them in help overlay
+- Cancel GFile loading when decoder is dropped
+- Make crossfade from spinner page to image work
+- Don't make activatable row subtitles selectable in properties view
+- Disable "open folder" action for non-native files (GTK doesn't support it)
+- Leave fullscreen when status page is shown
+- Skip unsupported formats when sliding through images
+- Show window after 2 seconds if dimension are not yet known
+- Cancel scroll deceleration on gesture use
+- Hide headerbar on idle in fullscreen
+- Show controls on mouse click
+- Better solution for not registering swipes as cursor motion
+- Use AdwBreakpoint to move properties below the image for narrow windows
+- Fix vertical minimum size in measure for LpImageView
+- Ignore EXIF rotation info for now in HEIF formats
+
+44.2
+=======
+- Use GFile instead of direct file access
+- Do not crash when monitor info is not available
+- Get rid of many unwraps and report issues to UI instead, just to be safe
+- #130 Fix displayed times are wrong because they do not respect timezones
+- Add basic support for ICC color profiles
+- Support opening multiple files via drag and drop
+- Fix textures and background color not updating when image data changed
+- #124 Fix not defaulting to light background color in light theme
+- Fix thumbnail is broken for auto-rotated (EXIF) images
+- #120 Fix high-res scroll wheel issues
+- #134 Fix 100%/200% shortcuts ending up at best-fit when window size close to 100%/200%
+- Add printing support
+- Center new tilings in the viewport, making the first rendered tile cover the viewport already
+- Allow dragging (panning) the image with middle button
+- Generate list of mime types in meson and fix list of formats
+- Set actions enabled state based on UI property status, not manually everywhere
+- Add and update license headers with script based on commit info
+- Hide overlay controls after inactivity
+- Remove OSD from HeaderBar in fullscreen
+- Drop AdwFlap for HeaderBar
+- Make properties button insensitive if no image shown/loading
+- Move 'toggle fullscreen' button from inner to outer position
+- Add 'all files' filter option to file chooser
+
+44.1
+=======
+Bugfix release after initial feedback:
+ - Bump GTK dependency to 4.11.1 because of required fixes for scaled texture
+ - Drop gtk-macros (crate) dependency since it is not needed and lacking a LICENSE files
+ - #115 Fix WebP support for still images
+ - #115 Fix not detecting HEIC files
+
+44.0
+=======
+
+Initial release

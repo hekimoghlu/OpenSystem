@@ -1,0 +1,90 @@
+/* gweather-version.h - libgweather versioning information
+ *
+ * SPDX-FileCopyrightText: 2014  Javier Jardón <jjardon@gnome.org>
+ * SPDX-License-Identifier: LGPL-2.0-or-later
+ *
+ * Based on json-version from json-glib
+ * Authored by Emmanuele Bassi <ebassi@gnome.org>
+ * Adapted for libgweather by Javier Jardón <jjardon@gnome.org>
+ */
+
+#pragma once
+
+#if !(defined(IN_GWEATHER_H) || defined(GWEATHER_COMPILATION))
+#error "gweather-version.h must not be included individually, include gweather.h instead"
+#endif
+
+#ifndef _GWEATHER_EXTERN
+#define _GWEATHER_EXTERN extern
+#endif
+
+/* Backstop for all symbols available before the introduction of versioned macros */
+#define GWEATHER_AVAILABLE_IN_ALL       _GWEATHER_EXTERN
+
+/**
+ * GWEATHER_DISABLE_DEPRECATION_WARNINGS:
+ *
+ * Disable deprecation warnings from GWeather API.
+ *
+ * Must be defined before including `libgweather/gweather.h`.
+ */
+#ifdef GWEATHER_DISABLE_DEPRECATION_WARNINGS
+# define GWEATHER_DEPRECATED _GWEATHER_EXTERN
+# define GWEATHER_DEPRECATED_FOR(f) _GWEATHER_EXTERN
+#else
+# define GWEATHER_DEPRECATED G_DEPRECATED _GWEATHER_EXTERN
+# define GWEATHER_DEPRECATED_FOR(f) G_DEPRECATED_FOR(f) _GWEATHER_EXTERN
+#endif
+
+/**
+ * GWEATHER_MAJOR_VERSION:
+ *
+ * LibGweather major version component (e.g. 1 if %GWEATHER_VERSION is 1.2.3)
+ */
+#mesondefine GWEATHER_MAJOR_VERSION
+
+/**
+ * GWEATHER_MINOR_VERSION:
+ *
+ * LibGweather minor version component (e.g. 2 if %GWEATHER_VERSION is 1.2.3)
+ */
+#mesondefine GWEATHER_MINOR_VERSION
+
+/**
+ * GWEATHER_MICRO_VERSION:
+ *
+ * LibGweather micro version component (e.g. 3 if %GWEATHER_VERSION is 1.2.3)
+ */
+#mesondefine GWEATHER_MICRO_VERSION
+
+/**
+ * GWEATHER_VERSION
+ *
+ * LibGweather version.
+ */
+#mesondefine GWEATHER_VERSION
+
+/**
+ * GWEATHER_VERSION_HEX:
+ *
+ * LibGweather version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define GWEATHER_VERSION_HEX                (GWEATHER_MAJOR_VERSION << 24 | \
+                                             GWEATHER_MINOR_VERSION << 16 | \
+                                             GWEATHER_MICRO_VERSION << 8)
+
+/**
+ * GWEATHER_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of LibGweather is greater than the required one.
+ */
+#define GWEATHER_CHECK_VERSION(major,minor,micro)   \
+        (GWEATHER_MAJOR_VERSION > (major) || \
+         (GWEATHER_MAJOR_VERSION == (major) && GWEATHER_MINOR_VERSION > (minor)) || \
+         (GWEATHER_MAJOR_VERSION == (major) && GWEATHER_MINOR_VERSION == (minor) && \
+          GWEATHER_MICRO_VERSION >= (micro)))

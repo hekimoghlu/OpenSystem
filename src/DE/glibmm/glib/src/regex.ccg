@@ -1,0 +1,288 @@
+/* Copyright (C) 2007 The glibmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/utility.h>
+
+using CompileFlags = Glib::Regex::CompileFlags;
+using MatchFlags = Glib::Regex::MatchFlags;
+
+namespace Glib
+{
+
+Glib::RefPtr<Glib::Regex>
+Regex::create(
+  Glib::UStringView pattern, CompileFlags compile_options, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  auto regex = g_regex_new(
+    pattern.c_str(), (GRegexCompileFlags)compile_options, (GRegexMatchFlags)match_options, &gerror);
+
+  if (gerror)
+    Glib::Error::throw_exception(gerror);
+  return Glib::wrap(regex);
+}
+
+// static
+Glib::ustring
+Regex::escape_string(const Glib::ustring& string)
+{
+  const auto buf =
+    make_unique_ptr_gfree(g_regex_escape_string(string.raw().c_str(), string.raw().size()));
+  return Glib::ustring(buf.get());
+}
+
+bool
+Regex::match(
+  Glib::UStringView string, Glib::MatchInfo& match_info, MatchFlags match_options)
+{
+  GMatchInfo* ginfo = nullptr;
+  bool const result = static_cast<bool>(
+    g_regex_match(gobj(), string.c_str(), static_cast<GRegexMatchFlags>(match_options), &ginfo));
+  match_info.set_gobject(ginfo);
+  return result;
+}
+
+bool
+Regex::match(Glib::UStringView string, MatchFlags match_options)
+{
+  return g_regex_match(gobj(), string.c_str(), (GRegexMatchFlags)(match_options), nullptr);
+}
+
+bool
+Regex::match(Glib::UStringView string, int start_position, Glib::MatchInfo& match_info,
+  MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  GMatchInfo* ginfo = nullptr;
+
+  bool const result = static_cast<bool>(g_regex_match_full(gobj(), string.c_str(), -1,
+    start_position, static_cast<GRegexMatchFlags>(match_options), &ginfo, &gerror));
+
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  match_info.set_gobject(ginfo);
+  return result;
+}
+
+bool
+Regex::match(Glib::UStringView string, gssize string_len, int start_position,
+  Glib::MatchInfo& match_info, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  GMatchInfo* ginfo = nullptr;
+
+  bool const result = static_cast<bool>(g_regex_match_full(gobj(), string.c_str(), string_len,
+    start_position, static_cast<GRegexMatchFlags>(match_options), &ginfo, &gerror));
+
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  match_info.set_gobject(ginfo);
+  return result;
+}
+
+bool
+Regex::match(Glib::UStringView string, int start_position, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  bool retvalue = g_regex_match_full(gobj(), string.c_str(), -1, start_position,
+    ((GRegexMatchFlags)(match_options)), nullptr, &(gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+bool
+Regex::match(
+  Glib::UStringView string, gssize string_len, int start_position, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  bool retvalue = g_regex_match_full(gobj(), string.c_str(), string_len, start_position,
+    ((GRegexMatchFlags)(match_options)), nullptr, &(gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+bool
+Regex::match_all(
+  Glib::UStringView string, Glib::MatchInfo& match_info, MatchFlags match_options)
+{
+  GMatchInfo* ginfo = nullptr;
+  bool const result = static_cast<bool>(g_regex_match_all(
+    gobj(), string.c_str(), static_cast<GRegexMatchFlags>(match_options), &ginfo));
+  match_info.set_gobject(ginfo);
+  return result;
+}
+
+bool
+Regex::match_all(Glib::UStringView string, MatchFlags match_options)
+{
+  return g_regex_match_all(gobj(), string.c_str(), ((GRegexMatchFlags)(match_options)), nullptr);
+}
+
+bool
+Regex::match_all(Glib::UStringView string, int start_position, Glib::MatchInfo& match_info,
+  MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  GMatchInfo* ginfo = nullptr;
+
+  bool const retvalue = static_cast<bool>(g_regex_match_all_full(gobj(), string.c_str(), -1,
+    start_position, static_cast<GRegexMatchFlags>(match_options), &ginfo, &gerror));
+
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  match_info.set_gobject(ginfo);
+  return retvalue;
+}
+
+bool
+Regex::match_all(Glib::UStringView string, gssize string_len, int start_position,
+  Glib::MatchInfo& match_info, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  GMatchInfo* ginfo = nullptr;
+
+  bool const retvalue = static_cast<bool>(g_regex_match_all_full(gobj(), string.c_str(), string_len,
+    start_position, static_cast<GRegexMatchFlags>(match_options), &ginfo, &gerror));
+
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  match_info.set_gobject(ginfo);
+  return retvalue;
+}
+
+bool
+Regex::match_all(Glib::UStringView string, int start_position, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  bool retvalue = g_regex_match_all_full(gobj(), string.c_str(), -1, start_position,
+    ((GRegexMatchFlags)(match_options)), nullptr, &(gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+bool
+Regex::match_all(
+  Glib::UStringView string, gssize string_len, int start_position, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  bool retvalue = g_regex_match_all_full(gobj(), string.c_str(), string_len, start_position,
+    ((GRegexMatchFlags)(match_options)), nullptr, &(gerror));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+Glib::ustring
+Regex::replace(Glib::UStringView string, int start_position, Glib::UStringView replacement,
+  MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::convert_return_gchar_ptr_to_ustring(g_regex_replace(gobj(), string.c_str(),
+    -1, start_position, replacement.c_str(), ((GRegexMatchFlags)(match_options)), &(gerror)));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+Glib::ustring
+Regex::replace_literal(Glib::UStringView string, int start_position,
+  Glib::UStringView replacement, MatchFlags match_options)
+{
+  GError* gerror = nullptr;
+  auto retvalue =
+    Glib::convert_return_gchar_ptr_to_ustring(g_regex_replace_literal(gobj(), string.c_str(), -1,
+      start_position, replacement.c_str(), ((GRegexMatchFlags)(match_options)), &(gerror)));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+std::vector<Glib::ustring>
+Regex::split(Glib::UStringView string, int start_position, MatchFlags match_options,
+  int max_tokens) const
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::ArrayHandler<Glib::ustring>::array_to_vector(
+    g_regex_split_full(const_cast<GRegex*>(gobj()), string.c_str(), -1, start_position,
+      ((GRegexMatchFlags)(match_options)), max_tokens, &(gerror)),
+    Glib::OWNERSHIP_DEEP);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+MatchInfo::MatchInfo() : gobject_(nullptr), take_ownership_(false)
+{
+}
+
+MatchInfo::MatchInfo(GMatchInfo* castitem, bool take_ownership)
+: gobject_(castitem), take_ownership_(take_ownership)
+{
+}
+
+MatchInfo::MatchInfo(MatchInfo&& other) noexcept : gobject_(std::move(other.gobject_)),
+                                                   take_ownership_(std::move(other.take_ownership_))
+{
+  other.gobject_ = nullptr;
+  other.take_ownership_ = false;
+}
+
+MatchInfo&
+MatchInfo::operator=(MatchInfo&& other) noexcept
+{
+  if (take_ownership_ && gobject_)
+    g_match_info_free(gobject_);
+
+  gobject_ = std::move(other.gobject_);
+  take_ownership_ = std::move(other.take_ownership_);
+
+  other.gobject_ = nullptr;
+  other.take_ownership_ = false;
+
+  return *this;
+}
+
+void
+MatchInfo::set_gobject(GMatchInfo* castitem, bool take_ownership)
+{
+  if (gobject_ && this->take_ownership_)
+    g_match_info_free(gobject_);
+
+  gobject_ = castitem;
+  this->take_ownership_ = take_ownership;
+}
+
+MatchInfo::~MatchInfo()
+{
+  if (take_ownership_ && gobject_)
+    g_match_info_free(gobject_);
+}
+
+} // namespace Glib

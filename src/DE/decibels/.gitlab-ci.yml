@@ -1,0 +1,70 @@
+include:
+  - project: "gnome/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: flatpak@x86_64
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_DEPTH: 1
+  FLATPAK_MODULE: 'decibels'
+  TARBALL_ARTIFACT_PATH: ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+.flatpak-local:
+  variables:
+    MANIFEST_PATH: "build-aux/flatpak/org.gnome.Decibels.Devel.json"
+    BUNDLE: "org.gnome.Decibels.Devel.flatpak"
+    FLATPAK_MODULE: "decibels"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.Decibels.Devel"
+  before_script:
+    - flatpak --user install -y org.freedesktop.Sdk.Extension.node20//24.08 org.freedesktop.Sdk.Extension.typescript//24.08
+
+flatpak@x86_64:
+  extends:
+    - .flatpak@x86_64
+    - .flatpak-local
+
+flatpak@aarch64:
+  extends:
+    - .flatpak@aarch64
+    - .flatpak-local
+
+# Publish to nightly repo
+nightly@x86_64:
+  extends: ".publish_nightly"
+  stage: deploy
+  dependencies:
+    - flatpak@x86_64
+
+nightly@aarch64:
+  extends: ".publish_nightly"
+  stage: deploy
+  dependencies:
+    - flatpak@aarch64
+
+eslint:
+  image: quay.io/fedora/fedora:latest
+
+  variables:
+    LINT_LOG: "eslint-report.txt"
+  script:
+    - sudo dnf install -y npm
+    - npm install
+    - npx eslint -o $LINT_LOG --no-color src || { cat $LINT_LOG; false; }
+  artifacts:
+    paths:
+      - ${LINT_LOG}
+    when: on_failure
+
+blueprint-format:
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+
+  image: quay.io/fedora/fedora:latest
+
+  script:
+    - sudo dnf install -y --enablerepo=updates-testing --best blueprint-compiler
+    - blueprint-compiler format data

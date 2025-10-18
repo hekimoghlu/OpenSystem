@@ -1,0 +1,80 @@
+/* Copyright (C) 2016 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <gdkmm/rectangle.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gdk
+{
+_WRAP_ENUM(SubpixelLayout, GdkSubpixelLayout, decl_prefix GDKMM_API)
+
+class GDKMM_API Display;
+
+/** Object representing an output.
+ *
+ * Gdk::Monitor objects represent the individual outputs that are
+ * associated with a Gdk::Display. Display has APIs to enumerate
+ * monitors with Display::get_n_monitors() and Display::get_monitor()
+ * and to find particular monitors with Display::get_monitor_at_surface().
+ *
+ * @newin{3,22}
+ */
+class GDKMM_API Monitor : public Glib::Object
+{
+  _CLASS_GOBJECT(Monitor, GdkMonitor, GDK_MONITOR, Glib::Object, GObject, , , GDKMM_API)
+
+protected:
+  _CTOR_DEFAULT()
+
+public:
+  _WRAP_METHOD(Glib::RefPtr<Display> get_display(), gdk_monitor_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Display> get_display() const, gdk_monitor_get_display, refreturn, constversion)
+  _WRAP_METHOD(void get_geometry(Rectangle& geometry) const, gdk_monitor_get_geometry)
+  _WRAP_METHOD(int get_width_mm() const, gdk_monitor_get_width_mm)
+  _WRAP_METHOD(int get_height_mm() const, gdk_monitor_get_height_mm)
+  _WRAP_METHOD(Glib::ustring get_manufacturer() const, gdk_monitor_get_manufacturer)
+  _WRAP_METHOD(Glib::ustring get_model() const, gdk_monitor_get_model)
+  _WRAP_METHOD(Glib::ustring get_connector() const, gdk_monitor_get_connector)
+  _WRAP_METHOD(int get_scale_factor() const, gdk_monitor_get_scale_factor)
+  _WRAP_METHOD(double get_scale() const, gdk_monitor_get_scale)
+  _WRAP_METHOD(int get_refresh_rate() const, gdk_monitor_get_refresh_rate)
+  _WRAP_METHOD(SubpixelLayout get_subpixel_layout() const, gdk_monitor_get_subpixel_layout)
+  _WRAP_METHOD(bool is_valid() const, gdk_monitor_is_valid)
+  _WRAP_METHOD(Glib::ustring get_description() const, gdk_monitor_get_description)
+
+  // We use no_default_handler because _GdkMonitorClass is private
+  // and there is no default handler in gtk.
+  _WRAP_SIGNAL(void invalidate(), "invalidate", no_default_handler)
+
+  _WRAP_PROPERTY("description", Glib::ustring)
+  _WRAP_PROPERTY("display", Glib::RefPtr<Display>)
+  _WRAP_PROPERTY("manufacturer", Glib::ustring)
+  _WRAP_PROPERTY("model", Glib::ustring)
+  _WRAP_PROPERTY("connector", Glib::ustring)
+  _WRAP_PROPERTY("scale-factor", int)
+  _WRAP_PROPERTY("scale", double)
+  _WRAP_PROPERTY("geometry", Gdk::Rectangle)
+  _WRAP_PROPERTY("width-mm", int)
+  _WRAP_PROPERTY("height-mm", int)
+  _WRAP_PROPERTY("refresh-rate", int)
+  _WRAP_PROPERTY("subpixel-layout", SubpixelLayout)
+  _WRAP_PROPERTY("valid", bool)
+};
+
+} // namespace Gdk

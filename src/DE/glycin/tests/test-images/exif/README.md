@@ -1,0 +1,3 @@
+- apple-iphone6 CC0
+- canon-400d CC0
+- [nikon-d5100](https://commons.wikimedia.org/wiki/File:Animals_mammal_marmot_rock_wildlife_NPS_Photo_(17116282849).jpg) CC0

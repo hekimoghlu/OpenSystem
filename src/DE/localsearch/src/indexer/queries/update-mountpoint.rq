@@ -1,0 +1,34 @@
+# Inputs: mountPoint, mounted, currentDate
+WITH tracker:FileSystem
+DELETE {
+  ?root tracker:unmountDate ?date ;
+    tracker:available ?avail
+} INSERT {
+  ?root tracker:available ~mounted ;
+    tracker:unmountDate ?newUnmountDate
+} WHERE {
+  ?root a tracker:IndexedFolder ;
+    nie:isStoredAs ~mountPoint .
+
+  OPTIONAL { ?root tracker:available ?avail } .
+  OPTIONAL { ?root tracker:unmountDate ?date } .
+  BIND (IF (~mounted, ?unbound, ~currentDate) AS ?newUnmountDate)
+};
+
+# Update plain tracker:available state on content specific graphs
+DELETE {
+  GRAPH ?g {
+    ?root tracker:available ?avail
+  }
+} INSERT {
+  GRAPH ?g {
+    ?root tracker:available ~mounted
+  }
+} WHERE {
+  GRAPH ?g {
+    ?root a tracker:IndexedFolder ;
+      nie:isStoredAs ~mountPoint .
+    OPTIONAL { ?root tracker:available ?avail }
+  }
+  FILTER (?g != tracker:FileSystem)
+}

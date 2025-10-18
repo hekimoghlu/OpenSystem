@@ -1,0 +1,24 @@
+# Inputs: unmountDate
+DELETE {
+  GRAPH tracker:FileSystem {
+    ?f a rdfs:Resource .
+    ?ie a rdfs:Resource
+  }
+  GRAPH ?g {
+    ?f a rdfs:Resource .
+    ?ie a rdfs:Resource
+  }
+} WHERE {
+  GRAPH tracker:FileSystem {
+    ?v a tracker:IndexedFolder ;
+       tracker:isRemovable true ;
+       tracker:available false ;
+       tracker:unmountDate ?d .
+
+    ?f nie:dataSource ?v .
+    FILTER (?d < ~unmountDate^^xsd:dateTime)
+  }
+  GRAPH ?g {
+    ?ie nie:isStoredAs ?f
+  }
+}

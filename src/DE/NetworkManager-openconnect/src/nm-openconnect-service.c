@@ -1,0 +1,853 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* NetworkManager -- Network link manager
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ *   Copyright © 2008 - 2009 Intel Corporation.
+ *
+ * Based on nm-vpnc-service.c:
+ *   Copyright © 2005 - 2008 Red Hat, Inc.
+ *   Copyright © 2007 - 2008 Novell, Inc.
+ */
+
+#include "nm-default.h"
+
+#include "nm-openconnect-service.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <linux/if_tun.h>
+#include <net/if.h>
+#include <pwd.h>
+#include <grp.h>
+#include <locale.h>
+
+#include "nm-utils/nm-shared-utils.h"
+#include "nm-utils/nm-vpn-plugin-macros.h"
+
+#if !defined(DIST_VERSION)
+# define DIST_VERSION VERSION
+#endif
+
+G_DEFINE_TYPE (NMOpenconnectPlugin, nm_openconnect_plugin, NM_TYPE_VPN_SERVICE_PLUGIN)
+
+typedef struct {
+	GPid pid;
+	char *tun_name;
+} NMOpenconnectPluginPrivate;
+
+#define NM_OPENCONNECT_PLUGIN_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), NM_TYPE_OPENCONNECT_PLUGIN, NMOpenconnectPluginPrivate))
+
+static const char *openconnect_binary_paths[] =
+{
+	"/usr/bin/openconnect",
+	"/usr/sbin/openconnect",
+	"/usr/local/bin/openconnect",
+	"/usr/local/sbin/openconnect",
+	"/opt/bin/openconnect",
+	"/opt/sbin/openconnect",
+	NULL
+};
+
+#define NM_OPENCONNECT_HELPER_PATH LIBEXECDIR"/nm-openconnect-service-openconnect-helper"
+
+typedef struct {
+	const char *name;
+	GType type;
+	gint int_min;
+	gint int_max;
+} ValidProperty;
+
+static const ValidProperty valid_properties[] = {
+	{ NM_OPENCONNECT_KEY_GATEWAY,     G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_CACERT,      G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_AUTHTYPE,    G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_USERCERT,    G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_PRIVKEY,     G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_KEY_PASS,    G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_MTU,         G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_PEM_PASSPHRASE_FSID, G_TYPE_BOOLEAN, 0, 0 },
+	{ NM_OPENCONNECT_KEY_PREVENT_INVALID_CERT, G_TYPE_BOOLEAN, 0, 0 },
+	{ NM_OPENCONNECT_KEY_DISABLE_UDP, G_TYPE_BOOLEAN, 0, 0 },
+	{ NM_OPENCONNECT_KEY_PROTOCOL,    G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_PROXY,       G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_CSD_ENABLE,  G_TYPE_BOOLEAN, 0, 0 },
+	{ NM_OPENCONNECT_KEY_CSD_WRAPPER, G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_TOKEN_MODE,  G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_TOKEN_SECRET, G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_REPORTED_OS, G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_MCACERT,     G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_MCAKEY,      G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_MCA_PASS,    G_TYPE_STRING, 0, 0 },
+	{ NULL,                           G_TYPE_NONE, 0, 0 }
+};
+
+static const ValidProperty valid_secrets[] = {
+	{ NM_OPENCONNECT_KEY_COOKIE,  G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_GATEWAY, G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_GWCERT,  G_TYPE_STRING, 0, 0 },
+	{ NM_OPENCONNECT_KEY_RESOLVE, G_TYPE_STRING, 0, 0 },
+	{ NULL,                       G_TYPE_NONE, 0, 0 }
+};
+
+typedef struct ValidateInfo {
+	const ValidProperty *table;
+	GError **error;
+	gboolean have_items;
+} ValidateInfo;
+
+static struct {
+	uid_t tun_owner;
+	gid_t tun_group;
+	gboolean debug;
+	int log_level;
+	GMainLoop *loop;
+} gl/*obal*/;
+
+/*****************************************************************************/
+
+#define _NMLOG(level, ...) \
+	G_STMT_START { \
+		if (gl.log_level >= (level)) { \
+			g_print ("nm-openconnect[%ld] %-7s " _NM_UTILS_MACRO_FIRST (__VA_ARGS__) "\n", \
+			         (long) getpid (), \
+			         nm_utils_syslog_to_str (level) \
+			         _NM_UTILS_MACRO_REST (__VA_ARGS__)); \
+		} \
+	} G_STMT_END
+
+static gboolean
+_LOGD_enabled (void)
+{
+	return gl.log_level >= LOG_INFO;
+}
+
+#define _LOGD(...) _NMLOG(LOG_INFO,    __VA_ARGS__)
+#define _LOGI(...) _NMLOG(LOG_NOTICE,  __VA_ARGS__)
+#define _LOGW(...) _NMLOG(LOG_WARNING, __VA_ARGS__)
+
+/*****************************************************************************/
+
+static void
+validate_one_property (const char *key, const char *value, gpointer user_data)
+{
+	ValidateInfo *info = (ValidateInfo *) user_data;
+	int i;
+
+	if (*(info->error))
+		return;
+
+	info->have_items = TRUE;
+
+	/* 'name' is the setting name; always allowed but unused */
+	if (!strcmp (key, NM_SETTING_NAME))
+		return;
+
+	for (i = 0; info->table[i].name; i++) {
+		ValidProperty prop = info->table[i];
+		long int tmp;
+
+		if (strcmp (prop.name, key))
+			continue;
+
+		switch (prop.type) {
+		case G_TYPE_STRING:
+			return; /* valid */
+		case G_TYPE_INT:
+			errno = 0;
+			tmp = strtol (value, NULL, 10);
+			if (errno == 0 && tmp >= prop.int_min && tmp <= prop.int_max)
+				return; /* valid */
+
+			g_set_error (info->error,
+			             NM_VPN_PLUGIN_ERROR,
+			             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+			             _("invalid integer property “%s” or out of range [%d -> %d]"),
+			             key, prop.int_min, prop.int_max);
+			break;
+		case G_TYPE_BOOLEAN:
+			if (!strcmp (value, "yes") || !strcmp (value, "no"))
+				return; /* valid */
+
+			g_set_error (info->error,
+			             NM_VPN_PLUGIN_ERROR,
+			             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+			             _("invalid boolean property “%s” (not yes or no)"),
+			             key);
+			break;
+		default:
+			g_set_error (info->error,
+			             NM_VPN_PLUGIN_ERROR,
+			             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+			             _("unhandled property “%s” type %s"),
+			             key, g_type_name (prop.type));
+			break;
+		}
+	}
+
+	/* Did not find the property from valid_properties or the type did not match */
+	if (!info->table[i].name && strncmp(key, "form:", 5)) {
+		_LOGW ("property '%s' unknown", key);
+		if (0)
+		g_set_error (info->error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+		             _("property “%s” invalid or not supported"),
+		             key);
+	}
+}
+
+static gboolean
+nm_openconnect_properties_validate (NMSettingVpn *s_vpn, GError **error)
+{
+	ValidateInfo info = { &valid_properties[0], error, FALSE };
+
+	nm_setting_vpn_foreach_data_item (s_vpn, validate_one_property, &info);
+	if (!info.have_items) {
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+		             "%s",
+		             _("No VPN configuration options."));
+		return FALSE;
+	}
+
+	return *error ? FALSE : TRUE;
+}
+
+static gboolean
+nm_openconnect_secrets_validate (NMSettingVpn *s_vpn, GError **error)
+{
+	ValidateInfo info = { &valid_secrets[0], error, FALSE };
+
+	nm_setting_vpn_foreach_secret (s_vpn, validate_one_property, &info);
+	if (!info.have_items) {
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+		             "%s",
+		             _("No VPN secrets!"));
+		return FALSE;
+	}
+
+	return *error ? FALSE : TRUE;
+}
+
+static char *
+create_persistent_tundev(const char *suggested_name, GError **error)
+{
+	struct passwd *pw;
+	struct ifreq ifr;
+	int fd;
+	int i;
+
+	pw = getpwnam(NM_OPENCONNECT_USER);
+	if (!pw) {
+		/* TODO: Is this an error case or a normal possibility
+		 * where we just don't set a persistent tundev? */
+		return NULL;
+	}
+
+	gl.tun_owner = pw->pw_uid;
+	gl.tun_group = pw->pw_gid;
+
+	fd = open("/dev/net/tun", O_RDWR);
+	if (fd < 0) {
+		perror("open /dev/net/tun");
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+		             "%s",
+		             _("Could not open /dev/net/tun"));
+		return NULL;
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+
+	if (suggested_name) {
+		/* Not NUL-terminated if strlen(suggested_name) >= IFNAMSIZE  */
+		strncpy(ifr.ifr_name, suggested_name, IFNAMSIZ);
+		if (ioctl(fd, TUNSETIFF, (void *)&ifr)) {
+			g_set_error (error,
+			             NM_VPN_PLUGIN_ERROR,
+			             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+			             _("Could not create tunnel interface named '%.*s'"),
+			             IFNAMSIZ, ifr.ifr_name);
+			return NULL;
+		}
+	} else {
+		for (i = 0; i < 256; i++) {
+			sprintf(ifr.ifr_name, "vpn%d", i);
+
+			if (!ioctl(fd, TUNSETIFF, (void *)&ifr))
+				break;
+		}
+		if (i == 256) {
+			g_set_error (error,
+			             NM_VPN_PLUGIN_ERROR,
+			             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+			             "%s",
+			             _("Could not create tunnel interface named 'vpnX', for X in 0..255"));
+			return NULL;
+		}
+	}
+
+	if (ioctl(fd, TUNSETOWNER, gl.tun_owner) < 0) {
+		perror("TUNSETOWNER");
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+		             _("Could not set tunnel interface owner to '%d'"),
+		             gl.tun_owner);
+		return NULL;
+	}
+
+	if (ioctl(fd, TUNSETPERSIST, 1)) {
+		perror("TUNSETPERSIST");
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+		             "%s",
+		             _("Could not set tunnel interface persistence"));
+		return NULL;
+	}
+	close(fd);
+	_LOGW ("Created tundev %s\n", ifr.ifr_name);
+	return g_strndup(ifr.ifr_name, IFNAMSIZ);
+}
+
+static void
+destroy_persistent_tundev(char *tun_name)
+{
+	struct ifreq ifr;
+	int fd;
+
+	fd = open("/dev/net/tun", O_RDWR);
+	if (fd < 0) {
+		perror("open /dev/net/tun");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+	strcpy(ifr.ifr_name, tun_name);
+
+	if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
+		perror("TUNSETIFF");
+		exit(EXIT_FAILURE);
+	}
+
+	if (ioctl(fd, TUNSETPERSIST, 0)) {
+		perror("TUNSETPERSIST");
+		exit(EXIT_FAILURE);
+	}
+	_LOGW ("Destroyed  tundev %s\n", tun_name);
+	close(fd);
+}
+
+static void openconnect_drop_child_privs(gpointer user_data)
+{
+	char *tun_name = user_data;
+
+	if (tun_name) {
+		if (initgroups (NM_OPENCONNECT_USER, gl.tun_group) ||
+		    setgid (gl.tun_group) || setuid (gl.tun_owner)) {
+			_LOGW ("Failed to drop privileges when spawning openconnect");
+			exit (1);
+		}
+	}
+}
+
+static void
+openconnect_watch_cb (GPid pid, gint status, gpointer user_data)
+{
+	NMOpenconnectPlugin *plugin = NM_OPENCONNECT_PLUGIN (user_data);
+	NMOpenconnectPluginPrivate *priv = NM_OPENCONNECT_PLUGIN_GET_PRIVATE (plugin);
+	guint error = 0;
+
+	if (WIFEXITED (status)) {
+		error = WEXITSTATUS (status);
+		if (error != 0)
+			_LOGW ("openconnect exited with error code %d", error);
+	}
+	else if (WIFSTOPPED (status))
+		_LOGW ("openconnect stopped unexpectedly with signal %d", WSTOPSIG (status));
+	else if (WIFSIGNALED (status))
+		_LOGW ("openconnect died with signal %d", WTERMSIG (status));
+	else
+		_LOGW ("openconnect died from an unknown cause");
+
+	/* Reap child if needed. */
+	waitpid (priv->pid, NULL, WNOHANG);
+	priv->pid = 0;
+
+	if (priv->tun_name) {
+		destroy_persistent_tundev (priv->tun_name);
+		g_free (priv->tun_name);
+		priv->tun_name = NULL;
+	}
+
+	/* Must be after data->state is set since signals use data->state */
+	switch (error) {
+	case 2:
+		/* Couldn't log in due to bad user/pass */
+		nm_vpn_service_plugin_failure (NM_VPN_SERVICE_PLUGIN (plugin), NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED);
+		break;
+	case 1:
+		/* Other error (couldn't bind to address, etc) */
+		nm_vpn_service_plugin_failure (NM_VPN_SERVICE_PLUGIN (plugin), NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
+		break;
+	default:
+		nm_vpn_service_plugin_disconnect (NM_VPN_SERVICE_PLUGIN (plugin), NULL);
+		break;
+	}
+}
+
+static gint
+nm_openconnect_start_openconnect_binary (NMOpenconnectPlugin *plugin,
+                                         NMSettingConnection *s_con,
+                                         NMSettingVpn *s_vpn,
+                                         GError **error)
+{
+	NMOpenconnectPluginPrivate *priv = NM_OPENCONNECT_PLUGIN_GET_PRIVATE (plugin);
+	GPid pid;
+	const char **openconnect_binary = NULL;
+	GPtrArray *openconnect_argv;
+	GSource *openconnect_watch;
+	gint stdin_fd;
+	char csd_user_arg[60];
+	const char *props_vpn_gw, *props_cookie, *props_cacert, *props_mtu, *props_gwcert, *props_proxy;
+	const char *props_csd_enable, *props_csd_wrapper, *props_resolve;
+	const char *props_disable_udp;
+	const char *protocol;
+	const char *props_tun_name;
+
+	/* Find openconnect */
+	openconnect_binary = openconnect_binary_paths;
+	while (*openconnect_binary != NULL) {
+		if (g_file_test (*openconnect_binary, G_FILE_TEST_EXISTS))
+			break;
+		openconnect_binary++;
+	}
+
+	if (!*openconnect_binary) {
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+		             "%s",
+		             _("Could not find openconnect binary."));
+		return -1;
+	}
+
+	/* The actual gateway to use (after redirection) comes from the auth
+	   dialog, so it's in the secrets hash not the properties */
+	props_vpn_gw = nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_GATEWAY);
+	if (!props_vpn_gw || !strlen (props_vpn_gw) ) {
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+		             "%s",
+		             _("No VPN gateway specified."));
+		return -1;
+	}
+
+	props_cookie = nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_COOKIE);
+	if (!props_cookie || !strlen (props_cookie)) {
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+		             "%s",
+		             _("No WebVPN cookie provided."));
+		return -1;
+	}
+	props_gwcert = nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_GWCERT);
+	props_resolve = nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_RESOLVE);
+
+	props_cacert = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_CACERT);
+	props_mtu = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_MTU);
+
+	props_proxy = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_PROXY);
+
+	openconnect_argv = g_ptr_array_new ();
+	g_ptr_array_add (openconnect_argv, (gpointer) (*openconnect_binary));
+
+	protocol = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_PROTOCOL);
+	if (protocol && strcmp (protocol, "anyconnect")) {
+		/* Special case for OpenConnect 7.06 which had --juniper but not --protocol */
+		if (!strcmp (protocol, "juniper"))
+			g_ptr_array_add (openconnect_argv, (gpointer) "--juniper");
+		else {
+			g_ptr_array_add (openconnect_argv, (gpointer) "--protocol");
+			g_ptr_array_add (openconnect_argv, (gpointer) protocol);
+		}
+	}
+
+	if (props_gwcert && strlen(props_gwcert)) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--servercert");
+		g_ptr_array_add (openconnect_argv, (gpointer) props_gwcert);
+	} else if (props_cacert && strlen(props_cacert)) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--cafile");
+		g_ptr_array_add (openconnect_argv, (gpointer) props_cacert);
+	}
+
+	if (props_mtu && strlen(props_mtu)) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--mtu");
+		g_ptr_array_add (openconnect_argv, (gpointer) props_mtu);
+	}
+
+	if (props_proxy && strlen(props_proxy)) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--proxy");
+		g_ptr_array_add (openconnect_argv, (gpointer) props_proxy);
+	}
+
+	g_ptr_array_add (openconnect_argv, (gpointer) "--syslog");
+	g_ptr_array_add (openconnect_argv, (gpointer) "--cookie-on-stdin");
+
+	g_ptr_array_add (openconnect_argv, (gpointer) "--script");
+	g_ptr_array_add (openconnect_argv, (gpointer) NM_OPENCONNECT_HELPER_PATH);
+
+	props_tun_name = nm_setting_connection_get_interface_name(s_con);
+	priv->tun_name = create_persistent_tundev (props_tun_name, error);
+	if (!priv->tun_name && *error)
+		return -1;
+	else if (priv->tun_name) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--interface");
+		g_ptr_array_add (openconnect_argv, (gpointer) priv->tun_name);
+	} else {
+		/* TODO: Is this a valid case? See create_persistent_tundev. */
+	}
+
+	props_disable_udp = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_DISABLE_UDP);
+	if (props_disable_udp && !strcmp (props_disable_udp, "yes")) {
+		/* May be renamed to --no-udp in the future, but with --no-dtls kept for backwards-
+		 * compatibility (see https://gitlab.com/openconnect/openconnect/-/merge_requests/151) */
+		g_ptr_array_add (openconnect_argv, (gpointer) "--no-dtls");
+	}
+
+	props_csd_enable = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_CSD_ENABLE);
+	props_csd_wrapper = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_CSD_WRAPPER);
+	if (props_csd_enable && !strcmp (props_csd_enable, "yes") && props_csd_wrapper) {
+		/* TODO: disable passing the script to openconnect.
+		 *
+		 * As we have priv->tun_name, openconnect will run as an unprivileged user NM_OPENCONNECT_USER.
+		 * However, it is still not safe to run untrusted scripts provided by the user.
+		 *
+		 * This needs a different solution, for now, just log a warning. */
+		if (FALSE && priv->tun_name) {
+			/* Replicate the CSD parameters used in the authentication phase, for
+			   supported protocols which may need to invoke the security trojan ("CSD")
+			   in the tunnel/connection phase. */
+			g_ptr_array_add (openconnect_argv, (gpointer) "--csd-wrapper");
+			g_ptr_array_add (openconnect_argv, (gpointer) props_csd_wrapper);
+			g_ptr_array_add (openconnect_argv, (gpointer) "--csd-user");
+			g_ptr_array_add (openconnect_argv, (gpointer) nm_sprintf_buf (csd_user_arg, "%d", gl.tun_owner));
+		} else {
+			_LOGW ("openconnect won't call csd-wrapper script because it cannot drop privileges to user \"%s\"",
+			       NM_OPENCONNECT_USER);
+		}
+	}
+
+	g_ptr_array_add (openconnect_argv, (gpointer) props_vpn_gw);
+
+	if (props_resolve && strlen(props_resolve)) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--resolve");
+		g_ptr_array_add (openconnect_argv, (gpointer) props_resolve);
+	}
+
+	if (gl.log_level >= LOG_INFO) {
+		g_ptr_array_add (openconnect_argv, (gpointer) "--verbose");
+		if (gl.log_level >= LOG_DEBUG)
+			g_ptr_array_add (openconnect_argv, (gpointer) "--verbose");
+	}
+
+	g_ptr_array_add (openconnect_argv, NULL);
+
+	if (!g_spawn_async_with_pipes (NULL, (char **) openconnect_argv->pdata, NULL,
+	                               G_SPAWN_DO_NOT_REAP_CHILD,
+	                               openconnect_drop_child_privs, priv->tun_name,
+	                               &pid, &stdin_fd, NULL, NULL, error)) {
+		g_ptr_array_free (openconnect_argv, TRUE);
+		_LOGW ("openconnect failed to start.  error: '%s'", (*error)->message);
+		return -1;
+	}
+	g_ptr_array_free (openconnect_argv, TRUE);
+
+	_LOGI ("openconnect started with pid %d", pid);
+
+	if (write(stdin_fd, props_cookie, strlen(props_cookie)) != strlen(props_cookie) ||
+	    write(stdin_fd, "\n", 1) != 1) {
+		_LOGW ("openconnect didn't eat the cookie we fed it");
+		return -1;
+	}
+
+	close(stdin_fd);
+
+	NM_OPENCONNECT_PLUGIN_GET_PRIVATE (plugin)->pid = pid;
+	openconnect_watch = g_child_watch_source_new (pid);
+	g_source_set_callback (openconnect_watch, (GSourceFunc) openconnect_watch_cb, plugin, NULL);
+	g_source_attach (openconnect_watch, NULL);
+	g_source_unref (openconnect_watch);
+
+	return 0;
+}
+static gboolean
+real_connect (NMVpnServicePlugin   *plugin,
+              NMConnection  *connection,
+              GError       **error)
+{
+	NMSettingConnection *s_con;
+	NMSettingVpn *s_vpn;
+	gint openconnect_fd = -1;
+
+	s_con = nm_connection_get_setting_connection(connection);
+	g_assert (s_con);
+	if (!s_con)
+		goto out;
+	s_vpn = nm_connection_get_setting_vpn (connection);
+	g_assert (s_vpn);
+	if (!nm_openconnect_properties_validate (s_vpn, error))
+		goto out;
+	if (!nm_openconnect_secrets_validate (s_vpn, error))
+		goto out;
+
+	if (_LOGD_enabled ())
+		nm_connection_dump (connection);
+
+	openconnect_fd = nm_openconnect_start_openconnect_binary (NM_OPENCONNECT_PLUGIN (plugin), s_con, s_vpn, error);
+	if (!openconnect_fd)
+		return TRUE;
+
+ out:
+	return FALSE;
+}
+
+static gboolean
+real_need_secrets (NMVpnServicePlugin *plugin,
+                   NMConnection *connection,
+                   const char **setting_name,
+                   GError **error)
+{
+	NMSettingVpn *s_vpn;
+
+	g_return_val_if_fail (NM_IS_VPN_SERVICE_PLUGIN (plugin), FALSE);
+	g_return_val_if_fail (NM_IS_CONNECTION (connection), FALSE);
+
+	s_vpn = nm_connection_get_setting_vpn (connection);
+	if (!s_vpn) {
+		g_set_error (error,
+		             NM_VPN_PLUGIN_ERROR,
+		             NM_VPN_PLUGIN_ERROR_INVALID_CONNECTION,
+		             "%s",
+		             "Could not process the request because the VPN connection settings were invalid.");
+		return FALSE;
+	}
+
+	/* We just need the WebVPN cookie, and the final IP address of the gateway
+	   (after HTTP redirects, which do happen). All the certificate/SecurID
+	   nonsense can be handled for us, in the user's context, by auth-dialog */
+	if (!nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_GATEWAY)) {
+		*setting_name = NM_SETTING_VPN_SETTING_NAME;
+		return TRUE;
+	}
+	if (!nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_COOKIE)) {
+		*setting_name = NM_SETTING_VPN_SETTING_NAME;
+		return TRUE;
+	}
+	if (!nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_GWCERT)) {
+		*setting_name = NM_SETTING_VPN_SETTING_NAME;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static gboolean
+ensure_killed (gpointer data)
+{
+	int pid = GPOINTER_TO_INT (data);
+
+	if (kill (pid, 0) == 0)
+		kill (pid, SIGKILL);
+
+	return FALSE;
+}
+
+static gboolean
+real_disconnect (NMVpnServicePlugin   *plugin,
+                 GError       **err)
+{
+	NMOpenconnectPluginPrivate *priv = NM_OPENCONNECT_PLUGIN_GET_PRIVATE (plugin);
+
+	if (priv->pid) {
+		if (kill (priv->pid, SIGINT) == 0)
+			g_timeout_add (2000, ensure_killed, GINT_TO_POINTER (priv->pid));
+		else
+			kill (priv->pid, SIGKILL);
+
+		_LOGI ("Terminated openconnect daemon with PID %d.", priv->pid);
+		priv->pid = 0;
+	}
+
+	return TRUE;
+}
+
+static void
+nm_openconnect_plugin_init (NMOpenconnectPlugin *plugin)
+{
+}
+
+static void
+nm_openconnect_plugin_class_init (NMOpenconnectPluginClass *openconnect_class)
+{
+	GObjectClass *object_class = G_OBJECT_CLASS (openconnect_class);
+	NMVpnServicePluginClass *parent_class = NM_VPN_SERVICE_PLUGIN_CLASS (openconnect_class);
+
+	g_type_class_add_private (object_class, sizeof (NMOpenconnectPluginPrivate));
+
+	/* virtual methods */
+	parent_class->connect    = real_connect;
+	parent_class->need_secrets = real_need_secrets;
+	parent_class->disconnect = real_disconnect;
+}
+
+NMOpenconnectPlugin *
+nm_openconnect_plugin_new (const char *bus_name)
+{
+	NMOpenconnectPlugin *plugin;
+	GError *error = NULL;
+
+	plugin = (NMOpenconnectPlugin *) g_initable_new (NM_TYPE_OPENCONNECT_PLUGIN, NULL, &error,
+	                                                 NM_VPN_SERVICE_PLUGIN_DBUS_SERVICE_NAME, bus_name,
+	                                                 NM_VPN_SERVICE_PLUGIN_DBUS_WATCH_PEER, !gl.debug,
+	                                                 NULL);
+	if (!plugin) {
+		_LOGW ("Failed to initialize a plugin instance: %s", error->message);
+		g_error_free (error);
+	}
+
+	return plugin;
+}
+
+static void
+signal_handler (int signo)
+{
+	if (signo == SIGINT || signo == SIGTERM)
+		g_main_loop_quit (gl.loop);
+}
+
+static void
+setup_signals (void)
+{
+	struct sigaction action;
+	sigset_t mask;
+
+	sigemptyset (&mask);
+	action.sa_handler = signal_handler;
+	action.sa_mask = mask;
+	action.sa_flags = 0;
+	sigaction (SIGTERM,  &action, NULL);
+	sigaction (SIGINT,  &action, NULL);
+}
+
+static void
+quit_mainloop (NMOpenconnectPlugin *plugin, gpointer user_data)
+{
+	g_main_loop_quit ((GMainLoop *) user_data);
+}
+
+int main (int argc, char *argv[])
+{
+	NMOpenconnectPlugin *plugin;
+	gboolean persist = FALSE;
+	GOptionContext *opt_ctx = NULL;
+	gchar *bus_name = NM_DBUS_SERVICE_OPENCONNECT;
+	char sbuf[30];
+
+	GOptionEntry options[] = {
+		{ "persist", 0, 0, G_OPTION_ARG_NONE, &persist, N_("Don’t quit when VPN connection terminates"), NULL },
+		{ "debug", 0, 0, G_OPTION_ARG_NONE, &gl.debug, N_("Enable verbose debug logging (may expose passwords)"), NULL },
+		{ "bus-name", 0, 0, G_OPTION_ARG_STRING, &bus_name, N_("D-Bus name to use for this instance"), NULL },
+		{NULL}
+	};
+
+#if !GLIB_CHECK_VERSION (2, 35, 0)
+	g_type_init ();
+#endif
+
+	/* locale will be set according to environment LC_* variables */
+	setlocale (LC_ALL, "");
+
+	bindtextdomain (GETTEXT_PACKAGE, NM_OPENCONNECT_LOCALEDIR);
+	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+	textdomain (GETTEXT_PACKAGE);
+
+	/* Parse options */
+	opt_ctx = g_option_context_new (NULL);
+	g_option_context_set_translation_domain (opt_ctx, GETTEXT_PACKAGE);
+	g_option_context_set_ignore_unknown_options (opt_ctx, FALSE);
+	g_option_context_set_help_enabled (opt_ctx, TRUE);
+	g_option_context_add_main_entries (opt_ctx, options, NULL);
+
+	g_option_context_set_summary (opt_ctx,
+	                              _("nm-openconnect-service provides integrated "
+	                                "Cisco AnyConnect SSL VPN capability to NetworkManager."));
+
+	g_option_context_parse (opt_ctx, &argc, &argv, NULL);
+	g_option_context_free (opt_ctx);
+
+	if (getenv ("OPENCONNECT_DEBUG"))
+		gl.debug = TRUE;
+
+	gl.log_level = _nm_utils_ascii_str_to_int64 (getenv ("NM_VPN_LOG_LEVEL"),
+	                                             10, 0, LOG_DEBUG,
+	                                             gl.debug ? LOG_INFO : LOG_NOTICE);
+
+	/* set logging options for helper script. */
+	setenv ("NM_VPN_LOG_LEVEL", nm_sprintf_buf (sbuf, "%d", gl.log_level), TRUE);
+	setenv ("NM_VPN_LOG_PREFIX_TOKEN", nm_sprintf_buf (sbuf, "%ld", (long) getpid ()), TRUE);
+
+	_LOGD ("nm-openconnect-service (version " DIST_VERSION ") starting...");
+
+	if (system ("/sbin/modprobe tun") == -1)
+		exit (EXIT_FAILURE);
+
+	if (bus_name)
+		setenv ("NM_DBUS_SERVICE_OPENCONNECT", bus_name, 0);
+
+	plugin = nm_openconnect_plugin_new (bus_name);
+	if (!plugin)
+		exit (EXIT_FAILURE);
+
+	gl.loop = g_main_loop_new (NULL, FALSE);
+
+	if (!persist)
+		g_signal_connect (plugin, "quit", G_CALLBACK (quit_mainloop), gl.loop);
+
+	setup_signals ();
+	g_main_loop_run (gl.loop);
+
+	g_clear_pointer (&gl.loop, g_main_loop_unref);
+	g_object_unref (plugin);
+
+	exit (EXIT_SUCCESS);
+}

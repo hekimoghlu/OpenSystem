@@ -1,0 +1,100 @@
+2007-05-03  Morten Welinder <terra@gnome.org>
+
+	* Release 1.7.10
+
+2007-05-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (unit_name_to_unit): correct the sense of the tests.
+
+2007-05-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: add preferred-unit schema
+	* src/xml-sax-read.c (xml_sax_print_margins_get_double): deleted
+	(xml_sax_print_margins_unit): rewritten
+	(xml_sax_print_margins): add arguments to xml_sax_print_margins_unit
+	* src/gnumeric-gconf.c (gnm_gconf_init_printer_defaults): add preferred unit
+	(gnm_gconf_set_print_tb_margins): add argument
+	* src/gnumeric-gconf.h (gnm_gconf_set_print_tb_margins): add argument
+	(gnm_app_prefs): add fields
+	* src/xml-sax-write.c (xml_write_print_unit): rewrite to handle unit
+	(xml_write_print_margin): delete
+	* src/gnumeric-gconf-priv.h (PRINTSETUP_GCONF_PREFERRED_UNIT): new
+	* src/xml-io.c (xml_node_get_print_unit): deleted
+	(xml_node_get_print_margin): rewrite and replace xml_node_get_print_unit with 
+	xml_node_get_print_margin
+	* src/print-info.c (unit_name_to_unit): new
+	(unit_convert): deleted
+	(unit_to_unit_name): new
+	* src/print-info.h (unit_name_to_unit): new
+	(unit_to_unit_name): new
+
+2007-05-02  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	*  plugins/fn-tsa/Makefile.am: Do not needlessly try to link against
+	libgsl.
+
+2007-05-02  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Bumped goffice dependency to reflect that goffice trunk
+	is needed for the new tsa plugin.
+
+2007-05-02  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: add new tsa plugin.
+	* plugins/Makefile.am: ditto.
+	* plugins/fn-tsa/Makefile.am: ditto.
+	* plugins/fn-tsa/functions.c: add two sheet functions:
+	interpolation and periodogram
+	* plugins/fn-tsa/plugin.xml.in: ditto.
+
+2007-04-29  Jody Goldberg <jody@gnome.org>
+
+	Begin generalizing the conventions to properly support ODF-1.2 output.
+	s/GnmExprConventions/GnmConventions/
+	s/gnm_expr_conventions_new_full/gnm_conventions_new_full/
+	s/gnm_expr_conventions_new/gnm_conventions_new/
+	s/gnm_expr_conventions_free/gnm_conventions_free/
+	s/gnm_expr_conventions_default/gnm_conventions_default/
+	s/gnm_expr_conventions_r1c1/gnm_conventions_xls_r1c1/
+
+	* src/parse-util.c (cellref_as_string) : Take the new
+	  'GnmConventionsOut' to combine the various args.
+	(rangeref_as_string) : ditto.
+	(gnm_1_0_rangeref_as_string) : ditto.
+	(std_expr_name_handler) : ditto.
+
+2007-04-27  Jody Goldberg <jody@gnome.org>
+
+	Fixes #433907.
+	* src/expr.c (reloc_range) : do not attempt to relocate a reference to
+	  something not on the origin sheet.
+	(reloc_normalize_cellref) : use the ParsePos (initialized from the
+	  dep) to select the default sheet, not the origin_sheet.
+
+2007-04-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_print_setup): print_info_dup might load the pi
+	* src/xml-sax-read.c (xml_sax_orientation): use 
+	  print_info_set_paper_orientation
+	* src/xml-sax-write.c (xml_write_print_info): use 
+	  print_info_get_paper_orientation
+	* src/print.c (compute_sheet_pages_across_then_down): remove debug 
+	  spew
+	* src/xml-io.c (xml_read_print_info): use 
+	  print_info_set_paper_orientation
+	* src/print-info.c (print_info_set_paper_orientation): new
+	(print_info_get_paper_orientation): new
+	(print_info_get_page_setup): print-info is not constant, also verify
+	  arguments
+	(print_info_set_page_setup): verify arguments
+	(print_info_get_paper_display_name): new
+	* src/print-info.h (portrait_orientation): remove field
+	(invert_orientation): remove field
+	(print_info_set_paper_orientation): new
+	(print_info_get_paper_orientation): new
+	(print_info_get_page_setup): print-info is not constant
+	(print_info_get_paper_display_name): new
+	
+2007-04-21  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

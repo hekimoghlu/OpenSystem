@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="BjbWindow" parent="AdwApplicationWindow">
+    <property name="title" translatable="yes">Notes</property>
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+
+    <child>
+      <object class="AdwBreakpoint">
+        <condition>max-width: 400sp</condition>
+        <setter object="main_view" property="collapsed">1</setter>
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwNavigationSplitView" id="main_view">
+
+        <property name="sidebar">
+          <object class="BjbSideView" id="side_view">
+            <signal name="selected-note-changed" handler="window_selected_note_changed_cb" swapped="yes"/>
+          </object>
+        </property>
+
+        <property name="content">
+          <object class="AdwNavigationPage" id="content_page">
+            <!-- Set empty title to avoid a Gtk-Warning -->
+            <property name="title"> </property>
+            <property name="child">
+              <object class="AdwToolbarView">
+
+                <child type="top">
+                  <object class="AdwHeaderBar" id="note_headerbar">
+                    <property name="title-widget">
+                      <object class="GtkEntry" id="title_entry">
+                        <property name="visible">0</property>
+                        <property name="focusable">1</property>
+                        <property name="max-width-chars">60</property>
+                        <property name="placeholder-text" translatable="yes">Untitled</property>
+                      </object>
+                    </property>
+                    <child type="end">
+                      <object class="GtkMenuButton" id="menu_button">
+                        <property name="tooltip-text" translatable="yes">More options</property>
+                        <property name="icon-name">view-more-symbolic</property>
+                        <property name="menu-model">note-menu</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <property name="content">
+                  <object class="BjbNoteView" id="note_view">
+                    <property name="vexpand">1</property>
+                  </object>
+                </property>
+
+              </object> <!-- ./AdwToolbarView -->
+            </property>
+          </object>
+        </property>
+
+      </object>
+    </child>
+  </template>
+
+
+  <menu id="note-menu">
+
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Undo</attribute>
+        <attribute name="action">win.undo</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Redo</attribute>
+        <attribute name="action">win.redo</attribute>
+      </item>
+    </section>
+
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Notebooks</attribute>
+        <attribute name="action">win.view-notebooks</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Email this Note</attribute>
+        <attribute name="action">win.email</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Move to Trash</attribute>
+        <attribute name="action">win.trash</attribute>
+      </item>
+    </section>
+
+  </menu>
+
+</interface>

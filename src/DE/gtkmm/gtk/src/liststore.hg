@@ -1,0 +1,164 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or(at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <vector>
+
+#include <gtkmm/treeiter.h>
+#include <gtkmm/treemodel.h>
+#include <gtkmm/treesortable.h>
+#include <gtkmm/treedragdest.h>
+#include <gtkmm/treedragsource.h>
+#include <gtkmm/buildable.h>
+// We couldn't include it in treemodel.h, but doing it here makes it easier for people.
+#include <gtkmm/treepath.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+/** This is a list model for use with a Gtk::TreeView widget.
+ *
+ * It implements the Gtk::TreeModel interface, and also implements the
+ * Gtk::TreeSortable interface so you can sort the list using the view.
+ * Finally, it also implements the tree drag and drop interfaces.
+ *
+ * @ingroup TreeView
+ * @deprecated 4.10: Use Gio::ListStore instead, and the various
+ *   list models provided by GTK.
+ */
+class GTKMM_API ListStore :
+  public Glib::Object,
+  public TreeModel,
+  public TreeSortable,
+  public TreeDragSource,
+  public TreeDragDest,
+  public Buildable
+{
+  _CLASS_GOBJECT(ListStore, GtkListStore, GTK_LIST_STORE, Glib::Object, GObject, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(TreeModel)
+  _IMPLEMENTS_INTERFACE(TreeSortable)
+  _IMPLEMENTS_INTERFACE(TreeDragSource)
+  _IMPLEMENTS_INTERFACE(TreeDragDest)
+  _IMPLEMENTS_INTERFACE(Buildable)
+  _IGNORE(gtk_list_store_insert_after,
+          gtk_list_store_prepend, gtk_list_store_append, gtk_list_store_set_value,
+          gtk_list_store_insert,
+          gtk_list_store_set, gtk_list_store_set_valist,
+          gtk_list_store_reorder, gtk_list_store_move_after, gtk_list_store_move_before)
+  _IGNORE(gtk_list_store_insert_with_values, gtk_list_store_insert_with_valuesv,
+          gtk_list_store_set_valuesv)dnl// deprecated
+
+protected:
+  /** When using this constructor, you must use set_column_types() immediately afterwards.
+   * This can be useful when deriving from this class, with a fixed TreeModelColumnRecord
+   * that is a member of the class.
+   * There is no create() method that corresponds to this constructor, because this
+   * constructor should only be used by derived classes.
+   */
+  _CTOR_DEFAULT
+
+  explicit ListStore(const TreeModelColumnRecord& columns);
+
+public:
+
+  /** Instantiate a new ListStore.
+   * @param columns The column types for this tree model.
+   * @result The new ListStore.
+   */
+  _WRAP_CREATE(const TreeModelColumnRecord& columns)
+
+  void set_column_types(const TreeModelColumnRecord& columns);
+  _IGNORE(gtk_list_store_set_column_types)
+
+  /** Removes the given row from the list store.
+   * @param iter The iterator to the row to be removed.
+   * @result An iterator to the next row, or end() if there is none.
+   */
+  iterator erase(const iterator& iter);
+  _IGNORE(gtk_list_store_remove)
+
+  //TODO: Make this documentation similar to documentation for Standard C++ insert methods.
+  /** Creates a new row before the position.
+   * If iter is end() then a new row will be appended to the list.
+   * The row will be empty - to fill in values, you need to dereference the returned iterator and use Row::operator[] or Row::set_value().
+   * See also prepend() and append().
+   *
+   * @param iter An iterator to the row before which the new row will be inserted.
+   * @result An iterator to the new row.
+   */
+  iterator insert(const iterator& iter);
+  _IGNORE(gtk_list_store_insert_before)
+
+  //TODO: Docs. This one is apparently faster.
+  /** Creates a new row after the position.
+   * If iter is end() then a new row will be prepended to the list.
+   * The row will be empty - to fill in values, you need to dereference the returned iterator and use Row::operator[] or Row::set_value().
+   * See also insert(), prepend() and append().
+   *
+   * @param iter An iterator to the row after which the new row will be inserted.
+   * @result An iterator to the new row.
+   */
+  iterator insert_after(const iterator& iter);
+  _IGNORE(gtk_list_store_insert_after)
+
+  /** Creates a new row at the start.
+   * The row will be empty - to fill in values, you need to dereference the returned iterator and use Row::operator[] or Row::set_value().
+   * See also insert() and append().
+   *
+   * @result An iterator to the new row.
+   */
+  iterator prepend();
+
+  /** Creates a new row at the end.
+   * The row will be empty - to fill in values, you need to dereference the returned iterator and use Row::operator[] or Row::set_value().
+   * See also insert() and prepend().
+   *
+   * @result An iterator to the new row.
+   */
+  iterator append();
+
+  _WRAP_METHOD(void iter_swap(const iterator& a, const iterator& b), gtk_list_store_swap)
+
+  /** Moves @a source to the position at @a destination.
+   * Note that this function only works with unsorted stores.
+   * @param source The row that should be moved.
+   * @param destination The position to move to.
+   */
+  void move(const iterator& source, const iterator& destination);
+
+  /** Reorders the list store to follow the order indicated by @a new_order.
+   * Note that this function only works with unsorted stores.
+   */
+  void reorder(const std::vector<int>& new_order);
+
+  _WRAP_METHOD(void clear(), gtk_list_store_clear)
+
+  _WRAP_METHOD(bool iter_is_valid(const const_iterator& iter) const, gtk_list_store_iter_is_valid)
+
+protected:
+  void set_value_impl(const iterator& row, int column, const Glib::ValueBase& value) override;
+};
+
+} // namespace Gtk

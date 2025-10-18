@@ -1,0 +1,226 @@
+variables:
+    MESON_BUILD_DIR: _build
+    TARBALL_ARTIFACT_PATH: ${MESON_BUILD_DIR}/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz
+    # When branching a stable release, change 'main'
+    # to the release number/branch to ensure that
+    # a new image will be created, tailored for the
+    # stable branch.
+    # Could probably also switch away from rawhide,
+    # to stable fedora branch as well.
+    FDO_DISTRIBUTION_TAG: '2025-08-02.0-main'
+    FDO_DISTRIBUTION_VERSION: rawhide
+
+include:
+    - project: "GNOME/citemplates"
+      file: "templates/default-rules.yml"
+    - project: "GNOME/citemplates"
+      file: "flatpak/flatpak_ci_initiative.yml"
+    - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+      inputs:
+          job-stage: deploy
+          dist-job-name: build-release-tarball
+          tarball-artifact-path: ${TARBALL_ARTIFACT_PATH}
+    - remote: 'https://gitlab.freedesktop.org/freedesktop/ci-templates/-/raw/f9171e21724bc4e2abeabad5f2d7e2e5cc10cbe3/templates/fedora.yml'
+
+stages:
+    - prepare
+    - lint
+    - build
+    - deploy
+
+# stage: prepare
+
+build.container.fedora:
+    extends: '.fdo.container-build@fedora'
+    stage: prepare
+    variables:
+        # no need to pull the whole tree for rebuilding the image
+        GIT_STRATEGY: none
+        # Expiry sets fdo.expires on the image
+        FDO_EXPIRES_AFTER: 8w
+        FDO_DISTRIBUTION_PACKAGES: >-
+            meson
+            appstream
+            cairo-devel
+            clippy
+            dbus-devel
+            desktop-file-utils
+            djvulibre-devel
+            exempi-devel
+            gi-docgen
+            glib2-devel
+            gobject-introspection-devel
+            gsettings-desktop-schemas-devel
+            gtk4-devel
+            itstool
+            libadwaita-devel
+            libarchive-devel
+            libsass-devel
+            libsecret-devel
+            libtiff-devel
+            nautilus-devel
+            poppler-glib-devel
+            yelp-tools
+            zlib-devel
+            rust
+            rustfmt
+            cargo
+            git
+            blueprint-compiler
+
+# stage: lint
+
+editorconfig:
+    stage: lint
+    image: alpine:3.21
+    script:
+        - apk add editorconfig-checker
+        - ec --disable-indentation --exclude '^.git/'
+
+clang-format:
+    stage: lint
+    image: alpine:3.21
+    script:
+        - apk add clang19-extra-tools
+        - ./.gitlab-ci/clang-format.sh
+
+blueprint-compiler-format:
+    stage: lint
+    image: alpine:3.21
+    script:
+        - apk add blueprint-compiler
+        - ./.gitlab-ci/blueprint-compiler-format.sh
+
+pot-files:
+    stage: lint
+    image: alpine:3.21
+    script:
+        - ./.gitlab-ci/check-potfiles.sh
+
+cargo-format:
+    stage: lint
+    extends: '.fdo.distribution-image@fedora'
+    script:
+        - cd shell && cargo fmt --check
+
+# stage: build
+
+.setup-meson:
+    stage: build
+    extends: '.fdo.distribution-image@fedora'
+    artifacts:
+        when: on_failure
+        paths:
+            - ${MESON_BUILD_DIR}/meson-logs/meson-log.txt
+            - ${MESON_BUILD_DIR}/meson-logs/testlog.txt
+        expire_in: 2 days
+    before_script:
+        - git submodule init
+        - git submodule update --checkout
+        - cargo install --path rust/gir
+        - export PATH=$PATH:$HOME/.cargo/bin
+        - meson setup $MESON_SETUP_OPTIONS --werror --fatal-meson-warnings "${MESON_BUILD_DIR}"
+        - meson compile -C "${MESON_BUILD_DIR}" update-rust-bindings
+
+meson-dev:
+    extends: '.setup-meson'
+    variables:
+        MESON_SETUP_OPTIONS: "-Dbuildtype=debug"
+    script:
+        - meson compile -C "${MESON_BUILD_DIR}"
+        - meson compile -C "${MESON_BUILD_DIR}" cargo-clippy
+        - meson test -C "${MESON_BUILD_DIR}"
+
+meson-rel:
+    extends: '.setup-meson'
+    variables:
+        MESON_SETUP_OPTIONS: "-Dbuildtype=release"
+    script:
+        - meson compile -C "${MESON_BUILD_DIR}"
+
+meson-pot:
+    extends: '.setup-meson'
+    variables:
+        MESON_SETUP_OPTIONS: "-Dbuildtype=release"
+    script:
+        - meson compile -C "${MESON_BUILD_DIR}" papers-pot
+        - if [ "$(grep 'gettext!' -R shell)" != "" ]; then exit 1; fi
+
+msrv:
+    extends: '.setup-meson'
+    variables:
+        MESON_SETUP_OPTIONS: "-Dbuildtype=debug -Dthumbnailer=false"
+    script:
+        - dnf install -y rustup
+        - rustup-init -y
+        - cargo install --debug cargo-msrv
+        - meson compile -C "${MESON_BUILD_DIR}"
+        - meson devenv -C "${MESON_BUILD_DIR}" cargo msrv --manifest-path=${CI_PROJECT_DIR}/shell/Cargo.toml verify
+    only:
+        changes:
+            - Cargo.lock
+
+.flatpak-local:
+    stage: build
+    variables:
+        MANIFEST_PATH: "build-aux/flatpak/org.gnome.Papers.Devel.json"
+        RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+        FLATPAK_MODULE: "papers"
+        APP_ID: "org.gnome.Papers.Devel"
+        BUNDLE: "org.gnome.Papers.Devel.flatpak"
+    retry: 2
+    before_script:
+        - "jq '. + { \"runtime-version\": \"master\" }' ${MANIFEST_PATH} > ${MANIFEST_PATH}.tmp"
+        - mv ${MANIFEST_PATH}.tmp ${MANIFEST_PATH}
+    rules:
+        - if: $CI_COMMIT_BRANCH =~ /gnome-\d+/
+          allow_failure: true
+        - if: $CI_COMMIT_BRANCH !~ /gnome-\d+/
+
+flatpak@x86_64:
+    extends:
+        - .flatpak@x86_64
+        - .flatpak-local
+
+flatpak@aarch64:
+    extends:
+        - .flatpak@aarch64
+        - .flatpak-local
+
+build-release-tarball:
+    stage: build
+    extends: '.fdo.distribution-image@fedora'
+    artifacts:
+        name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}
+        when: always
+        paths:
+            - ${TARBALL_ARTIFACT_PATH}
+    script:
+        - meson setup "${MESON_BUILD_DIR}"
+        - meson dist -C "${MESON_BUILD_DIR}" --include-subprojects
+
+# stage: deploy
+
+nightly@x86_64:
+    extends: '.publish_nightly'
+    needs: ['flatpak@x86_64']
+
+nightly@aarch64:
+    extends: '.publish_nightly'
+    needs: ['flatpak@aarch64']
+
+pages:
+    extends: '.fdo.distribution-image@fedora'
+    stage: deploy
+    rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PROJECT_NAMESPACE == "GNOME"
+    script:
+        - meson setup "${MESON_BUILD_DIR}" -Dthumbnailer=false -Dshell=false
+        - ninja -C "${MESON_BUILD_DIR}"
+        - mkdir public
+        - mv ${MESON_BUILD_DIR}/help/reference/libdocument/libppsdocument public/document/
+        - mv ${MESON_BUILD_DIR}/help/reference/libview/libppsview public/view/
+    artifacts:
+        paths:
+            - public/
+        expire_in: 2 days

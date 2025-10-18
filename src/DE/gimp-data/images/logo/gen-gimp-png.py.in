@@ -1,0 +1,144 @@
+import pathlib
+import os
+import sys
+
+# It's just a icon
+if '@TILE_WIDTH@' == 'none':
+  wilber_path = '@SRCDIR@/gimp-logo.svg'
+# It's a tile
+else:
+  wilber_path = '@SRCDIR@/gimp-logo-shadow.svg'
+
+export_dir = 'build/windows/store/Assets/'
+# We need to manually create Assets folder
+if not os.path.exists(export_dir):
+  os.makedirs(export_dir)
+
+
+def export_relative_img(scale):
+  procedure   = Gimp.get_pdb().lookup_procedure("file-svg-load")
+  config      = procedure.create_config()
+  config.set_property("file", Gio.file_new_for_path(wilber_path))
+  logo_size   = @LOGO_SIZE@ * scale / 100
+  config.set_property("width",  logo_size)
+  config.set_property("height", logo_size)
+  v = Gimp.Procedure.run(procedure, config)
+  if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+    sys.exit(70)
+
+  image = v.index(1)
+  image.undo_disable()
+
+  # Create tile
+  if '@TILE_WIDTH@' != 'none':
+    tile_width    = @TILE_WIDTH@ * scale / 100
+    tile_height   = @TILE_HEIGHT@ * scale / 100
+    image.resize(tile_width, tile_height, (tile_width-logo_size)/2, (tile_height-logo_size)/2)
+
+  if scale == 100:
+    procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+    config    = procedure.create_config()
+    drawables = image.get_selected_drawables()
+    config.set_property("image", image)
+    scale_str = str(scale)
+    config.set_property("file", Gio.file_new_for_path(export_dir + '@NAME@.png'))
+    v = Gimp.Procedure.run(procedure, config)
+    if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+      sys.exit(70)
+
+  procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+  config    = procedure.create_config()
+  drawables = image.get_selected_drawables()
+  config.set_property("image", image)
+  scale_str = str(scale)
+  config.set_property("file", Gio.file_new_for_path(export_dir + '@NAME@.scale-' + scale_str + '.png'))
+  v = Gimp.Procedure.run(procedure, config)
+  if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+    sys.exit(70)
+
+
+def export_absolute_img(size):
+  procedure   = Gimp.get_pdb().lookup_procedure("file-svg-load")
+  config      = procedure.create_config()
+  config.set_property("file", Gio.file_new_for_path('@SRCDIR@/gimp-logo.svg'))
+  config.set_property("width",  size)
+  config.set_property("height", size)
+  v = Gimp.Procedure.run(procedure, config)
+  if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+    sys.exit(70)
+
+  image = v.index(1)
+  image.undo_disable()
+
+  if size == 44:
+    procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+    config    = procedure.create_config()
+    drawables = image.get_selected_drawables()
+    config.set_property("image", image)
+    size_str = str(size)
+    config.set_property("file", Gio.file_new_for_path(export_dir + '@NAME@.png'))
+    v = Gimp.Procedure.run(procedure, config)
+    if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+      sys.exit(70)
+
+  else:
+    procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+    config    = procedure.create_config()
+    drawables = image.get_selected_drawables()
+    config.set_property("image", image)
+    size_str = str(size)
+    config.set_property("file", Gio.file_new_for_path(export_dir + '@NAME@.targetsize-' + size_str + '.png'))
+    v = Gimp.Procedure.run(procedure, config)
+    if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+      sys.exit(70)
+
+    if '@NAME@' =='AppList':
+      procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+      config    = procedure.create_config()
+      drawables = image.get_selected_drawables()
+      config.set_property("image", image)
+      size_str = str(size)
+      config.set_property("file", Gio.file_new_for_path(export_dir + '@NAME@.targetsize-' + size_str + '_altform-unplated.png'))
+      v = Gimp.Procedure.run(procedure, config)
+      if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+        sys.exit(70)
+
+      procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+      config    = procedure.create_config()
+      drawables = image.get_selected_drawables()
+      config.set_property("image", image)
+      size_str = str(size)
+      config.set_property("file", Gio.file_new_for_path(export_dir + '@NAME@.targetsize-' + size_str + '_altform-lightunplated.png'))
+      v = Gimp.Procedure.run(procedure, config)
+      if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+        sys.exit(70)
+
+
+export_relative_img(100)
+export_relative_img(125)
+export_relative_img(150)
+export_relative_img(200)
+export_relative_img(400)
+
+if @LOGO_SIZE@ == 44:
+  export_absolute_img(44)
+  export_absolute_img(16)
+  export_absolute_img(20)
+  export_absolute_img(24)
+  export_absolute_img(30)
+  export_absolute_img(32)
+  export_absolute_img(36)
+  export_absolute_img(40)
+  export_absolute_img(48)
+  export_absolute_img(56)
+  export_absolute_img(60)
+  export_absolute_img(64)
+  export_absolute_img(72)
+  export_absolute_img(80)
+  export_absolute_img(96)
+  export_absolute_img(128)
+  export_absolute_img(256)
+
+
+# Avoid the images being re-generated at each build.
+pathlib.Path('gimp-data/images/logo/stamp-@NAME@.png').touch()

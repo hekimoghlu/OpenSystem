@@ -1,0 +1,1286 @@
+2001-08-11  Jody Goldberg <jgoldberg@home.com>
+
+	* Release 0.69
+
+2001-08-11  Ariel Rios <ariel@linuxppc.org>
+
+	* configure.in: Configure is now able to detect
+        whether a recent version of guile is available
+        to be able to build the guile plugin.
+
+2001-08-11  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/sheet-object.c: Revert below removal of "Old crufty IO". In 
+	addition, fix a warning that I introduced yesterday (missing cast).
+
+2001-08-11  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/sheet-object-graphic.c: Use GdkColors instead of strings. 
+	Implemented printing. Objects aren't in the right place though. Still 
+	needs some tuning. Configuration implemented (border width, outline
+	color, fill color).
+	* src/sheet-object-graphic.h: Be consistent, rename
+	IS_SHEET_GRAPHIC_OBJECT -> IS_SHEET_OBJECT_GRAPHIC and
+	IS_SHEET_FILLED_OBJECT -> IS_SHEET_OBJECT_FILLED
+	* sheet-object.c: (sheet_object_read_xml): Remove "Old crufty IO"
+	(quoted from code). Get and set the direction here instead of in
+	sheet-object-graphic.
+	* src/xml-io.[c,h]: Make xml_[get,set]_value_double and 
+	xml_[get,set]_value_color public.
+
+2001-08-09  Jody Goldberg <jgoldberg@home.com>
+
+	* src/format.c (format_get_decimal) : Fix a problem in locale's with
+	  different numeric conventions for standard and monetary use (eg ru_RU)
+	  we must use the same thing as strtod.
+
+2001-08-08  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/commands.c (cmd_move_object):
+	Use "Resize object" instead of "Move object" as command's description
+	if the size of the object has changed.
+
+2001-08-07  Zbigniew Chyla  <cyba@gnome.pl>
+
+	Fixes #58648
+	Added support for default importers (with specified priority)
+
+	* file.[ch]
+	(register_file_opener_as_importer_as_default,
+	get_default_file_importer): New functions, added support for default
+	importers (with specified priority).
+
+	* gui-file.c (gui_file_import): Open the dialog with default importer
+	selected.
+
+	* plugin-service.h (struct _PluginServiceFileOpener):
+	Added default_importer_priority field.
+
+	* plugin-service.c (plugin_service_file_opener_read): If importer is
+	enabled, read default_importer_priority attribute.
+	(plugin_service_file_opener_initialize): Register as default importer if
+	default_importer_priority is specified.
+
+	* src/stf.c (stf_init): Register "Gnumeric_stf:stf_druid" as default
+	file importer with priority 50.
+
+2001-08-07  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-cursor.c (item_cursor_draw) : When centering the cursor
+	  with an even width tweak it to make things symetric.
+	Some cosmetic formating and naming issues too.
+
+2001-08-07  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/commands.c: (cmd_insert_object_redo): Do proper ref counting.
+	* src/item-grid.c: (cb_obj_create_button_release): Hook up 
+	cmd_insert_object.
+	* src/sheet-object.c: (sheet_object_remove_cb): Unref the sheet
+	object.
+	(sheet_object_set_sheet): Just return TRUE if (so->sheet == sheet) 
+	instead of printing a warning. This is because when command_push_undo
+	is called, the redo function will be called although there is nothing
+	to redo at this moment. We detect this through this function here.
+
+2001-08-07  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/commands.[c,h]: (cmd_insert_object), (cmd_delete_object): New.
+	cmd_insert_object is not hooked up yet.
+	* src/sheet-control-gui.c: (cb_control_point_event): Pass the sheet
+	object to cmd_move_object, that makes more sense than the so_view.
+	* src/sheet-object.c: (sheet_object_remove_cb): Call cmd_delete_object
+	instead of just gtk_object_destroy which can't be undone.
+	(sheet_object_clear_sheet): If so->sheet == NULL, just return instead
+	of printing a warning.
+	
+2001-08-07  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/commands.[c,h]: (cmd_move_object): New. Will also handle 
+	resizing of objects
+	* src/sheet-control-gui-priv.h: Remember the initial_coords before
+	moving or resizing an object
+	* src/sheet-control-gui.c: (cb_control_point_event): When done with
+	moving/resizing, call cmd_move_object so that we can undo this action
+	later.
+	
+2001-08-06  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-autofill.c (autofill_compute_delta) : Make month/years
+	  count forward and add some smarts to handle nice steps when days are
+	  visible too.
+	(autofill_cell) : ditto.
+
+2001-08-06  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-canvas.c (gnumeric_canvas_new) : don't use different
+	  canvas groups for objects and animated cursors.  That was confusing
+	  things.
+
+2001-08-04  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet.c (sheet_set_zoom_factor) : changing the zoom forces a
+	  visibility computation.
+
+2001-08-06  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-cursor.c (item_cursor_point) : Disable selection if we are
+	  invisible.
+
+2001-08-06  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (psion): Improve psiconv test.
+
+2001-08-06  Jody Goldberg <jgoldberg@home.com>
+
+	* src/selection.c (walk_boundaries) : Check for merged regions while
+	  walking, not just at the onset.
+
+2001-08-03  Jody Goldberg <jgoldberg@home.com>
+
+	* src/colrow.c (colrow_restore_sizes) : Use sheet_flag_recompute_spans.
+	  to simplfy debugging.
+	* src/sheet.c (sheet_set_zoom_factor) : ditto
+	(sheet_{insert,delete}_{cols,rows}) : ditto.
+	(sheet_move_range) : ditto.
+	sheet_{col,row}_set_size_{pts,pixels} : ditto.
+
+2001-07-19  Tim Mooney <mooney@dogbert.cc.ndsu.NoDak.edu>
+
+	* configure.in: fix the GNUMERIC_HAVE_ALLOCA_H test to handle the
+	new cache value used by autoconf 2.50+.
+
+2001-08-02  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Use the new improved (functional) guile tests.
+
+2001-08-02  Jody Goldberg <jgoldberg@home.com>
+
+	* src/application.c (application_init) : Add search&replace icon from
+	  evo.
+	* src/workbook-control-gui.c (workbook_standard_toolbar_orient) : Use
+	  it.
+
+2001-08-01  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-autofill.c (autofill_compute_delta) : default to copy not
+	  increment.
+
+2001-07-31  Jody Goldberg <jgoldberg@home.com>
+
+	* src/application.c (application_init) : add new icons from evolution.
+	* src/workbook-control-gui.c (workbook_standard_toolbar_orient) : Use
+	  them.
+
+2001-07-30  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-pane.c (gnm_pane_rangesel_bound_set) : typo.
+
+2001-07-30  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : Use the properly
+	  localized formats.
+
+2001-07-30  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : Use
+	  workbook_cmd_mutate_borders.
+	* src/workbook-cmd-format.c (workbook_cmd_mutate_borders) : moved
+	  from gnumeric_canvas.
+
+2001-07-30  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-bar.c (item_bar_resize_stop) : renamed from
+	  item_bar_end_resize to be consistent.
+
+	* src/Makefile.am : rename gnumeric-sheet -> gnumeric-canvas
+
+2001-07-30  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-control.c (sc_wbc) : new.
+	(sc_sheet) : const.
+	(sc_update_cursor_pos) : delete.
+
+	* src/gnumeric-pane.c (gnm_pane_special_cursor_bound_set) : new.
+	(gnm_pane_special_cursor_start) : ditto.
+	(gnm_pane_special_cursor_start) : ditto.
+
+	* src/sheet-control-gui.c (scg_update_cursor_pos)  : fold into
+	  scg_resize.
+	(scg_resize) : reposition all of the cursors.
+	(scg_edit_start) renamed from scg_create_editor.
+	(scg_edit_stop) : renamed from scg_stop_editing.
+	(scg_special_cursor_start) : new.
+	(scg_special_cursor_stop) : new.
+	(scg_special_cursor_bound_set) : new.
+
+	* src/item-cursor.c (item_cursor_selection_event) : Use
+	  scg_special_cursor_start, and scg_special_cursor_bound_set.
+	(item_cursor_do_action) : use scg_special_cursor_stop.
+	(item_cursor_do_drop) : ditto.
+	(item_cursor_autofill_event) : ditto.
+	(item_cursor_set_bounds_visibly) : Doh! fix my stupidity.
+	  We need to change the visibility here because we explicitly disable
+	  doing it in the scroll handlers.  We are constraining the scroll
+	  so we need to do it manually.
+
+2001-07-30  Jody Goldberg <jgoldberg@home.com>
+
+	s/GnumericSheet/GnumericCanvas/
+	s/gsheet/gcanvas/
+	s/gnumeric_sheet_*/gnm_canvas_/
+	s/gnumeric_pane_*/gnm_pane_/
+	Move the std and rangesel cursors from GnumericSheet -> GnumericPane
+	Move the grid and editor from GnumericSheet -> GnumericPane
+
+2001-07-28  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_handle_motion) : fix autoscroll
+	  from bottom/right panes into adjcant regions that do not scroll as
+	  reported by almer.
+
+2001-07-28  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_handle_motion) : work towards
+	  support h only or v only freezes by using the geometry of pane 1 or 3
+	  in place of pane 2 which only exists in the h&v case.
+	(gsheet_sliding_callback) : ditto.
+	(gnumeric_sheet_slide_init: ditto.
+
+2001-07-28  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-pane.c (gnumeric_pane_colrow_resize_start) :
+	  Switch GnumericSheet to using CellPos for consisency.
+	* src/gnumeric-sheet.c (gnumeric_sheet_key_mode_sheet) : ditto.
+	(gnumeric_sheet_button_release) : ditto.
+	(gnumeric_sheet_init) : ditto.
+	(gnumeric_sheet_find_col) : ditto.
+	(gnumeric_sheet_find_row) : ditto.
+	(gnumeric_sheet_create_editor) : ditto.
+	(gsheet_compute_visible_region) : ditto.
+	(gnumeric_sheet_redraw_region) : ditto.
+	(gsheet_sliding_callback): ditto.
+	(gnumeric_sheet_handle_motion) : ditto.
+	(gnumeric_sheet_slide_init) : ditto.
+	* src/item-bar.c (item_bar_draw) : ditto.
+	(item_bar_event) : ditto.
+	* src/item-cursor.c (item_cursor_update) : ditto.
+	(item_cursor_draw) : ditto.
+	* src/item-edit.c (recalc_spans) : ditto.
+	(item_edit_set_arg) : ditto.
+	* src/sheet-control-gui.c (scg_redraw_headers) : ditto.
+	(scg_resize) : ditto.
+	(scg_scrollbar_config) : ditto.
+	(scg_colrow_select) : ditto.
+	(gnumeric_sheet_update_inital_top_left) : ditto.
+	(bar_set_left_col) : ditto.
+	(bar_set_top_row) : ditto.
+	(gnumeric_sheet_set_left_col) : ditto.
+	(gnumeric_sheet_set_top_row) : ditto.
+	(gnumeric_sheet_set_top_left) : ditto.
+	(gnumeric_sheet_make_cell_visible) : ditto.
+	(scg_set_panes) : ditto.
+	(cb_slide_handler) : ditto.
+	* src/workbook-control-gui.c (cb_view_freeze_panes) : ditto.
+
+2001-07-24  Jody Goldberg <jgoldberg@home.com>
+
+	* plugins/Makefile.am (SUBDIRS) : Add psion plugin from
+	Frodo Looijaard <frodol@dds.nl>
+
+2001-07-27  Morten Welinder  <terra@diku.dk>
+
+	* src/rangefunc.c (range_min_k, range_min_k_nonconst): New
+ 	function.
+
+	* src/analysis-tools.c (kth_largest, kth_smallest): Use
+ 	range_min_k_nonconst.
+
+	* src/analysis-tools.c (summary_statistics): Constify data.
+
+	* src/rangefunc.c (range_median_inter): Respect const.
+	(range_median_inter_nonconst): New version.
+
+	* src/rangefunc.c, src/rangefunc.h: new files, contents taken from
+ 	mathfunc.c among other places.
+
+2001-07-27   Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/analysis-tools.c (correlation_tool) Rewrite to use standard
+	  range_* functions.
+	(covariance_tool) ditto
+	(descriptive_stat_tool) Extract code into multi-use support functions.
+	(summary_statistics) ditto
+	(confidence_level) ditto
+	(kth_largest) : ditto
+	(kth_smallest) : ditto
+	(sampling_tool) : Create real random samples.
+	and various support functions.
+
+	* src/dialog/dialog-analysis-tools.c (dialog_correlation_tool) Display
+	error dialog.
+	(dialog_covariance_tool) ditto
+	(dialog_descriptive_stat_tool) Use dao->labels_flag instead of labels_flag.
+
+	* src/dialogs/tools.h (descriptive_stat_tool) Remove labels_flag.
+
+2001-07-27  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/workbook-control-gui.c (hide_show_detail): helper which
+	implements the actual meat of the show/hide operations.
+	(cb_data_hide_detail): Implement using hide_show_detail.
+	(cb_data_show_detail): Idem.
+
+2001-07-26  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet.c (sheet_init_sc) : Don't allow positioning during the
+	  initialization sequence of a control to overwrite requested top_left.
+
+	* src/sheet-control-gui.c (gnumeric_sheet_update_inital_top_left) :
+	  new function.
+	(gnumeric_sheet_set_left_col) : used here.
+	(gnumeric_sheet_set_top_row) : used here.
+	(gnumeric_sheet_set_top_left) : used here.
+
+2001-07-26  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/stf.c (stf_read_workbook): Set the format on all lines.
+
+	* src/sheet-control-gui.c (scg_colrow_select): Avoid loss of
+	an invalid expression.
+
+	* src/workbook-control-gui.c (wbcg_close_control): Avoid loss of
+	any entered text.
+
+2001-07-26  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/workbook-control-gui.c (cb_notebook_switch_page):
+	Accept input and flip page in one step (don't require two clicks).
+
+2001-07-25  Morten Welinder  <terra@diku.dk>
+
+	* src/analysis-tools.c (summary_statistics): Cleanup a bit.  Fix
+ 	the min, max, and range items.  Avoid most casts.
+
+2001-07-25  Almer S. Tigelaar  <almer@gnome.org>
+
+ 	* src/gnumeric-sheet.c (gnumeric_sheet_key_mode_sheet): Add
+ 	C-Insert, S-Insert and S-Delete shortcuts for cutting, pasting
+ 	and copying.
+
+2001-07-25  Almer S. Tigelaar  <almer@gnome.org>
+
+ 	* src/workbook-control-gui.c (cb_notebook_switch_page): If we are
+ 	still editing and the expression is invalid, don't switch pages, but
+ 	insist the user correct it first.
+
+2001-07-18   Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/analysis-tools.c (set_cell) : Catch NULL string pointer.
+	(get_data_grouped_by_cols) : new routine to read data from cell range.
+	(get_data_grouped_by_rows) : ditto
+	(get_text_col) : ditto
+	(get_text_row) : ditto
+	(kurt) : removed, use range_kurtosis_m3_est instead.
+	(skew) : removed, use range_skew_est instead.
+	(summary_statistics) : rewritten to use range_*, to use correct data
+	  labels and to check for errors.
+	(confidence_level) : ditto
+	(kth_largest) : ditto
+	(kth_smallest) : ditto
+	(range_min_k) : new function to find kth smallest number (rather than
+	  the code twice)
+	(descriptive_stat_tool) : rewritten to use correct data labels and to
+	  use above modified functions.
+
+	* src/analysis-tools.h (range_min_k) : new prototype
+
+	* src/dialogs/dialog-analysis-tools.c : include selection.h
+	(dialog_descriptive_stat_tool) :  preload descriptive statistics input
+	  range and add checkbox to specify row labels
+
+	* src/dialogs/tools.h (descriptive_stat_tool) : add labels_flag
+
+2001-07-18  Jody Goldberg <jgoldberg@home.com>
+
+	* configure.in : AC_DEFINE ENABLE_EVOLUTION if it is available.
+
+2001-07-20  Lutz Müller  <urc8@rz.uni-karlsruhe.de>
+
+	* src/sheet-object-impl.h: Add the view as parameter to the virtual
+	method set_active.
+	* src/sheet-object-container.c:
+	(sheet_object_container_set_active): New. Overrides above virtual and
+	handles (de)activation of view frames.
+	* src/sheet-control-gui-priv.h: Do not let the SheetControlGUI know
+	about an active_object_frame - remove this variable.
+	* src/sheet-control-gui.[c,h]:
+	(scg_activate_view_frame),
+	(scg_deactivate_view_frame): Removed. Now handled by the objects
+	themselves through set_active virtual method.
+	(scg_object_stop_editing),
+	(scg_mode_edit_object): Adjust parameters for virtual method set_active.
+
+2001-07-18  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/dialogs/dialog-function-wizard.c (formula_guru_init_args): Use
+	locale dependent argument separator.
+
+	* src/func.h (function_get_category,
+	function_get_category_with_translation): Renamed args.
+
+	* src/func.c
+	(function_category_compare): Don't use g_strcasecmp, it's broken.
+	(function_get_category): Use function_get_category_with_translation.
+	(function_get_category_with_translation): Some code moved from
+	function_get_category, keep categories sorted by display_name, store
+	internal_name in "normalized" form (converted to lowercase).
+
+2001-07-18  Jody Goldberg <jgoldberg@home.com>
+
+	* configure.in : post release version bump.
+
+	* src/xml-io-autoft.c (xml_write_format_template_members) : remove
+	  warnings.
+
+2001-07-17  Jody Goldberg <jgoldberg@home.com>
+
+	* Release 0.68
+
+2001-07-17  Jody Goldberg <jgoldberg@home.com>
+
+	* configure.in : Only enable evo support if someone explicitly
+	  requests it.
+
+	* src/gui-clipboard.c (x_selection_handler) : Make things friendlier
+	  with Klipper.
+
+	* src/workbook-control-gui.c (wbcg_sheet_move) : Fix.
+	  SheetControl no longer inherits from Table it now contains it.
+
+	* src/sheet-control-gui.c (cb_sheet_object_view_destroy) : rename from
+	  cb_sheet_object_destroy.
+
+	* src/sheet-object.c (cb_sheet_object_configure) : Use
+	  sheet_object_view_obj and sheet_object_view_control.
+	(sheet_object_view_destroyed) : remove the sheetcontrol key from the
+	  view when it is destroyed.  And remove our reference to the control.
+	(sheet_object_new_view) : give the view a ref of the control.
+
+	* src/item-grid.c (item_grid_draw) : only draw bound lines at pane
+	  bounds.
+
+	* src/item-bar.c (item_bar_event) : dont draw the resize bar past the
+	  minimum size.
+
+2001-07-15  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/analysis-tools.c (descriptive_stat_tool) : adjust
+	  scrollbars after outputting data.
+	(sampling_tool) : ditto
+	(ztest_tool) : ditto
+	(random_tool) : ditto
+	(regression_tool) : ditto
+	(average_tool) : ditto
+	(ranking_tool) : ditto
+	(anova_single_factor_tool) : ditto
+	(anova_two_factor_without_r_tool) : ditto
+	(anova_two_factor_with_r_tool) : ditto
+	(histogram_tool) : ditto
+
+2001-07-16  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-object-graphic.c (sheet_object_graphic_write_xml) : use cstr.
+	(sheet_object_filled_write_xml) : ditto.
+
+	* src/xml-io-autoft.c (xml_write_format_template_members) : remove
+	  extra copying to and fro.
+
+	* src/xml-io.c (xml_set_value_string) : delete this bogosity.
+	(xml_write_solver) : Use xmlSetProp in its place.
+	(xml_set_value_double) : remove the searchiing silliness.
+	(xml_read_sheet_layout) : new function.
+	(xml_sheet_read) : called from here.
+	(xml_write_sheet_layout) : new function.
+	(xml_sheet_write) : called from here.
+
+2001-07-16  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-sheet.c (gsheet_compute_visible_region) : add a
+	  comment.
+	(gnumeric_sheet_button_release) : Fix scroll wheel handling.
+	  And make the scroll by 1/4 of a page rather than a full page.
+
+	* src/workbook-control-gui.c (cb_sheet_label_button_press) : while
+	  selecting a range all buttons switch pages.
+	(cb_view_freeze_panes) : Improve handling of border cases.
+
+	* src/sheet-control-gui.c (scg_set_top_left) : new function.
+	(scg_class_init) : tied in here.
+	(scg_scrollbar_config) : Some usability tuning.
+
+	* src/sheet.c (sheet_new) : init 'initial_top_left'
+	(sheet_set_initial_top_left) : new function.
+	(sheet_init_sc) : Set the initial top left.
+	(sheet_update_cursor_pos) : delete unnecessary.
+	(sheet_update_only_grid) : It is only called from here.  And even this
+	  seems questionable.
+	(sheet_find_boundary_{vertical,horizontal}) : adds more comments.
+
+	* src/sheet-control.c (sc_set_top_left) : new function.
+
+2001-07-17  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/commands.c (cmd_format): Marked string for translation.
+
+2001-07-16  Morten Welinder  <terra@diku.dk>
+
+	* src/stf-parse.c (stf_parse_csv_line): Don't reverse the fields
+ 	in case there are too many.
+	(stf_parse_fixed_line): Ditto.
+	(stf_parse_general): Plug leak.
+
+2001-07-16  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/file.c (gnum_file_saver_save_to_stream_real):
+	Don't mmap the file, use read() instead.
+
+2001-07-16  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/stf-parse.c (stf_parse_csv_line): Use g_list_append and
+	g_list_reverse.
+	(stf_parse_fixed_line): Idem.
+	(stf_parse_general): Idem.
+
+ 	* src/item-cursor.c (item_cursor_selection_event): Fix horizontal
+	double-click filling and add extra bound check for vertical
+	double-click filling.
+
+2001-07-16  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/file-priv.h
+	(struct _GnumFileSaver): Removed save_to_stream_func member.
+	(gnum_file_saver_setup): Removed save_to_stream_func argument.
+
+	* src/file.h
+	(gnum_file_saver_new): Removed save_to_stream_func argument.
+	(gnum_file_saver_supports_save_to_stream): Removed.
+
+	* src/file.c
+	(gnum_file_saver_save_to_stream_real):
+	New implementation, uses temporary file and gnum_file_saver_save.
+	(gnum_file_saver_setup): Removed save_to_stream_func argument.
+	(gnum_file_saver_new): Removed save_to_stream_func argument.
+	(gnum_file_saver_supports_save_to_stream): Removed.
+
+	* src/gui-file.c
+	(ask_for_file_saver): Show all file savers in format chooser.
+
+	* src/bonobo-io.c (gnumeric_bonobo_io_init),
+	src/plugin-service.c (gnum_plugin_file_saver_new),
+	src/stf.c (stf_init):
+	Adjusted to file.h change (removed save_to_stream_func argument).
+
+	* src/xml-io.c
+	(gnumeric_xml_write_workbook_to_stream): Removed.
+	(xml_init): Adjusted to file.h change.
+
+2001-07-16  Almer S. Tigelaar  <almer@gnome.org>
+
+	* stf-parse.c (stf_parse_general): Fix leakage.
+
+2001-07-15  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/gnumeric-util.c (gnumeric_create_popup_menu): Fixed problem with
+	keyboard navigation in popup menus ("empty" items not skipped). Now
+	such items are insensitive.
+
+2001-07-15  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/workbook-control-gui.c: Added comment above send_menu_item and
+	send_menu_item_i18n strings about keeping them in sync.
+
+2001-07-15  Kjartan Maraas  <kmaraas@gnome.org>
+
+	* configure.in: Added "nn" to ALL_LINGUAS.
+
+2001-07-15  Almer S. Tigelaar  <almer@gnome.org>
+
+	* stf.c (stf_read_workbook): Honor lines to parse.
+
+	* gui-clipboard.c (x_selection_to_cell_region): Idem.
+
+	* stf-parse.c (stf_parse_options_set_lines_to_parse): Don't
+	convert to index it's not an index.
+
+2001-07-15  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/analysis-tools.c (anova_two_factor_with_r_tool): Finish
+ 	implementation.
+
+2001-07-15  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/workbook-control-gui.c:
+	(send_menu_item): Defined static string instead of SEND_MENU_ITEM macro
+	to avoid backslashes, added _tip property.
+	(send_menu_item_i18n): Array of strings from send_menu_item intended for
+	localization (i18n tools can't extract strings from XML inside .c file).
+	(workbook_control_gui_init): Adjusted.
+
+2001-07-15  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet.c (sheet_freeze_panes) : Avoid double calling set_panes.
+
+2001-07-15  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-control-gui.c (scg_resize) : Adust to change in semantics
+	  and name from sheet::frozen::bottom_right ->
+	                sheet::unfrozen_top_left.
+	(scg_scrollbar_config) : ditto.
+	(scg_set_left_col) : ditto.
+	(scg_set_top_row) : ditto.
+	(scg_make_cell_visible) : ditto.
+	(scg_set_panes) : ditto.
+	* src/sheet.c (sheet_new) : ditto.
+	(sheet_update_only_grid) : ditto.
+	(sheet_freeze_panes) : ditto.
+	(sheet_is_frozen) : ditto.
+
+	* src/sheet-merge.c (sheet_merge_add) : don't regen the spans until
+	  after the merge is listed.
+
+2001-07-14  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_handle_motion) : support
+	  reverse scroll for things that started the drag adjacent.  That is
+	  about as clear as mud, see the deleted BUG entry.
+	(gsheet_sliding_callback) : ditto.
+
+2001-07-14  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/error-info.[ch]
+	(error_info_new_vprintf): New.
+	(error_info_new_printf): Use error_info_new_vprintf.
+	(error_info_peek_message): Constified.
+
+	* src/command-context-priv.h (struct CommandContextClass): Added
+	error.error_info virtual.
+
+	* src/command-context.[ch] (gnumeric_error_error_info): New.
+
+	* src/io-context.[ch]
+	(gnumeric_io_error_system, gnumeric_io_error_read,
+	gnumeric_io_error_save): Use gnumeric_io_error_string.
+	(gnumeric_io_error_string): New.
+	(gnumeric_io_error_display): Renamed from
+	gnumeric_io_error_info_display. Use CommandContext's virtual -
+	gnumeric_error_error_info.
+	(gnumeric_io_error_info_clear, gnumeric_io_has_error_info): Removed.
+	s/gnumeric_io_clear_error/gnumeric_io_error_clear
+	s/gnumeric_io_error_info_push/gnumeric_io_error_push/
+	s/gnumeric_io_error_info_pop/gnumeric_io_error_pop/
+
+	* src/gnumeric-util.c
+	(ctree_insert_error_info): Automatically expand most nodes (don't expand
+	nodes with siblings).
+	(gnumeric_error_info_dialog_show_full): Renamed from
+	gnumeric_error_info_dialog_show. Display only a tree with error
+	details. Don't hardcode ctree column width, make ctree look nicer (no
+	lines, triangles as icons).
+	(gnumeric_error_info_dialog_show): New function, displays only main part
+	of the error and (optionally) "Show details" button. Use standard
+	gnome_message_box.
+
+	* src/plugin-util.c (gnumeric_fopen_error_info,
+	gnumeric_mmap_error_info): Use error_info_new_from_errno.
+	(gnumeric_open_error_info): Use error_info_new_from_errno,
+	added missing *ret_error.
+
+	* src/workbook-control-gui.c (wbcg_error_error_info): New
+	(implementation of CommandContext's virtual).
+	(workbook_control_gui_ctor_class): Use it here.
+
+	* src/workbook-view.c (wb_view_save_as, wb_view_save,
+	wb_view_open_custom): Don't use removed gnumeric_io_has_error_info.
+
+2001-07-14  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_handle_motion) : adjust
+	  signature to take an enum instead of 4 booleans.  Add a flag to
+	  allow the caller to handle motion within the visible pane.
+	(gsheet_sliding_callback) : more tuning for reverse motion in unfrozen
+	  panes.
+
+	* src/item-bar.c (item_bar_event) : convert to new
+	  gnumeric_sheet_handle_motion signature.
+	* src/item-grid.c (item_grid_event) : ditto.
+	* src/item-cursor.c (item_cursor_handle_motion) : ditto.
+	* src/sheet-control-gui.c (cb_control_point_event) : ditto.
+	  Handle object motion within visible region locally.
+
+2001-07-14  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet.c (sheet_init_sc) : set the panes.
+
+	* src/sheet-control.c (sc_init_state) : delete unused.
+
+	* src/sheet-control-gui.c (scg_make_cell_visible) : when landing in a
+	  partially frozen pane (1 or 3) if the panes are coupled move the
+	  other pane too.
+	(scg_set_panes) : Only use herioc measures if panes are changing, not
+	  when initializing.
+	(sheet_control_gui_new) : construct before attaching.
+	(horizontal_scroll_offset_changed) : don't clear wbcg msg text if we
+	  are't connected yet.
+	(vertical_scroll_offset_changed) : ditto.
+	(scg_scrollbar_config) :  no need to clear here.  We are already doing
+	  it in the adjustment handlers.
+
+	* src/gnumeric-sheet.c (gsheet_sliding_callback) : simplify and
+	  improve feel at bounds when scrolling in reverse.  Also remove debug
+	  spewage.
+
+2001-07-13  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-cursor.c (item_cursor_set_bounds_visibly) : no need to make
+	  anything visible here.  We already did that in the autoscroller.
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_key_mode_sheet) : no need to
+	  force a scroll.
+
+2001-07-13  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-cursor.c (item_cursor_in_drag_handle) : bounding coords
+	  mark the outside of the drag box, center things before checking.
+	(item_cursor_selection_event) : be smarter about handling double
+	  clicks.  This could still be improved see comment.
+
+	* src/sheet.c (sheet_cell_calc_span) : clear existing span before
+	  recalculating it.
+	(sheet_cell_set_text) : clear existing spans for expressions.
+	(sheet_cell_set_expr): ditto.
+
+	* src/cellspan.c (cellspan_is_empty) : rename from cell_is_empty
+	  and change order of args to make it clear that the Cell in the cell
+	  in that arg list is _not_ the one being tested for emptiness.  Do
+	  the empty chacek manually because expressions with initial value
+	  'empty' are allowing other cells to continue spanning into them.
+	  However, since the expressions don't calc spans yet, the cell
+	  content is never made visibible.
+
+	* src/sheet-control-gui.c (scg_resize) : increase the size of the
+	  header canvases by 1.  I don't especially like the like, but I have
+	  no time to track down why the canvas scrolls by 1 pixel if I don't
+	  do this.
+	(cb_control_point_event) : partially fix sheet object movement.
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_slide_stop) : renamed from
+	  gnumeric_sheet_stop_sliding.
+	(col_scroll_step) : new function.
+	(row_scroll_step) : new function.
+	(gsheet_sliding_callback) : rewrite again to manage scrolling for
+	  panes more smoothly.  Still needs work.
+	(gnumeric_sheet_handle_motion) : handle motin into adjacent panes
+	  here.
+	(gnumeric_sheet_slide_init) : new routine to set adjacency earlier in
+	  process.
+
+	* src/item-bar.c (item_bar_event) : call gnumeric_sheet_slide_init.
+	* src/item-cursor.c (item_cursor_selection_event) : ditto.
+	(item_cursor_drag_event) : ditto.
+	* src/item-grid.c (item_grid_button_1) : ditto.
+
+2001-07-12  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-pane.c (gnumeric_pane_header_init) : no need to
+	  calc_size here.  That will be done when the item is realized.
+
+	* src/sheet-control-gui.c (scg_set_left_col) : And bounds checks and
+	  safety.
+	(scg_set_top_row) : ditto.
+
+	* src/item-cursor.c (item_cursor_draw) : Add a simple test for pane
+	  support when placing the drag handle.
+
+2001-07-13  Morten Welinder  <terra@diku.dk>
+
+	* src/eval.c (dependent_unqueue_sheet): Unconstify since it
+ 	changes things.
+	(dependent_unlink_sheet): Ditto.
+	(dep_slist_filter_sheet): Return the right list.
+
+2001-07-13  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+        * src/sheet-control-gui.[c,h]: Clean up the handling of bonobo objects
+        by introducing
+	(scg_activate_view_frame) and
+        (scg_deactivate_view_frame).
+	* src/sheet-object-bonobo.[c,h]: Check for existence of interfaces
+	before querying it. Fix ref-counting. Make functions
+	(sheet_object_bonobo_load_persist_file),
+	(sheet_object_bonobo_load_persist_stream), and
+	(sheet_object_bonobo_load_stream) consistent.
+	* src/sheet-object-container.c: Parent class is and has ever been
+	SheetObjectBonobo. This file should be called
+	sheet-object-bonobo-container... Fix ref-counting.
+	(cb_user_activation_request): Activate the view frame and set edit mode
+	(cb_view_activated): Removed
+	(sheet_object_container_new_view): Let the canvas item remember the
+	view frame (through gtk_object_set_data)
+	* src/sheet-object-container.h: Rename IS_SHEET_CONTAINER_OBJECT to
+	IS_SHEET_OBJECT_CONTAINER to be consistent. Remove view_frame
+	variable - this object can produce many view frames.
+
+2001-07-13  Morten Welinder  <terra@diku.dk>
+
+	* src/analysis-tools.c (ttest_eq_var_tool): Fixed for pooled
+ 	variance from Prof. Dr. Andreas J. Guelzow.
+
+2001-07-12  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (range_multinomial): New function.
+
+	* configure.in (evolution): Fix check, but see BUGS.
+
+2001-07-12  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/gnumeric-pane.c (gnumeric_pane_set_bounds): Kill warning.
+
+2001-07-11  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-grid.c (item_grid_draw) : Draw bound lines for panes.
+
+	* src/gnumeric-pane.c (gnumeric_pane_set_bounds) : new function.
+
+2001-07-10  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-control-gui.c (scg_resize) : Federico wins a dinner for
+	  pointing out the source of the bug with frozen panes starting
+	  somewhere other than 0,0.  It seems that scroll_regions are more
+	  powerful than I thought.
+	(scg_init) : the slider handling is elsewhere.
+	(bar_set_top_row) : remove debug spewage.
+	(scg_stop_sliding) : move to gnumeric_sheet.
+	(scg_sliding_callback) : ditto.
+	(scg_start_sliding) : ditto.
+	(cb_slide_handler) : signature change for slide callbacks.
+	(cb_control_point_event) : changes for panes.
+
+	* src/item-grid.c (cb_extend_cell_range) : signature change for slide
+	  callbacks.
+	(cb_extend_expr_range) : ditto.
+	(item_grid_event) : use gnumeric_sheet_handle_motion.
+	(item_grid_finalize) : switch over from destroy.
+	(item_grid_class_init) : add bound args.
+	(item_grid_set_arg) : ditto.
+	(item_grid_draw) : begin using the bound arg.
+	(item_grid_init) : init the bound arg to fullsheet.
+	(item_grid_realize) : Add an extra GC for drawing the bounding lines.
+	(item_grid_unrealize) : release the new GC.
+
+	* src/item-cursor.c (cb_move_cursor) : signature change for slide
+	  callbacks.
+	(cb_autofill_scroll) : ditto.
+	(item_cursor_handle_motion) : use gnumeric_sheet_handle_motion.
+
+	* src/item-bar.c (item_bar_draw) : remove debug spewage.
+	(cb_extend_selection) : signature change for slide callbacks.
+	(item_bar_event) : use gnumeric_sheet_handle_motion and simplify the
+	  code alot.
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_init) : init the sliding members.
+	  The sliding used to be managed by the scg, but it is now handled
+	  with the gsheet (could just as easily be gpane) becuase scrolling
+	  panes needs to know _which_ pane is scrolling.
+	(gsheet_compute_visible_region) : remove the debug spewage.
+	(gnumeric_sheet_stop_sliding) : moved from scg_stop_sliding.
+	(gsheet_sliding_callback) : moved from scg_sliding_callback and
+	  revamped to support frozen panes.
+	(gnumeric_sheet_handle_motion) : new routine to merge in the old
+	  scg_start_sliding and add a pile of replicated code from all the
+	  different users of the sliding mechanism.
+	(gnumeric_sheet_new) : take max col/row as arg.
+
+	* src/gnumeric-pane.c (canvas_bar_adjustment_changed) : delete debug routine.
+	(gnumeric_pane_header_init) : no need for adjust_size handler.
+
+2001-07-10  Jody Goldberg <jgoldberg@home.com>
+
+	* idl/Makefile.am : improve evo handling.
+
+	* configure.in : Fix definition of ENABLE_EVOLUTION in makefiles.
+
+2001-07-09  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-bar.c (item_bar_event) : clip the minimum col/row size at
+	  the margins.
+
+	* src/sheet.c (colrow_compute_pts_from_pixels) : add some sanity
+	  checking.
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_handle_motion) : new function.
+	  begin the process of getting enough information to scroll
+	  effectively with frozen panes.  Also merge alot of similar code.
+
+	* src/item-bar.c (item_bar_event) : Use gnumeric_sheet_handle_motion.
+	* src/item-cursor.c (item_cursor_handle_motion) : ditto.
+	* src/sheet-control-gui.c (cb_slide_handler) : ditto.
+
+2001-07-11  Zbigniew Chyla  <cyba@gnome.pl>
+
+	* src/workbook-control-gui.c (wbcg_menu_state_update): Fixed path for
+	"_Freeze Panes" menu item.
+
+2001-07-11  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/parser.y : Add error ID's.
+	(gnumeric_parse_error): Accept ID and set ID on error struct.
+
+	* src/parse-util.[ch]
+	(parse_error_init): Initialize the error id.
+
+	* src/workbook-edit.c (wbcg_edit_finish): When there's a missing
+	closing paren, try appending one and see if it helps.
+
+	* src/stf.c (stf_preparse): New, default preparsing of a file.
+	(stf_read_workbook): Use stf_preparse.
+	(stf_read_default_probe): Prober for reading.
+	(stf_read_workbook_csv_default): New, read a csv file in default formatting.
+	(stf_init): Register stf_read_workbook_csv_default.
+
+2001-07-10  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/workbook-control-gui.c: Add a menu item "Send" to the file menu.
+	If this one is clicked, pop up an Evolution-Composer with current
+	workbook attached.
+	* src/file-priv.h: New virtual function for GnumFileSaver:
+	save_to_stream.
+	Introduce GnumFileSaverSaveToStreamFunc. Keep a mime type.
+	* src/file.[c,h]: Implement save_to_stream and mime_type detection.
+	* src/gui-file.[c,h]: Reduce copy & paste by introducing
+	(make_format_chooser) and (check_multiple_sheet_support_if_needed).
+	New function: (gui_file_save_to_stream) which asks for the desired
+	mime type.
+	* src/bonobo-io.c: This file saver doesn't support save_to_stream.
+	* src/stf.c: This one either.
+	* src/xml-io.[c,h]: Implement save_to_stream.
+	* src/plugin-service.c: Pass NULL for save_to_stream.
+
+2001-07-09  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* acconfig.h: #undef ENABLE_EVOLUTION
+	* configure.in: Checks for Evolution-Composer.idl. Can be overwritten
+	with --without-evolution.
+	* idl/Makefile.am: Let orbit process the Evolution-Composer.idl.
+	* idl/.cvsignore: Ignore the generated Evolution* files.
+
+2001-07-09  Almer S. Tigelaar  <almer@gnome.org>
+
+	* stf-parse.c (stf_parse_convert_to_unix): Make this work as it
+	is supposed to.
+	(stf_parse_csv_line): Remove deprecated comment.
+
+2001-07-09  Jody Goldberg <jgoldberg@home.com>
+
+	* src/gnumeric-pane.c (canvas_bar_realized) : moved from scg.
+	(canvas_bar_adjustment_changed) : ditto.
+	(gnumeric_pane_header_init) : ditto.
+	(gnumeric_pane_init) : ditto.
+	(gnumeric_pane_release) : ditto.
+	(gnumeric_pane_colrow_resize_end) : new function.
+	(gnumeric_pane_colrow_resize_start) : ditto.
+	(gnumeric_pane_colrow_resize_move) : ditto.
+
+	* src/colrow.c (colrow_set_visibility) : toggling visibility moves
+	  objects and panes.
+	(colrow_save_sizes) : Use sheet_colrow_get_info.
+
+	* src/item-bar.c : s/destroy/finalize/
+	s/item_bar/ib/ for internal routines and vars.
+	Some renaming to clean things up
+	Move the struct decl into .c nothing should be looking at the
+	  implementation.
+	(item_bar_init) : remove unused 'FirstElement' arg.
+	(item_bar_set_arg) : remove unused arg and fix typo.
+	(item_bar_event) : use resize guide support routines in scg
+	  instead of handling it ourselves.
+	(resize_bar_init) : delete, and move concept to gnumeric-pane.
+	(item_bar_start_resize) : move content to gnumeric-pane.
+	(item_bar_end_resize) : move content to gnumeric-pane.
+
+	* src/sheet-control-gui.c (scg_set_top_row) : pane support.
+	(scg_set_left_col) : ditto.
+	(scg_colrow_resize_end) : new function.
+	(scg_colrow_resize_start) : ditto.
+	(scg_colrow_resize_move) : ditto.
+
+2001-07-08  Lutz Müller <urc8@rz.uni-karlsruhe.de>
+
+	* src/GNOME_Gnumeric.xml: Wrap file related menus into a placeholder
+	named FileOperations. Wrap print related menus into a a placeholder
+	named PrintOperations. This will help components like EOG to put
+	menu entries into the right place when activated.
+
+2001-07-06  Jody Goldberg <jgoldberg@home.com>
+
+	* src/item-cursor.c (item_cursor_update) : go one past the last
+	  visible in case the last visible == the last full.
+
+	* src/item-bar.c (item_bar_end_resize) : fix typo.
+
+	* src/sheet.c (sheet_update_only_grid) : force a resize after col/row
+	  resizes with frozen panes.
+
+2001-07-07  Almer S. Tigelaar  <almer@gnome.org>
+
+	* src/preview-grid.[ch] (marshal_POINTER__INT_INT): New, custom marshaller.
+	(pg_get_row_height): Get default row height by emitting signal.
+	(pg_get_col_width): Idem for column width.
+	(pg_get_style): Idem for style.
+	(pg_construct_cell): Idem for value.
+	(preview_grid_init): Provide sensible defaults.
+	(preview_grid_set_arg): Remove callback related arguments.
+	(preview_grid_class_init): Idem and create all newly added signals.
+
+2001-07-06  Yukihiro Nakai  <nakai@gnome.gr.jp>
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_realize) : Over-the-Spot
+	  style support for XIM.
+
+2001-07-05  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-control-gui.c (scg_make_cell_visible) : simplify.  There
+	  is no need to scroll all panes if the target is already visible in
+	  one of them.  Just keep things in sync.  This does suggest a ui
+	  enhancement thou.  Jump to boundaries (ctrl-arrow) should be smart
+	  about panes.
+	(scg_set_panes) : pre-scroll things to their minimum.
+
+2001-07-05  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-control.c (sc_resize) : add a force_scroll argument.
+
+	* src/sheet-control-gui.c (scg_scrollbar_config) : handle panes.
+	(scg_resize) : Add a force_scroll argument.
+	  reset all of the offsets.
+	  Keep the col/row heades for pane[0] and toss those on pane[1,3]
+	(scg_set_zoom_factor) : support panes without headers.
+	(scg_scrollbar_config) : pane support.
+	(scg_set_left_col) : quicky stub.
+	(scg_set_top_row) : quicky stub.
+	(gnumeric_pane_init) : rename from gnumeric_pane_new for consistency.
+	  either add both or neither header.
+	(gnumeric_pane_free) : rename from gnumeric_pane_delete.
+	(scg_set_panes) : only panes 0 and 2 need headers no need to attach
+	 the headers for panes 1 & 3.
+	 force a full scroll when setting up the panes.
+	(scg_adjust_preferences) : no need to worry about panes.
+
+2001-07-05  Rodrigo Moya <rodrigo@gnome-db.org>
+
+	* configure.in: use libgda >= 0.2.11 for the GDA plugin
+
+	* README: added comments about libgda version requirements
+
+2001-07-05  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (finite): Also check in -lm.
+
+2001-07-05  Almer S. Tigelaar  <almer@gnome.org>
+
+	* gnumeric-sheet.c (gnumeric_sheet_key_mode_sheet): Fix backspace.
+
+2001-07-04  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-merge.c (sheet_merge_add) : Use sheet_redraw_range.
+
+	* src/sheet-control.c (sc_set_panes) : new virtual.
+	(sc_set_sheet) : renamed from sc_invalidate_sheet.
+
+	* src/sheet-control-gui.c (scg_primary_pane) : new function. Be very
+	  careful when using this.  It should not be necessary in most cases.
+	(scg_get_wbcg) : convenience routine.
+	(scg_redraw_all) : frozen panes.
+	(scg_redraw_region) : renamed from scg_redraw_cell_region, and frozen
+	  pane support.
+	(scg_redraw_headers) : merge in the code from gnumeric-sheet.
+	(scg_update_cursor_pos) : pane support.
+	(scg_resize) : ditto.
+	(scg_set_zoom_factor) : ditto.  Broken. needs to resize the panes.
+	(scg_scrollbar_config) : adjust to panes.
+	(scg_make_edit_pos_visible) : use scg_make_cell_visible.
+	(scg_colrow_select) : reorg a bit.
+	(vertical_scroll_offset_changed) : adjust to panes.
+	(horizontal_scroll_offset_changed) : ditto.
+	(cb_table_destroy) : ditto.
+	(scg_init) : init the top here.
+	(bar_set_left_col) : from gnumeric-sheet. Still needs work for panes.
+	(bar_set_top_row) : ditto.
+	(gnumeric_sheet_set_left_col) : ditto.
+	(gnumeric_sheet_set_top_row) : ditto.
+	(scg_set_left_col) : TODO.
+	(scg_set_top_row) : ditto.
+	(gnumeric_sheet_set_top_left) : new function split from.
+	(gnumeric_sheet_make_cell_visible) : here.
+	(scg_make_cell_visible) : adjsut to panes and do the real work here.
+	(scg_make_cell_visible_virt : wrapper for use as virtual.
+	(gnumeric_pane_new) : new function.
+	(gnumeric_pane_delete) : ditto.
+	(scg_set_panes) : ditto.
+	(scg_construct) : move the table attachments around and move the
+	  canvas groups into the panes.
+	(sheet_control_gui_new) : beef this up.
+	(scg_unant) : adjust to panes.
+	(scg_ant) : ditto.
+	(scg_cursor_visible) : ditto.
+	(scg_cursor_bound) : ditto.
+	(scg_adjust_preferences) : ditto.
+	(scg_compute_visible_region) : ditto.
+	(scg_create_editor) : ditto.
+	(scg_stop_editing) : ditto.
+	(scg_take_focus) : ditto.
+	(scg_sliding_callback) : adjust top panes, but is still much too
+	  stupid.
+	(scg_start_sliding) : ditto.
+	(cb_slide_handler) : ditto.
+	(cb_control_point_event) : ditto.
+	(new_control_point) : ditto.
+	(set_item_x_y) : ditto.
+	(set_acetate_coords) : ditto.
+	(scg_object_calc_position) : ditto.
+	(scg_object_view_position) : ditto.
+	(scg_rangesel_changed) : ditto.
+	(scg_rangesel_start) : ditto.
+	(scg_rangesel_stop) : ditto.
+	(scg_rangesel_move) : ditto.
+	(scg_rangesel_extend) : ditto.
+
+	* src/item-grid.c (sheet_object_begin_creation) : Use the group
+	  associated with the gsheet, not the scg, and use GNUMERIC_IS_SHEET
+	  in preference to != NULL.
+
+	* src/item-bar.c : Store the gnumeric-sheet rather than the scg so
+	  that we can get to the Pane.
+
+	* src/embeddable-grid.c (grid_view_activate) : Use scg_take_focus.
+	(grid_view_new) : Use sheet_control_gui_new in place of sheet_new_scg.
+
+	* convert to E_MAKE_TYPE
+	* Use IS_SHEET in preference to sheet != NULL
+	* sheet_range_calc_spans signature change
+
+	* src/clipboard.c (clipboard_paste_region) : special handling when
+	  pasting into a selection that consists of a single merged cell.
+
+	* src/application.c (application_set_selected_sheet) : Use IS_SHEET.
+	(application_clipboard_copy) : ditto.
+	(application_clipboard_cut) : ditto.
+
+	* src/Makefile.am :
+	    command-context-corba -> workbook-control-corba
+
+	* src/sheet.c : convert to using IS_SHEET in place of sheet != NULL in
+	  several places.
+	(sheet_is_frozen) : new function.
+	(sheet_freeze_panes) : implement.
+	(sheet_new) : init frozen pane data.
+	(sheet_range_calc_spans) : pass a pointer rather than copy of the range.
+	  and use sheet_redraw_range.
+	(sheet_apply_style) : use sheet_redraw_range.
+	(cb_sheet_get_extent) : premature optimization is evil.
+	(sheet_redraw_region) : rename from sheet_redraw_cell_region.
+	(sheet_set_edit_pos) : use sheet_redraw_range.
+	(sheet_move_range) : ditto.
+	(sheet_init_sc) : new routine.
+	(sheet_attach_control) : rename and task from sheet_new_scg.
+	(sheet_redraw_region) : renamed from sheet_redraw_cell_region.
+
+	* src/item-cursor.c (item_cursor_update) : increase the spacing for
+	  the autohandle.
+
+	* src/GNOME_Gnumeric.xml :
+	  - Use Control*colon and Control*semicolon
+	  - desensitize the graph guru for now.
+	  - Add freeze/thaw
+
+	* src/item-bar.c (item_bar_unrealize) : no need to double unref the
+	  fonts.
+
+	* src/print-cell.c (print_merged_range) : This is not being drawn on
+	  the screen, no need for all the fancy calcs to only draw the visible
+	  bits.  We will just clip it.
+	* src/print-cell.c (print_cell) : Use the calulated width, not the col
+	  width for splitting.
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_key_mode_sheet) : Use the scg_
+	  versions of things in preference to the gnumeric_sheet_ versions.
+	(gnumeric_sheet_new) : Store the Pane that this is associated with.
+	(gnumeric_sheet_bar_set_top_row) : moved to sheet-control-gui.c
+	(gnumeric_sheet_set_top_row) : ditto.
+	(gnumeric_sheet_bar_set_left_col) : ditto.
+	(gnumeric_sheet_set_left_col) : ditto.
+	(gnumeric_sheet_make_cell_visible) : ditto.
+	(gsheet_compute_visible_region) : handle panes.
+
+2001-06-28  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-object-container.c : include sheet.h
+
+2001-06-29  Jody Goldberg <jgoldberg@home.com>
+
+	* src/sheet-control-gui.c (cb_table_destroy) : unref the control so
+	  that it is removed from the sheets lists and cleaned up.
+
+	* gnumeric.desktop.in : restore missing content.
+
+2001-06-28  Jody Goldberg <jgoldberg@home.com>
+
+	* Makefile.am : Add missing old changelog (doh!)
+
+	* configure.in : post release version bump.
+
+2001-06-28  Jody Goldberg <jgoldberg@home>
+
+	* Release 0.67
+
+2001-06-28  Jody Goldberg <jgoldberg@home.com>
+
+	* Makefile.am  : Install .desktop file not .in
+
+	* src/formats.c : Add comments re: order assumptions.
+
+	* src/workbook-control-gui.c (workbook_standard_toolbar_orient) :
+	  disable initial frozen pane support for release.
+
+	* src/workbook-control-gui.c (sort_by_rows) : fix old bug with sort
+	  tool buttons.
+
+	* src/stf-export.c (stf_export_sheet) : ignore spans and merges.
+
+	* src/ranges.c (range_clip_to_finite) : add comment re: expense.
+
+	* src/print.c (print_sheet) : Include spans and merges when printing.
+	(compute_sheet_pages) : ditto.
+
+	* src/gnumeric-sheet.c (gnumeric_sheet_key_mode_sheet) : spans are not
+	  relevant here.
+
+2001-06-28  Jody Goldberg <jgoldberg@home.com>
+
+	* configure.in : bump libxml1 req to 1.8.14 to fix i18n xml import
+	  broken with the switch to the progress monitor.
+	* gnumeric.spec.in : ditto.
+
+	* src/Makefile.am : Restore files that were not distributed due the
+	  differences in bonobo build.
+
+2001-06-27  John Gotts <jgotts@linuxsavvy.com>
+
+	* gnumeric.spec.in : resynch with 0.66.
+
+2001-06-27  John Gotts <jgotts@linuxsavvy.com>
+
+	* gnumeric.spec.in : minor updates.
+
+2001-06-27  Jody Goldberg <jgoldberg@home.com>
+
+	* configure.in : bump version to 0.67.

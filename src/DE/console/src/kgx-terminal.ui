@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <menu id="context_model">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Open Link</attribute>
+        <attribute name="action">term.open-link</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Copy _Link Address</attribute>
+        <attribute name="action">term.copy-link</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Copy</attribute>
+        <attribute name="action">term.copy</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Paste</attribute>
+        <attribute name="action">term.paste</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Select All</attribute>
+        <attribute name="action">term.select-all</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Leave _Fullscreen</attribute>
+        <attribute name="action">win.unfullscreen</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Show in _Files</attribute>
+        <attribute name="action">term.show-in-files</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="KgxTerminal" parent="VteTerminal">
+    <property name="allow-hyperlink">True</property>
+    <property name="enable-fallback-scrolling">False</property>
+    <property name="has-tooltip">True</property>
+    <property name="scroll-unit-is-pixels">True</property>
+    <property name="context-menu-model">context_model</property>
+    <property name="enable-a11y">True</property>
+    <binding name="font-desc">
+      <lookup name="font">
+        <lookup name="settings">KgxTerminal</lookup>
+      </lookup>
+    </binding>
+    <binding name="font-scale">
+      <lookup name="font-scale">
+        <lookup name="settings">KgxTerminal</lookup>
+      </lookup>
+    </binding>
+    <binding name="scrollback-lines">
+      <lookup name="scrollback-lines">
+        <lookup name="settings">KgxTerminal</lookup>
+      </lookup>
+    </binding>
+    <binding name="audible-bell">
+      <lookup name="audible-bell">
+        <lookup name="settings">KgxTerminal</lookup>
+      </lookup>
+    </binding>
+    <binding name="palette">
+      <closure function="resolve_livery" type="KgxPalette">
+        <lookup name="livery">
+          <lookup name="settings">KgxTerminal</lookup>
+        </lookup>
+        <closure function="kgx_enum_is" type="gboolean">
+          <closure function="resolve_theme" type="KgxTheme">
+            <lookup name="settings">KgxTerminal</lookup>
+            <lookup name="dark">
+              <closure function="kgx_style_manager_for_display" type="AdwStyleManager">
+                <lookup name="display" type="GtkWindow">
+                  <lookup name="root">KgxTerminal</lookup>
+                </lookup>
+              </closure>
+            </lookup>
+          </closure>
+          <constant type="KgxTheme">day</constant>
+        </closure>
+        <!-- I don't love that we are reaching all the way up to KgxWindow
+             like this, but I can't figure out anything cleaner -->
+        <lookup name="translucent" type="KgxWindow">
+          <lookup name="root">KgxTerminal</lookup>
+        </lookup>
+      </closure>
+    </binding>
+    <signal name="termprop-changed::vte.cwf" handler="location_changed" />
+    <signal name="termprop-changed::vte.cwd" handler="location_changed" />
+    <signal name="setup-context-menu" handler="setup_context_menu" />
+    <child>
+      <object class="GtkShortcutController">
+        <property name="name">kgx-terminal-shortcuts</property>
+        <property name="propagation-phase">capture</property>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;Shift&gt;&lt;Primary&gt;c</property>
+            <property name="action">action(term.copy)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;Shift&gt;&lt;Primary&gt;v</property>
+            <property name="action">action(term.paste)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkGestureClick">
+        <property name="name">kgx-terminal-menu</property>
+        <property name="button">0</property>
+        <signal name="pressed" handler="pressed" />
+      </object>
+    </child>
+    <child>
+      <object class="GtkEventControllerScroll">
+        <property name="name">kgx-terminal-zoom</property>
+        <property name="propagation-phase">capture</property>
+        <property name="flags">vertical|discrete</property>
+        <signal name="scroll" handler="scroll" />
+      </object>
+    </child>
+  </template>
+</interface>

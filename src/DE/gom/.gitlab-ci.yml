@@ -1,0 +1,50 @@
+include:
+  - project: "GNOME/citemplates"
+    file: "templates/default-rules.yml"
+  - component: gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master
+    inputs:
+      lsan: "disabled"
+      job-stage: "test"
+      meson-options: "-Denable-gtk-doc=true"
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "build-gnomeos"
+      tarball-artifact-path: "_builddir/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz"
+  - component: "gitlab.gnome.org/GNOME/citemplates/basic-deploy-docs@master"
+
+stages:
+- test
+- deploy
+
+variables:
+  DEPENDENCIES:
+    gcc
+    redhat-rpm-config
+    meson
+    gtk-doc
+    glib2-devel
+    gobject-introspection-devel
+    gdk-pixbuf2-devel
+    sqlite-devel
+    python3-gobject-devel
+    python3-devel
+  DEPENDENCIES_ABI_CHECK:
+    libabigail
+    git
+  LAST_ABI_BREAK: "25ec1926c677eaccca064d6c9e5d84c753360d25"
+
+build-fedora:
+  image: fedora:latest
+  stage: test
+  before_script:
+    - dnf install -y $DEPENDENCIES
+    # scriptlets bug?
+    - gdk-pixbuf-query-loaders-64 > /usr/lib64/gdk-pixbuf-2.0/2.10.0/loaders.cache
+  script:
+    - meson _build
+    - G_MESSAGES_DEBUG=all ninja -C _build test
+    - ninja -C _build install
+    - dnf install -y $DEPENDENCIES_ABI_CHECK
+    - curl https://gitlab.freedesktop.org/hadess/check-abi/-/raw/main/contrib/check-abi-fedora.sh | bash
+    - check-abi --parameters="-Denable-gtk-doc=false -Denable-introspection=false"  ${LAST_ABI_BREAK} $(git rev-parse HEAD)
+

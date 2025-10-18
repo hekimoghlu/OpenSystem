@@ -1,0 +1,290 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+#include <giomm/listmodel.h>
+#include <gdkmm/monitor.h>
+#include <gtkmm/application.h>
+#include <gtk/gtk.h>
+
+namespace
+{
+using Window_dispose_vfunc_functype = void (*)(GObject* self);
+Window_dispose_vfunc_functype Window_dispose_vfunc_funcptr;
+
+extern "C"
+{
+static void Window_dispose_vfunc_c_callback(GObject* self)
+{
+  Window_dispose_vfunc_funcptr(self);
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gtk
+{
+
+// All constructors are hand-coded, because they connect a signal handler
+// that removes the window from its application when the window is closed (hidden).
+//
+// All constructors add an extra reference. This reference stops the underlying
+// C object from being finalized and freed while the C++ wrapper still exists.
+// The extra reference is needed only for windows which are not managed.
+// All widgets are constructed as not managed.
+// From the documentation of gtk_window_new(): Due to GTK keeping a
+// reference to the window internally, gtk_window_new() does not
+// return a reference to the caller.
+Window::Window(const Glib::ConstructParams& construct_params)
+:
+  Gtk::Widget(construct_params)
+{
+  signal_hide().connect(sigc::mem_fun(*this, &Window::on_window_hide));
+  reference();
+}
+
+Window::Window(GtkWindow* castitem)
+:
+  Gtk::Widget((GtkWidget*)castitem)
+{
+  signal_hide().connect(sigc::mem_fun(*this, &Window::on_window_hide));
+  reference();
+}
+
+Window::Window(Window&& src) noexcept
+: Gtk::Widget(std::move(src))
+  , Native(std::move(src))
+  , Root(std::move(src))
+{
+  try
+  {
+    signal_hide().connect(sigc::mem_fun(*this, &Window::on_window_hide));
+    reference();
+  }
+  catch (...)
+  {
+    // Ignore exceptions.
+    // The move ctor shall be noexcept. It can be called from a move ctor
+    // in a subclass, such as Gtk::Dialog.
+  }
+}
+
+// The move assignment is identical to the one that gmmproc can generate.
+// _CUSTOM_MOVE_OPERATIONS() suppresses both move constructor and move assignment.
+Window& Window::operator=(Window&& src) noexcept
+{
+  Gtk::Widget::operator=(std::move(src));
+  Native::operator=(std::move(src));
+  Root::operator=(std::move(src));
+  return *this;
+}
+
+Window::Window()
+: _CONSTRUCT()
+{
+  signal_hide().connect(sigc::mem_fun(*this, &Window::on_window_hide));
+  reference();
+}
+
+void Window::on_window_hide()
+{
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Gtk::Window::on_window_hide() gobject_=%p\n", (void*) gobject_);
+  #endif
+
+  auto appl = get_application();
+  if (appl)
+  {
+    #ifdef GLIBMM_DEBUG_REFCOUNTING
+    g_warning("Gtk::Window::on_window_hide(): before remove_window().");
+    #endif
+
+    // Tell GtkApplication to forget the window.
+    // This can cause Application::run() to return, if it is the last window.
+    // Otherwise, GtkApplication waits for the window to be _destroyed_,
+    // which is just not something that it should care about.
+    // See https://bugzilla.gnome.org/show_bug.cgi?id=639931
+    appl->remove_window(*this);
+  }
+}
+
+void Window::set_manage()
+{
+  if (referenced_) // Not managed
+  {
+    // Drop the extra reference, added in the constructor.
+    unreference();
+
+    // This C++ wrapper is deleted by Gtk::Object::destroy_notify_() when the
+    // underlying C instance is destroyed.
+    referenced_ = false; // Managed
+  }
+}
+
+void Window::destroy_()
+{
+  //Called from destructors.
+  //overridden so that the correct _release_c_instance() ends up being called by the destructor.
+  //The destructors that call destroy_() are virtual, but _release_c_instance() is not.
+
+  //GTKMM_LIFECYCLE
+
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Gtk::Window::destroy_(): gobject_: %p\n", (void*) gobject_);
+  if(gobject_)
+   g_warning("  gtypename: %s\n", G_OBJECT_TYPE_NAME(gobject_));
+  #endif
+
+  if ( !cpp_destruction_in_progress_ )
+  {
+    cpp_destruction_in_progress_ = true;
+
+    //destroy the C instance:
+    _release_c_instance();
+  }
+
+  //The C++ destructor will be reached later. This function was called by a destructor.
+}
+
+void Window::_release_c_instance()
+{
+  //We override this, (though it's not virtual - we just call it from this class),
+  //because top-level windows can only be destroyed with gtk_window_destroy, according to Owen Taylor. murrayc.
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Gtk::Window::_release_c_instance() gobject_=%p\n", (void*) gobject_);
+  #endif
+
+  cpp_destruction_in_progress_ = true;
+
+  // remove our hook.
+  if (gobj())
+  {
+    // If this window is not managed, drop the extra reference,
+    // added in the constructor.
+    if (referenced_) // Not managed
+      unreference();
+
+    // If the window is not managed and the underlying GtkWindow had been
+    // destroyed earlier, unreference() might have dropped its last reference.
+    if (gobj())
+      gtk_window_destroy(gobj());
+
+    //If the GObject still exists, disconnect the C++ wrapper from it.
+    //The C++ wrapper is being deleted right now.
+    disconnect_cpp_wrapper();
+
+    //Glib::Object::~Object() will not g_object_unref() it too, because gobject_ is now 0.
+  }
+}
+
+void Window_Class::dispose_vfunc_callback(GObject* self)
+{
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Window_Class::dispose_vfunc_callback(): gobject_: %p\n", (void*)self);
+  #endif
+
+  const auto obj = dynamic_cast<Widget*>(
+      Glib::ObjectBase::_get_current_wrapper(self));
+
+  // This function might be invoked recursively because we're triggering
+  // several signal emissions, particularly signal_hide().  Therefore we
+  // have to test for cpp_destruction_in_progress_ at this point.
+
+  if(obj && !obj->_cpp_destruction_is_in_progress()) //When it should really be destroyed, we zero gobj_.
+  {
+    const auto pWidget = obj->gobj();
+    g_return_if_fail(pWidget == GTK_WIDGET(self));
+
+    #ifdef GLIBMM_DEBUG_REFCOUNTING
+    g_warning("Window_Class::dispose_vfunc_callback(): before gtk_widget_set_visible(pWidget, false).");
+    #endif
+
+    // The window may have been hidden with a call to the static (i.e. private)
+    // gtk_window_hide(), which does not send the "hide" signal.
+    // In that case gtk_widget_set_visible(pWidget, false) has no effect,
+    // and on_window_hide() won't be called indirectly from
+    // gtk_widget_set_visible(pWidget, false).
+    const auto win = dynamic_cast<Window*>(obj);
+    if (win)
+      win->on_window_hide();
+
+    // Now hide the widget.  The C++ object must _not_ be accessed anymore
+    // after this call, because a signal_hide() handler might delete it.
+    gtk_widget_set_visible(pWidget, false);
+
+    #ifdef GLIBMM_DEBUG_REFCOUNTING
+    g_warning("Window_Class::dispose_vfunc_callback(): after gtk_widget_set_visible(pWidget, false).");
+    #endif
+  }
+
+  // The "dispose" vfunc in GtkWindow does much more in gtk4 than in gtk3.
+  // It would be difficult to make the deletion of windows work without letting
+  // the gtk4 dispose vfunc do its job. /Kjell 2020-05-19
+  // GTKMM_LIFECYCLE
+
+  const auto base = static_cast<GObjectClass*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)));
+
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Window_Class::dispose_vfunc_callback(): before calling base->dispose.");
+  #endif
+
+  if(base->dispose)
+    (*base->dispose)(self);
+
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Window_Class::dispose_vfunc_callback(): after calling base->dispose.");
+  #endif
+}
+
+void Window::destroy()
+{
+  // Don't crash if destroy() is called twice.
+  // gobj() can be nullptr after the first call to destroy().
+  if (gobj())
+    gtk_window_destroy(gobj());
+}
+
+void Window::unset_focus()
+{
+  gtk_window_set_focus(gobj(), nullptr /* See GTK+ docs */);
+}
+
+void Window::unset_default_widget()
+{
+  gtk_window_set_default_widget(gobj(), nullptr /* See GTK+ docs */);
+}
+
+void Window::unset_transient_for()
+{
+  gtk_window_set_transient_for(gobj(), nullptr /* See GTK+ docs */);
+}
+
+void Window::unset_child()
+{
+  gtk_window_set_child(gobj(), nullptr);
+}
+
+void Window::unset_application()
+{
+  gtk_window_set_application(gobj(), nullptr /* See GTK+ docs */);
+}
+
+void Window::unset_titlebar()
+{
+  gtk_window_set_titlebar(gobj(), nullptr);
+}
+
+} // namespace Gtk

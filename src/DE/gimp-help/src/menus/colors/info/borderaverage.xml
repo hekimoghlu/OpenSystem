@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2008-05-23 j.h: tried to give more intelligible explanations for bucket size
+  2007-12-22 alex falappa: moved here from color filters and translated missing parts
+  2007-10-22 ude: moved here from filters/color/borderaverage.xml ('en','de')
+  2007-07-03 Added Spanish translation by AntI
+  2007-06-21 alex falappa: translated new bucket size related stuff in italian
+  2007-05-12 ude: fixed bucket size related stuff incl. examples
+  2007-04-15 ude: moved examples to <sect3>
+  2007-04-03 KoSt: added 'no'
+  2006-12-20 de adapted description by ude
+  2006-11-01 Changes in the description of the action and Number of colors by j.h
+  2005-12-07 replaced <simplesect> by <sect3> by lexa
+  2005-08-30 de replaced informalfigure by axel.wernicke
+  2005-08-24 de added by axel.wernicke
+-->
+<sect2 id="plug-in-borderaverage">
+  <title>Border Average</title>
+
+  <indexterm>
+    <primary>Colors</primary>
+    <secondary>Border Average</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Border Average</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Example for the <quote>Border Average</quote> filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/examples/taj_orig.png"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/examples/color-taj-borderaverage.png"/>
+        </imageobject>
+        <caption>
+          <para><link linkend="gimp-toolbox-color-area">Foreground color in
+          the Toolbox</link> after applying the <quote>Border Average</quote>
+          filter</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      This plug-in calculates the most often used color in a specified border
+      of the active layer or selection. It can gather similar colors together
+      so that they become predominant. The calculated color becomes the
+      <link linkend="gimp-toolbox-color-area">foreground color in the Toolbox</link>.
+      This filter is interesting when
+      you have to find a Web page color background that differs as little as
+      possible from your image border. The action of this filter is not
+      registered in Undo History and can't be undone with
+      <keycombo><keycap>Ctrl</keycap><keycap>Z</keycap></keycombo>:
+      it doesn't modify the image.
+    </para>
+    <note>
+      <para>
+        This command only works on RGB images. If the image is Grayscale or
+        Indexed, the menu entry is disabled.
+      </para>
+    </note>
+  </sect3>
+
+  <sect3>
+    <title>Activating the Filter</title>
+    <para>
+      This filter is found in the main menu under
+      <menuchoice>
+        <guimenu>Colors</guimenu>
+        <guisubmenu>Info</guisubmenu>
+        <guimenuitem>Border Average…</guimenuitem>
+      </menuchoice>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title>Options of the <quote>Border Average</quote> filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/menus/colors/info/borderaverage.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Border Size</term>
+        <listitem>
+          <para>
+            The border <guilabel>Thickness</guilabel> in pixels.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Number of Colors</term>
+        <listitem>
+          <para>
+            The <guilabel>Bucket Size</guilabel> lets you control the number
+            of colors considered as similar and counted with the same
+            <quote>bucket</quote>. A low bucket size value (i.e. a high bucket
+            number) gives you better precision in the calculation of the
+            average color. Note that better precision does not necessarily
+            mean better results (see example below).
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>
+      Examples illustrating the <quote>Border Average</quote> filter
+    </title>
+    <figure>
+      <title>Original image</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/examples/borderaverage.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            Original image: colors are pure Red (255;0;0), pure Blue
+            (0;0;255), and different but similar kinds of Green
+            (0;255;0 , 63;240;63 , 48;224;47 , 0;192;38).
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <figure>
+      <title><quote>Number of Colors</quote> is set to 8:</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/examples/borderaverage08.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            The resulting color is a Red (254,2,2).
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      The bucket size is low. So the bucket number is high. All color shades
+      can be stored in different buckets. Here, the bucket containing red is
+      the most filled. The resulting color is a nearly pure
+      Red (254,2,2) and becomes the foreground color in the Toolbox.
+      </para>
+    <figure>
+      <title><quote>Number of Colors</quote> is set to 64:</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/examples/borderaverage64.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            The resulting color is Green (32,224,32).
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      Here the bucket size is high, the number of buckets low. Similar colors
+      (here green) are stored in a same bucket. This <quote>green</quote>
+      bucket is now the most filled.
+      All colors in this bucket have the same values for the two most
+      significant bits: (00******;11******;00******). The remaining 6 bits
+      may have any values from 0 to 63 for the respective channel. So
+      in this bucket, color red channels range from 0 to 63, green channels
+      from 192 to 255, blue channels from 0 to 63. The resulting color is
+      Green (32,224,32), which, for every channel, is the average between the
+      limits of the channel range (63 + 0)/2, (255+192)/2 , (63+0)/2.
+    </para>
+  </sect3>
+</sect2>

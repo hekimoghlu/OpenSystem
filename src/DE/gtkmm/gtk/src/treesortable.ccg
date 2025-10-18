@@ -1,0 +1,76 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+extern "C"
+{
+static int SignalProxy_Compare_gtk_callback(GtkTreeModel* model, GtkTreeIter* lhs, GtkTreeIter* rhs, void* data)
+{
+  auto the_slot = static_cast<Gtk::TreeSortable::SlotCompare*>(data);
+
+  try
+  {
+    // use Slot::operator()
+    return (*the_slot)(Gtk::TreeModel::const_iterator(model, lhs), Gtk::TreeModel::const_iterator(model, rhs));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return 0;
+}
+
+static void SignalProxy_Compare_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::TreeSortable::SlotCompare*>(data);
+}
+} // extern "C"
+
+namespace Gtk
+{
+
+void TreeSortable::set_sort_func(int sort_column_id, const SlotCompare& slot)
+{
+  auto slot_copy = new SlotCompare(slot);
+
+  gtk_tree_sortable_set_sort_func(
+      gobj(), sort_column_id,
+      &SignalProxy_Compare_gtk_callback, slot_copy,
+      &SignalProxy_Compare_gtk_callback_destroy);
+}
+
+void TreeSortable::set_sort_func(const Gtk::TreeModelColumnBase& sort_column, const SlotCompare& slot)
+{
+  set_sort_func(sort_column.index(), slot);
+}
+
+void TreeSortable::set_default_sort_func(const SlotCompare& slot)
+{
+  auto slot_copy = new SlotCompare(slot);
+
+  gtk_tree_sortable_set_default_sort_func(
+      gobj(),
+      &SignalProxy_Compare_gtk_callback, slot_copy,
+      &SignalProxy_Compare_gtk_callback_destroy);
+}
+
+void TreeSortable::unset_default_sort_func()
+{
+  gtk_tree_sortable_set_default_sort_func(
+      gobj(), nullptr, nullptr, nullptr); /* See GTK+ docs about the nullptrs. */
+}
+
+} // namespace Gtk

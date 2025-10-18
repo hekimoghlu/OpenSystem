@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+ABS_BUILDDIR='@ABS_BUILDDIR@'
+ABS_SRCDIR='@ABS_SRCDIR@'
+
+if [ "${CALLS_GDB}" = 1 ]; then
+    echo "Running calls under gdb"
+    WRAPPER="gdb --args"
+fi
+
+export GSETTINGS_SCHEMA_DIR="${ABS_BUILDDIR}/data"
+export CALLS_PLUGIN_DIR="${ABS_BUILDDIR}/plugins"
+set -x
+exec ${WRAPPER} "${ABS_BUILDDIR}/src/gnome-calls" "$@"
+

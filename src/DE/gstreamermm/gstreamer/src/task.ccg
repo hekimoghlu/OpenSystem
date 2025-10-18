@@ -1,0 +1,95 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/taskpool.h>
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace
+{
+
+extern "C"
+{
+
+static void Task_Task_gstreamermm_callback(void* data)
+{
+  Gst::Task::SlotTask* the_slot = static_cast<Gst::Task::SlotTask*>(data);
+
+  try
+  {
+    (*the_slot)();
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+static void Task_Thread_gstreamermm_callback(GstTask* task, GThread* thread, gpointer user_data)
+{
+  Gst::Task::TaskThreadSlot* the_slot = static_cast<Gst::Task::TaskThreadSlot*>(user_data);
+
+  try
+  {
+    (*the_slot)(Glib::wrap(task, true), Glib::Threads::wrap(thread));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+static void Task_Callbacks_gstreamermm_callback_destroy(void* data)
+{
+  delete static_cast<Gst::Task::TaskThreadSlot*>(data);
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+Task::Task(const SlotTask& task_slot)
+:
+  _CONSTRUCT()
+{
+  // Create a copy of the slot.  A pointer to this copy will be passed through
+  // the call back's data parameter.  It will be destroyed with the
+  // std::unique_ptr<>.
+  m_slot.reset(new SlotTask(task_slot));
+
+  // These lines are taken verbatim from gst_task_create() after calling
+  // g_object_new().
+  gobj()->func = &Task_Task_gstreamermm_callback;
+  gobj()->user_data = m_slot.get();
+}
+
+void Task::set_leave_slot(const SlotLeave& leave_slot)
+{
+  gst_task_set_leave_callback(gobj(), &Task_Thread_gstreamermm_callback, new SlotLeave(leave_slot), &Task_Callbacks_gstreamermm_callback_destroy);
+}
+
+void Task::set_enter_slot(const SlotEnter& enter_slot)
+{
+  gst_task_set_enter_callback(gobj(), &Task_Thread_gstreamermm_callback, new SlotEnter(enter_slot), &Task_Callbacks_gstreamermm_callback_destroy);
+}
+
+} //namespace Gst

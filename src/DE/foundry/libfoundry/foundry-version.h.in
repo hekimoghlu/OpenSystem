@@ -1,0 +1,96 @@
+/* foundry-version.h.in
+ *
+ * Copyright 2024 Christian Hergert <chergert@redhat.com>
+ *
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of the
+ * License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#pragma once
+
+#if !defined(FOUNDRY_INSIDE) && !defined(FOUNDRY_COMPILATION)
+# error "Only <foundry.h> can be included directly."
+#endif
+
+/**
+ * SECTION:foundryversion
+ * @short_description: foundry version checking
+ *
+ * foundry provides macros to check the version of the library
+ * at compile-time
+ */
+
+/**
+ * FOUNDRY_MAJOR_VERSION:
+ *
+ * foundry major version component (e.g. 1 if %FOUNDRY_VERSION is 1.2.3)
+ */
+#define FOUNDRY_MAJOR_VERSION (@MAJOR_VERSION@)
+
+/**
+ * FOUNDRY_MINOR_VERSION:
+ *
+ * foundry minor version component (e.g. 2 if %FOUNDRY_VERSION is 1.2.3)
+ */
+#define FOUNDRY_MINOR_VERSION (@MINOR_VERSION@)
+
+/**
+ * FOUNDRY_MICRO_VERSION:
+ *
+ * foundry micro version component (e.g. 3 if %FOUNDRY_VERSION is 1.2.3)
+ */
+#define FOUNDRY_MICRO_VERSION (@MICRO_VERSION@)
+
+/**
+ * FOUNDRY_VERSION
+ *
+ * foundry version.
+ */
+#define FOUNDRY_VERSION (@VERSION@)
+
+/**
+ * FOUNDRY_VERSION_S:
+ *
+ * foundry version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define FOUNDRY_VERSION_S "@VERSION@"
+
+#define FOUNDRY_ENCODE_VERSION(major,minor,micro) \
+        ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * FOUNDRY_VERSION_HEX:
+ *
+ * foundry version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define FOUNDRY_VERSION_HEX \
+        (FOUNDRY_ENCODE_VERSION (FOUNDRY_MAJOR_VERSION, FOUNDRY_MINOR_VERSION, FOUNDRY_MICRO_VERSION))
+
+/**
+ * FOUNDRY_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of foundry is greater than the required one.
+ */
+#define FOUNDRY_CHECK_VERSION(major,minor,micro)   \
+        (FOUNDRY_MAJOR_VERSION > (major) || \
+         (FOUNDRY_MAJOR_VERSION == (major) && FOUNDRY_MINOR_VERSION > (minor)) || \
+         (FOUNDRY_MAJOR_VERSION == (major) && FOUNDRY_MINOR_VERSION == (minor) && \
+          FOUNDRY_MICRO_VERSION >= (micro)))

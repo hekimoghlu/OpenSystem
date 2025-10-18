@@ -1,0 +1,67 @@
+Accessing SQLite's symbols:
+===========================
+Since the addition of Oracle Berkeley DB 5's SQL provider, all the sqlite3_* symbols
+can be loaded twice during the execution of a program linked with Libgda. Therefore
+how the sqlite3_* functions are called is important, and is the reason of the SQLITE3_CALL()
+macro which _MUST_ be used everytime an sqlite3_* function is called.
+
+The shared libraries layout to avoid symbols resolution clashed is outlined in the following
+diagram (when SQLite is used from a shared library, if not, then there is no symbol clash):
+
+libgda-4.0.so --(dlopen)--> libsqlite3.so (which exports all the sqlite3_* symbols)
+	      --(dlopen)--> providers/libgda-sqlite.so (which does not export any sqlite3_* symbol)
+	      --(dlopen)--> providers/libgda-bdbsql.so
+	                        --(dlopen)--> libdb-5.0.so (which exports all the sqlite3_* symbols)
+As the libsqlite3.so and the libdb-5.0.so shared libraries are loaded using the G_MODULE_BIND_LOCAL
+flag, their exported symbols don't clash.
+
+
+Which version of SQLite is used:
+================================
+
+When embedded SQLITE is used:
+* HAVE_SQLITE is *not* defined
+* patch it to add the PRAGMA command
+* linked as static
+
+When system SQLITE is used:
+* HAVE_SQLITE is defined
+* obviously not patched for PRAGMA
+* linked as dynamic => override the sqlite3CreateFunc function
+* For WIN32 (or MacOSX) we would need to use another mechanism (see lattice.umiacs.umd.edu/files/functions_tr.pdf) => impose embedded static lib
+
+Possible solutions in the future:
+1 - make SQLite implement the required PRAGMA (patch proposed)
+2 - don't use the required PRAGMA at all, and manage to intercept the sqlite3CreateFunc call
+    when statically linked (=> modify the source code of SQLite) 
+
+
+
+
+BLOB handling in SQLite:
+========================
+
+SQLite now supports incremental I/O for BLOBS. Any data in any column can be accessed
+with this API.
+
+When writing a blob to the database:
+------------------------------------
+Opening a blob requires the following information:
+* the database name
+* the table name
+* the column name
+* the ROWID
+
+The first 3 pieces of information can be obtained from the INSERT or UPDATE statement
+itself.
+
+The ROWID can be obtained using sqlite3_last_insert_rowid() for an INSERT or must be queried
+for an UPDATE.
+
+When reading a blob from the database:
+--------------------------------------
+Opening a blob requires the following information:
+* the database name: use sqlite3_column_database_name()
+* the table name: use sqlite3_column_table_name()
+* the column name: use sqlite3_column_origin_name()
+* the ROWID: get it from the SELECT as the last row.

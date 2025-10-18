@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2009-02-21 j.h: revised for v2.6
+  2008-04-03 Mr.Dust : added 'ko'
+  2007-05-14 j.h added "Make a solid BG transparent"
+  2007-04-04 alex falappa: fixes in italian language
+  2006-09-06 added norwegian translation by KoSt
+  2006-07-23 manuelq: added spanish translation
+  2006-05-02 Dust: added Korean translation
+  2006-03-31 j.h: changed "making a selection transparent"
+  2006-01-13 lexa: added translation for de an made file docbook compliant
+  2005-11-28 lexa: replaced informalfigures by figures
+  050905: Added Making a selection semi-transparente
+-->
+<sect1 id="gimp-concepts-selection">
+  <title>The Selection</title>
+
+  <indexterm>
+    <primary>Selections</primary>
+    <secondary>Concepts</secondary>
+  </indexterm>
+
+  <para>
+    Often when you operate on an image, you only want part of it to be
+    affected. In <acronym>GIMP</acronym>, you make this happen by
+    <emphasis>selecting</emphasis>
+    that part. Each image has a <emphasis>selection</emphasis>
+    associated with it. Most, but not all, <acronym>GIMP</acronym> operations
+    act only on the selected portions of the image.
+  </para>
+  <figure>
+    <title>How would you isolate the tree?</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata fileref="images/using/fog-tree-example.png" format="PNG"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+  <para>
+    There are many, many situations where creating just the right selection is
+    the key to getting the result you want, and often it is not easy to
+    do. For example, in the above image, suppose I want to cut the tree out
+    from its background, and paste it into a different image. To do
+    this, I need to create a selection that contains the tree and nothing but
+    the tree. It is difficult because the tree has a complex shape, and
+    in several spots is hard to distinguish from the objects behind it.
+  </para>
+  <figure>
+    <title>Selection shown as usual with dashed line.</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata fileref="images/using/select-outline.png" format="PNG"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+  <para>
+    Now here is a very important point, and it is crucial to understand this.
+    Ordinarily when you create a selection, you see it as a dashed line
+    enclosing a portion of the image. The common, not entirely accurate,
+    idea you could get from this, is that
+    the selection is a sort of container, with the selected parts of the image
+    inside, and the unselected parts outside. Although this concept of
+    selection is okay for many purposes, it is not entirely correct.
+  </para>
+  <para>
+    Actually the selection is implemented as a <emphasis>channel</emphasis>.
+    In terms of its internal structure, it is identical to the red, green,
+    blue, and alpha channels of an image. Thus, the selection has a value
+    defined at each pixel of the image, ranging between 0 (unselected) and 255
+    (fully selected). The advantage of this approach is that it allows some
+    pixels to be <emphasis>partially selected</emphasis>,
+    by giving them intermediate values between 0 and 255. As you will see,
+    there are many situations where it is desirable to have smooth transitions
+    between selected and unselected regions.
+  </para>
+  <para>
+    What, then, is the dashed line that appears when you create a selection?
+  </para>
+  <para>
+    The dashed line is a <emphasis>contour line</emphasis>, dividing areas
+    that are more
+    than half selected from areas that are less than half selected.
+  </para>
+  <figure>
+    <title>Same selection in Quick Mask mode.</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata format="PNG"
+          fileref="images/using/select-outline-qmask.png"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+  <para>
+    While looking at the dashed line that represents the selection, always
+    remember that the line only tells part of the story. If you want to see the
+    selection in full detail, the easiest way is to click the
+    <link linkend="gimp-image-window-quick-mask-button">Quick Mask button</link>
+    in the lower left corner of the image window. This causes the selection to
+    be shown as a translucent overlay atop the image. Selected areas are
+    unaffected; unselected areas are reddened. The more completely selected an
+    area is, the less red it appears.
+  </para>
+  <para>
+    Many operations work differently in Quick Mask mode, as mentioned in the
+    <link linkend="gimp-image-window-quick-mask-overview"
+    >Quick Mask overview</link>.
+    Use the Quick Mask button in the lower left corner of the image window to
+    toggle Quick Mask mode on and off.
+  </para>
+  <figure>
+    <title>Same selection in Quick Mask mode after feathering.</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata format="PNG"
+          fileref="images/using/select-outline-qmask-feather.png"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+
+  <sect2 id="gimp-concepts-selection-feathering">
+    <title>Feathering</title>
+    <para>
+      With the default settings, the basic selection tools, such as the
+      Rectangle Select tool, create sharp selections. Pixels inside the dashed
+      line are fully selected, and pixels outside completely unselected. You
+      can verify this by toggling Quick Mask: you see a clear rectangle with
+      sharp edges, surrounded by uniform red.
+      Use the <quote>Feather edges</quote> checkbox in the Tool Options to
+      toggle between graduated selections and sharp selections.
+      The feather radius, which
+      you can adjust, determines the distance over which the transition
+      occurs.
+    </para>
+    <para>
+      If you are following along, try this with the Rectangle Select tool,
+      and then toggle Quick Mask. You will see that the clear rectangle has
+      a fuzzy edge.
+    </para>
+    <para>
+      Feathering is particularly useful when you are cutting and pasting, so
+      that the pasted object blends smoothly and unobtrusively with its
+      surroundings.
+    </para>
+    <para>
+      It is possible to feather a selection at any time, even if it
+      was originally created as a sharp selection. Use
+      <menuchoice>
+        <guimenu>Select</guimenu>
+        <guimenuitem>Feather</guimenuitem>
+      </menuchoice>
+      from the main menu to open the Feather Selection dialog. Set the
+      feather radius and click <guibutton>OK</guibutton>. Use
+      <menuchoice>
+        <guimenu>Select</guimenu>
+        <guimenuitem>Sharpen</guimenuitem>
+      </menuchoice>
+      to do the opposite&mdash;sharpen a graduated selection into an
+      all-or-nothing selection.
+    </para>
+    <note>
+      <para>
+        For technically oriented readers: feathering works by applying a
+        Gaussian blur to the selection channel, with the specified blurring
+        radius.
+      </para>
+    </note>
+  </sect2>
+
+  <sect2 id="gimp-concepts-selection-transparent">
+    <title>Making a Selection Partially Transparent</title>
+    <para>
+      You can set layer opacity, but you cannot do that directly for a
+      selection. It is quite useful to make the image of a glass
+      transparent. Use the following methods to set the layer opacity:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          For simple selections, use the Eraser tool with the desired opacity.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          For complex selections: use
+          <menuchoice>
+            <guimenu>Select</guimenu>
+            <guimenuitem>Float</guimenuitem>
+          </menuchoice>
+          to create a floating selection. This creates a new layer with
+          the selection called <quote>Floating Selection</quote>
+          (<xref linkend="gimp-selection-float"/>).
+
+          Set the opacity slider in the Layers dialog to the desired opacity.
+          Then anchor the selection: outside the selection, the mouse pointer
+          includes an anchor. When you click while the mouse pointer includes
+          the anchor, the floating selection
+          disappears from the Layers dialog and the selection is at the right
+          place and partially transparent (anchoring works this way only if a
+          selection tool is activated: you can also use the Anchor Layer
+          command in the context menu by right clicking on the selected layer
+          in the Layers dialog).
+        </para>
+        <para>
+          And, if you use this function frequently:
+          <keycombo action="press">
+            <keycap>Ctrl</keycap>
+            <keycap>C</keycap>
+          </keycombo> to copy the selection,
+          <keycombo action="press">
+            <keycap>Ctrl</keycap>
+            <keycap>V</keycap>
+          </keycombo> to paste the clipboard as a floating selection, and
+          <menuchoice>
+            <guimenu>Layer</guimenu>
+            <guimenuitem>New Layer…</guimenuitem>
+          </menuchoice> to turn the selection into a new layer.
+          You can adjust the opacity before, or after creating the new layer.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Another way: use
+          <menuchoice>
+            <guimenu>Layer</guimenu>
+            <guisubmenu>Mask</guisubmenu>
+            <guimenuitem>Add Layer Masks…</guimenuitem>
+          </menuchoice>
+          to add a layer mask to the layer with the
+          selection, initializing it with the selection. Then use a brush with
+          the desired opacity to paint the selection with black, i.e. paint it
+          with transparency. Then <menuchoice><guimenu>Layer</guimenu>
+          <guisubmenu>Mask</guisubmenu><guimenuitem>Apply Layer Mask</guimenuitem>
+          </menuchoice>. See <xref linkend="gimp-layer-mask"/>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          To <emphasis>make the solid background of an image
+          transparent</emphasis>, add an Alpha channel, and use the Magic
+          Wand to select the background. Then, use the Color Picker
+          tool to select the background color, which becomes the foreground
+          color in Toolbox. Use the Bucket Fill tool with the selected color.
+          Set the Bucket Fill mode to <quote>Color Erase</quote>, which erases
+          pixels with the selected color; other pixels are partially erased
+          and their color is changed.
+        </para>
+        <para>
+          The simplest method is to use
+          <menuchoice>
+            <guimenu>Edit</guimenu>
+            <guimenuitem>Clear</guimenuitem>
+          </menuchoice>, which gives complete transparency to a selection.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect2>
+</sect1>

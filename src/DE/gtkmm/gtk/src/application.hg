@@ -1,0 +1,352 @@
+/* Copyright (C) 2003-2014 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <vector>
+#include <type_traits>
+#include <utility>
+#include <giomm/application.h>
+#include <giomm/menumodel.h>
+#include <giomm/menu.h>
+#include <gtkmm/window.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(giomm/private/application_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+// Needed before gtkmm/private/application_p.h is included.
+typedef struct _GtkWindow GtkWindow;
+#m4 _POP()
+
+namespace Gtk
+{
+
+//TODO: Add overview documentation discussing the techniques show in the examples in gtkmm-docmentation.
+//TODO: Add the screenshots from the C API?
+
+/** Application class.
+ *
+ * The %Gtk::Application class handles many important aspects
+ * of a GTK+ application in a convenient fashion, without enforcing
+ * a one-size-fits-all application model.
+ *
+ * Currently, %Gtk::Application handles GTK and gtkmm initialization, application
+ * uniqueness, session management, provides some basic scriptability and
+ * desktop shell integration by exporting actions and menus, and manages a
+ * list of toplevel windows whose life-cycle is automatically tied to the
+ * life-cycle of your application.
+ *
+ * While %Gtk::Application works fine with plain Gtk::Window%s, it is recommended
+ * to use it together with Gtk::ApplicationWindow.
+ *
+ * When GDK threads are enabled, %Gtk::Application will acquire the GDK
+ * lock when invoking actions that arrive from other processes.  The GDK
+ * lock is not touched for local action invocations.  In order to have
+ * actions invoked in a predictable context it is therefore recommended
+ * that the GDK lock be held while invoking actions locally with
+ * Gio::ActionGroup::activate_action().  The same applies to actions
+ * associated with Gtk::ApplicationWindow and to the Gio::Application::activate() and
+ * Gio::Application::open() methods.
+ *
+ * To specify a menubar that will be shown by
+ * Gtk::ApplicationWindow%s, use set_menubar(). Use the base
+ * Gio::ActionMap interface to add actions, to respond to the user
+ * selecting these menu items.
+ *
+ * %Gtk::Application optionally registers with a session manager
+ * of the users session (if you set the register-session
+ * property) and offers various functionality related to the session
+ * life-cycle.
+ *
+ * An application can block various ways to end the session with
+ * the inhibit() method. Typical use cases for
+ * this kind of inhibiting are long-running, uninterruptible operations,
+ * such as burning a CD or performing a disk backup. The session
+ * manager may not honor the inhibitor, but it can be expected to
+ * inform the user about the negative consequences of ending the
+ * session while inhibitors are present.
+ *
+ * @note
+ * Most widgets can't safely be created before the application has been registered
+ * (Gio::Application::register_application() called) or activated
+ * (Gio::Application::signal_activate() emitted).
+ * They can't safely be deleted after run() or make_window_and_run() returns.
+ *
+ * @newin{3,4}
+ */
+class GTKMM_API Application
+  : public Gio::Application
+{
+protected:
+  _CLASS_GOBJECT(Application, GtkApplication, GTK_APPLICATION, Gio::Application, GApplication, , , GTKMM_API)
+
+protected:
+  /** Creates a new Application instance.
+   *
+   * This initializes gtkmm (and the GObject type system) for you.
+   * The global locale is set as specified by Glib::set_init_to_users_preferred_locale().
+   *
+   * If non-empty, the application ID must be valid. See Gio::Application::id_is_valid().
+   *
+   * If no application ID is given then some features (most notably application
+   * uniqueness) will be disabled. A null application ID is only allowed with
+   * gtkmm 3.6 or later.
+   *
+   * @param application_id A valid application ID.
+   * @param flags The application flags.
+   *
+   * @newin{3,4}
+   */
+  explicit Application(const Glib::ustring& application_id = {}, Gio::Application::Flags flags = Gio::Application::Flags::NONE);
+  _IGNORE(gtk_application_new)
+  _IGNORE(gtk_application_window_new)
+
+public:
+  _WRAP_ENUM(InhibitFlags, GtkApplicationInhibitFlags, decl_prefix GTKMM_API)
+
+  /** Choose which %SearchEntry to use.
+   *
+   * There are two classes to choose from when a pointer to a GtkSearchEntry
+   * object comes from a gtk function (for instance in GtkBuilder), and a C++ wrapper
+   * shall be created: Gtk::SearchEntry or Gtk::SearchEntry2.
+   *
+   * To have any effect, this function must be called before any %Gtk::Application
+   * instance is created, typically early in the main() function.
+   * Not calling this function has the same effect as calling it with
+   * @a search_entry2 = <tt>false</tt>.
+   *
+   * This nuisance has become necessary due to a bug in gtkmm4.
+   * The bug can't be fixed by correcting %SearchEntry. It would break both
+   * ABI and API, and some working applications.
+   *
+   * @param search_entry2 If <tt>true</tt>, a GtkSearchEntry will be wrapped
+   *        in a Gtk::SearchEntry2. If <tt>false</tt>, a GtkSearchEntry will be
+   *        wrapped in a Gtk::SearchEntry.
+   *
+   * @newin{4,14}
+   */
+  static void wrap_in_search_entry2(bool search_entry2 = true);
+
+  /** Creates a new Application instance.
+   *
+   * This initializes gtkmm (and the GObject type system) for you.
+   * The global locale is set as specified by Glib::set_init_to_users_preferred_locale().
+   *
+   * If non-empty, the application ID must be valid. See Gio::Application::id_is_valid().
+   *
+   * If no application ID is given then some features (most notably application
+   * uniqueness) will be disabled. A null application ID is only allowed with
+   * gtkmm 3.6 or later.
+   *
+   * @param application_id A valid application ID.
+   * @param flags The application flags.
+   *
+   * @newin{3,4}
+   */
+  static Glib::RefPtr<Application> create(const Glib::ustring& application_id = {}, Gio::Application::Flags flags = Gio::Application::Flags::NONE);
+
+#m4 _CONVERSION(`GList*',`std::vector<Window*>',`Glib::ListHandler<Window*>::list_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Window*> get_windows(), gtk_application_get_windows)
+
+#m4 _CONVERSION(`GList*',`std::vector<const Window*>',`Glib::ListHandler<const Window*>::list_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<const Window*> get_windows() const, gtk_application_get_windows)
+
+  // Concerning the note on quit(), see https://bugzilla.gnome.org/show_bug.cgi?id=731126
+  // Concerning the return from run() on hidden windows, see
+  // https://bugzilla.gnome.org/show_bug.cgi?id=639931 and Gtk::Widget_Class::hide_callback().
+  /** Adds a window to the Gtk::Application.
+   *
+   * If all the windows managed by Gtk::Application are closed (hidden) or
+   * removed from the application then the call to run() will return,
+   * unless Gio::Application::hold() has been called.
+   *
+   * This call is equivalent to calling Gtk::Window::set_application().
+   *
+   * Normally, the connection between the application and the window
+   * will remain until the window is closed (hidden) or destroyed, but you can explicitly
+   * remove it with remove_window().
+   *
+   * @note If you call Gio::Application::quit() while a window is connected to
+   * the application, and then return from main() without removing the window
+   * from the application, the application's destructor will not be called.
+   *
+   * @newin{3,4}
+   *
+   * @param window A toplevel window to add to the application.
+   */
+  _WRAP_METHOD(void add_window(Window& window), gtk_application_add_window)
+
+  _WRAP_METHOD(void remove_window(Window& window), gtk_application_remove_window)
+
+  /** Starts the application.
+   *
+   * @param argc The argc from main() (or 0 if @a argv is <tt>nullptr</tt>).
+   * @param argv The argv from main(), or <tt>nullptr</tt>.
+   * @return The exit status.
+   *
+   * @see Gio::Application::run()
+   *
+   * @newin{3,4}
+   */
+  int run(int argc, char** argv);
+
+  /** Starts the application.
+   *
+   * @return The exit status.
+   *
+   * @see Gio::Application::run()
+   *
+   * @newin{3,4}
+   */
+  int run();
+
+  /** Starts the application, creates and presents a window.
+   *
+   * A window of type T_Window is constructed and added to the application
+   * in a signal_activate() handler. The window is deleted when it is hidden
+   * or removed from the application. The method returns when the window is hidden,
+   * unless other windows have been added but not removed.
+   *
+   * The window is only constructed on the first activate signal. Any activations
+   * thereafter only cause the window to be raised.
+   *
+   * @tparam T_Window The type of window to present. Must be Gtk::Window or a class type
+   *                  that inherits from Gtk::Window.
+   * @param argc The argc from main() (or 0 if @a argv is <tt>nullptr</tt>).
+   * @param argv The argv from main(), or <tt>nullptr</tt>.
+   * @param args Arguments to T_Window's constructor, if any.
+   * @return The exit status.
+   *
+   * @see Gio::Application::run()
+   *
+   * @newin{3,98}
+   */
+  template <typename T_Window, typename... T_Args>
+  int make_window_and_run(int argc, char** argv, T_Args&&... args);
+
+  /** Get the window, constructed by make_window_and_run().
+   */
+  Window* get_run_window() { return m_run_window; }
+  /** Get the window, constructed by make_window_and_run().
+   */
+  const Window* get_run_window() const { return m_run_window; }
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::MenuModel> get_menubar(), gtk_application_get_menubar, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::MenuModel> get_menubar() const, gtk_application_get_menubar, refreturn, constversion)
+
+  _WRAP_METHOD(void set_menubar(const Glib::RefPtr<Gio::MenuModel>& menubar), gtk_application_set_menubar)
+
+  _WRAP_METHOD(guint inhibit(Window& window, InhibitFlags flags, const Glib::ustring& reason), gtk_application_inhibit)
+  _WRAP_METHOD(void uninhibit(guint cookie), gtk_application_uninhibit)
+
+  _WRAP_METHOD(Window* get_window_by_id(guint id), gtk_application_get_window_by_id, refreturn)
+  _WRAP_METHOD(const Window* get_window_by_id(guint id) const, gtk_application_get_window_by_id, refreturn, constversion)
+
+  _WRAP_METHOD(Window* get_active_window(), gtk_application_get_active_window, refreturn)
+  _WRAP_METHOD(const Window* get_active_window() const, gtk_application_get_active_window, refreturn, constversion)
+
+#m4 _CONVERSION(`char**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> list_action_descriptions() const, gtk_application_list_action_descriptions)
+
+#m4 _CONVERSION(`char**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_accels_for_action(const Glib::ustring& detailed_action_name) const, gtk_application_get_accels_for_action)
+
+  _WRAP_METHOD(std::vector<Glib::ustring> get_actions_for_accel(const Glib::ustring& accel) const, gtk_application_get_actions_for_accel)
+
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char*-const*',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data ()')
+  _WRAP_METHOD(void set_accels_for_action(const Glib::ustring& detailed_action_name, const std::vector<Glib::ustring>& accels), gtk_application_set_accels_for_action)
+
+  /** Sets a keyboard accelerator that will trigger the
+   * given action. It will be the primary
+   * accelerator, which may be displayed in the UI.
+   *
+   * See unset_accels_for_action().
+   *
+   * @param detailed_action_name A detailed action name, specifying an action
+   * and target to associate accelerators with.
+   * @param accel An accelerator in the format understood by gtk_accelerator_parse().
+   *
+   * @newin{3,12}
+   */
+  void set_accel_for_action(const Glib::ustring& detailed_action_name, const Glib::ustring& accel);
+
+  /** Unsets a keyboard accelerator that will trigger the
+   * given action. See set_accels_for_action() and set_accel_for_action().
+   *
+   * @param detailed_action_name A detailed action name, specifying an action
+   * and target to associate accelerators with.
+   *
+   * @newin{3,12}
+   */
+  void unset_accels_for_action(const Glib::ustring& detailed_action_name);
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::Menu> get_menu_by_id(const Glib::ustring& id), gtk_application_get_menu_by_id, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::Menu> get_menu_by_id(const Glib::ustring& id) const, gtk_application_get_menu_by_id, refreturn, constversion)
+
+  _WRAP_PROPERTY("menubar", Glib::RefPtr<Gio::MenuModel>)
+  _WRAP_PROPERTY("register-session", bool,
+    deprecated "4.20: This property is ignored. GTK always registers with the session manager.")
+  _WRAP_PROPERTY("screensaver-active", bool, newin "3,94")
+  _WRAP_PROPERTY("active-window", Window*)
+
+  _WRAP_SIGNAL(void window_added(Window* window), "window-added")
+  _WRAP_SIGNAL(void window_removed(Window* window), "window-removed")
+  // no_default_handler because the wrapped C signal has no default handler.
+  _WRAP_SIGNAL(void query_end(), "query-end", no_default_handler)
+
+private:
+  /** This is just a way to call Glib::init() before calling a Glib::Object ctor,
+   * so that glibmm's GQuarks are created before they are used.
+   */
+  const Glib::Class& custom_class_init();
+
+  Window* m_run_window = nullptr;
+};
+
+template <typename T_Window, typename... T_Args>
+int Application::make_window_and_run(int argc, char** argv, T_Args&&... args)
+{
+  static_assert(std::is_base_of<Window, T_Window>::value);
+
+  signal_activate().connect([this, &args...] () {
+    if (!m_run_window)
+    {
+      // The created window is managed. Thus, the C++ wrapper is deleted
+      // by Gtk::Object::destroy_notify_() when the C window is destroyed.
+      // https://gitlab.gnome.org/GNOME/gtkmm/-/issues/114
+      auto window = make_managed<T_Window>(std::forward<T_Args>(args)...);
+      m_run_window = window;
+      add_window(*window);
+      window->present();
+    } else {
+      m_run_window->present();
+    }
+  });
+
+  signal_window_removed().connect([this] (Window* window) {
+    if (window == m_run_window)
+    {
+      if (window)
+        window->destroy();
+      m_run_window = nullptr;
+    }
+  });
+
+  return Gio::Application::run(argc, argv);
+}
+
+} // namespace Gtk

@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="IdeTweaks">
+    <child internal-child="foundry_section">
+      <object class="IdeTweaksSection">
+        <child>
+          <object class="IdeTweaksPage" id="application_page">
+            <property name="icon-name">application-x-executable-symbolic</property>
+            <property name="title" translatable="yes">Application</property>
+            <child>
+              <object class="IdeTweaksGroup">
+                <property name="title" translatable="yes">Commands</property>
+                <property name="hidden-when">application</property>
+                <child>
+                  <object class="IdeTweaksCombo">
+                    <property name="title" translatable="yes">Run Command</property>
+                    <property name="subtitle" translatable="yes">This command is used to run your project</property>
+                    <property name="binding">
+                      <object class="IdeTweaksSetting">
+                        <property name="schema-id">org.gnome.builder.project</property>
+                        <property name="schema-key">default-run-command</property>
+                      </object>
+                    </property>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title" translatable="yes">Automatically Discover</property>
+                        <property name="value">''</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksFactory" id="run_commands_factory">
+                        <property name="model">RunCommands</property>
+                        <child>
+                          <object class="IdeTweaksChoice">
+                            <binding name="title">
+                              <lookup name="display-name" type="IdeRunCommand">
+                                <lookup name="item">run_commands_factory</lookup>
+                              </lookup>
+                            </binding>
+                            <binding name="value">
+                              <lookup name="id" type="IdeRunCommand">
+                                <lookup name="item">run_commands_factory</lookup>
+                              </lookup>
+                            </binding>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="IdeTweaksGroup">
+                <property name="title" translatable="yes">Starting &amp; Stopping</property>
+                <child>
+                  <object class="IdeTweaksSwitch">
+                    <property name="title" translatable="yes">Install Before Running</property>
+                    <property name="subtitle" translatable="yes">Installs the application before running. This is necessary for most projects unless custom run commands are used.</property>
+                    <property name="binding">
+                      <object class="IdeTweaksSetting">
+                        <property name="schema-id">org.gnome.builder.project</property>
+                        <property name="schema-key">install-before-run</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="IdeTweaksGroup">
+                <child>
+                  <object class="IdeTweaksCombo">
+                    <property name="title" translatable="yes">Stop Signal</property>
+                    <property name="subtitle" translatable="yes">Send the signal to the target application when requesting the application stop.</property>
+                    <property name="binding">
+                      <object class="IdeTweaksSetting">
+                        <property name="schema-id">org.gnome.builder.project</property>
+                        <property name="schema-key">stop-signal</property>
+                      </object>
+                    </property>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGKILL</property>
+                        <property name="value">'SIGKILL'</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGINT</property>
+                        <property name="value">'SIGINT'</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGHUP</property>
+                        <property name="value">'SIGHUP'</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGUSR1</property>
+                        <property name="value">'SIGUSR1'</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGUSR2</property>
+                        <property name="value">'SIGUSR2'</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGABRT</property>
+                        <property name="value">'SIGABRT'</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksChoice">
+                        <property name="title">SIGQUIT</property>
+                        <property name="value">'SIGQUIT'</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="IdeTweaksGroup">
+                <property name="title" translatable="yes">Logging</property>
+                <child>
+                  <object class="IdeTweaksSwitch">
+                    <property name="title" translatable="yes">Verbose Logging</property>
+                    <property name="subtitle" translatable="yes">Runs with &lt;tt&gt;G_MESSAGES_DEBUG=all&lt;/tt&gt; environment variable for troubleshooting</property>
+                    <property name="binding">
+                      <object class="IdeTweaksSetting">
+                        <property name="schema-id">org.gnome.builder.project</property>
+                        <property name="schema-key">verbose-logging</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="IdeTweaksGroup">
+                <property name="title" translatable="yes">Unit Tests</property>
+                <child>
+                  <object class="IdeTweaksRadio">
+                    <property name="title" translatable="yes">Build Pipeline</property>
+                    <property name="subtitle" translatable="yes">Run unit tests from within the build environment.</property>
+                    <property name="value">'pipeline'</property>
+                    <property name="binding">
+                      <object class="IdeTweaksSetting" id="binding_unit_test_locality">
+                        <property name="schema-id">org.gnome.builder.project</property>
+                        <property name="schema-key">unit-test-locality</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="IdeTweaksRadio">
+                    <property name="title" translatable="yes">As Application</property>
+                    <property name="subtitle" translatable="yes">Run unit with access to display and other runtime environment features.</property>
+                    <property name="value">'runtime'</property>
+                    <property name="binding">binding_unit_test_locality</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="IdeTweaksPage" id="build_page">
+            <property name="icon-name">builder-build-symbolic</property>
+            <property name="title" translatable="yes">Build &amp; Tooling</property>
+            <child>
+              <object class="IdeTweaksSection" id="build_general_section">
+                <child>
+                  <object class="IdeTweaksPage" id="build_general_page">
+                    <property name="icon-name">builder-build-symbolic</property>
+                    <property name="title" translatable="yes">General</property>
+                    <child>
+                      <object class="IdeTweaksGroup">
+                        <property name="title" translatable="yes">Storage</property>
+                        <child>
+                          <object class="IdeTweaksDirectory">
+                            <property name="title" translatable="yes">Artifacts and Cached Files</property>
+                            <property name="subtitle" translatable="yes">Directory used for storing build artifacts and cached files from the build pipeline. Requires restarting Builder to take effect.</property>
+                            <property name="is-directory">true</property>
+                            <property name="binding">
+                              <object class="IdeTweaksSetting">
+                                <property name="schema-id">org.gnome.builder.project</property>
+                                <property name="schema-key">cache-root</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksGroup">
+                        <property name="title" translatable="yes">History</property>
+                        <child>
+                          <object class="IdeTweaksSwitch">
+                            <property name="title" translatable="yes">Clear Expired Artifacts</property>
+                            <property name="subtitle" translatable="yes">Artifacts which have expired will be deleted when Builder is started</property>
+                            <property name="binding">
+                              <object class="IdeTweaksSetting">
+                                <property name="schema-id">org.gnome.builder</property>
+                                <property name="schema-key">clear-cache-at-startup</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="IdeTweaksSwitch">
+                            <property name="title" translatable="yes">Clear Build Logs</property>
+                            <property name="subtitle" translatable="yes">Clear the build log history when a new build begins</property>
+                            <property name="binding">
+                              <object class="IdeTweaksSetting">
+                                <property name="schema-id">org.gnome.builder.build</property>
+                                <property name="schema-key">clear-build-log-pane</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="IdeTweaksSwitch">
+                            <property name="title" translatable="yes">Show Build Logs</property>
+                            <property name="subtitle" translatable="yes">Show the build log when a new build begins</property>
+                            <property name="binding">
+                              <object class="IdeTweaksSetting">
+                                <property name="schema-id">org.gnome.builder.build</property>
+                                <property name="schema-key">show-log-for-build</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksGroup">
+                        <property name="title" translatable="yes">Language Servers</property>
+                        <child>
+                          <object class="IdeTweaksSwitch">
+                            <property name="title" translatable="yes">Log to Console</property>
+                            <property name="subtitle" translatable="yes">Redirect language server error logs to stderr</property>
+                            <property name="binding">
+                              <object class="IdeTweaksSetting">
+                                <property name="schema-id">org.gnome.builder</property>
+                                <property name="schema-key">lsp-inherit-stderr</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksGroup">
+                        <property name="title" translatable="yes">Workers</property>
+                        <child>
+                          <object class="IdeTweaksCombo">
+                            <property name="title" translatable="yes">Build Parallelism</property>
+                            <property name="subtitle" translatable="yes">Number of workers to use when performing builds</property>
+                            <property name="binding">
+                              <object class="IdeTweaksSetting">
+                                <property name="schema-id">org.gnome.builder.build</property>
+                                <property name="schema-key">parallel</property>
+                              </object>
+                            </property>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title" translatable="yes">Default</property>
+                                <property name="value">-1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title" translatable="yes">1 per CPU</property>
+                                <property name="value">0</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">1</property>
+                                <property name="value">1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">2</property>
+                                <property name="value">2</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">4</property>
+                                <property name="value">4</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">6</property>
+                                <property name="value">6</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">8</property>
+                                <property name="value">8</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">16</property>
+                                <property name="value">16</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">24</property>
+                                <property name="value">24</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">32</property>
+                                <property name="value">32</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">48</property>
+                                <property name="value">48</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">64</property>
+                                <property name="value">64</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">128</property>
+                                <property name="value">128</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">256</property>
+                                <property name="value">256</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="IdeTweaksChoice">
+                                <property name="title">512</property>
+                                <property name="value">512</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="IdeTweaksSection" id="build_tooling_section">
+                <property name="title" translatable="yes">Tooling</property>
+                <property name="show-header">true</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child internal-child="configs_section">
+      <object class="IdeTweaksSection">
+        <child internal-child="config_factory">
+          <object class="IdeTweaksFactory">
+            <child internal-child="config_page">
+              <object class="IdeTweaksPage">
+                <child>
+                  <object class="IdeTweaksGroup">
+                    <child>
+                      <object class="IdeTweaksWidget">
+                        <signal name="create-for-item" handler="create_config_buttons_cb" swapped="true" object="GbpBuilduiTweaksAddin"/>
+                        <property name="binding">
+                          <object class="IdeTweaksProperty">
+                            <binding name="object">
+                              <lookup name="item">config_factory</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="IdeTweaksGroup">
+                    <property name="title" translatable="yes">General</property>
+                    <child>
+                      <object class="IdeTweaksDirectory" id="config_prefix_entry">
+                        <property name="title" translatable="yes">Installation Prefix</property>
+                        <property name="subtitle" translatable="yes">The project will be installed to this directory during the installation phase of the build pipeline.</property>
+                        <property name="is-directory">true</property>
+                        <property name="binding">
+                          <object class="IdeTweaksProperty">
+                            <property name="name">prefix</property>
+                            <binding name="object">
+                              <lookup name="item">config_factory</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="IdeTweaksGroup">
+                    <child>
+                      <object class="IdeTweaksEntry" id="config_opts_entry">
+                        <property name="title" translatable="yes">Configure Options</property>
+                        <property name="binding">
+                          <object class="IdeTweaksProperty">
+                            <property name="name">config-opts</property>
+                            <binding name="object">
+                              <lookup name="item">config_factory</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksCaption">
+                        <property name="text" translatable="yes">These options are used by the build system to configure the project during the configure phase of the build pipeline</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="IdeTweaksGroup">
+                    <property name="title" translatable="yes">Build Environment</property>
+                    <child>
+                      <object class="IdeTweaksCombo">
+                        <property name="title" translatable="yes">Locality</property>
+                        <property name="subtitle" translatable="yes">Where your project builds</property>
+                        <property name="binding">
+                          <object class="IdeTweaksProperty">
+                            <property name="name">locality</property>
+                            <binding name="object">
+                              <lookup name="item">config_factory</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                        <child>
+                          <object class="IdeTweaksChoice">
+                            <property name="title" translatable="yes">Default</property>
+                            <property name="value">['default']</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="IdeTweaksChoice">
+                            <property name="title" translatable="yes">Inside Source Tree</property>
+                            <property name="value">['in-tree']</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="IdeTweaksChoice">
+                            <property name="title" translatable="yes">Outside Source Tree</property>
+                            <property name="value">['out-of-tree']</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksWidget">
+                        <signal name="create-for-item" handler="create_runtime_list_cb" swapped="true" object="GbpBuilduiTweaksAddin"/>
+                        <property name="binding">
+                          <object class="IdeTweaksProperty">
+                            <property name="name">runtime-id</property>
+                            <binding name="object">
+                              <lookup name="item">config_factory</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="IdeTweaksCaption">
+                        <property name="text" translatable="yes">The SDK used to build your application is automatically determined from the runtime.</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="IdeTweaksGroup">
+                    <child>
+                      <object class="IdeTweaksWidget">
+                        <signal name="create-for-item" handler="create_environ_editor_cb" swapped="true" object="GbpBuilduiTweaksAddin"/>
+                        <property name="binding">
+                          <object class="IdeTweaksProperty">
+                            <property name="name">environ</property>
+                            <binding name="object">
+                              <lookup name="item">config_factory</lookup>
+                            </binding>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

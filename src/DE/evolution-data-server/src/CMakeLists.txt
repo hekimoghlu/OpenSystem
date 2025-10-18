@@ -1,0 +1,18 @@
+add_subdirectory(camel)
+add_subdirectory(libedataserver)
+add_subdirectory(libebackend)
+add_subdirectory(addressbook)
+add_subdirectory(calendar)
+add_subdirectory(libedataserverui)
+add_subdirectory(modules)
+add_subdirectory(private)
+add_subdirectory(services)
+add_subdirectory(tools)
+
+if(ENABLE_EXAMPLES)
+	add_subdirectory(examples)
+endif(ENABLE_EXAMPLES)
+
+if(ENABLE_VALA_BINDINGS)
+	add_subdirectory(vala)
+endif(ENABLE_VALA_BINDINGS)

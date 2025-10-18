@@ -1,0 +1,48 @@
+/* gcalc-expresion.vala
+ *
+ * Copyright (C) 2018  Daniel Espinosa <esodan@gmail.com>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors:
+ *      Daniel Espinosa <esodan@gmail.com>
+ */
+/**
+ * An implementation of {@link MathExpression}
+ */
+public class GCalc.Expression : Object, MathExpression {
+  ExpressionContainer exps = new ExpressionContainer ();
+  construct {
+    exps.parent = this;
+  }
+  // Expression
+  internal weak MathExpression parent { get; set; }
+  internal ExpressionContainer expressions { get { return exps; } }
+  internal virtual string to_string () {
+    string s = "";
+    foreach (MathExpression e in expressions) {
+      s += e.to_string ();
+    }
+    return s;
+  }
+  internal virtual MathResult solve () {
+    return new ErrorResult ("Invalid expression");
+  }
+}
+
+/**
+ * Represent an expression in error condition
+ */
+public class GCalc.ErrorExpression : Expression {}
+

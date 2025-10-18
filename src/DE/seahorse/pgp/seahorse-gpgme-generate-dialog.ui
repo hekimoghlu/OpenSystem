@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="SeahorseGpgmeGenerateDialog" parent="AdwDialog">
+    <property name="title" bind-source="window_title" bind-property="title" bind-flags="sync-create|bidirectional" />
+    <property name="follows-content-size">True</property>
+
+    <child>
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <property name="show-start-title-buttons">False</property>
+            <property name="show-end-title-buttons">False</property>
+
+            <child type="start">
+              <object class="GtkButton">
+                <property name="label" translatable="yes">_Cancel</property>
+                <property name="use-underline">True</property>
+                <property name="action-name">window.close</property>
+              </object>
+            </child>
+
+            <property name="title-widget">
+              <object class="AdwWindowTitle" id="window_title">
+                <property name="title" translatable="yes">New PGP key</property>
+              </object>
+            </property>
+
+            <child type="end">
+              <object class="GtkButton">
+                <property name="label" translatable="yes">C_reate</property>
+                <property name="use-underline">True</property>
+                <property name="action-name">create-key</property>
+                <property name="tooltip_text" translatable="yes">Generate a new key</property>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <property name="content">
+          <object class="GtkScrolledWindow">
+            <property name="propagate-natural-height">True</property>
+            <property name="hscrollbar-policy">never</property>
+            <child>
+              <object class="AdwClamp">
+                <child>
+                  <object class="GtkBox" id="container">
+                    <property name="spacing">24</property>
+                    <property name="orientation">vertical</property>
+                    <property name="margin-start">32</property>
+                    <property name="margin-end">32</property>
+                    <property name="margin-top">32</property>
+                    <property name="margin-bottom">32</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="xalign">0</property>
+                        <property name="yalign">0</property>
+                        <property name="label" translatable="yes">A PGP key allows you to encrypt email or files to other people.</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <child>
+                          <object class="AdwEntryRow" id="name_row">
+                            <property name="title" translatable="yes" comments="Full name of the key, usually the name of the user.">Full _Name</property>
+                            <property name="use-underline">True</property>
+                            <property name="input-purpose">name</property>
+                            <child type="suffix">
+                              <object class="GtkImage" id="name_row_warning">
+                                <property name="icon-name">dialog-warning-symbolic</property>
+                                <property name="tooltip-text" translatable="yes">Name must be at least 5 characters long.</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwEntryRow" id="email_row">
+                            <property name="title" translatable="yes">_Email Address</property>
+                            <property name="use-underline">True</property>
+                            <property name="input-purpose">email</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <property name="title" translatable="yes">Advanced key options</property>
+                        <child>
+                          <object class="AdwEntryRow" id="comment_row">
+                            <property name="title" translatable="yes">_Comment</property>
+                            <property name="use-underline">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwComboRow" id="algorithm_row">
+                            <property name="title" translatable="yes">Encryption _Type</property>
+                            <property name="use-underline">True</property>
+                            <signal name="notify::selected" handler="on_algo_row_notify_selected"/>
+                            <property name="model">
+                              <object class="GtkFilterListModel">
+                                <property name="model">
+                                  <object class="AdwEnumListModel">
+                                    <property name="enum-type">SeahorseGpgmeKeyGenType</property>
+                                  </object>
+                                </property>
+                                <property name="filter">
+                                  <object class="GtkCustomFilter" id="algo_filter"/>
+                                </property>
+                              </object>
+                            </property>
+                            <property name="expression">
+                              <closure type="gchararray" function="algo_to_string">
+                                <lookup name="value" type="AdwEnumListItem"/>
+                              </closure>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwActionRow" id="bits_row">
+                            <property name="title" translatable="yes">Key _Strength (bits)</property>
+                            <property name="use-underline">True</property>
+                            <child type="suffix">
+                              <object class="GtkSpinButton" id="bits_spin">
+                                <property name="valign">center</property>
+                                <property name="climb-rate">1</property>
+                                <property name="numeric">True</property>
+                                <property name="adjustment">
+                                  <object class="GtkAdjustment" id="bits_spin_adjustment">
+                                    <property name="lower">512</property>
+                                    <property name="upper">8192</property>
+                                    <property name="value">2048</property>
+                                    <property name="step-increment">512</property>
+                                  </object>
+                                </property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwActionRow">
+                            <property name="title" translatable="yes">Ne_ver Expires</property>
+                            <property name="use-underline">True</property>
+                            <child type="suffix">
+                              <object class="GtkSwitch" id="expires_switch">
+                                <property name="valign">center</property>
+                                <property name="active">True</property>
+                                <signal name="notify::active" handler="on_expires_switch_notify_active"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwActionRow" id="expires_date_row">
+                            <property name="title" translatable="yes">E_xpiration Date</property>
+                            <property name="use-underline">True</property>
+                            <property name="sensitive" bind-source="expires_switch" bind-property="active" bind-flags="bidirectional|sync-create|invert-boolean" />
+                            <child type="suffix">
+                              <object class="SeahorseDatePicker" id="expires_datepicker">
+                                <property name="valign">center</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </child>
+  </template>
+</interface>

@@ -1,0 +1,93 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <giomm/drive.h>
+#include <giomm/volume.h>
+#include <giomm/mount.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+/** Monitors a file or directory for changes.
+ * VolumeMonitor is for listing the user-interesting devices and volumes on the
+ * computer. In other words, what a file selector or file manager would show in
+ * a sidebar.
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API VolumeMonitor : public Glib::Object
+{
+  _CLASS_GOBJECT(VolumeMonitor, GVolumeMonitor, G_VOLUME_MONITOR, Glib::Object, GObject, , , GIOMM_API)
+protected:
+
+public:
+
+  _WRAP_METHOD(static Glib::RefPtr<VolumeMonitor> get(), g_volume_monitor_get)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<Drive>>',`Glib::ListHandler<Glib::RefPtr<Drive>>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Drive>> get_connected_drives(), g_volume_monitor_get_connected_drives)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<Volume>>',`Glib::ListHandler<Glib::RefPtr<Volume>>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Volume>> get_volumes(), g_volume_monitor_get_volumes)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<Mount>>',`Glib::ListHandler<Glib::RefPtr<Mount>>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Mount>> get_mounts(), g_volume_monitor_get_mounts)
+
+  _WRAP_METHOD(Glib::RefPtr<Volume> get_volume_for_uuid(const std::string& uuid), g_volume_monitor_get_volume_for_uuid, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<Mount> get_mount_for_uuid(const std::string& uuid), g_volume_monitor_get_mount_for_uuid, refreturn)
+
+  _IGNORE(g_volume_monitor_adopt_orphan_mount)
+
+#m4 _CONVERSION(`GVolume*',`const Glib::RefPtr<Volume>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void volume_added(const Glib::RefPtr<Volume>& volume), volume_added)
+  _WRAP_SIGNAL(void volume_removed(const Glib::RefPtr<Volume>& volume), volume_removed)
+  _WRAP_SIGNAL(void volume_changed(const Glib::RefPtr<Volume>& volume), volume_changed)
+
+#m4 _CONVERSION(`GMount*',`const Glib::RefPtr<Mount>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void mount_added(const Glib::RefPtr<Mount>& mount), mount_added)
+  _WRAP_SIGNAL(void mount_removed(const Glib::RefPtr<Mount>& mount), mount_removed)
+  _WRAP_SIGNAL(void mount_pre_unmount(const Glib::RefPtr<Mount>& mount), mount_pre_unmount)
+  _WRAP_SIGNAL(void mount_changed(const Glib::RefPtr<Mount>& mount), mount_changed)
+
+#m4 _CONVERSION(`GDrive*',`const Glib::RefPtr<Drive>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void drive_connected(const Glib::RefPtr<Drive>& drive), drive_connected)
+  _WRAP_SIGNAL(void drive_disconnected(const Glib::RefPtr<Drive>& drive), drive_disconnected)
+  _WRAP_SIGNAL(void drive_changed(const Glib::RefPtr<Drive>& drive), drive_changed)
+
+  _WRAP_SIGNAL(void drive_eject_button(const Glib::RefPtr<Drive>& drive), drive_eject_button)
+  _WRAP_SIGNAL(void drive_stop_button(const Glib::RefPtr<Drive>& drive), drive_stop_button)
+
+protected:
+  //TODO: Use ListHandler?
+  //_WRAP_VFUNC(GList* get_volumes(), get_volumes)
+  //_WRAP_VFUNC(GList* get_mounts(), get_mounts)
+
+#m4 _CONVERSION(`Glib::RefPtr<Volume>',`GVolume*',__CONVERT_CONST_REFPTR_TO_P)
+  //_WRAP_VFUNC(Glib::RefPtr<Volume> get_volume_for_uuid(const std::string& uuid), get_volume_for_uuid)
+
+#m4 _CONVERSION(`Glib::RefPtr<Mount>',`GMount*',__CONVERT_CONST_REFPTR_TO_P)
+  //_WRAP_VFUNC(Glib::RefPtr<Mount> get_mount_for_uuid(const std::string& uuid), get_mount_for_uuid)
+
+  //There are no properties.
+};
+
+} // namespace Gio
+

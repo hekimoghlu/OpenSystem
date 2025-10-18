@@ -1,0 +1,132 @@
+/* Copyright (C) 2012 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/action.h>
+#include <giomm/simpleaction.h>
+
+namespace Gio
+{
+
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action(const Glib::ustring& name)
+{
+  auto action = SimpleAction::create(name);
+  add_action(action);
+  return action;
+}
+
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action(const Glib::ustring& name, const ActivateSlot& slot)
+{
+  auto action = add_action(name);
+  action->signal_activate().connect(sigc::hide(slot));
+  return action;
+}
+
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_with_parameter(
+  const Glib::ustring& name, const Glib::VariantType& parameter_type, const ActivateWithParameterSlot& slot)
+{
+  auto action = SimpleAction::create(name, parameter_type);
+  action->signal_activate().connect(slot);
+  add_action(action);
+  return action;
+}
+
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_bool(const Glib::ustring& name, bool state)
+{
+  auto action = SimpleAction::create_bool(name, state);
+  add_action(action);
+  return action;
+}
+
+// TODO: Use a slot that takes a bool?
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_bool(const Glib::ustring& name, const ActivateSlot& slot, bool state)
+{
+  auto action = add_action_bool(name, state);
+  action->signal_activate().connect(sigc::hide(slot));
+  return action;
+}
+
+// TODO: Use a slot that takes a string?
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_radio_string(const Glib::ustring& name, const Glib::ustring& state)
+{
+  auto action = SimpleAction::create_radio_string(name, state);
+  add_action(action);
+  return action;
+}
+
+namespace
+{
+
+// Handle the normal activate signal, calling instead a slot that takes the specific type:
+static void
+on_action_radio_string(
+  const Glib::VariantBase& parameter, const Gio::ActionMap::ActivateWithStringParameterSlot& slot)
+{
+  const auto variantDerived = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(parameter);
+  const auto str = variantDerived.get();
+  slot(str);
+}
+
+} // anonymous namespace
+
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_radio_string(const Glib::ustring& name,
+  const ActivateWithStringParameterSlot& slot, const Glib::ustring& state)
+{
+  auto action = add_action_radio_string(name, state);
+  action->signal_activate().connect(sigc::bind(sigc::ptr_fun(&on_action_radio_string), slot));
+  return action;
+}
+
+namespace
+{
+
+// Handle the normal activate signal, calling instead a slot that takes the specific type:
+static void
+on_action_radio_int(
+  const Glib::VariantBase& parameter, const Gio::ActionMap::ActivateWithIntParameterSlot& slot)
+{
+  const auto variantDerived = Glib::VariantBase::cast_dynamic<Glib::Variant<int>>(parameter);
+  const auto str = variantDerived.get();
+  slot(str);
+}
+
+} // anonymous namespace
+
+// TODO: Use a slot that takes an integer?
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_radio_integer(const Glib::ustring& name, gint32 state)
+{
+  auto action = SimpleAction::create_radio_integer(name, state);
+  add_action(action);
+  return action;
+}
+
+Glib::RefPtr<SimpleAction>
+ActionMap::add_action_radio_integer(
+  const Glib::ustring& name, const ActivateWithIntParameterSlot& slot, gint32 state)
+{
+  auto action = add_action_radio_integer(name, state);
+  action->signal_activate().connect(sigc::bind(sigc::ptr_fun(&on_action_radio_int), slot));
+  return action;
+}
+
+} // namespace Gio

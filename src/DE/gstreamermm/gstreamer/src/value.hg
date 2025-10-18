@@ -1,0 +1,301 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gst/gstvalue.h>
+#include <glibmm/value_custom.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** @defgroup GstHelperClasses gstreamermm Helper Classes
+ *  Classes used to represent GStreamer internal GValue types such as
+ *  GST_TYPE_FRACTION, etc.
+ */
+
+/** A class that represents a 4 byte identifier (used in codecs).
+ * Gst::Fourcc is used to store a four byte identifier in Gst::Structure of
+ * Gst::Caps as a value representing a property (see GStreamer Application
+ * Development Manual section 8.2.2 and GstValue docs).  When the value is set,
+ * it is transformed to a GStreamer GType so retrieving the value is a bit
+ * different.  The class can be used in setting and getting a Gst::Structure
+ * field like so:
+ *
+ * @code
+ * Glib::Value<Gst::Fourcc> value;
+ * value.init(Glib::Value<Gst::Fourcc>::value_type());
+ * value.set(Gst::Fourcc('M', 'J', 'P', 'G'));
+ *
+ * Gst::Structure structure("my-structure");
+ * structure.set_field("id", value);
+ * ...
+ * Glib::ValueBase gst_value;
+ * structure.get_field("id", gst_value);
+ * Gst::Fourcc fourcc(gst_value);
+ * char first_char = fourcc.first;
+ * ...
+ * @endcode
+ *
+ * Last reviewed on 2016-08-27 (1.8.0)
+ *
+ * @ingroup GstHelperClasses
+ */
+class Fourcc
+{
+public:
+  /** Construct an undefined Gst::Fourcc.
+   */
+  Fourcc();
+
+  /** Construct a Gst::Fourcc from another.
+   */
+  Fourcc(const Fourcc& src);
+
+  /** Construct a Gst::Fourcc from 4 characters.
+   */
+  Fourcc(char first, char second, char third, char fourth);
+
+  /** Construct a Gst::Fourcc from an input string. Caller is responsible for
+   * ensuring the input string consists of at least four characters.
+   */
+  explicit Fourcc(const Glib::ustring& s);
+
+  /** Construct a Gst::Fourcc from a 32 bit unsigned integer.
+   */
+  explicit Fourcc(guint32 fourcc);
+
+  Fourcc& operator=(const Fourcc& src);
+
+
+public:
+
+public:
+  char first;
+  char second;
+  char third;
+  char fourth;
+
+private:
+  void set_ccs(guint32 fourcc);
+};
+
+
+/** A class that represents a fraction.
+ * Gst::Fraction is used to store a fraction in Gst::Structures of Gst::Caps as
+ * a value representing a property (see GStreamer Application Development
+ * Manual section 8.2.2 and GstValue docs).  When the value is set, it is
+ * transformed to a GStreamer GType so retrieving the value is a bit different.
+ * The class can be used in setting and getting a Gst::Structure field like so:
+ *
+ * @code
+ * Glib::Value<Gst::Fraction> value;
+ * value.init(Glib::Value<Gst::Fraction>::value_type());
+ * value.set(Gst::Fraction(25,1));
+ *
+ * Gst::Structure structure("my-structure");
+ * structure.set_field("framerate", value);
+ * ...
+ * Glib::ValueBase gst_value;
+ * structure.get_field("framerate", gst_value);
+ * Gst::Fraction fract(gst_value);
+ * int numerator = fract.num;
+ * ...
+ * @endcode
+ *
+ * Last reviewed on 2016-08-27 (1.8.0) 
+ *
+ * @ingroup GstHelperClasses
+ */
+class Fraction
+{
+public:
+  /** Constructs a zero Gst::Fraction (0/1).
+   */
+  Fraction();
+
+  /** Constructs a Gst::Fraction from another.
+   */
+  Fraction(const Fraction& src);
+
+  /** Constructs a Gst::Fraction (num/denom).
+   */
+  Fraction(int num, int denom);
+
+  /** Constructs a Gst::Fraction from a GST_TYPE_FRACTION.
+   */
+  explicit Fraction(const Glib::ValueBase& gst_fraction_value);
+
+  /** Constructs a Gst::Fraction from a GST_TYPE_FRACTION.
+   */
+  explicit Fraction(const GValue& gst_fraction_value);
+
+  Fraction& operator=(const Fraction& src);
+
+
+public:
+  int num;
+  int denom;
+};
+
+/** A class that represents a range (min - max).
+ * Gst::Range is used to store a range in Gst::Structures of
+ * Gst::Caps as a value representing a property (see GStreamer Application
+ * Development Manual section 8.2.2 and GstValue docs).  When the value is set,
+ * it is transformed to a GStreamer GType so retrieving the value is a bit
+ * different.  The class can be used in setting and getting a Gst::Structure
+ * field like so:
+ *
+ * @code
+ * Glib::Value<Gst::Range<int>> value;
+ * value.init(Glib::Value<Gst::Range<int>>::value_type());
+ * value.set(Gst::Range<int>(8000, 50000));
+ *
+ * Gst::Structure structure("my-structure");
+ * structure.set_field("rate", value);
+ * ...
+ * Glib::ValueBase gst_value;
+ * structure.get_field("rate", gst_value);
+ * Gst::Range<int> range(gst_value);
+ * int max = range.max;
+ * ...
+ * @endcode
+ *
+ * Gst::Range should be used with following types: int, double, Gst::Fraction.
+ *
+ * Last reviewed on 2016-08-27 (1.8.0)
+ *
+ * @ingroup GstHelperClasses
+ */
+template<typename T>
+class Range
+{
+public:
+  /** Constructs a zero Gst::Range.
+   */
+  Range() : min(T()), max(T()) {}
+
+  /** Constructs a Gst::Range (min - max).
+   */
+  Range(T _min, T _max) : min(_min), max(_max) {}
+
+  /** Constructs an Gst::Range from another range.
+   */
+  Range(const Range& src) : min(src.min), max(src.max) {}
+
+  /** Constructs an Gst::Range from a Glib::ValueBase.
+   */
+  explicit Range(const Glib::Value<Range<T>>& range_value)
+  {
+    min = range_value.get().min;
+    max = range_value.get().max;
+  }
+
+  /** Constructs an Gst::Range from a GValue.
+   */
+  explicit Range(const GValue& range_value)
+  {
+    init_range(range_value);
+  }
+
+  Range& operator=(const Range& src)
+  {
+    min = src.min;
+    max = src.max;
+    return *this;
+  }
+
+public:
+  T min;
+  T max;
+  
+private:
+  void init_range(const GValue& range_value);
+};
+
+} //namespace Gst
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+namespace Glib
+{
+
+template<>
+class Value<Gst::Fourcc> : public Value<unsigned int>
+{
+public:
+  typedef Gst::Fourcc   CppType;
+  typedef guint32       CType;
+
+  static GType value_type() G_GNUC_CONST;
+
+  void set(const Gst::Fourcc& data);
+  Gst::Fourcc get() const;
+};
+
+template<>
+class Value<Gst::Range<int>> : public ValueBase_Boxed
+{
+public:
+  typedef Gst::Range<int> CppType;
+
+  static GType value_type() G_GNUC_CONST;
+
+  void set(const Gst::Range<int>& data);
+  Gst::Range<int> get() const;
+};
+
+template<>
+class Value<Gst::Range<double>> : public ValueBase_Boxed
+{
+public:
+  typedef Gst::Range<double> CppType;
+
+  static GType value_type() G_GNUC_CONST;
+
+  void set(const Gst::Range<double>& data);
+  Gst::Range<double> get() const;
+};
+
+template<>
+class Value<Gst::Fraction> : public ValueBase_Boxed
+{
+public:
+  typedef Gst::Fraction CppType;
+
+  static GType value_type() G_GNUC_CONST;
+
+  void set(const Gst::Fraction& data);
+  Gst::Fraction get() const;
+};
+
+template<>
+class Value<Gst::Range<Gst::Fraction>> : public ValueBase_Boxed
+{
+public:
+  typedef Gst::Range<Gst::Fraction> CppType;
+
+  static GType value_type() G_GNUC_CONST;
+
+  void set(const Gst::Range<Gst::Fraction>& data);
+  Gst::Range<Gst::Fraction> get() const;
+};
+
+} // namespace Glib
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */

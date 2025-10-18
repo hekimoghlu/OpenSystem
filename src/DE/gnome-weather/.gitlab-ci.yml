@@ -1,0 +1,51 @@
+include:
+  - project: 'GNOME/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_DEPTH: 1
+  APP_ID: "org.gnome.WeatherDevel"
+  BUNDLE: "gnome-weather-dev.flatpak"
+  FLATPAK_MODULE: "gnome-weather"
+  MANIFEST_PATH: "org.gnome.Weather.json"
+  RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+  TARBALL_ARTIFACT_PATH: ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+flatpak:
+  extends: '.flatpak@x86_64'
+  before_script:
+    - flatpak --user install -y org.freedesktop.Sdk.Extension.node20//24.08 org.freedesktop.Sdk.Extension.typescript//24.08
+
+flatpak@aarch64:
+  extends: '.flatpak@aarch64'
+  before_script:
+    - flatpak --user install -y org.freedesktop.Sdk.Extension.node20//24.08 org.freedesktop.Sdk.Extension.typescript//24.08
+
+nightly:
+  extends: '.publish_nightly'
+  needs: ['flatpak']
+
+nightly aarch64:
+  extends: '.publish_nightly'
+  needs: ['flatpak@aarch64']
+
+lint:
+  variables:
+    LINT_LOG: "eslint-report.txt"
+    FORMAT_LOG: "prettier-report.diff"
+  script:
+    - sudo dnf install -y npm
+    - npm install
+    - npx eslint -o $LINT_LOG --no-color src || { cat $LINT_LOG; false; }
+    - npx prettier -c ./src/ || { npx prettier -w ./src/; git diff >> $FORMAT_LOG; false; }
+  artifacts:
+    paths:
+      - ${LINT_LOG}
+      - ${FORMAT_LOG}
+    when: on_failure
+

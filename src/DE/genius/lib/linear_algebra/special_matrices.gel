@@ -1,0 +1,167 @@
+# Some Special Matrices
+
+#FIXME:
+#	higham test matrices (a whole slew of 'em)
+
+SetHelp ("CompanionMatrix", "linear_algebra", "Companion matrix of a polynomial (as vector)")
+function CompanionMatrix(p)= (
+	if not IsPoly (p) or elements(p) < 2 then
+		(error("CompanionMatrix: argument not a polynomial (vector) order 2 or greater");bailout);
+	#make monic
+	if p@(elements(p)) != 1 then
+		p = p ./ p@(elements(p));
+	#make vertical
+	if columns(p) > 1 then
+		p = p.';
+	[ [0;I(elements(p)-2)] , -p@(1 : elements(p)-1,1) ]
+)
+
+SetHelp ("HankelMatrix", "linear_algebra", "Hankel matrix")
+function HankelMatrix(c,r)= (
+	H = [0];
+	for i=1 to elements(c) do
+		for j=1 to elements(r) do
+			H@(i,j) = if i+j-1 <= elements(c) then c@(i+j-1) else r@(i+j-elements(c));
+	H
+)
+
+SetHelp ("HilbertMatrix", "linear_algebra", "Hilbert matrix of order n")
+function HilbertMatrix(n)= (
+	H = [0];
+	for i=1 to n do
+		for j=1 to n do
+			H@(i,j) = 1/(i+j-1);
+	H
+)
+
+SetHelp ("InverseHilbertMatrix", "linear_algebra", "Inverse Hilbert matrix of order n")
+function InverseHilbertMatrix(n) = HilbertMatrix(n)^(-1)
+#	magic square (exists for n != 2 -- I know how to make them for n odd)
+#	pascal matrix
+#	toeplitz matrix 
+#		constant along diagonals
+#		take first column, first row (or just first row, and then make Hermitian, i.e., set first column = conjugate of first row)
+#	wilkinson (tridiagonal -- once off diagonals are all 1s, and the diagonal goes:
+# 3 2 1 0 1 2 3 (say, for n=7)
+# or
+#1.5 .5 .5 1.5 (for n=4, say)
+
+SetHelp ("VandermondeMatrix", "linear_algebra", "Return the Vandermonde matrix")
+function VandermondeMatrix(v) =
+  (
+    if rows(v) == 1 then v=v.';
+    n=rows(v);
+    vandermonde=ones(n,1);
+    for loop = 2 to n do
+     (
+      vandermonde=[vandermonde,v];  # adjoin new column
+      vandermonde@(,n) = vandermonde@(,n-1) .* vandermonde@(,n)
+    );
+   vandermonde
+  )
+SetHelpAlias ("VandermondeMatrix", "vander")
+vander = VandermondeMatrix
+
+SetHelp ("RosserMatrix", "linear_algebra", "Rosser matrix, a classic symmetric eigenvalue test problem")
+RosserMatrix = [611,196,-192,407,-8,-52,-49,29
+196,899,113,-192,-71,-43,-8,-44
+-192,113,899,196,61,49,8,52
+407,-192,196,611,8,44,59,-23
+-8,-71,61,8,411,-599,208,208
+-52,-43,49,44,-599,411,208,208
+-49,-8,8,59,208,208,99,-911
+29,-44,52,-23,208,208,-911,99];
+
+#Rotation matrices
+# See http://mathworld.wolfram.com/RotationMatrix.html
+
+SetHelp ("Rotation2D", "linear_algebra", "Rotation around origin in R^2")
+function Rotation2D(angle) = (
+ [cos(angle),sin(angle)
+  -sin(angle),cos(angle)]
+)
+SetHelpAlias ("Rotation2D", "RotationMatrix")
+RotationMatrix = Rotation2D
+
+SetHelp ("Rotation3DX", "linear_algebra", "Rotation around origin in R^3 about the x-axis")
+function Rotation3DX(angle) = (
+ [1,0,0
+  0,cos(angle),sin(angle)
+  0,-sin(angle),cos(angle)]
+)
+
+SetHelp ("Rotation3DY", "linear_algebra", "Rotation around origin in R^3 about the y-axis")
+function Rotation3DY(angle) = (
+ [cos(angle),0,-sin(angle)
+  0,1,0
+  sin(angle),0,cos(angle)]
+)
+
+SetHelp ("Rotation3DZ", "linear_algebra", "Rotation around origin in R^3 about the z-axis")
+function Rotation3DZ(angle) = (
+ [cos(angle),sin(angle),0
+  -sin(angle),cos(angle),0
+  0,0,1]
+)
+
+# Ported from octave
+SetHelp ("CommutationMatrix", "linear_algebra", "Return the commutation matrix K(m,n) which is the unique m*n by m*n matrix such that K(m,n) * MakeVector(A) = MakeVector(A.') for all m by n matrices A.")
+function CommutationMatrix(m,n) = (
+  if not IsPositiveInteger (m) or not IsPositiveInteger (n) then
+  	(error("CommutationMatrix: arguments not positive integers");bailout);
+
+  ## It is clearly possible to make this a LOT faster!
+  k = zeros (m * n, m * n);
+  for i = 1 to m do (
+    for j = 1 to n do (
+      k@((i - 1) * n + j, (j - 1) * m + i) = 1
+    )
+  );
+  k
+)
+
+#ported from octave
+SetHelp ("ToeplitzMatrix", "linear_algebra", "Return the Toeplitz matrix constructed given the first column c and (optionally) the first row r.")
+function ToeplitzMatrix (c, r...) = (
+  if IsNull(r) then
+	rr = c
+  else if elements(r) > 1 then
+  	(error("ToeplitzMatrix: must have at most 2 arguments");bailout)
+  else
+	rr = r@(1);
+
+  if not IsVector(rr) or not IsVector(c) then
+  	(error("ToeplitzMatrix: Arguments not vectors");bailout);
+
+  if rr@(1) != c@(1) then
+    error ("ToeplitzMatrix: column wins diagonal conflict");
+
+  ## If we have a single complex argument, we want to return a
+  ## Hermitian-symmetric matrix (actually, this will really only be
+  ## Hermitian-symmetric if the first element of the vector is real).
+
+  if IsNull(r) then (
+    c = conj (c);
+    c@(1) = conj (c@(1))
+  );
+
+  if columns(c) > 1 then
+	c = c .';
+  if rows(rr) > 1 then
+	rr = rr .';
+
+  nc = elements (c);
+  nr = elements (rr);
+
+  retval = SetMatrixSize (c, nc, nr);
+
+  for i = 2 to min (nc, nr) do (
+    retval@(i:nc, i) = c@(1:nc-i+1).'
+  );
+
+  for i = 1 to min (nc, nr-1) do (
+    retval@(i, i+1:nr) = rr@(2:nr-i+1)
+  );
+
+  retval
+)

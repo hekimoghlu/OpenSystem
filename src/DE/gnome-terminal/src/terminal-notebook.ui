@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright © 2012 Christian Persch
+  Copyright © 2023 Christian Hergert
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<interface>
+  <template class="TerminalNotebook" parent="GtkWidget">
+    <child>
+      <object class="AdwTabView" id="tab_view">
+        <property name="menu-model">page_menu</property>
+        <signal name="setup-menu" handler="terminal_notebook_setup_menu" swapped="0" object="TerminalNotebook"/>
+        <signal name="notify::selected-page" handler="terminal_notebook_switch_page" after="1" swapped="0" object="TerminalNotebook"/>
+        <signal name="page-attached" handler="terminal_notebook_page_added" after="1" swapped="0" object="TerminalNotebook"/>
+        <signal name="page-detached" handler="terminal_notebook_page_removed" after="1" swapped="0" object="TerminalNotebook"/>
+        <signal name="page-reordered" handler="terminal_notebook_page_reordered" after="1" swapped="0" object="TerminalNotebook"/>
+        <signal name="close-page" handler="terminal_notebook_close_page" swapped="0" object="TerminalNotebook"/>
+      </object>
+    </child>
+  </template>
+  <menu id="page_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Pin Terminal</attribute>
+        <attribute name="action">notebook.notebook-tab-pin</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Unpin Terminal</attribute>
+        <attribute name="action">notebook.notebook-tab-unpin</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Move Terminal _Left</attribute>
+        <attribute name="action">notebook.notebook-tab-move-left</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Move Terminal _Right</attribute>
+        <attribute name="action">notebook.notebook-tab-move-right</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Detach Terminal</attribute>
+        <attribute name="action">notebook.notebook-tab-detach</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Set _Title…</attribute>
+        <attribute name="action">notebook.notebook-set-title</attribute>
+        <attribute name="hidden-when">action-missing</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">C_lose Terminal</attribute>
+        <attribute name="action">notebook.notebook-tab-close</attribute>
+	<attribute name="accel"></attribute>
+      </item>
+    </section>
+  </menu>
+</interface>

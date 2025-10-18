@@ -1,0 +1,1482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.0"/>
+  <requires lib="Panel" version="1.0"/>
+  <template class="ExampleWindow" parent="AdwApplicationWindow">
+    <property name="title">Panel Example</property>
+    <property name="default-width">900</property>
+    <property name="default-height">600</property>
+    <style>
+      <class name="devel"/>
+    </style>
+    <child>
+      <object class="AdwToolbarView">
+        <property name="top-bar-style">raised</property>
+        <property name="bottom-bar-style">raised</property>
+        <child>
+          <object class="PanelDock" id="dock">
+            <property name="reveal-start">false</property>
+            <property name="reveal-bottom">true</property>
+            <property name="reveal-end">false</property>
+            <property name="start-width">250</property>
+            <child internal-child="center">
+              <object class="PanelDockChild">
+                <property name="child">
+                  <object class="PanelGrid" id="grid">
+                    <signal name="create-frame" handler="create_frame_cb"/>
+                  </object>
+                </property>
+                <property name="top-edge">
+                  <object class="AdwHeaderBar" id="headerbar">
+                    <child type="start">
+                      <object class="GtkMenuButton">
+                        <property name="width-request">65</property>
+                        <property name="always-show-arrow">true</property>
+                        <property name="icon-name">list-add-symbolic</property>
+                        <property name="menu-model">add_menu</property>
+                      </object>
+                    </child>
+                    <child type="start">
+                      <object class="PanelToggleButton">
+                        <property name="dock">dock</property>
+                        <property name="area">start</property>
+                      </object>
+                    </child>
+                    <child type="title">
+                      <object class="GtkCenterBox">
+                        <child type="center">
+                          <object class="AdwClamp">
+                            <property name="orientation">horizontal</property>
+                            <property name="maximum-size">400</property>
+                            <child>
+                              <object class="PanelOmniBar">
+                                <property name="valign">center</property>
+                                <property name="icon-name">builder-build-symbolic</property>
+                                <property name="action-name">project.build</property>
+                                <property name="menu-model">build_menu</property>
+                                <child type="prefix">
+                                  <object class="GtkBox">
+                                    <property name="valign">center</property>
+                                    <property name="orientation">vertical</property>
+                                    <property name="margin-end">12</property>
+                                    <child>
+                                      <object class="GtkImage">
+                                        <property name="icon-name">pan-up-symbolic</property>>
+                                        <property name="pixel-size">12</property>>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkImage">
+                                        <property name="icon-name">pan-down-symbolic</property>>
+                                        <property name="pixel-size">12</property>>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="hexpand">true</property>
+                                    <property name="label">Ready</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                                <property name="popover">
+                                  <object class="GtkPopover">
+                                    <property name="width-request">450</property>
+                                    <child>
+                                      <object class="GtkGrid">
+                                        <property name="margin-top">24</property>
+                                        <property name="margin-bottom">24</property>
+                                        <property name="margin-start">24</property>
+                                        <property name="margin-end">24</property>
+                                        <property name="row-spacing">8</property>
+                                        <property name="column-spacing">16</property>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">libpanel</property>
+                                            <property name="xalign">0</property>
+                                            <property name="margin-bottom">6</property>
+                                            <attributes>
+                                              <attribute name="weight" value="bold"/>
+                                              <attribute name="scale" value="1.1"/>
+                                            </attributes>
+                                            <layout>
+                                              <property name="row">0</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Branch</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">1</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">main</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">1</property>
+                                              <property name="column">1</property>
+                                              <property name="column-span">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Build Profile</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">2</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">org.gnome.libpanel.demo</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">2</property>
+                                              <property name="column">1</property>
+                                              <property name="column-span">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Runtime</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">3</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">org.gnome.Platform (master)</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">3</property>
+                                              <property name="column">1</property>
+                                              <property name="column-span">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Device</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">4</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">My Computer (localhost)</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">4</property>
+                                              <property name="column">1</property>
+                                              <property name="column-span">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Build status</property>
+                                            <property name="margin-top">12</property>
+                                            <property name="xalign">1</property>
+                                            <attributes>
+                                              <attribute name="weight" value="bold"/>
+                                            </attributes>
+                                            <layout>
+                                              <property name="row">5</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="margin-top">12</property>
+                                            <property name="label">Ready</property>
+                                            <property name="xalign">0</property>
+                                            <layout>
+                                              <property name="row">5</property>
+                                              <property name="column">1</property>
+                                              <property name="column-span">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Last Build</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">6</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">04:26:28 PM</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">6</property>
+                                              <property name="column">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Build Result</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">7</property>
+                                              <property name="column">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Success</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">7</property>
+                                              <property name="column">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Warnings</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">6</property>
+                                              <property name="column">2</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">0</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">6</property>
+                                              <property name="column">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">Errors</property>
+                                            <property name="xalign">1</property>
+                                            <style>
+                                              <class name="dim-label"/>
+                                            </style>
+                                            <layout>
+                                              <property name="row">7</property>
+                                              <property name="column">2</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="label">0</property>
+                                            <property name="xalign">0</property>
+                                            <property name="hexpand">true</property>
+                                            <layout>
+                                              <property name="row">7</property>
+                                              <property name="column">3</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="end">
+                          <object class="GtkBox">
+                            <property name="margin-start">6</property>
+                            <child>
+                              <object class="AdwSplitButton" id="run_button">
+                                <property name="icon-name">media-playback-start-symbolic</property>
+                                <property name="tooltip-text">Run Project (Ctrl+Shift+R)</property>
+                                <property name="menu-model">run_menu</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="end">
+                      <object class="GtkMenuButton" id="primary_button">
+                        <property name="icon-name">open-menu-symbolic</property>
+                        <property name="primary">true</property>
+                        <property name="menu-model">window_menu</property>
+                      </object>
+                    </child>
+                    <child type="end">
+                      <object class="PanelToggleButton">
+                        <property name="dock">dock</property>
+                        <property name="area">end</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="PanelPaned">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="PanelFrame">
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Color</property>
+                        <property name="tooltip">Color</property>
+                        <property name="can-maximize">true</property>
+                        <property name="icon-name">color-select-symbolic</property>
+                        <child>
+                          <object class="GtkColorChooserWidget">
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Swatches</property>
+                        <property name="icon-name">preferences-color-symbolic</property>
+                        <property name="can-maximize">true</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkListBox"></object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="PanelFrame">
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Adjustments</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkListBox"></object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Styles</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkListBox"></object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="PanelFrame">
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Layers</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkListBox"></object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Channels</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkListBox"></object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="PanelWidget">
+                        <property name="title">Paths</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <child>
+                              <object class="GtkListBox"></object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child internal-child="bottom">
+              <object class="PanelDockChild">
+                <property name="child">
+                  <object class="PanelPaned">
+                    <property name="orientation">horizontal</property>
+                    <child>
+                      <object class="PanelFrame">
+                        <property name="orientation">horizontal</property>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="icon-name">edit-find-symbolic</property>
+                            <property name="title">Find in Files</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkTextView">
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="title">Terminal</property>
+                            <property name="icon-name">utilities-terminal-symbolic</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <child>
+                                  <object class="GtkTextView">
+                                    <property name="monospace">true</property>
+                                    <property name="overwrite">true</property>
+                                    <property name="buffer">
+                                      <object class="GtkTextBuffer">
+                                        <property name="text">christian@fedora libpanel]$ </property>
+                                      </object>
+                                    </property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="title">Build Output</property>
+                            <property name="icon-name">builder-build-symbolic</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <child>
+                                  <object class="GtkTextView"></object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="title">Application Output</property>
+                            <property name="icon-name">media-playback-start-symbolic</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <child>
+                                  <object class="GtkTextView"></object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+                <property name="bottom-edge">
+                  <object class="PanelStatusbar">
+                    <child>
+                      <object class="GtkMenuButton">
+                        <property name="direction">up</property>
+                        <property name="menu-model">vcs_menu</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">builder-vcs-branch-symbolic</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">main</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">warnings-symbolic</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">6</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="margin-start">6</property>
+                            <property name="icon-name">errors-symbolic</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;a href="http://gnome.org/"&gt;3&lt;/a&gt;</property>
+                            <property name="use-markup">true</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="command_bar">
+                        <property name="hexpand">true</property>
+                        <property name="xalign">0</property>
+                        <attributes>
+                          <attribute name="family" value="Monospace"/>
+                        </attributes>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="PanelToggleButton">
+                        <property name="dock">dock</property>
+                        <property name="area">bottom</property>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkToggleButton" id="frame_header_bar">
+                        <property name="active">true</property>
+                        <property name="label">H</property>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkToggleButton" id="frame_tab_bar">
+                        <property name="group">frame_header_bar</property>
+                        <property name="label">T</property>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkLabel">
+                        <property name="label">INS</property>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkMenuButton">
+                        <property name="focusable">false</property>
+                        <property name="focus-on-click">false</property>
+                        <property name="direction">up</property>
+                        <property name="popover">
+                          <object class="GtkPopover">
+                            <property name="width-request">200</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">12</property>
+                                <property name="margin-bottom">12</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <attributes>
+                                      <attribute name="weight" value="bold"/>
+                                    </attributes>
+                                    <property name="label">Go to Line</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkBox">
+                                    <property name="spacing">10</property>
+                                    <child>
+                                      <object class="GtkEntry">
+                                        <property name="width-chars">5</property>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkButton">
+                                        <property name="label">Go</property>
+                                        <style>
+                                          <class name="suggested-action"/>
+                                        </style>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Ln 1, Col 1</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkMenuButton">
+                        <property name="focusable">false</property>
+                        <property name="direction">up</property>
+                        <property name="menu-model">tabs_v_spaces_menu</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">2:2 Spaces</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkMenuButton">
+                        <property name="focusable">false</property>
+                        <property name="direction">up</property>
+                        <property name="menu-model">crlf_menu</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">LF</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkDropDown" id="language">
+                        <property name="enable-search">true</property>
+                        <property name="show-arrow">false</property>
+                        <property name="expression">
+                          <lookup name="string" type="GtkStringObject"/>
+                        </property>
+                        <property name="model">
+                          <object class="GtkStringList">
+                            <items>
+                              <item>C</item>
+                              <item>C++</item>
+                              <item>CSS</item>
+                              <item>HTML</item>
+                              <item>JavaScript</item>
+                              <item>Python</item>
+                              <item>Ruby</item>
+                              <item>XML</item>
+                            </items>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkMenuButton">
+                        <property name="direction">up</property>
+                        <property name="menu-model">encoding_menu</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="hexpand">true</property>
+                            <property name="label">UTF-8</property>
+                            <property name="xalign">.5</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="suffix">
+                      <object class="GtkLabel" id="command">
+                        <property name="visible">false</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child type="start">
+              <object class="AdwToolbarView">
+                <property name="top-bar-style">flat</property>
+                <property name="bottom-bar-style">flat</property>
+                <child type="top">
+                  <object class="AdwHeaderBar">
+                    <property name="show-end-title-buttons">false</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="PanelPaned">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="PanelFrame">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="icon-name">view-list-symbolic</property>
+                            <property name="title">Project Tree</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">Project Tree</property>
+                                    <property name="margin-top">6</property>
+                                    <property name="margin-bottom">6</property>
+                                    <property name="margin-start">6</property>
+                                    <property name="margin-end">6</property>
+                                    <property name="xalign">0</property>
+                                    <attributes>
+                                      <attribute name="weight" value="bold"/>
+                                      <attribute name="scale" value="0.833"/>
+                                      <attribute name="foreground-alpha" value="33000"/>
+                                    </attributes>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkScrolledWindow">
+                                    <property name="propagate-natural-height">true</property>
+                                    <property name="propagate-natural-width">true</property>
+                                    <property name="vexpand">true</property>
+                                    <child>
+                                      <object class="GtkListBox">
+                                        <child>
+                                          <object class="GtkListBoxRow">
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="margin-bottom">3</property>
+                                                <property name="margin-top">3</property>
+                                                <property name="margin-start">6</property>
+                                                <property name="margin-end">6</property>
+                                                <property name="spacing">12</property>
+                                                <child>
+                                                  <object class="GtkImage">
+                                                    <property name="icon-name">builder-vcs-branch-symbolic</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="xalign">0</property>
+                                                    <property name="hexpand">true</property>
+                                                    <property name="label">Version Control</property>
+                                                    <attributes>
+                                                      <attribute name="weight" value="bold"/>
+                                                    </attributes>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkListBoxRow">
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="margin-bottom">3</property>
+                                                <property name="margin-top">3</property>
+                                                <property name="margin-start">6</property>
+                                                <property name="margin-end">6</property>
+                                                <property name="spacing">12</property>
+                                                <child>
+                                                  <object class="GtkImage">
+                                                    <property name="icon-name">builder-build-symbolic</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="xalign">0</property>
+                                                    <property name="hexpand">true</property>
+                                                    <property name="label">Build Targets</property>
+                                                    <attributes>
+                                                      <attribute name="weight" value="bold"/>
+                                                    </attributes>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkListBoxRow">
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="margin-bottom">3</property>
+                                                <property name="margin-top">3</property>
+                                                <property name="margin-start">6</property>
+                                                <property name="margin-end">6</property>
+                                                <property name="spacing">12</property>
+                                                <child>
+                                                  <object class="GtkImage">
+                                                    <property name="icon-name">builder-unit-tests-symbolic</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="xalign">0</property>
+                                                    <property name="hexpand">true</property>
+                                                    <property name="label">Unit Tests</property>
+                                                    <attributes>
+                                                      <attribute name="weight" value="bold"/>
+                                                    </attributes>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="GtkListBoxRow">
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="margin-bottom">3</property>
+                                                <property name="margin-top">3</property>
+                                                <property name="margin-start">6</property>
+                                                <property name="margin-end">6</property>
+                                                <property name="spacing">12</property>
+                                                <child>
+                                                  <object class="GtkImage">
+                                                    <property name="icon-name">view-list-symbolic</property>
+                                                  </object>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="xalign">0</property>
+                                                    <property name="hexpand">true</property>
+                                                    <property name="label">Files</property>
+                                                    <attributes>
+                                                      <attribute name="weight" value="bold"/>
+                                                    </attributes>
+                                                  </object>
+                                                </child>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSearchEntry">
+                                    <property name="placeholder-text">Filter…</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="title">Build Issues</property>
+                            <property name="icon-name">builder-build-symbolic</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <child>
+                                  <object class="GtkListBox"></object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="PanelWidget">
+                            <property name="title">TODOs/FIXMEs</property>
+                            <property name="icon-name">object-select-symbolic</property>
+                            <property name="can-maximize">true</property>
+                            <child>
+                              <object class="GtkScrolledWindow">
+                                <child>
+                                  <object class="GtkListBox"></object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+  <object class="PanelThemeSelector" id="theme_selector">
+    <property name="action-name">win.theme</property>
+  </object>
+  <menu id="page_menu">
+    <section>
+      <item>
+        <attribute name="label">Maximize</attribute>
+        <attribute name="action">page.maximize</attribute>
+        <attribute name="accel">&lt;shift&gt;F11</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Save</attribute>
+        <attribute name="action">page.save</attribute>
+        <attribute name="accel">&lt;control&gt;s</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Close Page</attribute>
+        <attribute name="action">frame.close-page-or-frame</attribute>
+        <attribute name="accel">&lt;control&gt;w</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="window_menu">
+    <section>
+      <item>
+        <attribute name="custom">theme</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Open a Project…</attribute>
+      </item>
+      <item>
+        <attribute name="label">Clone Repository…</attribute>
+      </item>
+      <item>
+        <attribute name="label">Start New Project…</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Add Workspace…</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Close Workspace</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Preferences</attribute>
+      </item>
+      <item>
+        <attribute name="label">Keyboard Shortcuts</attribute>
+        <attribute name="action">win.help-overlay</attribute>
+        <attribute name="accel">&lt;ctrl&gt;question</attribute>
+      </item>
+      <item>
+        <attribute name="label">Help</attribute>
+      </item>
+      <item>
+        <attribute name="label">About Builder</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="add_menu">
+    <section>
+      <attribute name="label">Files</attribute>
+      <item>
+        <attribute name="label">New File</attribute>
+        <attribute name="action">document.new</attribute>
+        <attribute name="accel">&lt;ctrl&gt;n</attribute>
+      </item>
+      <item>
+        <attribute name="label">New Class</attribute>
+        <attribute name="action">class.new</attribute>
+      </item>
+      <item>
+        <attribute name="label">New Widget</attribute>
+        <attribute name="action">class.new</attribute>
+      </item>
+    </section>
+    <section>
+      <attribute name="label">Terminals</attribute>
+      <item>
+        <attribute name="label">New Terminal</attribute>
+        <attribute name="action">terminal.new</attribute>
+      </item>
+      <item>
+        <attribute name="label">New Terminal in SDK</attribute>
+        <attribute name="action">terminal.new-build</attribute>
+      </item>
+      <item>
+        <attribute name="label">New Terminal in Runtime</attribute>
+        <attribute name="action">terminal.new-build</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="vcs_menu">
+    <section>
+      <attribute name="label">Branches</attribute>
+      <item>
+        <attribute name="label">main</attribute>
+        <attribute name="action">vcs.switch-branch('main')</attribute>
+      </item>
+      <item>
+        <attribute name="label">gnome-41</attribute>
+        <attribute name="action">vcs.switch-branch('gnome-41')</attribute>
+      </item>
+      <item>
+        <attribute name="label">gnome-42</attribute>
+        <attribute name="action">vcs.switch-branch('gnome-42')</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="crlf_menu">
+    <section>
+      <attribute name="label">Line Ending</attribute>
+      <item>
+        <attribute name="label">Linux (LF)</attribute>
+        <attribute name="action">newline.type('lf')</attribute>
+      </item>
+      <item>
+        <attribute name="label">Windows (CR/LF)</attribute>
+        <attribute name="action">newline.type('crlf')</attribute>
+      </item>
+      <item>
+        <attribute name="label">Mac Classic (CR)</attribute>
+        <attribute name="action">newline.type('cr')</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="encoding_menu">
+    <section>
+      <attribute name="label">Encoding</attribute>
+      <item>
+        <attribute name="label">UTF-8</attribute>
+      </item>
+      <item>
+        <attribute name="label">ASCII</attribute>
+      </item>
+      <item>
+        <attribute name="label">Western (ISO 8895-1)</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="syntax_menu">
+    <section>
+      <attribute name="label">Highlight Mode</attribute>
+      <item>
+        <attribute name="label">C</attribute>
+      </item>
+      <item>
+        <attribute name="label">C++</attribute>
+      </item>
+      <item>
+        <attribute name="label">CSS</attribute>
+      </item>
+      <item>
+        <attribute name="label">HTML</attribute>
+      </item>
+      <item>
+        <attribute name="label">JavaScript</attribute>
+      </item>
+      <item>
+        <attribute name="label">Python</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="tabs_v_spaces_menu">
+    <section>
+      <attribute name="label">Indentation</attribute>
+      <item>
+        <attribute name="label">Tabs</attribute>
+        <attribute name="action">indent.style('tabs')</attribute>
+        <attribute name="role">radio</attribute>
+      </item>
+      <item>
+        <attribute name="label">Spaces</attribute>
+        <attribute name="action">indent.style('spaces')</attribute>
+        <attribute name="role">radio</attribute>
+      </item>
+    </section>
+    <section>
+      <submenu>
+        <attribute name="label">Spaces per Tab</attribute>
+        <section>
+          <item>
+            <attribute name="label">2</attribute>
+          </item>
+          <item>
+            <attribute name="label">3</attribute>
+          </item>
+          <item>
+            <attribute name="label">4</attribute>
+          </item>
+          <item>
+            <attribute name="label">5</attribute>
+          </item>
+          <item>
+            <attribute name="label">8</attribute>
+          </item>
+        </section>
+      </submenu>
+      <submenu>
+        <attribute name="label">Indentation Size</attribute>
+        <section>
+          <item>
+            <attribute name="label">2</attribute>
+          </item>
+          <item>
+            <attribute name="label">3</attribute>
+          </item>
+          <item>
+            <attribute name="label">4</attribute>
+          </item>
+          <item>
+            <attribute name="label">5</attribute>
+          </item>
+          <item>
+            <attribute name="label">8</attribute>
+          </item>
+        </section>
+      </submenu>
+    </section>
+  </menu>
+  <menu id="run_menu">
+    <section>
+      <submenu>
+        <attribute name="label">Run Command</attribute>
+        <section>
+          <submenu>
+            <attribute name="label">Unit Tests</attribute>
+            <section>
+              <item>
+                <attribute name="label">Run All Tests</attribute>
+              </item>
+            </section>
+            <section>
+              <item>
+                <attribute name="label">test-animation</attribute>
+              </item>
+              <item>
+                <attribute name="label">test-panel</attribute>
+              </item>
+            </section>
+          </submenu>
+        </section>
+        <section>
+          <item>
+            <attribute name="label">gnome-builder (Flatpak)</attribute>
+            <attribute name="role">radio</attribute>
+          </item>
+          <item>
+            <attribute name="label">test-vim (Meson)</attribute>
+            <attribute name="role">radio</attribute>
+          </item>
+          <item>
+            <attribute name="label">test-buffer (Meson)</attribute>
+            <attribute name="role">radio</attribute>
+          </item>
+        </section>
+      </submenu>
+      <section>
+        <item>
+          <attribute name="label">Custom Command…</attribute>
+        </item>
+      </section>
+    </section>
+    <section>
+      <submenu>
+        <attribute name="label">Device (My Computer)</attribute>
+        <section>
+          <item>
+            <attribute name="label">My Computer</attribute>
+          </item>
+          <item>
+            <attribute name="label">My Computer (_i386)</attribute>
+          </item>
+        </section>
+        <section>
+          <submenu>
+            <attribute name="label">Simulator</attribute>
+            <section>
+              <submenu>
+                <attribute name="label">GNOME OS</attribute>
+                <section>
+                  <item>
+                    <attribute name="label">41</attribute>
+                  </item>
+                  <item>
+                    <attribute name="label">42</attribute>
+                  </item>
+                  <item>
+                    <attribute name="label">43</attribute>
+                  </item>
+                </section>
+                <section>
+                  <item>
+                    <attribute name="label">Nightly</attribute>
+                  </item>
+                </section>
+              </submenu>
+              <submenu>
+                <attribute name="label">Fedora</attribute>
+                <section>
+                  <item>
+                    <attribute name="label">35</attribute>
+                  </item>
+                  <item>
+                    <attribute name="label">36</attribute>
+                  </item>
+                </section>
+                <section>
+                  <item>
+                    <attribute name="label">Rawhide</attribute>
+                  </item>
+                </section>
+              </submenu>
+              <submenu>
+                <attribute name="label">Red Hat Enterprise Linux</attribute>
+                <section>
+                  <item>
+                    <attribute name="label">RHEL 7 Workstation</attribute>
+                  </item>
+                  <item>
+                    <attribute name="label">RHEL 8 Workstation</attribute>
+                  </item>
+                </section>
+                <section>
+                  <item>
+                    <attribute name="label">RHEL 9 Workstation (Beta)</attribute>
+                  </item>
+                </section>
+              </submenu>
+            </section>
+          </submenu>
+          <submenu>
+            <attribute name="label">Simulator (aarch64)</attribute>
+            <section>
+              <submenu>
+                <attribute name="label">GNOME OS (aarch64)</attribute>
+                <section>
+                  <item>
+                    <attribute name="label">41</attribute>
+                  </item>
+                  <item>
+                    <attribute name="label">42</attribute>
+                  </item>
+                  <item>
+                    <attribute name="label">43</attribute>
+                  </item>
+                </section>
+                <section>
+                  <item>
+                    <attribute name="label">Nightly</attribute>
+                  </item>
+                </section>
+              </submenu>
+            </section>
+          </submenu>
+        </section>
+        <section>
+          <item>
+            <attribute name="label">Christian's Phone</attribute>
+          </item>
+        </section>
+      </submenu>
+    </section>
+    <section>
+      <attribute name="label">Observation</attribute>
+      <item>
+        <attribute name="label">Disabled</attribute>
+        <attribute name="action">win.runner</attribute>
+        <attribute name="target" type="s">''</attribute>
+        <attribute name="role">radio</attribute>
+      </item>
+      <item>
+        <attribute name="label">Profiler</attribute>
+        <attribute name="action">win.runner</attribute>
+        <attribute name="target" type="s">'profiler'</attribute>
+        <attribute name="role">radio</attribute>
+      </item>
+      <item>
+        <attribute name="label">Debugger</attribute>
+        <attribute name="action">win.runner</attribute>
+        <attribute name="target" type="s">'debugger'</attribute>
+        <attribute name="role">radio</attribute>
+      </item>
+      <item>
+        <attribute name="label">Valgrind</attribute>
+        <attribute name="action">win.runner</attribute>
+        <attribute name="target" type="s">'valgrind'</attribute>
+        <attribute name="role">radio</attribute>
+      </item>
+    </section>
+    <section>
+      <attribute name="label">Settings</attribute>
+      <submenu>
+        <attribute name="label">Appearance</attribute>
+        <section>
+          <item>
+            <attribute name="label">Follow System</attribute>
+            <attribute name="role">radio</attribute>
+            <attribute name="action">win.theme</attribute>
+            <attribute name="target" type="s">'default'</attribute>
+          </item>
+          <item>
+            <attribute name="label">Force Light</attribute>
+            <attribute name="role">radio</attribute>
+            <attribute name="action">win.theme</attribute>
+            <attribute name="target" type="s">'dark'</attribute>
+          </item>
+          <item>
+            <attribute name="label">Force Dark</attribute>
+            <attribute name="role">radio</attribute>
+            <attribute name="action">win.theme</attribute>
+            <attribute name="target" type="s">'light'</attribute>
+          </item>
+        </section>
+      </submenu>
+      <submenu>
+        <attribute name="label">Accessibility</attribute>
+        <section>
+          <item>
+            <attribute name="label">High Contrast</attribute>
+            <attribute name="role">check</attribute>
+            <attribute name="action">win.high-contrast</attribute>
+          </item>
+          <item>
+            <attribute name="label">Right-to-Left</attribute>
+            <attribute name="role">check</attribute>
+            <attribute name="action">win.right-to-left</attribute>
+          </item>
+        </section>
+      </submenu>
+    </section>
+  </menu>
+  <menu id="build_menu">
+    <section>
+      <submenu>
+        <attribute name="label">Active Configuration</attribute>
+        <section>
+          <item>
+            <attribute name="label">org.gnome.Builder.json</attribute>
+          </item>
+          <item>
+            <attribute name="label">org.gnome.Builder.Devel.json</attribute>
+          </item>
+          <item>
+            <attribute name="label">Default</attribute>
+          </item>
+        </section>
+      </submenu>
+      <item>
+        <attribute name="label">Configure Project…</attribute>
+      </item>
+    </section>
+    <section>
+      <submenu>
+        <attribute name="label">Build Target</attribute>
+        <section>
+          <item>
+            <attribute name="label">Project Default</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label">gnome-builder</attribute>
+          </item>
+          <item>
+            <attribute name="label">Ide-43.gir</attribute>
+          </item>
+          <item>
+            <attribute name="label">install</attribute>
+          </item>
+        </section>
+      </submenu>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Build</attribute>
+        <attribute name="action">window.close</attribute>
+        <attribute name="accel">&lt;ctrl&gt;&lt;shift&gt;space</attribute>
+      </item>
+      <item>
+        <attribute name="label">Rebuild</attribute>
+      </item>
+      <item>
+        <attribute name="label">Clean</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Stop Build</attribute>
+      </item>
+      <item>
+        <attribute name="label">Pause Builds</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Show Build Output</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Update Dependencies…</attribute>
+      </item>
+      <item>
+        <attribute name="label">Manage SDKs…</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label">Export to Flatpak…</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>

@@ -1,0 +1,105 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/file.h>
+#include <giomm/icon.h>
+#include <giomm/loadableicon.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+/** Icon theming support.
+ * ThemedIcon is an implementation of Gio::Icon that supports icon themes.
+ * ThemedIcon contains a list of all of the icons present in an icon
+ * theme, so that icons can be looked up quickly. ThemedIcon does
+ * not provide actual pixmaps for icons, just the icon names.
+ * Ideally something like Gtk::IconTheme::choose_icon() should be used to
+ * resolve the list of names so that fallback icons work nicely with
+ * themes that inherit other themes.
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API ThemedIcon
+: public Glib::Object,
+  public Icon
+{
+  _CLASS_GOBJECT(ThemedIcon, GThemedIcon, G_THEMED_ICON, Glib::Object, GObject, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(Icon)
+
+protected:
+  /** Creates a new themed icon for @a iconname, and optionally all the names that can be created by shortening @a iconname at '-' characters.
+   *
+   * @param iconname A string containing an icon name.
+   * @param use_default_fallbacks Whether to use all the names that can be created by shortening @a iconname at '-' characters.
+   */
+  explicit ThemedIcon(const Glib::ustring& iconname, bool use_default_fallbacks = false);
+  _IGNORE(g_themed_icon_new, g_themed_icon_new_with_default_fallbacks)
+
+  /** Creates a new themed icon for @a iconnames.
+   *
+   * @param iconnames A vector of strings containing icon names.
+   *
+   * @newin{2,60}
+   */
+  explicit ThemedIcon(const std::vector<Glib::ustring>& iconnames);
+  _IGNORE(g_themed_icon_new_from_names)
+
+public:
+  /** Creates a new themed icon for @a iconname, and optionally all the names that can be created by shortening @a iconname at '-' characters.
+   *
+   * For example
+   * @code
+   * Glib::RefPtr<Gio::ThemedIcon> icon = Gio::ThemedIcon::create("gnome-dev-cdrom-audio", true);
+   * @endcode
+   * is equivalent to
+   * @code
+   * Glib::RefPtr<Gio::ThemedIcon> icon = Gio::ThemedIcon::create("gnome-dev-cdrom-audio", false);
+   * icon->append_name("gnome-dev-cdrom");
+   * icon->append_name("gnome-dev");
+   * icon->append_name("gnome");
+   * @endcode
+   *
+   * @param iconname A string containing an icon name.
+   * @param use_default_fallbacks Whether to use all the names that can be created by shortening @a iconname at '-' characters.
+   */
+  _WRAP_CREATE(const Glib::ustring& iconname, bool use_default_fallbacks = false)
+
+  /** Creates a new themed icon for @a iconnames.
+   *
+   * @param iconnames A vector of strings containing icon names.
+   *
+   * @newin{2,60}
+   */
+  _WRAP_CREATE(const std::vector<Glib::ustring>& iconnames)
+
+  _WRAP_METHOD(void prepend_name(const Glib::ustring& iconname), g_themed_icon_prepend_name)
+  _WRAP_METHOD(void append_name(const Glib::ustring& iconname), g_themed_icon_append_name)
+
+  #m4 _CONVERSION(`const gchar* const*',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_names() const, g_themed_icon_get_names)
+
+  //There are no signals.
+
+  //The "name" property is write-only and construct-only so it should not be wrapped.
+  _WRAP_PROPERTY("names", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("use-default-fallbacks", bool)
+};
+
+} // namespace Gio

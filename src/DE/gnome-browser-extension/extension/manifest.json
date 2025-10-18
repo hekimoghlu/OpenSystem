@@ -1,0 +1,81 @@
+{
+  "manifest_version": 3,
+
+  "name": "__MSG_gs_chrome__",
+  "short_name": "GS Chrome",
+  "description": "__MSG_manifest_description__",
+  "version": "12.1",
+
+  "default_locale": "en",
+
+  "author": "Yuri Konotopov <ykonotopov@gnome.org>",
+  "key": "${PUBLIC_KEY}",
+
+  "icons": {
+    "16": "icons/GnomeLogo-16.png",
+    "48": "icons/GnomeLogo-48.png",
+    "128": "icons/GnomeLogo-128.png"
+  },
+
+  "background": {
+    "service_worker": "extension.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_icon": {
+      "16": "icons/GnomeLogo-16.png",
+      "32": "icons/GnomeLogo-32.png"
+    },
+    "default_title": "__MSG_open_website__"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://extensions.gnome.org/*",
+        "https://extensions-next.gnome.org/*"
+    ],
+      "run_at": "document_start",
+      "js": [
+        "include/constants-script.js",
+        "include/compat-content-script.js",
+        "content-script-start.js"
+      ]
+    }
+  ],
+
+  "externally_connectable": {
+      "matches": [
+        "https://extensions.gnome.org/*",
+        "https://extensions-next.gnome.org/*"
+    ]
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "permissions": [
+    "nativeMessaging",
+    "notifications",
+    "storage"
+  ],
+  "optional_permissions": [
+    "idle"
+  ],
+  "host_permissions": [
+    "https://extensions.gnome.org/",
+    "https://extensions-next.gnome.org/"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "include/sweettooth-api.js"
+      ],
+      "matches": [
+        "https://extensions.gnome.org/*",
+        "https://extensions-next.gnome.org/*"
+      ]
+    }
+  ]
+}

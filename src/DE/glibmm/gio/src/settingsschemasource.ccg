@@ -1,0 +1,38 @@
+/* Copyright (C) 2015 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+
+#include <glibmm/vectorutils.h>
+
+namespace Gio
+{
+
+std::vector<Glib::ustring>
+SettingsSchemaSource::list_schemas(bool relocatable, bool recursive) const
+{
+  auto gobject = const_cast<GSettingsSchemaSource*>(gobj());
+  gchar** schemas{};
+
+  if (relocatable)
+    g_settings_schema_source_list_schemas(gobject, recursive, nullptr, &schemas);
+  else
+    g_settings_schema_source_list_schemas(gobject, recursive, &schemas, nullptr);
+
+  return Glib::ArrayHandler<Glib::ustring>::array_to_vector(schemas, Glib::OWNERSHIP_DEEP);
+}
+
+} // namespace Gio

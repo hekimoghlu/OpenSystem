@@ -1,0 +1,19 @@
+SELECT DISTINCT ?artist ?name ?snippet
+WHERE {
+  GRAPH tracker:Audio {
+    ?artist a nmm:Artist ;
+      nmm:artistName ?name ;
+      fts:match ~match .
+    ?ie nmm:artist ?artist ;
+      nie:isStoredAs ?f .
+    ?f nie:dataSource ?ds .
+    OPTIONAL {
+      ?ds tracker:available ?available
+    }
+    BIND (IF (~detailed^^xsd:boolean, fts:snippet(?artist, "\u001b[0;1;39m", "\u001b[0m"), "") AS ?snippet)
+    FILTER (~showAll^^xsd:boolean || ?available)
+  }
+}
+ORDER BY ASC(?name)
+OFFSET ~offset
+LIMIT ~limit

@@ -1,0 +1,79 @@
+/* Copyright 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+namespace Pango
+{
+
+TabArray::TabArray(int initial_size, bool positions_in_pixels)
+{
+  gobject_ = pango_tab_array_new(initial_size, (gboolean)positions_in_pixels);
+}
+
+TabArray::TabArray(const Glib::ustring& text)
+:
+  gobject_(pango_tab_array_from_string(text.c_str()))
+{}
+
+TabArray::operator bool() const
+{
+  return gobj() != nullptr;
+}
+
+std::pair<TabAlign,int> TabArray::get_tab(int tab_index) const
+{
+  PangoTabAlign p_alignment;
+  TabAlign alignment;
+  int location;
+  pango_tab_array_get_tab(const_cast<PangoTabArray*>(gobj()), tab_index, &p_alignment, &location);
+  alignment = static_cast<TabAlign>(p_alignment);
+  return std::pair<TabAlign,int>(alignment, location);
+}
+
+std::vector<std::pair<TabAlign,int>> TabArray::get_tabs() const
+{
+  typedef std::pair<TabAlign,int> PairType;
+
+  PairType* pair_buffer = nullptr;
+  const int size = pango_tab_array_get_size(const_cast<PangoTabArray*>(gobj()));
+
+  if(size > 0)
+  {
+    // Get arrays
+    PangoTabAlign* pAlignments = nullptr;
+    int*           pLocations  = nullptr;
+    pango_tab_array_get_tabs(const_cast<PangoTabArray*>(gobj()), &pAlignments, &pLocations);
+
+    if(pAlignments && pLocations)
+    {
+      // Create temporary C array.  Fortunately, the C++ type is POD,
+      // so we can safely store it in the array.
+      pair_buffer = g_new(PairType, size);
+
+      for(int i = 0; i < size; ++i)
+      {
+        pair_buffer[i].first  = (TabAlign)(pAlignments[i]);
+        pair_buffer[i].second = pLocations[i];
+      }
+    }
+
+    g_free(pAlignments);
+    g_free(pLocations);
+  }
+
+  return Glib::ArrayHandler<PairType>::array_to_vector(pair_buffer, size, Glib::OWNERSHIP_SHALLOW);
+}
+
+} /* namespace Pango */

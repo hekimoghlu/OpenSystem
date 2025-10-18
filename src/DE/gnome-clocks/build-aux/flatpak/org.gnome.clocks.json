@@ -1,0 +1,106 @@
+{
+    "app-id": "org.gnome.clocksDevel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.vala-nightly"
+    ],
+    "command": "gnome-clocks",
+    "tags": ["nightly"],
+    "finish-args": [
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--socket=pulseaudio",
+        "--share=network",
+        "--env=G_MESSAGES_DEBUG=org.gnome.ClocksDevel"
+    ],
+    "build-options": {
+        "prepend-path": "/usr/lib/sdk/vala-nightly/bin/",
+        "prepend-ld-library-path": "/usr/lib/sdk/vala-nightly/lib"
+    },
+    "cleanup": ["/include", "/lib/pkgconfig",
+                "/share/pkgconfig", "/share/aclocal",
+                "/man", "/share/man", "/share/gtk-doc",
+                "/share/vala",
+                "*.la", "*.a"],
+    "modules": [
+        {
+            "name": "geocode-glib",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Denable-installed-tests=false",
+                "-Denable-introspection=true",
+                "-Denable-gtk-doc=false",
+                "-Dsoup2=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/geocode-glib.git"
+                }
+            ]
+        },
+        {
+            "name": "libgweather",
+            "buildsystem": "meson",
+            "config-opts": [
+              "-Dtests=false",
+              "-Dgtk_doc=false"
+            ],
+            "modules": [
+                {
+                    "name" : "gweather-locations",
+                    "buildsystem" : "meson",
+                    "sources" : [
+                        {
+                            "type" : "git",
+                            "url" : "https://gitlab.gnome.org/GNOME/gweather-locations",
+                            "branch" : "main"
+                        }
+                    ]
+                }
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libgweather.git",
+                    "branch": "main"
+                }
+            ]
+        },
+        {
+            "name": "gnome-desktop",
+            "buildsystem": "meson",
+            "config-opts": [
+              "-Ddebug_tools=false",
+              "-Dudev=disabled",
+              "-Dgtk_doc=false",
+              "-Ddesktop_docs=false",
+              "-Dlegacy_library=false",
+              "-Dbuild_gtk4=true"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-desktop.git"
+                }
+            ]
+        },
+        {
+            "name": "gnome-clocks",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "../../"
+                }
+            ]
+        }
+    ]
+}

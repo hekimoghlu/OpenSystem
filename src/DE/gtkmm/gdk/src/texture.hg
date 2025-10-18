@@ -1,0 +1,100 @@
+/* Copyright (C) 2017 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <gdkmm/enums.h>
+#include <gdkmm/paintable.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Glib
+{
+class GDKMM_API Bytes;
+}
+namespace Gio
+{
+class GDKMM_API File;
+}
+
+namespace Gdk
+{
+class GDKMM_API ColorState;
+class GDKMM_API Pixbuf;
+
+_WRAP_GERROR(TextureError, GdkTextureError, GDK_TEXTURE_ERROR, decl_prefix GDKMM_API)
+
+//TODO: Derive from (and implement) Gio::Icon and Gio::LoadableIcon when we can break ABI.
+/** Pixel data.
+ *
+ * %Gdk::Texture is the basic element used to refer to pixel data.
+ * It is primarily meant for pixel data that will not change over
+ * multiple frames, and will be used for a long time.
+ *
+ * There are various ways to create %Gdk::Texture objects from a
+ * Gdk::Pixbuf, or a %Cairo surface, or other pixel data.
+ *
+ * The ownership of the pixel data is transferred to the %Gdk::Texture
+ * instance; you can only make a copy of it, via download().
+ *
+ * %Gdk::Texture is an immutable object: That means you cannot change
+ * anything about it.
+ *
+ * @newin{3,94}
+ */
+class GDKMM_API Texture : public Glib::Object, public Paintable
+{
+  _CLASS_GOBJECT(Texture, GdkTexture, GDK_TEXTURE, Glib::Object, GObject, , , GDKMM_API)
+  _IMPLEMENTS_INTERFACE(Paintable)
+  _IGNORE(gdk_texture_downloader_new) dnl// gmmproc thinks this is a Texture method
+
+protected:
+  _CTOR_DEFAULT()
+
+public:
+  // All gdk_texture_new_*() functions do more than call g_object_new().
+  _WRAP_METHOD(static Glib::RefPtr<Texture> create_for_pixbuf(
+    const Glib::RefPtr<Pixbuf>& pixbuf), gdk_texture_new_for_pixbuf,
+    deprecated "4.20: Use e.g. libglycin (a C library), which can load many image formats into GdkTexture.")
+  _WRAP_METHOD(static Glib::RefPtr<Texture> create_from_resource(
+    const std::string& resource_path), gdk_texture_new_from_resource)
+  _WRAP_METHOD(static Glib::RefPtr<Texture> create_from_file(
+    const Glib::RefPtr<Gio::File>& file), gdk_texture_new_from_file, errthrow)
+  _WRAP_METHOD(static Glib::RefPtr<Texture> create_from_filename(
+    const std::string& path), gdk_texture_new_from_filename, errthrow)
+  _WRAP_METHOD(static Glib::RefPtr<Texture> create_from_bytes(
+    const Glib::RefPtr<const Glib::Bytes>& bytes), gdk_texture_new_from_bytes, errthrow)
+
+  _WRAP_METHOD(int get_width() const, gdk_texture_get_width)
+  _WRAP_METHOD(int get_height() const, gdk_texture_get_height)
+  _WRAP_METHOD(MemoryFormat get_format() const, gdk_texture_get_format)
+  // ColorState is immutable. No need for a non-const get-method.
+  _WRAP_METHOD(Glib::RefPtr<ColorState> get_color_state() const, gdk_texture_get_color_state, refreturn)
+  _WRAP_METHOD(void download(guchar* data, gsize stride) const, gdk_texture_download)
+  //TODO: When we can break ABI, change to const std::string& filename
+  _WRAP_METHOD(bool save_to_png(const Glib::ustring& filename) const, gdk_texture_save_to_png)
+  _WRAP_METHOD(Glib::RefPtr<Glib::Bytes> save_to_png_bytes() const, gdk_texture_save_to_png_bytes)
+  _WRAP_METHOD(bool save_to_tiff(const std::string& filename) const, gdk_texture_save_to_tiff)
+  _WRAP_METHOD(Glib::RefPtr<Glib::Bytes> save_to_tiff_bytes() const, gdk_texture_save_to_tiff_bytes)
+
+  _WRAP_PROPERTY("width", int)
+  _WRAP_PROPERTY("height", int)
+  _WRAP_PROPERTY("color-state", Glib::RefPtr<ColorState>)
+
+  // There are no public signals or vfuncs.
+};
+
+} // namespace Gdk

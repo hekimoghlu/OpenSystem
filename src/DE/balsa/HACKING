@@ -1,0 +1,104 @@
+The following are some general guidelines for adding code to Balsa:
+-------------------------------------------------------------------
+
+The prefered address for reaching Balsa developers is 
+ balsa-maintainer@theochem.kth.se
+The prefered place to discuss general Balsa development is
+ balsa-list@gnome.org
+Refer to AUTHORS for the list of active developers.
+
+
+The code has generally three layers:
+
+  |--------------------|
+  |        src         |
+  |    |---------------|
+  |    |    libbalsa   |
+  |    |  |------------|
+  |    |  |  libmutt   |
+  ----------------------
+
+- src contains balsa specific code.  
+
+- libbalsa contains object definitions code that in principle can be
+  reused. Good examples are address books, or AddressEntries.
+
+- libmutt is a mailbox backend code.
+
+
+Use FIXME in comments to make a note of things which need looking at.
+
+All GtkObject derivatives should live in there own .c and .h files. In
+general functionality should be split in a sensible way amoung files.
+
+respect the libbalsa_ namespace.
+
+commited code should compile with --enable-more-warnings - this
+enables some extra warnings and -Werror which makes warnings into
+errors.
+
+libmutt
+-------
+
+All changes to libmutt/* should be marked with a comment beginning
+BALSA: and describing the change and the reason for it.
+
+Source files
+------------
+
+All files should have a magic emacs mode line at the top (note older
+files will have c-basic-offset as 2 or 8):
+
+/* -*-mode:c; c-style:k&r; c-basic-offset:4; -*- */
+
+following this a GPL copyright header. Copyright should be attributed as:
+
+(c) 1997-2000 Stuart Parmenter and others, see AUTHORS for a list of people
+
+Following this should be a brief description of what the file
+contains.
+
+See existing source for a general idea.
+
+Threads
+-------
+
+Their are three locks which are important to balsa: 
+
+1) The GDK lock - this protects GDK and GTK+. 
+
+2) The lock on each mailbox.
+
+3) The libmutt lock - this is maintained by libbalsa and is used
+because libmutt is not threadsafe.
+
+libbalsa API functions expect to always be called with the GDK lock
+held and the mutt lock not held (remember this when calling API funcs
+from within libbalsa). The GDK lock may be released, but you must be
+careful and should relock it before returning. You must be careful
+when the GDK lock is not held that libmutt doesn't call mutt_error or
+anything which calls GTK functions.
+
+In order to avoid deadlocks it is important that the locks are always
+taken in the same order. That is gdk lock first, then any mailbox
+lock, then libmutt lock. Note that this doesn't mean you must take all
+those locks - but if you do take them it must be in that order.
+
+If you want just the mutt lock and not the GDK lock this is OK - but
+you may not try to take the GDK lock whilst holding the mutt lock -
+you must release the mutt lock first.
+
+Be careful to avoid deadlock when locking multiple mailboxes (FIXME:
+This sentance isn't much help to anyone ;-)
+
+Coding Style
+------------
+
+The coding style used in Balsa currently is a bit of a mess. When
+adding a new file to Balsa, please use the standard GNOME indentation
+style, rather than the one used in the rest of Balsa. A good place to
+read is the file HACKING included with Gnumeric. The magin emacs
+comment (as mentioned above) should help you to follow the formatting
+guidelines but you can indent explicitly your file with
+
+indent -kr -i4 -psl <filename>

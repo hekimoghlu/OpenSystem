@@ -1,0 +1,89 @@
+include:
+  # include the component located in the current project from the current SHA
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-default"
+      job-stage: "GNOMEOS Basic CI"
+      meson-sourcedir: "gnome-font-viewer"
+      before-script: "git clone --depth=1 https://gitlab.gnome.org/gnome/gnome-font-viewer.git"
+      # Doesn't have any tests other than validate appdata
+      asan: "disabled"
+      lsan: "disabled"
+      tsan: "disabled"
+      ubsan: "disabled"
+      grcov-c: "disabled"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-default-calendar"
+      job-stage: "GNOMEOS Basic CI"
+      meson-sourcedir: "gnome-calendar"
+      before-script: "git clone --depth=1 https://gitlab.gnome.org/gnome/gnome-calendar.git"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-no-tests"
+      job-stage: "GNOMEOS Basic CI"
+      meson-sourcedir: "gnome-font-viewer"
+      before-script: "git clone --depth=1 https://gitlab.gnome.org/gnome/gnome-font-viewer.git"
+      run-tests: "no"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-no-before-script"
+      job-stage: "GNOMEOS Basic CI"
+      run-tests: "no"
+      clang: "disabled"
+      scan-build: "disabled"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-with-meson-args"
+      job-stage: "GNOMEOS Basic CI"
+      meson-sourcedir: "gnome-font-viewer"
+      meson-options: "-Dprofile=development"
+      before-script: "git clone --depth=1 https://gitlab.gnome.org/gnome/gnome-font-viewer.git"
+      # only need one of them to test
+      tsan: "disabled"
+      ubsan: "disabled"
+      grcov-c: "disabled"
+      scan-build: "disabled"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-fedora"
+      job-stage: "GNOMEOS Basic CI"
+      meson-sourcedir: "gnome-font-viewer"
+      before-script: "bash ./test-the-templates/basic-ci-fedora-before-script.sh"
+      image-ref: "fedora:42"
+      asan: "disabled"
+      lsan: "disabled"
+      tsan: "disabled"
+      ubsan: "disabled"
+      grcov-c: "disabled"
+      scan-build: "disabled"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/gnomeos-basic-ci@$CI_COMMIT_SHA
+    inputs:
+      job-name: "basic-ci-ubuntu"
+      job-stage: "GNOMEOS Basic CI"
+      meson-sourcedir: "gnome-font-viewer"
+      before-script: "bash ./test-the-templates/basic-ci-ubuntu-before-script.sh"
+      image-ref: "ubuntu:25.04"
+      asan: "disabled"
+      lsan: "disabled"
+      tsan: "disabled"
+      ubsan: "disabled"
+      grcov-c: "disabled"
+      scan-build: "disabled"
+
+# Override the jobs, gitlab should "merge" them so we can add the allow_failure
+basic-ci-default-calendar-lsan:
+  # The job itself fails as expected due to leaks
+  allow_failure: true
+
+basic-ci-ubuntu:
+  # We often get 403s in the CI runner while trying to install things
+  # Error: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0_1.17.0-2_amd64.deb  403  Forbidden [IP: 185.125.190.82 80]
+  allow_failure: true
+
+# Test that when we don't specify a before script
+# the template does not explode.
+# Without a before-script we can't test an app (unless add one in the repo)
+# but that's fine, as we only care about gitlab complaining
+basic-ci-no-before-script:
+  script: "echo Hello world"

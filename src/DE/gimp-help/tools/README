@@ -1,0 +1,165 @@
+These tools should make your documentation life easier:
+
+show_translation_progress.py
+                    This script shows statistics about the percentage
+                    of the help-ids done.
+                    It can also tell you which help-ids do not have a
+                    corresponding help document and can show inconsistencies
+                    between help-ids and their filenames.
+                    Run with -h option to see how to use it.
+
+validate_references.py
+                    Validates the references to image files in the
+                    XML files.
+                    Run with -h option to see how to use it.
+
+check_image_resolutions.sh
+                    A simple shell script to find images with resolution
+                    != 144x144 dpi.
+
+get_po_status.pl    This Perl script searches for po files in the specified
+                    directory and prints statistics about translation
+                    progress as well as a short summary (number of files
+                    and strings, number of translated, fuzzy, or
+                    untranslated strings).
+
+translated_percentage.py
+                    Generates info about what percentage of each available
+                    language has been translated. Written in a format that we
+                    can use when generating the website.
+
+validate_po.py      Validates correct use of XML tags and other possible causes
+                    of problems in po files.
+                    Note that currently only the translated messages are
+                    validated, not the original English message.
+
+
+show_translation_progress.py
+============================
+
+This script parses the gimp-help.xml which has been generated during
+transformation from DocBook/XML to HTML. It compares the ids with the
+gimphelp-ids.h header file located in the gimp source tree and creates
+statistics.
+It can tell you which help-ids do not have a corresponding help
+document and (option -i) can show inconsistencies between help-ids
+and their filenames.
+Note: we should probably rename this script since it is not really
+about progress in translations as progress in written help manual
+pages. Maybe: show_manual_progress.py
+
+Requirements:
+    - Path to GIMP sources (option -g)
+    - For best results also set the paths to the gimp-help
+      sources and the gimp-help build root (options -x and -b).
+
+Call the script like this (adjust paths as necessary):
+
+    python tools/show_translation_progress.py -g ../gimp -x . -b ../build/gimp-help
+
+
+validate_references.py
+======================
+
+Call the script from the gimp-help root:
+
+    python tools/validate_references.py
+
+Use the --help option for more information.
+
+
+get_po_status.pl
+================
+
+This Perl script searches for po files in the specified directory
+and prints statistics about translation progress as well as a
+short summary (number of files and strings, number of translated,
+fuzzy, or untranslated strings).
+
+Requirements:
+    - Perl
+    - msgfmt (package "gettext" or "gettext-runtime")
+
+Usage:
+    Call the script from the gimp-help root:
+
+        tools/get_po_status.pl [options] po-directory
+
+Options:
+        --[no]files       [Don't] print file statistics
+        --[no]summary     [Don't] print summary
+        --[no]progress    [Don't] print "progress" bar
+        --todo            Only print files with untranslated messages
+        --lang LANG       Add language "LANG" for naming the progress bar
+
+Use "perldoc tools/get_po_status.pl" for more information.
+
+
+check_image_resolutions.sh
+==========================
+
+A simple shell script to find images with resolution != 144x144 dpi.
+
+Requirements:
+    - identify (from the ImageMagick package: http://www.imagemagick.org)
+    - awk
+
+Usage:
+    tools/check_image_resolutions.sh DIR [DIR ...]
+
+
+translated_percentage.py
+========================
+
+Generates info about what percentage of each available language has been
+translated. Written in a format that we can use when generating the website.
+
+Requirements:
+    - msgfmt needs to be available
+
+Usage: translated_percentage.py [options]
+
+    options:
+        -o      --output          default: ../web/langstats.xml
+        -p      --podir           default: ../po
+        -q      --quickreference  handle quickreference po files
+        -v      --verbose         be more verbose
+        -h      --help            this help""")
+
+
+validate_po.py
+==============
+
+Validates correct use of XML tags and other possible causes of problems in
+po files.
+Note that currently only the translated messages are validated, not the
+original English message.
+
+Requirements:
+    - polib
+
+Usage: validate_po.py [options] POFILES
+
+    options:
+        -v      --verbose       be more verbose
+        -w      --warnings      show warnings
+        -h      --help          this help""")
+
+
+xml_helper.py
+=============
+Removed since multi-language XML documentation was ended long ago.
+Translations are now in separate po files.
+
+
+check_lang_attributes.pl
+==========================
+
+Removed after changing to gettext-based documentation.
+
+
+check_keywords_property.pl
+==========================
+
+Removed, we do not need "svn:keywords" any more
+(and "git" won't support them).

@@ -1,0 +1,63 @@
+{
+    "app-id" : "org.gnome.Robots",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "sdk-extensions" : [
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+    "command" : "gnome-robots",
+    "tags" : [
+        "nightly"
+    ],
+    "desktop-file-name-prefix" : "(Nightly) ",
+    "finish-args" : [
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--socket=pulseaudio",
+        "--filesystem=xdg-run/dconf",
+        "--filesystem=~/.config/dconf:ro",
+        "--talk-name=ca.desrt.dconf",
+        "--env=DCONF_USER_CONFIG_DIR=.config/dconf",
+        "--env=RUST_BACKTRACE=1"
+    ],
+    "cleanup" : [
+        "/include",
+        "/man",
+        "/share/aclocal",
+        "/share/doc",
+        "/share/gdm",
+        "/share/gnome",
+        "/share/gtk-doc",
+        "/share/pkgconfig",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "gnome-robots",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-robots.git"
+                }
+            ]
+        }
+    ],
+    "build-options" : {
+        "append-path" : "/usr/lib/sdk/rust-stable/bin",
+        "env" : {
+            "CARGO_HOME" : "/run/build/rust-flatpak/cargo"
+        },
+        "build-args" : [
+            "--share=network"
+        ],
+        "test-args" : [
+            "--socket=x11",
+            "--share=network"
+        ]
+    }
+}

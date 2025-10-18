@@ -1,0 +1,112 @@
+{% extends "default.html" %}
+{% block title %}Statistics{% endblock %}
+
+{% block content %}
+<script src="/static/js/Chart.js"></script>
+<script>
+Chart.defaults.global.animation = false;
+</script>
+
+<h2>Web Service Statistics</h2>
+<table class="table table-hover table-responsive">
+{% for key in results_stats %}
+  <tr>
+    <td>{{key}}</td>
+    <td>{{results_stats[key]}}</td>
+  </tr>
+{% endfor %}
+</table>
+
+<h2>Popularity By Page View</h2>
+<ol>
+{% for name, cnt in results_viewed %}
+  <li>{{name.replace('.desktop', '')}} ({{cnt}})</li>
+{% endfor %}
+</ol>
+
+<h2>Popularity By Submitted Reviews</h2>
+<ol>
+{% for name, cnt in results_submitted %}
+  <li>{{name.replace('.desktop', '')}} (<a href="{{url_for('.admin_show_app', app_id=name)}}">{{cnt}}</a>)</li>
+{% endfor %}
+</ol>
+
+<h2>Most Awesome Users</h2>
+<table class="table table-hover table-responsive">
+  <tr>
+    <th>User</th>
+    <th>Karma</th>
+    <th>Hash</th>
+    <th>Created</th>
+    <th>Banned</th>
+  </tr>
+{% for u in users_awesome %}
+  <tr>
+    <td>{{u.id}}</td>
+    <td>{{u.karma}}</td>
+    <td>
+{% if current_user.is_authenticated %}
+      <a href="{{url_for('.admin_show_user', user_hash=u.user_hash)}}">
+        <code>{{u.user_hash}}</code>
+      </a>
+{% else %}
+      <code>{{u.user_hash}}</code>
+{% endif %}
+    </td>
+    <td>{{u.date_created}}</td>
+    <td>{{u.is_banned}}</td>
+  </tr>
+{% endfor %}
+</table>
+
+<h2>Haters Gonna Hate</h2>
+<table class="table table-hover table-responsive">
+  <tr>
+    <th>User</th>
+    <th>Karma</th>
+    <th>Hash</th>
+    <th>Created</th>
+    <th>Banned</th>
+  </tr>
+{% for u in users_haters %}
+  <tr>
+    <td>{{u.id}}</td>
+    <td>{{u.karma}}</td>
+    <td>
+{% if current_user.is_authenticated %}
+      <a href="{{url_for('.admin_show_user', user_hash=u.user_hash)}}">
+        <code>{{u.user_hash}}</code>
+      </a>
+{% else %}
+      <code>{{u.user_hash}}</code>
+{% endif %}
+    </td>
+    <td>{{u.date_created}}</td>
+    <td>{{u.is_banned}}</td>
+  </tr>
+{% endfor %}
+</table>
+
+<h2>Where Reviews Come From</h2>
+<canvas id="reviewsChart" width="900" height="400"></canvas>
+<script>
+var ctx = document.getElementById("reviewsChart").getContext("2d");
+var data = {
+    labels: {{labels|safe}},
+    datasets: [
+        {
+            label: "Distributions",
+            fillColor: "rgba(20,120,220,0.2)",
+            strokeColor: "rgba(20,120,120,0.1)",
+            pointColor: "rgba(20,120,120,0.3)",
+            pointStrokeColor: "#fff",
+            pointHighlightFill: "#fff",
+            pointHighlightStroke: "rgba(220,220,220,1)",
+            data: {{data|safe}}
+        },
+    ]
+};
+var myBarChartDistros = new Chart(ctx).Bar(data, null);
+</script>
+
+{% endblock %}

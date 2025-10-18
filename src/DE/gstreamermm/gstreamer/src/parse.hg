@@ -1,0 +1,95 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Element;
+
+/** The different parsing errors that can occur.
+ *
+ * - SYNTAX - A syntax error occured.
+ * - NO_SUCH_ELEMENT - The description contained an unknown element
+ * - NO_SUCH_PROPERTY - An element did not have a specified property
+ * - LINK - There was an error linking two pads.
+ * - COULD_NOT_SET_PROPERTY - There was an error setting a property
+ * - EMPTY_BIN - An empty bin was specified.
+ * - EMPTY - An empty description was specified
+ */
+_WRAP_GERROR(ParseError, GstParseError, GST_PARSE_ERROR)
+
+/** A class that gets a pipeline from a text pipeline description.
+ * The methods in this class allow to create a pipeline based on the syntax
+ * used in the gst-launch utillity.
+ */
+class Parse
+{
+public:
+  /** Get the error quark used by the parsing subsystem.
+   * @return The quark of the parse errors.
+   */
+  static Glib::QueryQuark error_quark();
+
+  /** Create a new pipeline based on command line syntax. Please note that you
+   * might get a return value that is not a null RefPtr<> even though the error
+   * is set. In this case there was a recoverable parsing error and you can try
+   * to play the pipeline.
+   * @param pipeline_description The command line describing the pipeline.
+   * @return A new element on success, a null RefPtr<> on failure. If more than
+   * one toplevel element is specified by the pipeline_description, all
+   * elements are put into a Gst::Pipeline, which than is returned.
+   * @throw Gst::CoreError
+   * @throw Gst::ParseError
+   */
+  static Glib::RefPtr<Gst::Element> launch(const Glib::ustring& pipeline_description);
+
+  /** Create a new element based on command line syntax. An error does not
+   * mean that the pipeline could not be constructed.
+   * @param argv null-terminated array of arguments.
+   * specified. 
+   * @return A new element on success and null on failure.
+   * @throw Gst::CoreError
+   * @throw Gst::ParseError
+   */
+  static Glib::RefPtr<Gst::Element> launchv(const gchar *argv[]);
+
+  /** This is a convenience wrapper around launch() to create a Gst::Bin from a
+   * gst-launch-style pipeline description. See launch() and the gst-launch man
+   * page for details about the syntax. Ghost pads on the bin for unconnected
+   * source or sink pads within the bin can automatically be created (but only
+   * a maximum of one ghost pad for each direction will be created; if you
+   * expect multiple unconnected source pads or multiple unconnected sink pads
+   * and want them all ghosted, you will have to create the ghost pads
+   * yourself).
+   *
+   * @param bin_description Command line describing the bin.
+   * @param ghost_unconnected_pads Whether to automatically create ghost pads
+   * for unconnected source or sink pads within the bin.
+   * @return A newly-created bin, or a null RefPtr<> if an error occurred.
+   * @throw Gst::CoreError
+   * @throw Gst::ParseError
+   */
+  static Glib::RefPtr<Gst::Element> create_bin(const Glib::ustring& bin_description, bool ghost_unconnected_pads);
+};
+
+} // namespace Gst

@@ -1,0 +1,175 @@
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "build-release-tarball"              # <1.>
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"   # <2.>
+
+variables:
+  # Clone test-images
+  GIT_SUBMODULE_STRATEGY: recursive
+  RUST_BACKTRACE: "full"
+  TARBALL_ARTIFACT_PATH: "builddir/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+
+.install_dependencies:
+  before_script:
+    - apt update
+    - apt install -y git curl meson pkg-config gobject-introspection gi-docgen valac libgirepository1.0-dev python3-gi build-essential liblcms2-dev gettext clang mold bubblewrap libseccomp-dev libfontconfig-dev
+
+    #- git clone https://github.com/libjxl/libjxl.git --recursive --shallow-submodules
+    #- apt-get install -y clang cmake pkg-config libbrotli-dev
+    #- export CC=clang CXX=clang++
+    #- cd libjxl
+    #- mkdir build
+    #- cd build
+    #- cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
+    #- cmake --build . -- -j$(nproc)
+    #- cmake --install .
+    #- cd ../..
+
+    - echo "deb https://deb.debian.org/debian/ trixie main" >> /etc/apt/sources.list
+    - apt-get update
+    - apt-get install -y libheif-dev libaom3 libgtk-4-dev libcairo2-dev meson
+    - apt-get install -y librsvg2-2
+    - apt-get install -y libjxl-dev
+    # Fix valac issue in bookworm
+    - apt-get install -y valac
+    # Get QOI support in bookworm
+    - apt-get install -y shared-mime-info
+    # Required for librsvg/fontconfig, somehow fails to install automatically.
+    # Issue is new, first seen 2024-09-12
+    - apt-get install -y libbz2-dev
+  artifacts:
+    when: always
+    paths:
+      - tests/failures
+      - builddir/meson-logs
+
+build-release-tarball:
+  stage: build
+  image: rust:1.85-bookworm
+  extends: .install_dependencies
+  script:
+    - apt-get install -y gawk
+    - ./build-aux/publish-crates-io.py
+    - meson setup builddir
+    - meson dist -C builddir
+  artifacts:
+    name: "${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "${TARBALL_ARTIFACT_PATH}"
+  rules:
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_REF_PROTECTED
+
+test-x86_64:
+  image: rust:1.85-bookworm
+  extends: .install_dependencies
+  interruptible: true
+  script:
+    - export LD_LIBRARY_PATH=/usr/local/lib/x86_64-linux-gnu/
+    # Skip isolated install for tests to test usual installation scenario
+    - meson setup -Dbuildtype=debug -Dpython_tests=true -Dtest_skip_install=true -Dcapi_docs=true --prefix=/usr builddir
+    - meson install -C builddir
+    - meson test -vC builddir
+    - mv builddir/libglycin/libglycin-2 libglycin-docs
+    - mv builddir/libglycin/libglycin-gtk4-2 libglycin-gtk4-docs
+  artifacts:
+    paths:
+      - libglycin-docs
+      - libglycin-gtk4-docs
+
+test-i386:
+  # Use hash to force i386, lookup "MANIFEST DIGEST" here <https://hub.docker.com/r/i386/rust/tags>
+  image: rust@sha256:a82436f09b89b68853e3a25c4acfd7b2d11d78be8ef35f5b4a75d3c927f37d7b
+  extends: .install_dependencies
+  interruptible: true
+  # As long as 32-bit CI is so unstable
+  allow_failure: true
+  script:
+    - export LD_LIBRARY_PATH=/usr/local/lib/i386-linux-gnu/
+    - apt-get install -y ninja-build
+    - meson setup -Dbuildtype=debug  -Dpython_tests=true -Dtest_skip_install=true -Dtest_skip_ext=avif --prefix=/usr builddir
+    - meson install -C builddir
+    - meson test -vC builddir
+
+test-aarch64:
+  image: rust:1.85-bookworm
+  tags:
+    - asan-aarch64
+  extends: .install_dependencies
+  interruptible: true
+  script:
+    - export LD_LIBRARY_PATH=/usr/local/lib/aarch64-linux-gnu/
+    - meson setup -Dbuildtype=debug -Dpython_tests=true -Dtest_skip_install=true --prefix=/usr builddir
+    - meson install -C builddir
+    - meson test -vC builddir
+
+test-fedora43-loaders:
+  image: 'registry.fedoraproject.org/fedora:43'
+  interruptible: true
+  script:
+    - dnf install --assumeyes glycin-loaders cargo glib2-devel gtk4-devel lcms2-devel libseccomp-devel fontconfig-devel
+    - GLYCIN_TEST_SKIP_EXT=exr cargo test -p tests -- --nocapture --test-threads 1 \
+      color color_exif_orientation color_iccp_pro gray_iccp icon exif fonts editing_
+
+cargo-semver-checks:
+  image: rust
+  extends: .install_dependencies
+  interruptible: true
+  variables:
+    GIT_DEPTH: 1000
+  script:
+    # We need libglycin to be properly installed for pkgconf to work in libglycin-gtk4
+    - meson setup -Dbuildtype=debug -Dglycin-loaders=false -Dglycin-thumbnailer=false --prefix=/usr builddir
+    - meson install -C builddir
+    - cargo install cargo-semver-checks --locked
+    - cargo semver-checks -p glycin -p glycin-utils
+    - cargo semver-checks -p libglycin -p libglycin-gtk4 --baseline-rev 2.0.0
+
+cargo-fmt:
+  image: rust
+  interruptible: true
+  script:
+    - rustup component add rustfmt
+    - cargo fmt --check
+
+cargo-deny:
+  image: rust
+  interruptible: true
+  script:
+    - cargo install cargo-deny --locked
+    - cargo deny --target x86_64-unknown-linux-gnu check
+
+cargo-vet:
+  image: "rust"
+  allow_failure: true
+  interruptible: true
+  script:
+    - cargo install cargo-vet
+    - CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu cargo vet
+
+
+website:
+  image: rust
+  extends: .install_dependencies
+  interruptible: true
+  script:
+    - ./docs/website/build.bash
+  artifacts:
+    paths:
+      - public
+
+pages:
+  stage: deploy
+  dependencies:
+    - website
+    - test-x86_64
+  script:
+    - mv libglycin-docs public/libglycin
+    - mv libglycin-gtk4-docs public/libglycin-gtk4
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

@@ -1,0 +1,327 @@
+2005-01-17  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.4.2
+
+2005-01-16  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=158692
+	* src/preview-grid.c (pg_get_row_offset) : don't return SHEET_MAX_ROWS
+	  if h =0.
+	(pg_get_col_offset) : ditto.
+
+2005-01-16  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162631
+	* src/gnumeric-pane.c (set_acetate_coords) : handle the race condition
+	  for the rubber band directly case.
+
+2005-01-15  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162631
+	* src/sheet-object.c (sheet_object_new_view) : return the new view, it
+	  may actually be useful.
+
+	* src/sheet-control-gui.c (cb_collect_objects_to_commit) : we actually
+	  need to create the view here if it does not exist, otherwise we lose
+	  the size
+
+2005-01-13  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162631
+	* src/sheet-control-gui.c (cb_collect_objects_to_commit) : more
+	  safety.
+
+	* src/sheet-object.c (sheet_object_view_set_bounds) : be safer.
+
+2005-01-15  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=161547
+	* configure.in : Make the python test more robust
+
+2005-01-14  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163438
+	* src/format.c (format_compile) : notice fmts that request a fill
+	(style_format_new_XL) : init the new is_var_width flag
+
+	* src/rendered-value.c (rendered_value_render) : there are formats
+	  other than General that have variable widths.  Are measurement of
+	  col width and characters sucks.   We really need to do the fills at
+	  a higher level where we have font metrics.
+
+2005-01-14  Jody Goldberg <jody@gnome.org>
+
+	http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=290388
+	* src/sheet-object-cell-comment.c (comment_get_points) : This will
+	  need work for RTL, but we do need to compensate for the zoom.
+
+2005-01-14  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (cb_control_point_event) : fix double click
+	  handling to not start a drag when the editor is gone
+
+2005-01-13  Jody Goldberg <jody@gnome.org>
+
+	http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=288157
+	* src/colrow.c (colrow_set_sizes) : we need to rerender variable width
+	  content when resizing all cols at the same time, just like we do for
+	  smaller sections
+
+2005-01-13  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=161782
+	* templates/autoformat/Makefile.am : applied patch to use non
+	  bash-specific variable substitution.
+
+2005-01-13  Morten Welinder  <terra@gnome.org>
+
+	* src/style.c (style_font_new_simple): Don't ref and unref the
+	context.
+
+2005-01-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c: (gnm_go_data_matrix_load_values): don't write data outside of
+	allocated matrix. Fixes #163626.
+
+2005-01-12  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163223
+	* src/style.c (style_font_string_width) : take a layout directly.
+	(calc_font_width) : ditto.
+	(style_font_new_simple) : keep the PangoFontMetrics and PangoLayout
+	  here rather than as data members with no real purpose.  It should
+	  make it easier to remove the scaling in here.
+	NOTE : remove the prescaling of the font size.  It did not belong
+	  here.  We use a scale attribute while measuring.  Eventually we can
+	  split the calculation of metrics out and remove the ugly scale/zoom
+	  param entirely.
+	(style_font_unref) : we got rid of some data members.
+
+	* src/style-font.h : A new header to make cleaning up the definition
+	  of GnmFont easier.
+
+	* src/mstyle.c (mstyle_get_pango_attrs) : Add a scale attribute
+	  wrapper to scale all of the font sizes
+
+2005-01-12  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163198
+	* src/item-edit.c (get_top_left) : new function to get the top left
+	  point based on the vertical alignment.
+	(item_edit_draw) : the code was taken from here.
+	(item_edit_event) : and used here to give pango_layout_xy_to_index a
+	  reasonable coordinate.
+
+2005-01-12  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gui-file.c: (gui_get_image_save_info): test if file exists after
+	adding extension.
+	(gui_file_save_as): don't exit when file exists and
+	user do not want to overwrite. Back to the file chooser instead.
+	
+2005-01-12  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (cb_help_docs) : minor warning suppression
+
+2005-01-11  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-edit.c (gnm_pango_attr_list_splice): New function
+	doing what pango_attr_list_splice should have done, i.e., simply
+	splice.
+	(cb_entry_insert_text): Use gnm_pango_attr_list_splice.
+
+2005-01-10  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-edit.c (wbcg_edit_finish): Copy the resulting
+	markup as editing callbacks will otherwise destroy it.
+
+2005-01-10  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163408
+	* src/commands.c (cmd_ins_del_colrow_redo) : We only need to redo
+	  things for cuts, not copies (Although that feels a bit odd).
+	  Just un-ant things for now.
+
+2005-01-09  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163407
+	* src/commands.c (cmd_format_undo) : doh! resize only if we needed a
+	  resize when the style was applied, not based on the properties of
+	  the format we are restoring.
+
+2005-01-09  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162923
+	* src/expr.c (gnm_expr_eval) : minor thinko, array result from a
+	  function in a non-scalar context return the first element, not
+	  #VALUE!.  I broke this when tweaking the implicit iteration by
+	  forgetting that value_intersection handled that for me.
+
+2005-01-09  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163452
+	* src/sheet-control-gui.c (scg_mode_clear) : handle being called
+	  during destruction
+
+2005-01-05  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162888
+	* src/clipboard.c (cb_dup_objects) : sheet_object_dup can fail, be
+	  careful
+	(paste_object) : ditto.
+	* src/application.c (gnm_app_clipboard_cut_copy_obj) : ditto
+	* src/gnumeric-pane.c (gnm_pane_object_start_resize) : ditto
+
+2005-01-06  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (gnumeric_fake_floor, gnumeric_fake_ceil): Fix
+	negative case.
+
+2005-01-05  Morten Welinder  <terra@gnome.org>
+
+	* src/rangefunc.c (range_sum): Just sum.  Don't try to be overly
+	smart.
+	(range_sumsq): Ditto.
+
+2005-01-05  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (cb_sheet_object_widget_canvas_event) : handle
+	  double click
+
+	* src/sheet-object-widget.c (sheet_object_widget_class_init) : widgets
+	  render quickly rubber band directly
+	(sheet_widget_slider_create_widget) : do not draw the value
+
+2004-12-31  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (set_acetate_coords) : don't crash if we have
+	  not created a view yet.
+
+2004-12-31  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (gnm_pane_object_start_resize) : watch press
+	  events too.
+	(cb_control_point_event) : launch an editor for double clicks
+
+2005-01-04  Morten Welinder  <terra@gnome.org>
+
+	* src/format.c (fmt_general_float): Use GNUM_FORMAT_G.  The days
+	of glib <1.2.9 are over.
+	(fmt_general_int): Ditto.
+
+	* src/numbers.h (GNUM_FORMAT_G): Add.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=162865
+	* src/wbcg-actions.c: Fix Help->Contents and Edit->Clear->Contents
+	accelerators.
+
+2005-01-03  Morten Welinder  <terra@gnome.org>
+
+	Patch for 161909:
+
+	* src/sheet.c (sheet_cell_remove): Add new arg to control whether
+	to flag dependencies.  All callers changed.
+	(cb_empty_cell): Take whole flags argument.
+
+	* src/clipboard.c (clipboard_paste_region): Handle new flag
+	PASTE_NO_RECALC to help sorting speed.
+
+	* src/sort.c (sort_contents): Paste using PASTE_NO_RECALC and
+	handle dependencies ourselves.  Don't qsort if we have less than
+	two elements.
+
+2004-12-29  Morten Welinder  <terra@gnome.org>
+
+	* src/format.c (format_month_before_day): Add Win32 version.
+	(#161793, Ivan Wong.)
+
+2004-12-22  Morten Welinder  <terra@gnome.org>
+
+	* src/libgnumeric.h (gnumeric_popt_options): remove from here.
+
+2004-12-20  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-edit.c (wbcg_edit_add_markup): Use range 0-INT_MAX
+	so we don't split anything.
+	(cb_entry_cursor_pos): Ditto.
+	(wbcg_edit_init_markup): The .cur_fmt from markup, not
+	full_content, so we don't end up setting font sizes, etc.
+	(cb_entry_cursor_pos): Don't do anything if the entry is empty.
+
+2004-12-20  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-edit.c (cb_delete_filter): Be much more careful.
+	Things are unsigned.
+	(cb_entry_cursor_pos): Fix confusion between editline.markup and
+	edit_line.full_content.
+
+	* src/format.c (gnm_format_parse_markup): Attribute offsets are
+	unsigned.  Drop nops.
+	(cb_attrs_as_string): Ditto.
+
+2004-11-14  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-image.c (sheet_object_image_set_image) : renamed
+	  from sheet_object_image_new to make the life cycle simpler for
+	  importers.
+	(soi_get_pixbuf) : No data == no pixbuf
+	* src/wbcg-actions.c (cb_insert_image) : adjust to the name and
+	  semantic change of sheet_object_image_set_image.
+
+2004-12-17  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_cell_NEW): Fix origin correction.
+
+	* src/rendered-value.c (rendered_value_remeasure): Render while
+	rotated as pango turns off hinting in the font.
+
+	* src/style.c (style_default_halign): Errors and booleans remain
+	centered when rotated.  Numbers and text are left-aligned when
+	rotated up and right-aligned when rotated down.
+
+2004-12-15  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_cell_NEW): Print rotated.
+
+	* src/cell-draw.c (cell_draw): Draw rotated text if
+	HAVE_PANGO_CONTEXT_SET_MATRIX.
+
+	* src/rendered-value.c (rendered_value_render): Rotated numbers
+	are not variable width.
+	(rendered_value_remeasure): Adjust width and height for rotation.
+
+	* src/rendered-value.h (struct _RenderedValue): Eliminate
+	display_formula and introduce might_overflow and rotation.
+
+	* src/style.c (required_updates_for_style): Rotation changes
+	requires height resizing.
+	(style_default_halign): Rotated cells are aligned left by default,
+	even for numbers.
+
+	* src/sheet.c (cb_max_cell_height): Render rotated cells also.
+
+2004-12-14  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pgamma): Improve accuracy for extreme arguments.
+
+2004-12-13  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (lgamma1p): Make this work for x<0 also.
+
+2004-11-20  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* src/print-info.h: Add "paper_width" and "paper_height" to struct
+	PrintInformation, to support paper sizes for which gnome-print doesn't
+	have a name.
+	* src/print-info.c (print_info_make_config): Use paper_width and
+	paper_height when there is no paper name.
+	* src/print-info.c (print_info_set_paper_width,
+	print_info_set_paper_height, print_info_get_paper_width,
+	print_info_get_paper_height): New, get and set functions for
+	paper_width and paper_height.
+	* src/print-info.c (print_info_free, print_info_new, print_info_dup): 
+	Extended to handle the two fields added to struct PrintInformation.
+
+2004-12-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

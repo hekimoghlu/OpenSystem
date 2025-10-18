@@ -1,0 +1,287 @@
+{
+    "app-id": "org.gnome.Geary.Devel",
+    "branch": "master",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "geary",
+    "desktop-file-name-suffix": " (Development)",
+    "tags": [
+        "nightly"
+    ],
+    "finish-args": [
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--socket=pulseaudio",
+        "--share=network",
+        "--talk-name=org.freedesktop.secrets",
+        "--talk-name=org.gnome.Contacts",
+        "--talk-name=org.gnome.ControlCenter",
+        "--talk-name=org.gnome.Settings",
+        "--talk-name=org.gnome.OnlineAccounts",
+        "--talk-name=org.gnome.evolution.dataserver.*",
+        "--system-talk-name=org.freedesktop.login1",
+        "--filesystem=xdg-cache/evolution/addressbook:ro",
+        "--metadata=X-DConf=migrate-path=/org/gnome/Geary/",
+        "--filesystem=~/.config/geary:ro",
+        "--filesystem=~/.var/app/org.gnome.Geary/config/geary:ro",
+        "--filesystem=xdg-download:rw",
+        "--filesystem=/tmp"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/aclocal",
+        "/share/gir-1.0",
+        "/share/girepository-1",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name": "gnome-online-accounts",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dgoabackend=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-online-accounts.git",
+                    "branch": "master"
+                }
+            ]
+        },
+        {
+            "name": "gspell",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dgspell_app=false",
+                "-Dgtk_doc=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gspell.git",
+                    "branch": "master"
+                }
+            ],
+            "cleanup": [
+                "/bin",
+                "/share"
+            ]
+        },
+        {
+            "name": "libical",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DGOBJECT_INTROSPECTION=true",
+                "-DICAL_BUILD_DOCS=false",
+                "-DICAL_GLIB=true",
+                "-DICAL_GLIB_VAPI=true"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/libical/libical/releases/download/v3.0.14/libical-3.0.14.tar.gz",
+                    "sha256": "4284b780356f1dc6a01f16083e7b836e63d3815e27ed0eaaad684712357ccc8f"
+                }
+            ],
+            "cleanup": [
+                "/lib/cmake"
+            ]
+        },
+        {
+            "name": "intltool",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256": "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ],
+            "cleanup": [
+                "*"
+            ]
+        },
+        {
+            "name": "evolution-data-server",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DENABLE_CANBERRA=OFF",
+                "-DENABLE_EXAMPLES=OFF",
+                "-DENABLE_GOA=ON",
+                "-DENABLE_GTK=ON",
+                "-DENABLE_GTK_DOC=OFF",
+                "-DENABLE_INSTALLED_TESTS=OFF",
+                "-DENABLE_INTROSPECTION=ON",
+                "-DENABLE_VALA_BINDINGS=ON",
+                "-DENABLE_WEATHER=OFF",
+                "-DWITH_LIBDB=OFF",
+                "-DWITH_OPENLDAP=OFF"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/evolution-data-server.git"
+                }
+            ],
+            "cleanup": [
+                "/lib/cmake",
+                "/lib/evolution-data-server/*-backends",
+                "/libexec",
+                "/share/dbus-1/services"
+            ]
+        },
+        {
+            "name": "folks",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dtelepathy_backend=false",
+                "-Dbluez_backend=false",
+                "-Dinspect_tool=false",
+                "-Dimport_tool=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/folks.git",
+                    "branch": "main"
+                }
+            ],
+            "cleanup": [
+                "/bin"
+            ]
+        },
+        {
+            "name": "libcanberra",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz",
+                    "sha256": "c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72"
+                }
+            ],
+            "config-opts": [
+                "--disable-alsa",
+                "--disable-null",
+                "--disable-oss"
+            ]
+        },
+        {
+            "name": "libsecret",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dgtk_doc=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/libsecret/0.21/libsecret-0.21.4.tar.xz",
+                    "sha256": "163d08d783be6d4ab9a979ceb5a4fecbc1d9660d3c34168c581301cd53912b20"
+                }
+            ]
+        },
+        {
+            "name": "gsound",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gsound.git",
+                    "branch": "master"
+                }
+            ]
+        },
+        {
+            "name": "gmime",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/jstedfast/gmime.git",
+                    "branch": "master"
+                }
+            ]
+        },
+        {
+            "name": "libpeas",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libpeas.git",
+                    "commit": "7f245fa5158204621c3469756a951b68a651c4fe"
+                }
+            ]
+        },
+        {
+            "name": "libytnef",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/Yeraze/ytnef.git",
+                    "branch": "v1.9.3"
+                }
+            ]
+        },
+        {
+            "name": "snowball",
+            "buildsystem": "simple",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/snowballstem/snowball.git",
+                    "branch": "master"
+                },
+                {
+                    "type": "patch",
+                    "paths": [
+                        "build-aux/patches/shared-library.diff"
+                    ]
+                }
+            ],
+            "build-commands": [
+                "make libstemmer.so -j$FLATPAK_BUILDER_N_JOBS",
+                "install -Dm644 include/libstemmer.h /app/include/libstemmer.h",
+                "install -Dm644 libstemmer.so /app/lib/libstemmer.so.0.0.0",
+                "ln -s libstemmer.so.0.0.0 /app/lib/libstemmer.so.0",
+                "ln -s libstemmer.so.0 /app/lib/libstemmer.so"
+            ]
+        },
+        {
+            "name": "sound-theme-freedesktop",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://people.freedesktop.org/~mccann/dist/sound-theme-freedesktop-0.8.tar.bz2",
+                    "sha256": "cb518b20eef05ec2e82dda1fa89a292c1760dc023aba91b8aa69bafac85e8a14"
+                }
+            ]
+        },
+        {
+            "name": "geary",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/geary.git",
+                    "branch": "main"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,81 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glib.h>
+#include <glibmm/error.h>
+#include <glibmm/exceptionhandler.h>
+#include <giomm/slot_async.h>
+
+namespace Gio
+{
+
+Glib::RefPtr<FileInfo>
+FileOutputStream::query_info(
+  const Glib::RefPtr<Cancellable>& cancellable, const std::string& attributes)
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::wrap(g_file_output_stream_query_info(gobj(), g_strdup((attributes).c_str()),
+    const_cast<GCancellable*>(Glib::unwrap(cancellable)), &(gerror)));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  if (retvalue)
+    retvalue->reference(); // The function does not do a ref for us.
+  return retvalue;
+}
+
+Glib::RefPtr<FileInfo>
+FileOutputStream::query_info(const std::string& attributes)
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::wrap(
+    g_file_output_stream_query_info(gobj(), g_strdup((attributes).c_str()), nullptr, &(gerror)));
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  if (retvalue)
+    retvalue->reference(); // The function does not do a ref for us.
+  return retvalue;
+}
+
+void
+FileOutputStream::query_info_async(const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, const std::string& attributes, int io_priority)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_file_output_stream_query_info_async(gobj(), const_cast<char*>(attributes.c_str()), io_priority,
+    Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+FileOutputStream::query_info_async(
+  const SlotAsyncReady& slot, const std::string& attributes, int io_priority)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_file_output_stream_query_info_async(gobj(), const_cast<char*>(attributes.c_str()), io_priority,
+    nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+} // namespace Gio

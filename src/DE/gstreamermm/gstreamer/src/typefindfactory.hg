@@ -1,0 +1,57 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2009-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/pluginfeature.h>
+#include <glibmm/arrayhandle.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Caps;
+class TypeFind;
+
+/** A class used to get information about registered typefind functions.
+ * The methods in this class allow querying information about registered
+ * typefind functions.
+ *
+ * Writing typefinders in C++ is not possible presently.
+ *
+ * Last reviewed on 2016-08-27 (1.8.0).
+ */
+class TypeFindFactory : public PluginFeature
+{
+  _CLASS_GOBJECT(TypeFindFactory, GstTypeFindFactory, GST_TYPE_FIND_FACTORY, PluginFeature, GstPluginFeature)
+
+public:
+#m4 _CONVERSION(`GList*',`Glib::ListHandle< Glib::RefPtr<Gst::TypeFindFactory> >',`$2($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(static Glib::ListHandle< Glib::RefPtr<Gst::TypeFindFactory> > get_list(), gst_type_find_factory_get_list)
+
+#m4 _CONVERSION(`const gchar* const*',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_extensions() const, gst_type_find_factory_get_extensions)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_caps(), gst_type_find_factory_get_caps)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Caps> get_caps() const, gst_type_find_factory_get_caps, constversion)
+  _WRAP_METHOD(void call_slot(Gst::TypeFind& find), gst_type_find_factory_call_function)
+  _WRAP_METHOD(bool has_function() const, gst_type_find_factory_has_function)
+};
+
+} // namespace Gst

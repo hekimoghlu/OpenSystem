@@ -1,0 +1,185 @@
+include:
+  - project: 'GNOME/citemplates'
+    file: '/flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "dist"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+stages:
+  - build
+  - pages
+  - deploy
+
+cache:
+  paths:
+    - _ccache/
+
+variables:
+  FEDORA_IMAGE: "registry.gitlab.gnome.org/gnome/gnome-software/fedora:v23"
+  DEBIAN_IMAGE: "registry.gitlab.gnome.org/gnome/gnome-software/debian:v22"
+  MESON_TEST_TIMEOUT_MULTIPLIER: 4
+  G_MESSAGES_DEBUG: all
+  MESON_COMMON_OPTIONS: "--werror --buildtype debug --wrap-mode=nodownload --prefix /usr -Dwebapps=true -Dhardcoded_foss_webapps=false -Dhardcoded_proprietary_webapps=false"
+  BUNDLE: "gnome-software-dev.flatpak"
+  # -O2 is needed for -Wnull-dereference to work:
+  CFLAGS: "-O2"
+  # expected naming scheme for the release-service job
+  TARBALL_ARTIFACT_PATH: "_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+# FIXME: Work around https://gitlab.com/gitlab-org/gitlab/-/issues/391756
+.submodule_workaround:
+  before_script:
+    - git config --global --add safe.directory "${PWD}"
+    - git submodule update --init --depth 1
+    - git config --global --add safe.directory "${PWD}/subprojects/*"
+  variables:
+    GIT_SUBMODULE_STRATEGY: "none"
+    GIT_SUBMODULE_DEPTH: 1
+
+.build:
+  variables: !reference [".submodule_workaround", variables]
+  before_script:
+    - cp -r $HOME/subprojects/* subprojects/
+    - !reference [".submodule_workaround", "before_script"]
+
+fedora-x86_64:
+  extends: .build
+  image: "${FEDORA_IMAGE}"
+  stage: build
+  except:
+    - tags
+  script:
+    - meson setup ${MESON_COMMON_OPTIONS}
+            -Ddkms=true
+            -Drpm_ostree=true
+            -Dmalcontent=true
+            -Dsysprof=enabled
+            _build
+    - meson compile -C _build
+    - .gitlab-ci/run-tests.sh
+            --no-suite packagekit
+            --no-suite fwupd
+            --no-suite gtk
+            --no-suite libglib-testing
+            --no-suite malcontent
+  artifacts:
+    reports:
+      junit: "_build/${CI_JOB_NAME}-report.xml"
+    name: "gnome-software-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/help/"
+      - "_build/meson-logs"
+      - "_build/${CI_JOB_NAME}-report.xml"
+
+debian-x86_64:
+  extends: .build
+  image: "${DEBIAN_IMAGE}"
+  stage: build
+  except:
+    - tags
+  script:
+    - meson setup ${MESON_COMMON_OPTIONS}
+            -Ddkms=true
+            -Drpm_ostree=false
+            -Dmalcontent=false
+            -Dsysprof=disabled
+            _build
+    - meson compile -C _build
+    - .gitlab-ci/run-tests.sh
+            --no-suite packagekit
+            --no-suite fwupd
+            --no-suite gtk
+            --no-suite fedora-langpacks
+            --no-suite libxmlb
+  artifacts:
+    reports:
+      junit: "_build/${CI_JOB_NAME}-report.xml"
+    name: "gnome-software-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/meson-logs"
+      - "_build/${CI_JOB_NAME}-report.xml"
+
+# Allow building a flatpak on demand to test out the gnome-software UI
+flatpak bundle:
+  extends:
+    - ".flatpak"
+    - ".submodule_workaround"
+  stage: 'build'
+  variables:
+    MANIFEST_PATH: "build-aux/org.gnome.Software.Devel.json"
+    FLATPAK_MODULE: "gnome-software"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.Software.Devel"
+    RUN_TESTS: "no"
+  when: manual
+  allow_failure: true
+  
+# Due to the `only` clause in .publish_nightly, this will only publish on-demand
+# builds to nightly.gnome.org if they are built from a commit on `main`
+nightly:
+  extends: '.publish_nightly'
+  dependencies:
+    - 'flatpak bundle'
+  needs: ['flatpak bundle']
+  when: manual
+
+dist:
+  extends: .build
+  image: "${FEDORA_IMAGE}"
+  stage: build
+  needs: []
+  only:
+    - schedules
+    - tags
+  script:
+    - meson setup ${MESON_COMMON_OPTIONS}
+            --buildtype release
+            -Dgtk_doc=true
+            _build
+    # We can’t run tests because it would run the `gtk` suite, which doesn’t work on CI
+    # There’s currently no way to selectively disable some suites at dist time.
+    - meson dist -C _build --no-tests
+    # Compile again to build the docs
+    - meson compile -C _build
+    - ninja -C _build gnome-software-doc
+    - tar -c -J -f "_build/gnome-software-docs-${CI_COMMIT_TAG}.tar.xz" -C _build/doc/api html
+  artifacts:
+    paths:
+      - "${CI_PROJECT_DIR}/_build/gnome-software-docs-${CI_COMMIT_TAG}.tar.xz"
+      - "${CI_PROJECT_DIR}/_build/meson-dist/gnome-software-*.tar.xz"
+
+pages:
+  image: "${FEDORA_IMAGE}"
+  stage: pages
+  needs: ['fedora-x86_64']
+  interruptible: false
+  script:
+    - |
+      # yelp-build requires absolute paths
+      builddir="$(realpath ./_build)"
+
+      echo "Generating help for C locale"
+      mkdir -p "./public/help/C/"
+      yelp-build html --output ./public/help/C/ ./help/C/*.page
+
+      grep -v '^#' ./help/LINGUAS | while read -r language; do
+        echo "Generating help for ${language} locale"
+        mkdir "./public/help/${language}"
+        yelp-build html --ignore --output ./public/help/"${language}/" --path help/C/ "${builddir}/help/${language}/"
+      done
+
+      echo "Generating index"
+      ./.gitlab-ci/generate-help-index.py ./public/index.html ./help/
+  artifacts:
+    paths:
+    - "public"
+  rules:
+    - if: $CI_PROJECT_PATH == "GNOME/gnome-software" && $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - "help/**/*"
+        - ".gitlab-ci/generate-help-index.py"

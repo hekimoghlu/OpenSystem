@@ -1,0 +1,47 @@
+import pathlib
+import os
+import sys
+
+base_path   = '@SRCDIR@/../macos/gimp-dmg.xcf.xz'
+wilber_path = '@SRCDIR@/gimp-logo-shadow.svg'
+output_path = '@BUILDDIR@/gimp-dmg.png'
+wilber_size = 155
+offset_y    = 77
+
+
+# 1. Loading the background image.
+procedure = Gimp.get_pdb().lookup_procedure("gimp-file-load")
+config    = procedure.create_config()
+config.set_property("file", Gio.file_new_for_path(base_path))
+v = Gimp.Procedure.run(procedure, config)
+if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+  sys.exit(70)
+image = v.index(1)
+image.undo_disable()
+
+# 2. Loading Wilber.
+procedure = Gimp.get_pdb().lookup_procedure("file-svg-load")
+config    = procedure.create_config()
+config.set_property("file", Gio.file_new_for_path(wilber_path))
+config.set_property("width",  wilber_size)
+config.set_property("height", wilber_size)
+v = Gimp.Procedure.run(procedure, config)
+if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+  sys.exit(70)
+tmp_image = v.index(1)
+drawables = tmp_image.get_selected_drawables()
+layer2 = Gimp.Layer.new_from_drawable (drawables[0], image)
+image.insert_layer(layer2, None, 0)
+layer2.set_offsets((image.get_width() - wilber_size) / 2, offset_y)
+tmp_image.delete()
+
+# 3. Merging the background and Wilber on top.
+image.merge_down(layer2, Gimp.MergeType.CLIP_TO_IMAGE)
+procedure = Gimp.get_pdb().lookup_procedure("file-png-export")
+config    = procedure.create_config()
+drawables = image.get_selected_drawables()
+config.set_property("image", image)
+config.set_property("file", Gio.file_new_for_path(output_path))
+v = Gimp.Procedure.run(procedure, config)
+if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+  sys.exit(70)

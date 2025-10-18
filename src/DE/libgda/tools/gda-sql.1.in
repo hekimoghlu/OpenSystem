@@ -1,0 +1,415 @@
+.TH gda-sql 1 "@GDA_BUILDDATE@" "Version @PACKAGE_VERSION@" "LIBGDA Manual Pages"
+
+.SH NAME
+gda-sql - an SQL console based on Libgda
+
+.SH SYNOPSIS
+.B gda-sql
+[\-\-help] [\-v] [\-\-version]
+[\-o] [\-\-output\-file \fI<filename>\fP]
+[\-C] [\-\-command]
+[\-f] [\-\-commands\-file \fI<filename>\fP]
+[\-i] [\-\-interactive]
+[\-l] [\-\-list\-dsn]
+[\-L] [\-\-list\-providers]
+[\-s] [\-\-http\-port \fI<port>\fP]
+[\-t] [\-\-http\-token \fI<token phrase>\fP]
+[\-\-data\-files\-list]
+[\-\-data\-files\-purge \fI<criteria>\fP]
+[connection's spec] [connection's spec...]
+
+.SH DESCRIPTION
+.PP
+gda-sql is an SQL console based on the \fILibgda\fP library.
+.PP
+It enables you to type in queries interactively, issue them to be executed by a connection, and see the
+query results.
+.PP
+Several connections can be opened at the same time, allowing you to switch the active connection to any
+opened connection. When starting, gda-sql opens a connection for each connection specified on the command
+line (plus optionally one corresponding to the \fBGDA_SQL_CNC\fP environment variable). The prompt
+indicates the current connection used when executing commands. See the \fB.c\fP internal command for
+an explanation about the syntax to specify a connection on the command line.
+
+.PP
+Alternatively, input can be from a file.
+In addition, it provides a number of meta-commands and various shell-like features to facilitate writing
+scripts and automating a wide variety of tasks.
+
+.PP
+It is also possible to run the tool as a script using the classic '#!' string at the start of a script file,
+with the limitation that behaviour of arguments passed on the line after the '#!' command is undefined.
+Example:
+
+\fB#!/bin/path/to/gda-sql\fP
+
+\fB#!/usr/bin/env gda-sql\fP
+
+
+.SH OPTIONS
+gda-sql accepts the following options:
+.PP
+.TP 8
+.B  \-\-help
+Show command\-line options.
+.TP 8
+.B \-o, \-\-output\-file \fI<filename>\fP
+Specifies a file to which outputs are redirected.
+.TP 8
+.B \-C, \-\-command
+Run only single command (SQL or internal) and exit.
+.TP 8
+.B \-f, \-\-commands\-file \fI<filename>\fP
+Execute commands from \fI<filename>\fP, then exit (except if \-i specified).
+.TP 8
+.B \-i, \-\-interactive
+Keep the console opened after executing a file (used with the \-f option).
+.TP 8
+.B \-l, \-\-list\-dsn
+List configured data sources and exit.
+.TP 8
+.B \-L, \-\-list\-providers
+List installed database providers and exit
+.TP 8
+.B \-s, \-\-http\-port \fI<port>\fP
+Starts the embedded HTTP server on port \fI<port>\fP
+.TP 8
+.B \-t, \-\-http\-token \fI<token phrase>\fP
+Requires HTTP clients to authenticate by providing the \fI<token phrase>\fP
+(empty phrase by default)
+.TP 8
+.B \-\-data\-files\-list
+Lists all the files used to hold information related to each connection (ie.
+information gathered by the tool about the connection such as meta data, defined statements,...)
+.TP 8
+.B \-\-data\-files\-purge \fI<criteria>\fP
+Removes file used to hold information related to each connection for the criteria passed as argument
+(note that adding \fB"list-only"\fP to the criteria, either before or after it using a comma, will
+not actually remove the file):
+
+\fB"non-dsn"\fP: remove all the files which do not correspond to a DSN (data source name). These are the
+files created when a connection is specified using connection parameters instead of using a DSN
+
+\fB"non-exist-dsn"\fP: same as \fB"non-dsn"\fP except it also removes the files which were for DSN which
+don't exist anymore
+
+\fB"all"\fP: remove all the files, for a complete cleanup
+
+For example: \fB\-\-data\-files\-purge all,list-only\fP lists all the files (which would be removed
+if the command was \fB\-\-data\-files\-purge all\fP).
+
+.SH ENVIRONMENT
+gda-sql can be configured through some environment variables:
+.PP
+.TP 8
+.B GDA_SQL_CNC
+to define a connection to systematically be opened when the program starts.
+.TP 8
+.B PAGER
+to define a text pager program to use (by default determined by the system).
+.TP 8
+.B GDA_NO_PAGER
+to specify that no text pager should be used.
+.TP 8
+.B GDA_SQL_EDITOR EDITOR VISUAL
+to define a text editor to be used (variables are examined in this order).
+.TP 8
+.B GDA_SQL_VIEWER_PNG
+to define a PNG viewer.
+.TP 8
+.B GDA_SQL_VIEWER_PDF
+to define a PDF viewer.
+.TP 8
+.B GDA_SQL_HISTFILE
+to define the history file name to use (by default .gdasql_history), set to NO_HISTORY
+to disable history logging.
+.TP 8
+.B GDA_DATA_MODEL_DUMP_ROW_NUMBERS
+if set, the first column of the output will contain row numbers
+.TP 8
+.B GDA_DATA_MODEL_DUMP_ATTRIBUTES
+if set, also dump the data model's columns' types and value's attributes
+.TP 8
+.B GDA_DATA_MODEL_DUMP_TITLE
+if set, also dump the data model's title
+.TP 8
+.B GDA_DATA_MODEL_NULL_AS_EMPTY
+if set, replace the 'NULL' string with an empty string for NULL values
+.TP 8
+.B GDA_DATA_MODEL_DUMP_TRUNCATE
+if set to a numeric value, truncates the output to the width specified by the value.
+If the value is -1 then the actual terminal size (if it can be determined) is used
+
+.TP 0
+gda-sql can be compiled with support for binary relocatibility.
+This will cause data, plug-ins and configuration files to be searched
+relative to the location of the gda-sql executable file.
+
+
+.SH FILES
+gda-sql stores data source definitions (DSN) in Libgda defined files 
+($HOME/.local/share/libgda and @gdasysconfdir@/libgda-@GDA_ABI_VERSION@/config
+where ${prefix} is typically /usr).
+
+For each connection defined by a DSN, all the information regarding the connection
+(such as the meta data) is stored in a
+$HOME/.local/share/libgda/gda-sql-<DSN>.db file.
+
+
+.SH SQL commands
+You can run any SQL understood by the database engine of the current connection.
+Additionally SQL statement can contain variables expressed as \fI##<name>::<type>\fP
+where \fI<name>\fP is the variable's name and \fI<type>\fP is its declared type (which
+can be "int", "string", "boolean", "time", "date", "timestamp" (and other types defined
+by GLib's syntax).
+
+Use the \fI.set\fP internal command to set variable's values.
+
+.SH Internal commands
+In addition to SQL commands, gda-sql supports internal commands which differ from SQL
+commands because they start with the "." or "\\" character. These commands are:
+
+.IP \fB.?\fP
+Lists all internal commands
+.IP \fB.bind\fP
+Bind two or more connections into a single new one (allowing SQL commands to be executed across multiple
+connections). \fB.bind <CNC_NAME> <CNC_NAME1> <CNC_NAME2> [<CNC_NAME> ...]\fP creates a new connection named
+\fI<CNC_NAME>\fP which binds the tables of the \fI<CNC_NAME1>\fP, \fI<CNC_NAME2>\fP and any other
+connection specified.
+.IP \fB.c\fP
+Opens a connection or sets the current connection. Username and password can pe specified using
+the \fB<USERNAME>[:<PASSWORD>]@<DSN_NAME>\fP or \fB<USERNAME>[:<PASSWORD>]@<CNC_DEFINITION>\fP syntax,
+and if a username or a password is required but not specified, it will ba asked interactively.
+
+\fB.c <CNC_NAME> <DSN_NAME>\fP opens a connection internally known as \fI<CNC_NAME>\fP,
+using the specified DSN.
+
+\fB.c <CNC_NAME> <CNC_DEFINITION> \fP opens a connection internally known as \fI<CNC_NAME>\fP,
+using a connection specified by \fI<CNC_DEFINITION>\fP which is similar to the \fI<DSN_DEFINITION>\fP parameter
+of the \fB.lc\fP command.
+
+\fB.c <CNC_NAME>\fP sets the current connection to the connection known as \fI<CNC_NAME>\fP.
+
+\fB.c ~\fP or \fB.c ~<CNC_NAME>\fP set the current connection to the meta data corresponding to the
+current connection (for the first notation) or to the meta data corresponding to the \fI<CNC_NAME>\fP
+connection.
+.IP \fB.close\fP
+Closes a connection. Full syntax is: \fB.close <CNC_NAME>\fP.
+.IP \fB.cd\fP
+Changes the current working directory. Full syntax is: \fB.cd <DIR_NAME>\fP.
+.IP \fB.copyright\fP
+Displays copyright information.
+.IP \fB.d\fP
+Lists all database objects if no argument is provided. \fB.d <OBJ_NAME>\fP gives details about
+the specified object and \fB.d <SCHEMA>.*\fP lists all objects in specified schema.
+.IP \fB.dn\fP
+Lists all schemas if no argument is provided. \fB.d <SCHEMA_NAME>\fP lists specified schema.
+.IP \fB.dt\fP
+Lists all tables if no argument is provided. \fB.d <TABLE_NAME>\fP lists specified table.
+.IP \fB.dv\fP
+Lists all views if no argument is provided. \fB.d <VIEW_NAME>\fP lists specified view.
+.IP \fB.fkdeclare\fP
+Declares a new foreign key (no constraint is added to the database). The meta data is modified to take into account a foreign key constraint. The foreign key specification is \fB <fkname> <tableA>(<colA>,...) <tableB>(<colB>,...)\fP where \fB<fkname>\fP is the name given to the foreign key constraint and \fB<tableA>\fP references \fB<tableB>\fP using the columns mentionned between the parenthesis. Note that the (\fB<fkname>\fP, \fB<tableA>\fP, \fB<tableB>\fP) triplet uniquely identifies a declared foreign key (declaring a new foreign key with the same triplet will remove any previously declared one).
+\fINote:\fP any actual foreign key constraint will always have precedence over any declared foreign key.
+.IP \fB.fkundeclare\fP
+Un-declares a foreign key (does the opposite of \fB.fkdeclare\fP).
+.IP \fB.e\fP
+Edits the query buffer with external editor, if no argument is provided. \fB.e <FILE_NAME>\fP
+edits the specified file name. The external editor can be specified using environment variables.
+.IP \fB.echo\fP
+Sends output to stdout, full command is: \fB.echo [<TEXT>]\fP.
+.IP \fB.export\fP
+Exports internal parameter or table's value to the FILE file. Internal parameters are named values
+used when SQL statement containing variables are executed.
+
+\fB.export <NAME> <FILE_NAME>\fP exports the contents of the \fI<NAME>\fP parameter to the specified
+file.
+
+\fB.export <TABLE> <COLUMN> <ROW_CONDITION> <FILE_NAME>\fP exports the value of the \fI<TABLE>\fP
+table, column \fI<COLUMN>\fP for the row selected by \fI<ROW_CONDITION>\fP to the specified
+file. This is most useful to export BLOBs.
+.IP \fB.g\fP
+Executes the contents of the query buffer, if no parameter is provided. \fB.g <QUERY_BUFFER_NAME>\fP
+Executes the contents of the specified query buffer. A named query buffer is created using the
+\fB.qs\fP command.
+.IP \fB.graph\fP
+Creates a graph of tables showing their relations (based on foreign key constraints). If no argument
+is provided, the graph lists all tables. \fB.graph <TABLE_NAME> [<TABLE_NAME>...]\fP creates a graph
+listing the specified tables.
+
+The generated graph is created as the "gdaph.dot" file. If the \fBGDA_SQL_VIEWER_PNG\fP or \fBGDA_SQL_VIEWER_PDF\fP
+environment variables are set and if the "dot" program (from GraphViz) is found, then the graph is displayed (if
+a display is available).
+.IP \fB.H\fP
+Set output format. Full syntax is: \fB.H [HTML|XML|CSV|DEFAULT]\fP.
+.IP \fB.http\fP
+Starts/stops the embedded HTTP server. Full syntax is \fB.http [<port> [<authentication_token>]]\fP, where
+\fI<authentication_token>\fP is an optional token phrase which HTTP clients are required to send to authenticate.
+.IP \fB.i\fP
+Executes commands from file the specified file: \fB.i <FILE_NAME>\fP.
+.IP \fB.l\fP
+Lists all data sources if no argument is provided. \fB.l <DSN>\fP lists information about
+the specified DSN.
+.IP \fB.lp\fP
+Lists all available database providers if no argument is provided. \fB.lp <provider>\fP lists
+information about the specified provider.
+.IP \fB.lc\fP
+Declares a DSN. Full syntax is: \fB.lc <DSN_NAME> <DSN_DEFINITION> [<DESCRIPTION>]\fP.
+The \fI<DSN_DEFINITION>\fP format is: \fI<provider>://[<username>[:<password>]@]<connection_params>\fP
+where \fI<connection_params>\fP is a semi-colon (";") separated list of <key>=<value> pairs
+where \fI<key>\fP is defined when using \fB.lp <provider>\fP (if \fI<value>\fP contains
+non alphanumeric characters, they should be represented as specified by the RFC 1738).
+
+If a DSN with a similar name already exists, it is first removed.
+
+For example: ".lc mydsn PostgreSQL://HOST=moon;DB_NAME=mydb".
+.IP \fBldap_attributes\fP
+This option (see the \fB.option\fP command) defines or list the attributes handled by LDAP commands; it
+is only useful if the current connection is an LDAP connection. Its values must have the following format: \fB<attribute>[,<attribute>...]\fP.
+
+For multi valued attributes (such as "objectClass"), it is possible to specify how multiple
+values are handled by appending \fB::csv\fP (values are listed in a CVS syntax), \fB::*\fP
+(each row is duplicated with each value of the attribute), \fB::1\fP (only the 1st value of
+the attribute is shown), \fB::concat\fP (all the values are made into a string, separated
+by newlines) or \fB::null\fP (a NULL value is used). The default is an error value.
+.IP \fB.ldap_descr\fP
+Describes an LDAP entry; this command only works if the current connection is an LDAP connection.
+Full syntax is: \fB.ldap_descr <DN> ["all"|"set"|"unset"]\fP.
+
+If the \fBset\fP option is passed, then all the set attributes are shown, if the \fBall\fP option
+is passed, then all attributes are shown,
+and if the \fBunset\fP option is passed, then only attributes which don't have a value are
+shown. The default is to show only the set attributes specified by the \fBldap_attributes\fP option.
+.IP \fBldap_dn\fP
+This option (see the \fB.option\fP command) defines how the DN column is handled for LDAP searched entries; it is useful only if the current connection is an LDAP connection. Its values must be among: \fBdn\fP (use the full DN), \fBrdn\fP (use only the RDN), or \fBnone\fP (don't use the DN at all).
+.IP \fB.ldap_mod\fP
+Modifies an LDAP entry's attributes; this command only works if the current connection is an LDAP connection. Full syntax is: \fB.ldap_mod <DN> <OPERATION> [<ATTR>[=<VALUE>]] [<ATTR>=<VALUE> ...]\fP.
+
+The \fB.<OPERATION>\fP argument specifies which operation must be performed, among \fBDELETE\fP, \fBREPLACE\fP and \fBADD\fP.
+.IP \fB.ldap_mv\fP
+Renames an LDAP entry; this command only works if the current connection is an LDAP connection. Full syntax is: \fB.ldap_mv <DN> <NEW DN>\fP.
+.IP \fB.ldap_search\fP
+Searches the LDAP directory for entries; this command only works if the current connection is
+an LDAP connection. Full syntax is: \fB.ldap_search <filter> ["base"|"onelevel"|"subtree" [<base DN>]]\fP.
+
+Filter must be a valid LDAP filter expression (outer most parenthesis are optional though), "base",
+"onelevel" or "subtree" can optionally specify the search scope (default is subtree), and
+\fB.<base DN>\fP can be used to specify a different DN to search from (the default is to use the
+base DN specified when opening the connection).
+.IP \fB.lr\fP
+Removes a DSN declaration. Full syntax is: \fB.lc <DSN_NAME>\fP.
+.IP \fB.meta\fP
+Updates the current connection's meta data (use this command after having modified the
+database's schema).
+.IP \fB.o\fP
+Sends output to a file or |pipe. Full syntax is: \fB.o <FILE_NAME>\fP or \fB.o |<COMMAND>\fP.
+.IP \fB.option\fP
+Defines options shared among all the connections. Full syntax is: \fB.option [<OPTION NAME> [<VALUE>]]\fP.
+
+If no option name is given, then all the available options and their current values are shown. If an option
+name is given without any value, its current value is shown, and to define the value of an option, give its
+name and new value.
+.IP \fB.pivot\fP
+Performs data summarization on a data set. Full syntax is: \fB.pivot <SELECT> <ROW_FIELDS> [<COLUMN_FIELDS> [<DATA_FIELDS> [...]]]\fP.
+
+The \fI<SELECT>\fP defines the data set to perform summarization on.
+
+The \fI<ROW_FIELDS>\fP defines the fields from the data set from which each individual value will
+yield to a row in the analysis (it can be any valid selectable SQL expression on the data set's
+fields); multiple expressions can be provided, separated by commas (forming a valid SQL expression).
+In this case a row will be created for each combination of values of each of the expression.
+
+The \fI<COLUMN_FIELDS>\fP defines the fields from the data set from which each individual value will
+yield to a column in the analysis. Its syntax is similar to the \fI<ROW_FIELDS>\fP one. If not
+specified (or if specified as a single dash ("-") caracter), then only one column will be created.
+Note that, if the \fI<DATA_FIELDS>\fP argument is
+specified each column created from the \fI<COLUMN_FIELDS>\fP will in fact lead to the creation
+of as many \fI<DATA_FIELDS>\fP arguments provided.
+
+The \fI<DATA_FIELDS>\fP arguments are entirely optional and indicates the way data summarization
+is done for each pair of (row,column) values (the default is to count occurrences). The syntax
+for each \fI<DATA_FIELDS>\fP argument is: \fB[aggregate]<SQL_expression>\fP, where the aggregate
+part is optional and, if present must be among [SUM], [COUNT], [AVG], [MIN] or [MAX], and
+the SQL expression is a valid selectable SQL expression of the data set's fields.
+
+Examples:
+
+\fB.pivot "SELECT * FROM food" person food\fP
+
+\fB.pivot "SELECT * FROM products" category "CASE WHEN price < 15 THEN 'low' ELSE 'high' END" [AVG]price \fP
+
+\fB.pivot "SELECT * FROM sales" category,product - [AVG]quantity\fP
+
+
+.IP \fB.q\fP
+Quits the application.
+.IP \fB.qecho\fP
+Sends output to the output stream (stdout). Full syntax is: \fB.qecho <TEXT>\fP.
+.IP \fB.qa\fP
+Lists all saved query buffers in dictionary.
+.IP \fB.qd\fP
+Deletes a query buffer from the dictionary. Full syntax is: \fB.qd <QUERY_BUFFER_NAME>\fP
+.IP \fB.ql\fP
+Loads query buffer from dictionary into the current query buffer.
+Full syntax is: \fB.ql <QUERY_BUFFER_NAME>\fP.
+.IP \fB.qp\fP
+Shows the contents of the current query buffer.
+.IP \fB.qr\fP
+Resets the query buffer to empty if no argument is provided. \fB.qr <FILE _NAME>\fP loads
+the specified file into the query buffer.
+.IP \fB.qs\fP
+Saves query buffer to dictionary, full syntax is \fB.qs <QUERY_BUFFER_NAME>\fP. This creates
+a new query buffer with the specified name in the dictionary, containing the current query
+buffer.
+.IP \fB.qw\fP
+Writes the query buffer to the specified file, full syntax is \fB.qw <FILE_NAME>\fP.
+.IP \fB.s\fP
+Show commands history. \fB.s <FILE_NAME>\fP saves command history to specified file.
+.IP \fB.set\fP
+Sets, shows or lists internal parameters.
+
+\fB.set\fP lists all the defined internal parameters.
+
+\fB.set <NAME> <VALUE>\fP (re)defines the internal parameter named \fI<NAME>\fP to the
+specified value (which can be the \fI_null_\fP literal to set it to NULL).
+
+\fB.set <NAME>\fP shows the contents of the internal parameter named \fI<NAME>\fP.
+.IP \fB.setex\fP
+Set internal parameter as the contents of the FILE file or from an existing table's 
+value.
+
+\fB.setex <NAME> <FILE_NAME>\fP (re)defines the the internal parameter named \fI<NAME>\fP
+with the contents of the specified file name.
+
+\fB.setex <NAME> <TABLE> <COLUMN> <ROW_CONDITION>\fP (re)defines the the internal parameter named \fI<NAME>\fP
+with the value of the \fI<TABLE>\fP table, column \fI<COLUMN>\fP for the row selected by \fI<ROW_CONDITION>\fP.This is most useful to export BLOBs.
+.IP \fB.unset\fP
+Unset (delete) internal parameter.
+
+\fB.unset\fP unsets all the internal parameters.
+
+\fB.unset <NAME>\fP unsets the internal parameter named \fI<NAME>\fP.
+.SH SUGGESTIONS AND BUG REPORTS
+Any bugs found should be reported to the online issues-tracking system
+available on the web at http://gitlab.gnome.org/GNOME/libgda/issues. Before reporting
+bugs, please check to see if the bug has already been reported.
+
+When reporting bugs, it is important to include a reliable way to
+reproduce the bug, version number of gda-sql, OS name
+and version, and any relevant hardware specs. If a bug is causing a
+crash, it is very useful if a stack trace can be provided. And of
+course, patches to rectify the bug are even better.
+
+
+.SH OTHER INFO
+Consult the Libgda's home page at http://www.gnome-db.org/.
+
+.SH AUTHORS
+Vivien Malerba (for Libgda's authors, please consult the AUTORS file
+within the Libgda's sources)
+
+
+.SH "SEE ALSO"
+.BR psql (1),
+.BR mysql (1),
+.BR sqlite3 (1)

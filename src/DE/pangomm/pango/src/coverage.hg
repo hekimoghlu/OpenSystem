@@ -1,0 +1,53 @@
+/* coverage.h
+ *
+ * Copyright (C) 1998-1999 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(pangommconfig.h)
+
+#include <glibmm/value.h>
+#include <pango/pango.h>
+
+_DEFS(pangomm,pango)
+
+namespace Pango
+{
+// PangoCoverage is a GObject since pango 1.44.0 (July 2019).
+// Since that time pango_coverage_ref/unref() only call g_object_ref/unref().
+// pango_coverage_ref/unref() are deprecated since pango 1.52.0.
+//TODO: When we can break ABI, make Pango::Coverage a _CLASS_GOBJECT.
+
+/** A Pango::Coverage represents a map from ISO-10646 character point to Pango::Coverage::Level.
+ * It is often necessary in pango to determine if a particular font can represent a particular character,
+ * and also how well it can represent that character. Pango::Coverage holds this information.
+ */
+class PANGOMM_API Coverage final
+{
+  _CLASS_OPAQUE_REFCOUNTED(Coverage, PangoCoverage, pango_coverage_new, g_object_ref, g_object_unref, PANGOMM_API)
+  _IGNORE(pango_coverage_ref, pango_coverage_unref)
+  _IGNORE(pango_coverage_copy)
+  _IGNORE(pango_coverage_to_bytes, pango_coverage_from_bytes, pango_coverage_max)dnl// deprecated
+
+public:
+  _WRAP_ENUM(Level, PangoCoverageLevel, decl_prefix PANGOMM_API)
+
+  //_WRAP_METHOD(Glib::RefPtr<Coverage> copy() const, pango_coverage_copy) //see above
+
+  _WRAP_METHOD(Level get(int index) const, pango_coverage_get)
+  _WRAP_METHOD(void set(int index, Level level), pango_coverage_set)
+};
+
+} // namespace Pango

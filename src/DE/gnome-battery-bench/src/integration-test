@@ -1,0 +1,409 @@
+#!/usr/bin/python3
+
+# gnome-battery-bench intergration test suite
+#
+#
+# Copyright: (C) 2017 Christian Kellner <gicmo@gnome.org>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+
+try:
+    import gi
+except ImportError as e:
+    sys.stderr.write('Skipping tests, PyGobject not available for Python 3, or missing GI typelibs: %s\n' % str(e))
+    sys.exit(0)
+
+try:
+    gi.require_version('UMockdev', '1.0')
+    from gi.repository import UMockdev
+except ImportError:
+    sys.stderr.write('Skipping tests, umockdev not available (https://launchpad.net/umockdev/)\n')
+    sys.exit(0)
+
+
+class LogReader(object):
+    def __init__(self, path):
+        self.fd = open(path, 'r')
+        self.timeout = [0.3, 0.7, 1.0]
+
+    def _check_text_in_log(self, text):
+        lines = self.fd.readlines()
+        return any([text in l for l in lines])
+
+    def wait_for_text(self, text):
+        for t in self.timeout:
+            if self._check_text_in_log(text):
+                return True
+            time.sleep(t)
+        self._check_text_in_log(text)
+
+    def __contains__(self, text):
+        return self.wait_for_text(text)
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        if self.fd is None:
+            return
+        self.fd.close()
+        self.fd = None
+
+
+class Tests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # find the gbb binary
+        builddir = os.getenv('top_builddir', '.')
+        if os.access(os.path.join(builddir, 'src', 'gbb'), os.X_OK):
+            print('Testing binaries from local build tree')
+            cls.local_bins = True
+            cls.gbb_path = os.path.join(builddir, 'src', 'gbb')
+        elif os.environ.get('UNDER_JHBUILD', False):
+            print('Testing binaries from JHBuild')
+            jhbuild_prefix = os.environ['JHBUILD_PREFIX']
+            cls.gbb_path = os.path.join(jhbuild_prefix, 'bin', 'gbb')
+        else:
+            print('Testing installed system binaries')
+            cls.gbb_path = os.path.join('/usr', 'bin', 'gbb')
+
+        assert os.access(cls.gbb_path, os.X_OK), "could not execute gbb @ " + cls.gbb_path
+
+    def setUp(self):
+        '''Set up a local umockdev testbed.
+
+        The testbed is initially empty.
+        '''
+        self.testbed = UMockdev.Testbed.new()
+
+    def tearDown(self):
+        del self.testbed
+        self.gbb_stop()
+
+        errors = [x[1] for x in self._outcome.errors if x[1]]
+        if errors and self.logfile:
+            werr = sys.stderr.write
+            werr('\n' + 29 * '=' + ' gbb output ' + '=' * 29 + '\n')
+            with open(self.logfile.name) as f:
+                werr('\n' + 30 * '-' + '  stdout  ' + 30 * '-' + '\n')
+                werr(f.read())
+            with open(self.errfile.name) as f:
+                werr('\n' + 30 * '-' + '  stderr  ' + 30 * '-' + '\n')
+                werr(f.read())
+                werr('=' * 70 + '\n')
+
+        if self.logfile:
+            os.unlink(self.logfile.name)
+        if self.errfile:
+            os.unlink(self.errfile.name)
+
+    def gbb_start(self, command, params=None):
+        env = os.environ.copy()
+        env['G_DEBUG'] = 'fatal-criticals'
+
+        env['UMOCKDEV_DIR'] = self.testbed.get_root_dir()
+        self.logfile = tempfile.NamedTemporaryFile(delete=False)
+        self.errfile = tempfile.NamedTemporaryFile(delete=False)
+        gbb_path = [self.gbb_path, command] + (params or [])
+
+        if os.getenv('VALGRIND') is not None:
+            gbb_path = ['valgrind'] + gbb_path
+            if self.local_bins:
+                gbb_path = ['libtool', '--mode=execute'] + gbb_path
+
+        self.gbb_argv = gbb_path
+        self.env = env
+        self.gbb_proc = subprocess.Popen(gbb_path,
+                                         env=env,
+                                         stdout=self.logfile,
+                                         stderr=self.errfile)
+        return self.gbb_proc
+
+    def gbb(self, command, params=None):
+        gbb = self.gbb_start(command, params=params)
+        if gbb is not None:
+            gbb.communicate()
+            with open(self.logfile.name) as f:
+                return f.read()
+        return ""
+
+    def gbb_stop(self):
+        if self.gbb_proc is not None:
+            import signal
+            gbb = self.gbb_proc
+            stopped = False
+            for x in [0.1, 0.4, 0.5]:
+                time.sleep(x)
+                stopped = gbb.returncode is not None
+                if stopped:
+                    break
+            if not stopped:
+                try:
+                    gbb.send_signal(signal.SIGINT)
+                except OSError:
+                    pass
+                gbb.wait()
+        self.gbb_proc = None
+
+    def log(self):
+        return LogReader(self.logfile.name)
+
+    def add_std_platform(self):
+        dev = self.testbed.add_device('dmi', 'virtual/dmi/id', None,
+                                      ['sys_vendor', 'GNOME.org',
+                                       'product_name', 'hal',
+                                       'product_version', '9000',
+                                       'bios_vendor', 'bios.GNOME.org',
+                                       'bios_version', '9k',
+                                       'bios_date', '01/23/1997'], [])
+        return dev
+
+    def add_std_power_supply(self, vendor='GNOME.org', model='B1'):
+        ac = self.testbed.add_device('power_supply', 'AC', None,
+                                     ['type', 'Mains', 'online', '0'], [])
+
+        b0 = self.testbed.add_device('power_supply', 'BAT0', None,
+                                     ['type', 'Battery',
+                                      'manufacturer', vendor,
+                                      'model_name', model,
+                                      'present', '1',
+                                      'status', 'Discharging',
+                                      'energy_full', '60000000',
+                                      'energy_full_design', '80000000',
+                                      'energy_now', '48000000',
+                                      'voltage_now', '11000000'], [])
+        return ac, b0
+
+    def test_basic(self):
+        '''Basic system information (model, bios, etc)
+
+        In the first run we ensure that we don't have the fields in the
+        json that we haven't set in /sys, then we fill them for them
+        second run and check we get the right values
+        '''
+        log = self.gbb("info", ["--json"])
+        out = json.loads(log)
+
+        self.assertIn('hardware', out)
+        hw = out['hardware']
+        for key in ['vendor', 'version', 'name', 'bios']:
+            self.assertNotIn(key, hw)
+
+        self.assertIn('batteries', hw)
+        self.assertEqual(len(hw['batteries']), 0)
+
+        # now with devices in /sys/
+        vendor = 'GNOME.org'
+        model = 'B1'
+
+        plt = self.add_std_platform()
+        self.add_std_power_supply(vendor=vendor, model=model)
+
+        log = self.gbb("info", ["--json"])
+        out = json.loads(log)
+        self.assertTrue('hardware' in out)
+        hw = out['hardware']
+        self.assertEqual(hw['vendor'], 'GNOME.org')
+        self.assertEqual(hw['name'], 'hal')
+        self.assertEqual(hw['version'], '9000')
+        self.assertIn('bios', hw)
+        bios = hw['bios']
+        self.assertEqual(bios['vendor'], 'bios.GNOME.org')
+        self.assertEqual(bios['date'], '01/23/1997')
+        self.assertEqual(bios['version'], '9k')
+        self.assertTrue('batteries' in hw)
+        bats = hw['batteries']
+        self.assertEqual(len(bats), 1)
+        self.assertEqual(bats[0]['name'], 'BAT0')
+        self.assertEqual(bats[0]['vendor'], vendor)
+        self.assertEqual(bats[0]['model'], model)
+
+        self.testbed.set_attribute(plt, 'product_version', '\n')
+        log = self.gbb("info", ["--json"])
+        out = json.loads(log)
+        self.assertTrue('hardware' in out)
+        hw = out['hardware']
+        self.assertNotIn('version', hw)
+
+    def test_basic_monitor(self):
+        ac, b0 = self.add_std_power_supply()
+
+        self.gbb_start('monitor')
+        log = self.log()
+
+        self.assertIn('Monitoring power events', log)
+
+        self.testbed.set_attribute(b0, 'energy_now', '40000000')
+        self.assertIn('40.00 WH', log)
+        self.testbed.set_attribute(b0, 'energy_now', '30000000')
+        self.assertIn('30.00 WH', log)
+        self.testbed.set_attribute(b0, 'energy_now', '25000000')
+        self.assertIn('25.00 WH', log)
+        self.testbed.set_attribute(ac, 'online', '1')
+        self.assertIn('AC: online', log)
+
+        log.close()
+        self.gbb_stop()
+
+    def test_charge_basic(self):
+        self.add_std_platform()
+
+        self.testbed.add_device('power_supply', 'BAT0', None,
+                                ['type', 'Battery',
+                                 'manufacturer', 'GNOME.org',
+                                 'model_name', 'b1',
+                                 'present', '1',
+                                 'status', 'Discharging',
+                                 'charge_full', '7226000',
+                                 'charge_full_design', '7150000',
+                                 'charge_now', '4234000',
+                                 'voltage_min_design', '7600000'], [])
+
+        log = self.gbb("info", ["--json"])
+        out = json.loads(log)
+        self.assertTrue('hardware' in out)
+        hw = out['hardware']
+        self.assertTrue('batteries' in hw)
+        bats = hw['batteries']
+        self.assertEqual(len(bats), 1)
+        b1 = bats[0]
+        self.assertEqual(b1['voltage-design'], 7.6)
+        self.assertEqual(b1['energy-full'], 54.9176)
+        self.assertEqual(b1['energy-full-design'], 54.34)
+
+    def test_charge_monitor(self):
+        self.add_std_platform()
+
+        self.testbed.add_device('power_supply', 'AC', None,
+                                ['type', 'Mains', 'online', '0'], [])
+
+        b0 = self.testbed.add_device('power_supply', 'BAT0', None,
+                                     ['type', 'Battery',
+                                      'manufacturer', 'GNOME.org',
+                                      'model_name', 'b1',
+                                      'present', '1',
+                                      'status', 'Discharging',
+                                      'charge_full', '7226000',
+                                      'charge_full_design', '7150000',
+                                      'charge_now', '7324000',
+                                      'voltage_min_design', '7600000'], [])
+
+        self.gbb_start('monitor')
+        log = self.log()
+
+        self.assertIn('Monitoring power events', log)
+
+        self.testbed.set_attribute(b0, 'charge_now', '7000000')
+        self.assertIn('53.20 WH', log)
+        self.testbed.set_attribute(b0, 'charge_now', '6600000')
+        self.assertIn('50.16 WH', log)
+        self.testbed.set_attribute(b0, 'charge_now', '6000000')
+        self.assertIn('45.60 WH', log)
+
+        log.close()
+        self.gbb_stop()
+
+    def test_multiple_batteries(self):
+
+        self.add_std_platform()
+
+        self.testbed.add_device('power_supply', 'AC', None,
+                                ['type', 'Mains', 'online', '0'], [])
+
+        b0 = self.testbed.add_device('power_supply', 'BAT0', None,
+                                     ['type', 'Battery',
+                                      'manufacturer', 'GNOME.org',
+                                      'model_name', 'b1',
+                                      'present', '1',
+                                      'status', 'Discharging',
+                                      'energy_full', '21920000',
+                                      'energy_full_design', '26330000',
+                                      'energy_now', '10000000',
+                                      'voltage_min_design', '114000000'], [])
+
+        b1 = self.testbed.add_device('power_supply', 'BAT1', None,
+                                     ['type', 'Battery',
+                                      'manufacturer', 'GNOME.org',
+                                      'model_name', 'b2',
+                                      'present', '1',
+                                      'status', 'Discharging',
+                                      'energy_full', '22640000',
+                                      'energy_full_design', '23510000',
+                                      'energy_now', '11000000',
+                                      'voltage_min_design', '112500000'], [])
+
+        log = self.gbb("info", ["--json"])
+        out = json.loads(log)
+        self.assertTrue('hardware' in out)
+        hw = out['hardware']
+        self.assertTrue('batteries' in hw)
+        bats = hw['batteries']
+        self.assertEqual(len(bats), 2)
+
+        self.gbb_start('monitor')
+        log = self.log()
+
+        self.assertIn('Monitoring power events', log)
+
+        self.testbed.set_attribute(b0, 'energy_now', '9000000')
+        self.assertIn('20.00 WH', log)
+
+        self.testbed.set_attribute(b1, 'energy_now', '10000000')
+        self.assertIn('19.00 WH', log)
+
+        self.testbed.set_attribute(b0, 'energy_now', '0')
+        self.assertIn('10.00 WH', log)
+
+        log.close()
+        self.gbb_stop()
+
+    def test_pci_gpus(self):
+        self.add_std_platform()
+        self.add_std_power_supply(vendor="GNOME", model="ng")
+        self.testbed.add_device('pci',
+                                'pci0000:00/0000:00:02.0', None,
+                                ['class', '0x030000',
+                                 'vendor', '0x8086',
+                                 'device', '0x1916',
+                                 'enable', '1',
+                                 'revision', '0x07'],
+                                ['ID_MODEL_FROM_DATABASE', 'HD Graphics 520',
+                                 'ID_VENDOR_FROM_DATABASE', 'Intel Corporation'])
+
+        os.system('find ' + self.testbed.get_root_dir())
+        log = self.gbb("info", ["--json"])
+        out = json.loads(log)
+        self.assertIn('hardware', out)
+        hw = out['hardware']
+        self.assertIn('gpus', hw)
+        gpus = hw['gpus']
+
+        self.assertEqual(len(gpus), 1)
+        gpu = gpus[0]
+        self.assertEqual(gpu['vendor'], 32902)
+        self.assertEqual(gpu['device'], 6422)
+        self.assertEqual(gpu['revision'], 7)
+        self.assertEqual(gpu['enabled'], True)
+
+
+
+if __name__ == '__main__':
+    if 'umockdev' not in os.environ.get('LD_PRELOAD', ''):
+        os.execvp('umockdev-wrapper', ['umockdev-wrapper'] + sys.argv)
+    unittest.main()

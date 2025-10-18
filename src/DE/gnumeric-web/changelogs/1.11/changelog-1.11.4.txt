@@ -1,0 +1,208 @@
+2012-06-25  Morten Welinder <terra@gnome.org>
+
+	* Release 1.11.4
+
+2012-06-22  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (gnm_x_store_clipboard_if_needed): More
+	debug.
+
+2012-06-18  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (gnm_xml_out_add_gocolor): Handle alpha.
+
+2012-06-16  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-filter.c (gnm_filter_set_range): new
+	(gnm_sheet_filter_insdel_colrow): preserve range of to-be-killed filter
+	and set range on undo
+
+2012-06-15  Morten Welinder  <terra@gnome.org>
+
+	* src/style-color.c (style_color_new_gdk): Improve roundtrip.
+	[#667484]
+	(style_color_new_gdk): Keep alpha.
+
+2012-06-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object.c (sheet_objects_clear): filter-combos are not
+	included in "all objects"
+
+2012-06-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_analysis_tool_undo): update wbc
+	(cmd_analysis_tool_redo): update wbc
+
+2012-06-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_analysis_tool_finalize): do not pass a context
+	since the tools don't need it for TOOL_ENGINE_CLEAN_UP and it may not
+	be valid
+
+2012-06-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add ToolsOneMeanTest
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/wbc-gtk-actions.c (cb_tools_one_mean_test): new
+	(actions): add ToolsOneMeanTest
+
+2012-06-10  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/wbc-gtk.c (cb_scroll_wheel): make mouse wheel scrolling work
+	again with gtk+-3.4. [#675089]
+
+2012-06-05  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-bar.c (ib_draw_cell): make selction background visible. [#648676]
+	* src/item-grid.c (item_grid_draw_region): ditto.
+	* src/pattern.c (gnumeric_background_set): ditto.
+
+2012-05-31  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_update): Use gnm_style_conditions_hash.
+
+	* src/style-conditions.c (gnm_style_conditions_new): Add new sheet
+	argument.  All callers changed.
+	(gnm_style_conditions_insert): Verify that sheets match between
+	objects.
+	(gnm_style_cond_new): Add new sheet argument.  All callers
+	changed.  Initialize managed dependent.
+	(gnm_style_conditions_hash): New function.
+
+	* src/style-conditions.h (GnmStyleCond): Store expressions as
+	managed dependents.
+
+2012-05-25  Morten Welinder  <terra@gnome.org>
+
+	* src/style-conditions.c (gnm_style_conditions_insert): Change
+	memory ownership semantics to no longer taking partial ownership.
+
+	* src/xml-sax-read.c (xml_sax_condition_expr_end): Fixed reversed
+	condition.
+
+2012-05-23  Morten Welinder  <terra@gnome.org>
+
+	* src/style-conditions.c (gnm_style_cond_set_overlay): New
+	function.
+	(gnm_style_cond_new): Drop overlay argument.  All callers fixed.
+	(gnm_style_cond_dup): Use gnm_style_cond_set_overlay.
+
+	* src/xml-sax-read.c: Treat GnmStyleCond as (mostly) opaque.
+
+2012-05-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-style.h (sheet_style_range_foreach): new
+	(gnm_style_region_new): new
+	(gnm_style_region_free): new
+	* src/sheet-style.c (sheet_style_range_foreach): new
+	(style_region_new): rename to gnm_style_region_new and publish
+	(style_region_free): rename to gnm_style_region_free and publish
+	(cb_hash_to_cb): new
+
+2012-05-17  Morten Welinder  <terra@gnome.org>
+
+	* src/validation.h: Grand rename into gnm_ namespace.
+
+	* src/validation.c (gnm_validation_dup, gnm_validation_get_sheet)
+	(gnm_validation_set_sheet): New functions.
+
+	* src/mstyle.c (gnm_style_link_sheet): Call
+	gnm_style_linked_sheet_changed.  Fixes duplication of sheets with
+	validation and similar cases.
+	(gnm_style_linked_sheet_changed): New function.
+
+	* src/dependent.c (dependent_managed_set_sheet): We don't own a
+	sheet ref, so don't mess with it.
+
+2012-05-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: push gofffice requirement
+
+2012-05-16  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c: New multiset implementation for style hash.
+	Fixes #67595 item 3.
+
+2012-05-15  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c (cb_gnm_so_filled_changed): allways use margins
+	to evaluate text position.
+
+2012-05-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sheet_style_get_range, cell_tile_optimize)
+	(sample_styles, verify_styles): Use gnm_style_eq, not
+	gnm_style_equal.  Fixes #675955 item 4.
+
+	* src/mstyle.c (gnm_style_eq): New function.
+
+2012-05-14  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/selection.c (sv_selection_to_plot): when several ranges are selected,
+	use a header for all if at least one has a header. [#675913]
+
+2012-05-11  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_update): Include font.script in hash.
+	Only use fields that are set.
+
+2012-05-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnm_load_pango_attributes_into_buffer_filter):
+	deleted
+	(gnm_load_pango_attributes_into_buffer_named_filter): deleted
+	(gnm_create_std_tags_for_buffer): deleted
+	(gnm_load_pango_byte_to_char): deleted
+	(gnm_load_pango_attributes_into_buffer): use
+	go_load_pango_attributes_into_buffer
+	* src/gui-util.h (gnm_create_std_tags_for_buffer): delete
+	* src/sheet-control-gui.c (scg_comment_display):  use
+	go_create_std_tags_for_buffer instead of gnm_create_std_tags_for_buffer
+
+2012-05-11  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_update): Make hashing half-way decent.
+	Avoid clash between two styles where one is bold and the other is
+	italic.
+	(gnm_style_equal, gnm_style_equal_XL): Only compare style elements
+	that are set.  However, if there are a difference in whether an
+	element is set, the styles are different.
+
+2012-05-10  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_dispose): Dispose of views early.
+	(This is desirable since the views hold the auto-expression value
+	which in turn may references sheets via validations in the
+	format.)
+
+	* src/validation.h (GnmValidation): Use GnmDependent, not raw
+	GnmExprTop, for storing expressions.  All users changed.
+
+	* src/validation.c (validation_new): Add new "sheet" argument.
+	All callers changed.  Hook up expressions as managed dependents.
+	Fixes #674914.
+
+	* src/sheet-style.c (GnmSheetStyleData): Document the rules for
+	the style_hash member.
+
+	* src/mstyle.c (gnm_style_update): Don't use the validation's
+	address for the hash value -- use just whether it is NULL.
+
+2012-05-02  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): Get the
+	ViewStatusbar action from the right group.  Fixes fullscreen
+	criticals.
+
+2012-05-01  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_insert_cols): check the columns not the rows
+
+2012-04-30  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_get_arg_description): Ignore initial
+	whitespace is description.  (See bug 675000, comment 10.)
+
+2012-04-21  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

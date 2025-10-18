@@ -1,0 +1,15 @@
+SELECT DISTINCT ?u ?url
+WHERE {
+  GRAPH tracker:FileSystem {
+    ?u a nfo:Folder ;
+      nie:isStoredAs ?url .
+    ?url nie:dataSource ?ds .
+    OPTIONAL {
+      ?ds tracker:available ?available
+    }
+    FILTER (~showAll^^xsd:boolean || ?available) .
+  }
+}
+ORDER BY ASC(?url)
+OFFSET ~offset
+LIMIT ~limit

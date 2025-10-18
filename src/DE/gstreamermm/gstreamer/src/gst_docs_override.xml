@@ -1,0 +1,337 @@
+<root>
+<function name="gst_plugin_load_file">
+<description>
+Loads a plugin from file.
+</description>
+<parameters>
+<parameter name="filename">
+<parameter_description> the plugin filename to load
+</parameter_description>
+</parameter>
+<parameter name="error">
+<parameter_description> pointer to a NULL-valued GError
+</parameter_description>
+</parameter>
+</parameters>
+<return> a reference to the existing loaded GstPlugin, a reference to the
+newly-loaded GstPlugin, or NULL if an error occurred.
+</return>
+</function>
+
+<function name="gst_element_factory_make">
+<description>
+Create a new element of the type defined by the given element factory.
+
+
+</description>
+<parameters>
+<parameter name="factoryname">
+<parameter_description> a named factory to instantiate
+</parameter_description>
+</parameter>
+<parameter name="name">
+<parameter_description> name of new element
+</parameter_description>
+</parameter>
+</parameters>
+<return> new #GstElement or NULL if unable to create element
+</return>
+</function>
+
+<function name="gst_query_type_iterate_definitions">
+<description>
+Get a #GstIteratorBasic of all the registered query types. The definitions 
+iterated over are read only.
+
+
+</description>
+<parameters>
+</parameters>
+<return> A #GstIteratorBasic of #GstQueryTypeDefinition.
+</return>
+</function>
+
+<function name="gst_clock_id_wait">
+<description>
+Perform a blocking wait on the Gst::ClockID. 
+The Gst::ClockID should have been created with
+Gst::Clock::create_single_shot_id() or Gst::Clock::create_periodic_id()
+and should not have been unscheduled with a call to unschedule(). 
+
+If this function returns #GST_CLOCK_OK or #GST_CLOCK_EARLY,
+the @jitter argument will contain the difference
+against the clock and the time of the Gst::ClockID when this method was
+called.
+Positive values indicate how late the Gst::ClockID was relative to the clock
+(in which case this function will return #GST_CLOCK_EARLY). 
+Negative values indicate how much time was spent waiting on the clock 
+before this function returned.
+
+
+</description>
+<parameters>
+<parameter name="id">
+<parameter_description> The #GstClockID to wait on
+</parameter_description>
+</parameter>
+<parameter name="jitter">
+<parameter_description> A pointer that will contain the jitter.
+</parameter_description>
+</parameter>
+</parameters>
+<return> the result of the blocking wait. #GST_CLOCK_EARLY will be returned
+if the current clock time is past the time of the Gst::ClockID, #GST_CLOCK_OK
+if Gst::ClockID was scheduled in time. #GST_CLOCK_UNSCHEDULED if Gst::ClockID
+was unscheduled with unschedule().
+
+MT safe.
+</return>
+</function>
+
+<function name="gst_type_find_peek">
+<description>
+Returns the @size bytes of the stream to identify beginning at offset. If
+offset is a positive number, the offset is relative to the beginning of the
+stream, if offset is a negative number the offset is relative to the end of
+the stream. The returned memory is valid until the typefinding function
+returns and must not be freed.
+
+Returns: the requested data, or NULL if that data is not available.
+
+</description>
+<parameters>
+<parameter name="find">
+<parameter_description> The #GstTypeFind object the function was called with
+</parameter_description>
+</parameter>
+<parameter name="offset">
+<parameter_description> The offset
+</parameter_description>
+</parameter>
+<parameter name="size">
+<parameter_description> The number of bytes to return
+</parameter_description>
+</parameter>
+</parameters>
+<return> the requested data, or NULL if that data is not available.
+</return>
+</function>
+
+<function name="gst_type_find_suggest">
+<description>
+If a Gst::TypeFind::SlotFind calls this method it suggests the caps with the
+given probability. A Gst::TypeFind::SlotFind may supply different suggestions
+in one call.
+It is up to the caller of the Gst::TypeFind::SlotFind to interpret these
+values.
+
+</description>
+<parameters>
+<parameter name="find">
+<parameter_description> The #GstTypeFind object the function was called with
+</parameter_description>
+</parameter>
+<parameter name="probability">
+<parameter_description> The probability in percent that the suggestion is right
+</parameter_description>
+</parameter>
+<parameter name="caps">
+<parameter_description> The fixed #GstCaps to suggest
+</parameter_description>
+</parameter>
+</parameters>
+<return></return>
+</function>
+
+<function name="gst_type_find_factory_call_function">
+<description>
+Calls the Gst::TypeFind::SlotFind associated with this factory.
+
+</description>
+<parameters>
+<parameter name="factory">
+<parameter_description> A #GstTypeFindFactory
+</parameter_description>
+</parameter>
+<parameter name="find">
+<parameter_description> A properly setup #GstTypeFind entry. The get_data and suggest_type
+members must be set.
+</parameter_description>
+</parameter>
+</parameters>
+<return></return>
+</function>
+
+<function name="gst_bus_poll">
+<description>
+Poll the bus for messages. Will block while waiting for messages to come.
+You can specify a maximum time to poll with the @timeout parameter. If
+@timeout is negative, this function will block indefinitely.
+
+All messages not in @events will be popped off the bus and will be ignored.
+It is not possible to use message enums beyond #GST_MESSAGE_EXTENDED in the
+@events mask
+
+Because poll is implemented using the &quot;message&quot; signal enabled by
+gst_bus_add_signal_watch(), calling gst_bus_poll() will cause the &quot;message&quot;
+signal to be emitted for every message that poll sees. Thus a &quot;message&quot;
+signal handler will see the same messages that this function sees -- neither
+will steal messages from the other.
+
+This function will run a main loop from the default main context when
+polling.
+
+You should never use this function, since it is pure evil. This is
+especially true for GUI applications based on Gtk+ or Qt, but also for any
+other non-trivial application that uses the GLib main loop. As this function
+runs a GLib main loop, any callback attached to the default GLib main
+context may be invoked. This could be timeouts, GUI events, I/O events etc.;
+even if gst_bus_poll() is called with a 0 timeout. Any of these callbacks
+may do things you do not expect, e.g. destroy the main application window or
+some other resource; change other application state; display a dialog and
+run another main loop until the user clicks it away. In short, using this
+function may add a lot of complexity to your code through unexpected
+re-entrancy and unexpected changes to your application's state.
+
+For 0 timeouts use gst_bus_pop_filtered() instead of this function; for
+other short timeouts use gst_bus_timed_pop_filtered(); everything else is
+better handled by setting up an asynchronous bus watch and doing things
+from there.
+
+
+</description>
+<parameters>
+<parameter name="bus">
+<parameter_description> a #GstBus
+</parameter_description>
+</parameter>
+<parameter name="events">
+<parameter_description> a mask of #GstMessageType, representing the set of message types to
+poll for (note special handling of extended message types below)
+</parameter_description>
+</parameter>
+<parameter name="timeout">
+<parameter_description> the poll timeout, as a #GstClockTime, or #GST_CLOCK_TIME_NONE to poll
+indefinitely.
+</parameter_description>
+</parameter>
+</parameters>
+<return> the message that was received,
+or %NULL if the poll timed out. The message is taken from the
+bus.
+</return>
+</function>
+
+<function name="gst_bus_pop">
+<description>
+Get a message from the bus.
+
+
+</description>
+<parameters>
+<parameter name="bus">
+<parameter_description> a #GstBus to pop
+</parameter_description>
+</parameter>
+</parameters>
+<return> the #GstMessage that is on the
+bus, or %NULL if the bus is empty. The message is taken from
+the bus.
+
+MT safe.
+</return>
+</function>
+
+<function name="gst_bus_pop_filtered">
+<description>
+Get a message matching @type from the bus.  Will discard all messages on
+the bus that do not match @type and that have been posted before the first
+message that does match @type.  If there is no message matching @type on
+the bus, all messages will be discarded. It is not possible to use message
+enums beyond #GST_MESSAGE_EXTENDED in the @events mask.
+
+
+</description>
+<parameters>
+<parameter name="bus">
+<parameter_description> a #GstBus to pop
+</parameter_description>
+</parameter>
+<parameter name="types">
+<parameter_description> message types to take into account
+</parameter_description>
+</parameter>
+</parameters>
+<return> the next #GstMessage matching
+@type that is on the bus, or %NULL if the bus is empty or there
+is no message matching @type. The message is taken from the bus.
+
+MT safe.
+</return>
+</function>
+
+<function name="gst_bus_timed_pop">
+<description>
+Get a message from the bus, waiting up to the specified timeout.
+
+If @timeout is 0, this function behaves like gst_bus_pop(). If @timeout is
+#GST_CLOCK_TIME_NONE, this function will block forever until a message was
+posted on the bus.
+
+
+</description>
+<parameters>
+<parameter name="bus">
+<parameter_description> a #GstBus to pop
+</parameter_description>
+</parameter>
+<parameter name="timeout">
+<parameter_description> a timeout
+</parameter_description>
+</parameter>
+</parameters>
+<return> the #GstMessage that is on the
+bus after the specified timeout or %NULL if the bus is empty
+after the timeout expired.  The message is taken from the bus.
+
+MT safe.
+</return>
+</function>
+
+
+<function name="gst_bus_timed_pop_filtered">
+<description>
+Get a message from the bus whose type matches the message type mask @types,
+waiting up to the specified timeout (and discarding any messages that do not
+match the mask provided).
+
+If @timeout is 0, this function behaves like gst_bus_pop_filtered(). If
+@timeout is #GST_CLOCK_TIME_NONE, this function will block forever until a
+matching message was posted on the bus.
+
+
+</description>
+<parameters>
+<parameter name="bus">
+<parameter_description> a #GstBus to pop from
+</parameter_description>
+</parameter>
+<parameter name="timeout">
+<parameter_description> a timeout in nanoseconds, or GST_CLOCK_TIME_NONE to wait forever
+</parameter_description>
+</parameter>
+<parameter name="types">
+<parameter_description> message types to take into account, GST_MESSAGE_ANY for any type
+</parameter_description>
+</parameter>
+</parameters>
+<return> a #GstMessage matching the
+filter in @types, or %NULL if no matching message was found on
+the bus until the timeout expired. The message is taken from
+the bus.
+
+MT safe.
+</return>
+</function>
+
+</root>

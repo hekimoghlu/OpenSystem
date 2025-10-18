@@ -1,0 +1,122 @@
+/* Copyright (C) 2003 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <vector>
+
+#include <gdkmm/paintable.h>
+#include <gdkmm/display.h>
+#include <gtkmm/enums.h>
+#include <gtkmm/iconpaintable.h>
+#include <giomm/icon.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+
+_WRAP_ENUM(IconLookupFlags, GtkIconLookupFlags, NO_GTYPE, decl_prefix GTKMM_API)
+
+/** Exception class for Gtk::IconTheme errors.
+ */
+_WRAP_GERROR(IconThemeError,GtkIconThemeError,GTK_ICON_THEME_ERROR, decl_prefix GTKMM_API)
+
+/** Looking up icons by name.
+ *
+ * %Gtk::IconTheme provides a facility for looking up icons by name
+ * and size. The main reason for using a name rather than simply
+ * providing a filename is to allow different icons to be used
+ * depending on what “icon theme” is selected by the user.
+ * The operation of icon themes on Linux and Unix follows the
+ * [IconPaintable Theme Specification](http://www.freedesktop.org/Standards/icon-theme-spec).
+ * There is a fallback icon theme, named `hicolor`, where applications
+ * should install their icons, but additional icon themes can be installed
+ * as operating system vendors and users choose.
+ *
+ * In many cases, named themes are used indirectly, via Gtk::Image
+ * rather than directly, but looking up icons
+ * directly is also simple. The %Gtk::IconTheme object acts
+ * as a database of all the icons in the current theme. You
+ * can create new %Gtk::IconTheme objects, but it’s much more
+ * efficient to use the standard icon theme for the Gdk::Display
+ * so that the icon information is shared with other people
+ * looking up icons. Use get_for_display().
+ */
+class GTKMM_API IconTheme : public Glib::Object
+{
+  _CLASS_GOBJECT(IconTheme, GtkIconTheme, GTK_ICON_THEME, Glib::Object, GObject, , , GTKMM_API)
+
+protected:
+  _CTOR_DEFAULT()
+public:
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(static Glib::RefPtr<IconTheme> get_for_display(const Glib::RefPtr<Gdk::Display>& display), gtk_icon_theme_get_for_display, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Display> get_display(), gtk_icon_theme_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Display> get_display() const, gtk_icon_theme_get_display, refreturn, constversion)
+
+#m4 _CONVERSION(`const std::vector<std::string>&',`const char*-const*',`Glib::ArrayHandler<std::string>::vector_to_array($3).data()')
+  _WRAP_METHOD(void set_search_path(const std::vector<std::string>& path), gtk_icon_theme_set_search_path)
+#m4 _CONVERSION(`char**',`std::vector<std::string>',`Glib::ArrayHandler<std::string>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<std::string> get_search_path() const, gtk_icon_theme_get_search_path)
+  _WRAP_METHOD(void add_search_path(const std::string& path), gtk_icon_theme_add_search_path)
+
+  _WRAP_METHOD(void set_resource_path(const std::vector<std::string>& path), gtk_icon_theme_set_resource_path)
+  _WRAP_METHOD(std::vector<std::string> get_resource_path() const, gtk_icon_theme_get_resource_path)
+  _WRAP_METHOD(void add_resource_path(const std::string& path), gtk_icon_theme_add_resource_path)
+
+  _WRAP_METHOD(void set_theme_name(const Glib::ustring& theme_name), gtk_icon_theme_set_theme_name)
+  _WRAP_METHOD(Glib::ustring get_theme_name() const, gtk_icon_theme_get_theme_name)
+  _WRAP_METHOD(bool has_icon(const Glib::ustring& icon_name) const, gtk_icon_theme_has_icon)
+  _WRAP_METHOD(bool has_gicon(const Glib::RefPtr<const Gio::Icon>& gicon) const, gtk_icon_theme_has_gicon)
+
+#m4 _CONVERSION(`int*',`std::vector<int>',`Glib::ArrayHandler<int>::array_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<int> get_icon_sizes(const Glib::ustring& icon_name) const, gtk_icon_theme_get_icon_sizes)
+
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char*[]',`const_cast<const char**>(Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data())')
+  _WRAP_METHOD(Glib::RefPtr<IconPaintable> lookup_icon(const Glib::ustring& icon_name,
+    const std::vector<Glib::ustring>& fallbacks{?}, int size, int scale = 1, TextDirection direction = TextDirection::NONE,
+    IconLookupFlags flags = (IconLookupFlags)0), gtk_icon_theme_lookup_icon)
+  _WRAP_METHOD(Glib::RefPtr<const IconPaintable> lookup_icon(const Glib::ustring& icon_name,
+    const std::vector<Glib::ustring>& fallbacks{?}, int size, int scale = 1, TextDirection direction = TextDirection::NONE,
+    IconLookupFlags flags = (IconLookupFlags)0) const, gtk_icon_theme_lookup_icon, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<IconPaintable> lookup_icon(const Glib::RefPtr<const Gio::Icon>& icon,
+    int size, int scale = 1, TextDirection direction = TextDirection::NONE,
+    IconLookupFlags flags = (IconLookupFlags)0), gtk_icon_theme_lookup_by_gicon)
+  _WRAP_METHOD(Glib::RefPtr<const IconPaintable> lookup_icon(const Glib::RefPtr<const Gio::Icon>& icon,
+    int size, int scale = 1, TextDirection direction = TextDirection::NONE,
+    IconLookupFlags flags = (IconLookupFlags)0) const, gtk_icon_theme_lookup_by_gicon, constversion)
+
+#m4 _CONVERSION(`char**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  /** Lists the names of icons in the current icon theme.
+   *
+   * @return A vector holding the names of all the icons in the theme.
+   */
+  _WRAP_METHOD(std::vector<Glib::ustring> get_icon_names() const, gtk_icon_theme_get_icon_names)
+
+  // no_default_handler because GtkIconThemeClass is private.
+  _WRAP_SIGNAL(void changed(), "changed", no_default_handler)
+
+  _WRAP_PROPERTY("display", Glib::RefPtr<Gdk::Display>)
+  _WRAP_PROPERTY("icon-names", std::vector<Glib::ustring>)
+  _WRAP_PROPERTY("search-path", std::vector<std::string>)
+  _WRAP_PROPERTY("resource-path", std::vector<std::string>)
+  _WRAP_PROPERTY("theme-name", Glib::ustring)
+};
+
+} // namespace Gtk

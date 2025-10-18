@@ -1,0 +1,80 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/exceptionhandler.h>
+
+namespace // anonymous
+{
+using SocketControlMessage_deserialize_vfunc_functype = GSocketControlMessage* (*)
+  (int level, int type, gsize size, gpointer data);
+
+SocketControlMessage_deserialize_vfunc_functype SocketControlMessage_deserialize_vfunc_funcptr;
+
+extern "C"
+{
+static GSocketControlMessage*
+SocketControlMessage_deserialize_vfunc_c_callback(int level, int type, gsize size, gpointer data)
+{
+  return SocketControlMessage_deserialize_vfunc_funcptr(level, type, size, data);
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gio
+{
+// static
+std::set<SocketControlMessage::DeserializeFunc> SocketControlMessage::m_deserialize_funcs;
+
+GSocketControlMessage* SocketControlMessage_Class::deserialize_vfunc_callback(
+  int level, int type, gsize size, gpointer data)
+{
+  // Loop through all registered deserialize functions.
+  // Accept the returned message from the first function that has been able to
+  // deserialize the message. g_socket_control_message_deserialize() loops
+  // through all subclasses of GSocketControlMessage in this way.
+  for (auto deserialize_func : CppObjectType::m_deserialize_funcs)
+  {
+    try // Trap C++ exceptions which would normally be lost because this is a C callback.
+    {
+      // Call the function which has been registered with add_deserialize_func().
+      Glib::RefPtr<SocketControlMessage> msg = deserialize_func(level, type, size, data);
+      if (msg)
+      {
+        msg->reference(); // Give the caller a reference.
+        return msg->gobj();
+      }
+    }
+    catch (...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+
+  // Don't call the original underlying C function (GSocketControlMessage.deserialize()).
+  // Let g_socket_control_message_deserialize() do that as a last resort,
+  // if it's appropriate.
+  return nullptr;
+}
+
+// static
+void SocketControlMessage::add_deserialize_func(DeserializeFunc func)
+{
+  // std::set never contains duplicates.
+  m_deserialize_funcs.insert(func);
+}
+
+} // namespace Gio

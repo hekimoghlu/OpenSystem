@@ -1,0 +1,464 @@
+2004-08-29  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.3.2
+
+2004-08-29   Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+
+	* src/item-bar.c (item_bar_draw): Fix group lines in row/column
+	headers.
+
+2004-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_new_with_type) : Renamed from sheet_new_special,
+	  that name was not terribly clear.
+
+2004-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/pixmaps/Makefile.am : Add halign-fill and halign-general
+	* src/application.c (gnumeric_application_setup_icons) : ditto
+
+2004-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_merge_cells) : optionally center the merged
+	  region
+	* src/wbcg-actions.c (cb_merge_and_center) : new
+
+2004-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml : Reorder Delete menu to put Col before
+	  Row to be consistent with the other menus
+
+2004-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (cb_view_zoom_in) : new
+	(cb_view_zoom_out) : new
+
+2004-08-28  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c : Add ctrl +/- as accelerators for ins/del cells
+
+2004-08-27  Jody Goldberg <jody@gnome.org>
+
+	* src/plugin-service.c (plugin_service_file_opener_read_xml) :
+	  simplify parsing of 'file_pattern' for importer filename probing.
+	  All we every really needed was suffix matching.  None of the power
+	  of fnmatch or optional case sensitivity was every used.
+	(gnm_plugin_file_opener_probe) : use a nice simple suffix match.
+
+2004-08-27  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-graphic.c :  convert markup to a property for
+	  SheetObjectText
+
+	* src/sheet-object-cell-comment.c : Add a property 'markup' to be used
+	  eventually.
+
+2004-08-27  Jon K Hellan  <hellan@acm.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=151152
+	
+	* src/workbook-control-gui.c (wbcg_close_if_user_permits): Define
+	responses GNM_RESPONSE_SAVE_ALL, GNM_RESPONSE_DISCARD_ALL. These
+	are negative, to work with druid logic in gnumeric_dialog_run.
+
+2004-08-26  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-file.c (gui_wb_view_show): New. Factored out of
+	gui_file_read. Show  view in a wbcg. Use current or new wbcg
+	according to policy. 
+	(gui_file_read): Use it.
+
+2004-08-26  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c (cb_help_bug, cb_help_web): Do something
+	useful here.  (Based on patch from ynakai@redhat.com.)
+
+2004-08-25  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-filter.c (cb_filter_bounds_changed) : fix typo in cast
+	  from new code for bounds-changed
+
+2004-08-24  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=150530
+	* src/sheet-object-cell-comment.c (cell_comment_write_xml_sax) : fix
+	  in libgsf, but patched here too to tide us over until the next
+	  libgsf release.
+
+2004-08-24  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object.c (sheet_object_class_init) : declare a
+	  bounds-changed signal.
+	(sheet_object_update_bounds) : emit bounds-changed and assume the
+	  views will do the right thing.  No need to manually walk the
+	  realized list.  That should go away.
+
+	* src/sheet-filter.c :  Adjust to using the bounds-changed signal
+	  instead of doing it directly.
+	* src/sheet-object-cell-comment.c : ditto.
+	* src/sheet-object-graph.c : ditto.
+	* src/sheet-object-graphic.c : ditto.
+	* src/sheet-object-image.c : ditto.
+	* src/sheet-object-widget.c : ditto.
+
+	* src/sheet-control-gui.c (cb_scg_object_bounds_changed) :  new
+	(scg_object_stop_editing) : disconnect the bounds changed signal here.
+	(scg_mode_edit_object) : connect to it here.
+
+	* src/gnumeric-pane.c (display_object_menu) : no need to use
+	  sheet_object_view_control.  We can pull the info from the canvas.
+	(cb_sheet_object_canvas_event) : ditto.
+	(cb_sheet_object_widget_canvas_event) : ditto.
+	(cb_sheet_object_view_destroyed) : ditto.
+	(gnm_pane_object_register) : Add some convenience arguments to hook up
+	  the bounds-changed handler and set the initial size.
+	(gnm_pane_widget_register) :
+
+2004-08-24  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c :  signals are guint, not GQuark.  Probably does
+	  not matter, but it can't hurt to match the glib headers
+
+	* src/sheet-object-cell-comment.c (cell_comment_write_xml_sax) : gsf
+	  was more anal than libxml about handling NULL as strings.  new gsf
+	  is more relaxed, but add some protection here until that is in
+	  circulation.
+
+	* src/xml-io.c (gnumeric_xml_read_workbook) : default to using the sax
+	  exporter
+	(xml_init) : cleanup.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=150792
+	* src/sheet.c (colrow_move) : Only ignore non-existent cells, not all
+	  Blanks.  That includes things with VALUE_EMPTY which includes cells
+	  whose expressions were just re-written.
+	(sheet_move_range) : ditto.
+
+2004-08-24  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (cb_wbcg_drag_data_received): Take
+	advantage of newly minted go_file_split_uris.
+
+2004-08-22  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (cb_wbcg_drag_data_received): Remove
+	gnome-vfs dependency.
+
+2004-08-14  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-image.c (sheet_object_image_write_xml_sax) : add a
+	  'size-bytes' attribute to make optimization easier.
+
+2004-08-22  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (cb_wbcg_drag_data_received): Convert
+	uri to string before use.
+
+2004-08-21  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_set_zoom_factor) : forward port the zoom kludge.
+	  There is no time to do RenderedRegion for 1.4
+
+2004-08-21  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=149945
+	* src/value.c (find_column_of_field): Correct offset.
+
+2004-08-21  Kjartan Maraas  <kmaraas@gnome.org>
+
+	* configure.in: Add «nb» to ALL_LINGUAS.
+
+2004-08-20  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_new_special) : renamed from sheet_new, and a
+	  'type' added.  Not used yet.
+
+2004-08-20  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Check for asinh, acosh, atanh.
+
+	* src/gutils.c (asinhgnum, acoshgnum, atanhgnum): Provide if
+	needed.
+
+	* src/parser.y (yylex): Take extra care not to run off the edge.
+
+2004-08-17  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (mathfunc_init): Greatly simplify using goffice
+	code.
+
+	* src/libgnumeric.c (gnm_common_init): Init mathfunc after
+	goffice.
+
+2004-08-19  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Bumped the libgsf-gnome-1 requirement to make it
+	consistent with the libgsf-1 requirement.
+
+2004-08-18  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in (psiconv): Update psiconv.
+
+2004-08-17  Etsushi Kato  <ekato@ees.hokudai.ac.jp>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_press):
+	gtk_im_context_reset(gcanvas->im_context) should be called after
+	checking gtk_im_context_filter_keypress() and GDK_SHIFT_L, GTK_Alt_L,
+	and GDK_Control_L. (bug #148473)
+
+2004-08-17  Jon K Hellan  <hellan@acm.org>
+
+	* src/wbcg-actions.c (cb_insert_image): is_save parameter to
+	gui_image_file_select no longer needed.
+
+	* src/sheet-object-image.c (soi_gdk_pixbuf_save): New. Callback
+	which writes via gsf.
+	(soi_get_image_fmt): New. Get a format descriptor for the original
+	data in a SheetObjectImage.
+	(soi_free_image_fmt): New. Free a format descriptor.
+	(soi_cb_save_as): New. Choose file name and format and save
+	image.
+	(sheet_object_image_populate_menu): New. Put a "save as" entry in
+	the object's context menu.
+
+	* src/sheet-object-graph.c (soi_cb_save_as): Choose image format
+	from a list.
+
+	* src/gui-file.h (GnmImageFormat): Struct which describes an
+	(image) file format.
+
+	* src/gui-file.c (gui_image_file_select): Split the parts common
+	to save and open into new function gui_image_chooser_new. Drop
+	is_save parameter to _select.
+	(gui_get_image_save_info): The parts of _select which have to do
+	with saving go here. Add a format chooser.
+
+	* src/file.[ch] (gnm_file_saver_fix_file_name): Rename to
+	gnm_vrfy_uri_ext. Take an extension instead of a GnmFileSaver as
+	1st parameter.
+
+2004-08-16  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Plug leak.
+
+2004-08-16  Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+
+	* src/item-bar.c (item_bar_draw): Fix black line in row/column
+	headers.
+
+2004-08-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (wbcg_create_edit_area): Fix typo.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new): Ditto.
+
+2004-08-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-image.c (sheet_object_image_read_xml_dom): Read
+	image.
+
+2004-08-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-image.c (sheet_object_image_new): Simplify
+	using g_memdup.
+	(sheet_object_image_print): fix up types to make gmorten happy.
+
+2004-08-09  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-image.c (sheet_object_image_new): strdup the
+	image type.
+	(sheet_object_image_finalize): Free the image type.
+	(soi_info_cb): New callback used to find image type.
+	(soi_get_pixbuf): Install callback on pixbuf loader in order to
+	find image type.
+	(sheet_object_image_get_property): New gobject method to return
+	type, data or pixbuf as object parameters.
+	(sheet_object_image_class_init): Install properties.
+
+2004-08-11  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (main): Handle non-URI output destinations.
+
+2004-08-09  Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+
+	* src/sheet-object-graph.c (cb_save_as) : Set zoom to 1.0 when
+	exporting to SVG.
+
+2004-08-02  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_eval) : Functions returning an array when only
+	  scalar results are permitted produce #VALUE!
+
+	* src/style.c (style_default_halign) : Fix drilling down into arrays
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars) : Init state.
+
+2004-08-01  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (function_call_with_list) : Array parms seem to accept
+	  scalars.
+
+	* src/value.c (value_dup) : Accept NULL
+
+	* src/expr.c (gnm_expr_eval) : do intersection for constant arrays too
+
+2004-07-30  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init_zoom) : We need a label for the action
+	  in case it is a menu item.
+
+2004-07-30  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): Plug leaks.
+
+	* src/file.c (gnm_file_saver_unregister): First use, then free.
+
+2004-07-30  Jon K Hellan  <hellan@acm.org>
+
+	* src/command-context.c (format_message): Strange things happen if
+	we treat the unknown string we are passed as a format string.
+
+2004-07-30  Yukihiro Nakai  <nakai@gnome.gr.jp>
+
+	* src/wbcg-actions.c: Don't forget to mark with N_()
+	http://bugzilla.gnome.org/show_bug.cgi?id=148746
+
+2004-07-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/hlink.h (GNM_HLINK_URL_TYPE): new
+	(GNM_HLINK_URL): new
+	(IS_GNM_HLINK_URL): new
+
+2004-07-27  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Check for log1p also.
+
+2004-07-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_conf_init_printer_decoration_font): (void).
+	* src/application.c (cb_flag_windows_changed): Ditto.
+
+2004-07-27  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* configure.in: use AM_PROG_LEX rather than AC_PROG_LEX
+	
+2004-07-27  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_regenerate_window_menu) : new.
+
+2004-07-26  Jody Goldberg <jody@gnome.org>
+
+	* configure.in :  bump pxlib req to 0.3.0 per Uwe's request
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=148412
+	* src/workbook-control-gui-priv.h : typo in the new combos
+
+2004-07-26  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_colrow_group_ungroup): Don't use ?: result
+	as a structure.  Go via pointers.
+
+2004-07-23  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c: Add Ctrl-Shift-D for double underline.
+
+	* src/commands.c (cmd_merge_data): Fix 0/NULL mixup.
+	* src/complete.c (complete_finalize): Ditto.
+	* src/sheet.c (sheet_range_calc_spans, sheet_toggle_hide_zeros): Ditto.
+	* src/colrow.c (colrow_set_sizes, colrow_restore_state_group): Ditto.
+	* src/gui-util.c (gnumeric_popup_menu): Ditto.
+	* src/item-cursor.c (item_cursor_unrealize): Ditto.
+	* src/value.c (value_peek_string): Ditto.
+
+	* src/expr.c (cb_bin_arith): Add const-casts.
+
+	* src/format.c (format_entry_set_fmt): Use g_strdup, not plain
+	strdup.
+
+	* src/wbcg-actions.c: Add Ctrl-5 for strikethough.
+
+2004-07-22  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-edit.c (wbcg_edit_finish) : change 'accept' into an
+	  enum and handle arrays and range fills here.
+
+	* src/parser.y : Add distinct productions for array elements with
+	  {1\2\3;4\5\6} vs {1,2,3;4,5,6}
+	(build_array) : add some error messages empty and asymetric arrays.
+
+2004-07-22  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_set_standard_toolbar_visible) : delete
+	(wbcg_set_format_toolbar_visible) : delete
+	(wbcg_set_object_toolbar_visible) : delete
+	(wbcg_copy_toolbar_visibility) : make virtual for now
+
+	* src/wbcg-actions.c (cb_view_standard_toolbar) : delete
+	(cb_view_format_toolbar) : delete
+	(cb_view_object_toolbar) : delete
+
+2004-07-22  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_handlebox_visible) : new.
+	(cb_add_menus_toolbars) : connect it here and create a menu entry in
+	  the view menu to toggle the visibility.
+
+2004-07-21  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (expm1gnum): Supply this when missing.
+
+2004-07-20  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add test for sysconf as per Mark's request
+
+	* src/gnumeric-pane.c (cb_pane_popup_menu) : cheese up a little hack
+	  to get 'popup-menu' binding context menus for col/row headers too.
+	(gnm_pane_clear_obj_size_tip) : new
+	(gnm_pane_display_obj_size_tip) : new
+	(gnm_pane_object_move) : use gnm_pane_display_obj_size_tip to provide
+	 an indication of the object size.
+
+2004-07-20  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (lbeta3): Use lgamma_rgnum.
+
+	* src/gutils.c (lgamma_rgnum): When needed, supply this.
+
+	* src/numbers.h (lgamma_rgnum): Add definition for this.
+
+	* configure.in (lgamma_r): Check for this.  Check for long double
+	version when needed.
+
+2004-07-20  Morten Welinder  <terra@gnome.org>
+
+	* src/ranges.c (range_is_infinite): Fix.  (Still unused, though.)
+
+2004-07-19  Jody Goldberg <jody@gnome.org>
+	win32 portability patch from Mark Gilbert
+
+	* src/io-context.c (io_progress_update) : use g_get_current_time
+	  instead of gettimeofday.
+
+2004-07-19  Jody Goldberg <jody@gnome.org>
+
+	* src/dialogs/dialog-about.c : Update a bit.  Add
+	* doc/C/about-authors.xml  : ditto
+	    - Emmanuel
+	    - Jean
+	    - Hal
+	    - Uwe
+	    - Michael Devine
+
+2004-07-19  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_init) : make the dom exporter a lower priority
+	  than the sax exporter so that we can start phasing it out.
+
+2004-07-19  Jody Goldberg <jody@gnome.org>
+	Uwe Steinmann <uwe@steinmann.cx>
+
+	* plugins/Makefile.am : merge in the paradox importer
+
+2004-07-19  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release version bump

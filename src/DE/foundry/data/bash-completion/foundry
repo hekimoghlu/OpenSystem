@@ -1,0 +1,36 @@
+# Check for bash
+[ -z "$BASH_VERSION" ] && return
+
+####################################################################################################
+
+__foundry() {
+    local IFS=$'\n'
+    local cur=`_get_cword :`
+    RES=($(foundry complete "${COMP_LINE}" "${COMP_POINT}" "${cur}"))
+
+    COMPREPLY=()
+    for i in "${!RES[@]}"; do
+        if [[ "${RES[$i]}" = "__FOUNDRY_FILE" ]]; then
+            declare -a COMPGEN_OPTS=('-f')
+        elif [[ "${RES[$i]}" = "__FOUNDRY_DIR" ]]; then
+            declare -a COMPGEN_OPTS=('-d')
+        else
+            declare -a COMPGEN_OPTS=()
+        fi
+
+        if [[ ${#COMPGEN_OPTS[@]} -ne 0 ]]; then
+            if [[ "${cur}" = "=" ]]; then
+                CUR=""
+            else
+                CUR="${cur}"
+            fi
+            COMPREPLY=("${COMPREPLY[@]}" $(compgen ${COMPGEN_OPTS[@]} -- "${CUR}") )
+        else
+            COMPREPLY=("${COMPREPLY[@]}" "${RES[$i]}")
+        fi
+    done
+}
+
+####################################################################################################
+
+complete -o nospace -F __foundry foundry

@@ -1,0 +1,110 @@
+2020-05-09  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.47
+
+2020-05-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/Gnumeric-embed.xml.in: fix the menus and toolbars.
+	* component/gnumeric.c (go_gnm_component_edit): ditto.
+	* src/wbc-gtk-actions.c (component_changed_cb): don't loose the component
+	before using it.
+	* src/wbc-gtk-impl.h:fix the menus and toolbars.
+	* src/wbc-gtk.c (set_uifilename), (wbc_gtk_init):  ditto.
+
+2020-05-04  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object.c (sheet_object_get_print_flag): New function.
+
+2020-04-29  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (cb_pending_redraw_handler): Do some cheap merging
+	of ranges before redrawing.  That should away some degenerate
+	cases.
+	(sheet_queue_redraw_range): Switch to using array for ranges.
+
+	* src/ssconvert.c (convert): Infer image format from filename for
+	object export just as for regular conversion.
+
+2020-04-26  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_clear_region): Fix type of clear_flags.
+	(gnm_sheet_finalize): Free the list of pending redraws, just in
+	case.
+
+	* src/dependent.c (style_dep_unrender): Queue the redraw instead
+	of doing it.
+
+	* src/sheet.c (sheet_redraw_region): We don't need the redraw-all
+	hack here.  It's also in sc_redraw_range.
+	(sheet_queue_redraw_range): New function for queueing redraws that
+	we cannot actually handle happening right now.
+
+2020-04-26  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-component.c (sheet_object_component_new): really fix
+	the component reference count issue.
+	* src/wbc-gtk-actions.c: ditto.
+
+2020-04-25  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/gnumeric.c (go_gnm_component_update_data),
+	(go_gnm_component_set_data), (go_gnm_component_render): fix crash when the
+	embedded spreadsheet is invalid. [#481]
+	* src/sheet-object-component.c (soc_xml_finish),
+	(sheet_object_component_new): fix object reference count.
+
+2020-04-24  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (sheet_region_queue_recalc): Fix problem with
+	non-cell deps.  See #480.
+
+2020-04-21  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (export_objects_for_sheet): New function
+	extracted from do_split_save.
+
+2020-04-20  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (resolve_template): Expand %o to sheet object
+	name, if present, or the empty string.
+
+2020-04-19  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (list_image_formats): New function, handling new
+	option --list-image-formats.
+	(do_split_save): When exporting graphs, sort top-to-bottom,
+	left-to-right.
+
+2020-04-13  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-graph.c (gnm_sog_write_image): Fix criticals.
+
+	* src/ssconvert.c (do_split_save): Fix double-free.
+
+2020-04-12  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (clipboard_export): Avoid critical.
+	(convert): Avoid critical.
+
+	* src/workbook-view.c (workbook_view_new_from_input): Spell out
+	which file we complain over.  See #472.
+
+2020-03-03  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (apply_updates): Move NULL check into here so
+	all callers are covered.
+
+2020-02-24  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/ssconvert.c (convert): don't crash if ssconvert_set_cells is
+	NULL.
+
+2019-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnm_restore_window_geometry): Something changed
+	in Gtk+ in the past decade.  Attach to size-allocate instead of
+	unrealize.
+
+2019-11-06  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

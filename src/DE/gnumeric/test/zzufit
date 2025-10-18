@@ -1,0 +1,191 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+use IO::File;
+
+# We don't actually need these, but fuzzxml does.
+use XML::Parser;
+use XML::Writer;
+
+my @corpus;
+my %file_type;
+
+my $n = 0;
+my $rate = 0.0001;
+my $LOG = "zzufit.log";
+my $DIR = "zzufit.tmp";
+my $valgrind = 0;
+
+&GetOptions ("rate=f" => \$rate,
+	     "seed=i" => \$n,
+	     'valgrind' => \$valgrind,
+	     )
+    or die &usage (1);
+
+die &usage (1) unless @ARGV;
+@corpus = @ARGV;
+
+if (!-d $DIR) {
+    mkdir ($DIR, 0777) or die "$0: Cannot create $DIR: $!\n";
+}
+
+while (1) {
+    $n++;
+    print STDERR "Test $n\n";
+    &append_log ("-------------------------------------------------------\n");
+
+    my $file = $corpus[$n % @corpus];
+    my $type = &determine_file_type ($file);
+    die "$0: unable to determine type of $file\n" unless defined $type;
+
+    my ($filepath,$filebase,$fileext) =
+	($file =~ m:^(|.*/)([^/]+)(\.[^./]+)$:);
+    if (!defined $filepath) {
+	($filepath,$filebase) = ($file =~ m:^(|.*/)([^/]+)$:);
+	$fileext = "";
+    }
+
+    my $zzuffile = "$DIR/${filebase}-${n}${fileext}";
+    my $fuzzcmd;
+
+    if ($type eq 'xml') {
+	$fuzzcmd = "./fuzzxml -s$n -r$rate '$file' '$zzuffile'";
+    } elsif ($type eq 'xml.gz') {
+	$fuzzcmd = "gzip -dc '$file' | ./fuzzxml -s$n -r$rate - '$zzuffile'";
+    } elsif ($type eq 'raw') {
+	$fuzzcmd = "zzuf -s$n -r$rate <'$file' >'$zzuffile'";
+    } elsif ($type eq 'ods') {
+	$fuzzcmd = "./fuzzzip --subfuzzer='./fuzzxml -s$n -r$rate %i %o' --subfile content.xml --subfile styles.xml '$file' '$zzuffile'";
+    } elsif ($type eq 'xlsx') {
+	$fuzzcmd = "./fuzzzip --subfuzzer='./fuzzxml -s$n -r$rate %i %o' --subfile xl/styles.xml --subfile xl/worksheets/sheet1.xml '$file' '$zzuffile'";
+    } else {
+	die "$0: Internal error.\n";
+    }
+
+    &append_log ("Fuzz command $fuzzcmd\n");
+    {
+	system ($fuzzcmd);
+	my $code = $?;
+	my $sig = $code & 0x7f;
+	last if $sig == 2;
+    }
+
+    my $outfile = "$DIR/${filebase}-${n}.gnumeric";
+    my $logfile = "$DIR/${filebase}-${n}.log";
+    my $keepfiles = 0;
+    my $cmd = "../src/ssconvert '$zzuffile' '$outfile' 2>&1 | tee '$logfile' >>'$LOG'";
+    if ($valgrind) {
+	$cmd = "../tools/gnmvalgrind --leak-check=full $cmd";
+    }
+    system ($cmd);
+    my $code = $?;
+    my $sig = $code & 0x7f;
+    if ($sig) {
+	if ($code & 0x80) {
+	    &append_log ("CORE\n");
+	    print STDERR "CORE\n";
+	}
+	last if $sig == 2;
+	$keepfiles = 1;
+    } else {
+	$code >>= 8;
+	my $txt = "Exit code $code\n";
+	&append_log ($txt);
+	if ($code >= 2) {
+	    print STDERR $txt;
+	    $keepfiles = 1;
+	}
+    }
+
+    my $log_fh = new IO::File ($logfile, "r")
+	or die "$0: cannot read $logfile: $!\n";
+    my $prev = '';
+    while (<$log_fh>) {
+	my $prevline = $prev;
+	$prev = $_;
+
+	if (/^==\d+==\s+definitely lost: (\d+) bytes in \d+ blocks/ && $1 > 0) {
+	    print;
+	    $keepfiles = 1;
+	    next;
+	}
+	if (/\bat 0x/) {
+	    print $prevline;
+	    $keepfiles = 1;
+	    next;
+	}
+
+	if (/CRITICAL/) {
+	    print;
+	    $keepfiles = 1;
+	    next;
+	}
+    }
+    undef $log_fh;
+    if (!$keepfiles) {
+	unlink $logfile, $zzuffile, $outfile;
+    }
+}
+
+sub append_log {
+    my ($txt) = @_;
+
+    local (*FIL);
+    open (FIL, ">>$LOG") or die "$0: Cannot append to $LOG: $!\n";
+    print FIL $txt;
+    close (FIL);
+}
+
+sub usage {
+    my ($res) = @_;
+
+    print STDERR "$0 [options]\n\n";
+    print STDERR "  --rate=frac      Fraction of bits to flip.\n";
+    print STDERR "  --seed=int       Initial seed.\n";
+    print STDERR "  --valgrind       Run under Valgrind.\n";
+
+    exit ($res);
+}
+
+sub determine_file_type {
+    my ($file) = @_;
+
+    return $file_type{$file} if exists $file_type{$file};
+
+    return undef unless -r $file && -f _;
+
+    if ($file =~ /\.(xls|wb[23])$/) {
+	return $file_type{$file} = 'raw';
+    }
+
+    if ($file =~ /\.ods$/) {
+	return $file_type{$file} = 'ods';
+    }
+
+    if ($file =~ /\.xlsx$/) {
+	return $file_type{$file} = 'xlsx';
+    }
+
+    if ($file =~ /\.xml$/) {
+	return $file_type{$file} = 'xml';
+    }
+
+    if ($file =~ /\.gnumeric$/) {
+	my $f = new IO::File ($file, "r");
+	my $data;
+	my $nread = read $f,$data,10;
+	return undef unless $nread == 10;
+
+	if ($data =~ /^<\?xml/) {
+	    return $file_type{$file} = 'xml';
+	}
+
+	if (ord (substr ($data, 0, 1)) == 0x1f &&
+	    ord (substr ($data, 1, 1)) == 0x8b) {
+	    return $file_type{$file} = 'xml.gz';
+	}
+    }
+
+    return $file_type{$file} = undef;
+}

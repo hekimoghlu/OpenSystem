@@ -1,0 +1,341 @@
+#!/usr/local/bin/perl -w
+# -----------------------------------------------------------------------------
+
+use strict;
+
+my %config =
+    ('src/mathfunc.c' =>
+     {
+	 'files' => [
+	     "dpq.h",
+	     "pnorm.c", "qnorm.c",
+	     "ppois.c", "dpois.c",
+	     "dgamma.c", "pgamma.c",
+	     "dt.c", "pt.c", "qt.c",
+	     "pchisq.c", "qchisq.c",
+	     "dweibull.c", "pweibull.c",
+	     "pbinom.c", "dbinom.c", "qbinom.c",
+	     "dnbinom.c", "pnbinom.c", "qnbinom.c",
+	     "dbeta.c",
+	     "dhyper.c", "phyper.c",
+	     "dexp.c", "pexp.c",
+	     "dgeom.c", "pgeom.c",
+	     "dcauchy.c", "pcauchy.c",
+	     # These are for plugin fn-R.  They are so small it makes no
+	     # sense to place them elsewhere.
+	     "df.c",
+	     "dchisq.c",
+	     "qweibull.c",
+	     "qexp.c",
+	     "qgeom.c",
+	     # old:
+	     # "ftrunc.c",
+	     # "dnorm.c",
+	     # "dlnorm.c", "plnorm.c", "qlnorm.c",
+	     # "qpois.c",
+	     # "bd0.c",
+	     # "qgamma.c", # Not good enough.
+	     # "pf.c",
+	     # "qf.c",
+	     # "pbeta.c",
+	     # "qbeta.c",
+	     ],
+     },
+
+     'src/sf-gamma.c' =>
+     {
+	 'files' => [
+	     'chebyshev.c',
+	     'lgammacor.c',
+	     'lbeta.c',
+	     ]
+     },
+
+     'src/sf-bessel.c' =>
+     {
+	 'files' => [
+	     'bessel.h',
+	     "bessel_i.c",
+	     "bessel_k.c",
+	     ]
+     },
+    );
+
+my $gnm_dir = $ARGV[0];
+my $r_dir = $ARGV[1];
+my $subdir = "src/nmath";
+
+unless (defined ($gnm_dir) && -d $gnm_dir &&
+	defined ($r_dir) && -d "$r_dir/$subdir") {
+    print STDERR "Usage: $0 Gnumeric-dir R-directory\n";
+    exit 1;
+}
+
+for my $file (sort keys %config) {
+    print "Updating $file...\n";
+
+    my $fn = "$gnm_dir/$file";
+    my ($prefix,$postfix) = &read_source_file ($fn);
+
+    my $outfile = "$fn.tmp";
+    open (my $dst, '>', $outfile) or
+	die "$0: cannot write $outfile: $!\n";
+    print $dst $prefix;
+    print $dst "\n";
+    print $dst "// The following source code was imported from the R project.\n";
+    print $dst "// It was automatically transformed by $0.\n";
+    print $dst "\n";
+
+    my $pfiles = $config{$file}{'files'};
+    foreach my $file (@$pfiles) {
+	my $cleandefs = ($file =~ /\.c$/);
+	print $dst "/* Imported $subdir/$file from R.  */\n";
+	&import_file ("$r_dir/$subdir/$file", $cleandefs, $dst);
+    }
+
+    print $dst $postfix;
+    close ($dst);
+
+    rename $outfile, $fn;
+}
+
+
+# -----------------------------------------------------------------------------
+
+sub import_file {
+    my ($filename,$cleandefs,$dst) = @_;
+
+    my %defines = ();
+    my $incomment = 0; # Stupid.
+    my $victim;
+    my $removing = 0;
+
+    open (my $src, '<', $filename) or
+	die "$0: Cannot read $filename: $!\n";
+  LINE:
+    while (<$src>) {
+	if (/^\s*\#\s*ifndef\s+GNUMERIC_VERSION\b/ ... /^\s*\#\s*endif\b.*\bGNUMERIC_VERSION\b/) {
+	    next;
+	}
+
+	if (/^\s*\#\s*define\s+([a-zA-Z0-9_]+)/) {
+	    $defines{$1} = 1;
+	} elsif (/^\s*\#\s*undef\s+([a-zA-Z0-9_]+)/) {
+	    delete $defines{$1};
+	} elsif (/^\s*\#\s*include\s+/) {
+	    # Ignore for now.
+	    next LINE;
+	}
+
+	$_ .= <$src> if /^static\s+double\s*$/;
+
+	s/\s+$//;
+	s/ +\t/\t/;
+
+	if (!$removing && !$incomment && m|^\s*/\*| && !m|\*/|) {
+	    $incomment = 1;
+	}
+
+	if ($incomment) {
+	    $incomment = 0 if m|\*/|;
+	} else {
+	    my $comment = undef;
+	    $comment = $1 if (s{(/\*.*\*/)}{ MAGIC_C_COMMENT });
+
+	    s/\bdouble\b/gnm_float/g;
+	    s/\bRboolean\b/gboolean/g;
+
+	    s/^(\s*)(const\s+gnm_float\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\[\s*\d+\s*\]\s*=)/$1static $2/;
+
+	    # Improve precision of "log(1-x)".
+	    s/\blog\s*\(\s*1\s*-\s*([a-zA-Z0-9_]+)\s*\)/gnm_log1p (-$1)/g;
+
+	    # Improve precision of "log(1+x)".
+	    s/\blog\s*\(\s*1\s*\+\s*/gnm_log1p \(/g;
+
+	    # Map explicit long double stuff to gnm_float
+	    s/\bLDOUBLE\b/gnm_float/g;
+	    s/\b(exp|log)l(\s|$|\()/gnm_$1$2/g;
+
+	    s/\bISNAN\b/gnm_isnan/g;
+	    s/\bR_(finite|FINITE)\b/gnm_finite/g;
+	    s/\b(sqrt|exp|log|pow|log1p|expm1|floor|ceil|sin|cos|sinh|tan|sinpi)(\s|$|\()/gnm_$1$2/g;
+	    s/\b(lbeta|tanpi|atanpi|logcf)(\s|$|\()/gnm_$1$2/g;
+	    s/\bfabs\b/gnm_abs/g;
+	    s/\bR_forceint\b/gnm_round/g;
+
+	    s/\bgnm_floor\s*\(\s*([a-z]+)\s*\+\s*1e-7\s*\)/gnm_fake_floor($1)/;
+
+	    # We do not want translators to have to deal with these warnings.
+	    s/\b_\b//;
+
+	    # Style fix
+	    s/\bconst\s+static\b/static const/;
+
+	    s{#ifdef (HAVE_ATANPI)}{#if 1 // $1};
+
+	    # Constants.
+	    s/((>|<|>=|<=|==|!=)\s*[0-9]{1,9})\.0*([ \t\)])/$1$3/g;   # Compare against integer
+	    s!([- +*/]=\s*[0-9]{1,9})\.0*\s*;!$1;!g;   # Assignment of integer
+
+	    s/\b(M_LN2|M_PI|M_PI_2|M_SQRT2|M_2PI|M_1_PI)\b/$1gnum/g;
+	    s/\bDBL_(EPSILON|MIN|MAX)/GNM_$1/g;
+	    s/([^%])([-+]?(\d*\.(\d{1,})|\d+\.\d{0,})([eE][-+]?\d+)?)/$1GNM_const\($2\)/g;
+	    s/([ \t*])([-+]?\d+[eE][-+]?\d+\b)/$1GNM_const\($2\)/g;
+	    #s@(\d)\s*/\s*(\d+\.\d*)@$1 / GNM_const\($2\)@g;
+
+	    # Fix constant quotients.
+	    s~([-+]?\d+\.\d*)(\s*/\s*)([-+e0-9.]+)~GNM_const\($1\)$2$3~;
+
+	    s/\battribute_hidden\s+//;
+
+	    # These are made static.
+	    s/^gnm_float\s+(pbeta_both|bd0|chebyshev_eval|lgammacor|pbeta_raw|dbinom_raw|bessel_[ijky]|bessel_[ijy]_ex|do_search|pgamma_raw)\b/static gnm_float $1/;
+	    s/^int\s+(chebyshev_init)/static int $1/;
+
+	    # Optimization given our stupid gammafn.
+	    s|> 10|< 10| if /p and q are small: p <= q > 10/;
+	    s|gnm_log\(gammafn\(p\) \* \(gammafn\(q\) / gammafn\(p \+ q\)\)\)|gnm_lgamma (p) + gnm_lgamma (q) - gnm_lgamma (p + q)|;
+
+	    s/dnorm4/dnorm/g;
+	    s/pnorm5/pnorm/g;
+	    s/qnorm5/qnorm/g;
+	    s/\bR_pow_di\b/gnm_pow/;
+	    s/\bRf_gamma_cody\b/gnm_gamma/;
+
+	    s{^(\#define R_Log1_Exp)}{// $1};
+
+	    s/\b(trunc|ftrunc)\b/gnm_trunc/g;
+	    s/\b(lgammafn|lgamma)\b/gnm_lgamma/g;
+	    s/\bML_NAN\b/gnm_nan/g;
+	    s/\bML_VALID\b/\!gnm_isnan/g;
+	    s/\bML_NEGINF\b/gnm_ninf/g;
+	    s/\bML_POSINF\b/gnm_pinf/g;
+
+	    if ($filename !~ /\bpgamma\.c$/) {
+		# Improve precision of "lgammagnum(x+1)".
+		s/\bgnm_lgamma\s*\(([^()]+)\s*\+\s*GNM_const\(1(\.0*)?\)\s*\)/lgamma1p ($1)/;
+	    }
+	    s/\bR_Log1_Exp\b/swap_log_tail/g;
+
+	    if ($filename =~ /qnbinom\.c$/) {
+		s/\bdo_search\b/qbinom_do_search/g;
+	    }
+
+	    if ($filename =~ /pnorm\.c$/) {
+		s/\bcp;/cp = gnm_nan;/;
+	    }
+
+	    if ($filename =~ /pgamma\.c$/) {
+		s/^static (gnm_float\ngnm_logcf\b)/$1/;
+	    }
+
+	    if ($filename =~ m|/bessel_i\.c$|) {
+		s/\bgamma_cody\(empal\)/gnm_exp(lgamma1p(nu))/;
+	    }
+
+	    s/\bgamma_cody\b/gnm_gamma/g;
+
+	    if (/^(static\s+)?(gnm_float|int)\s+(chebyshev_init)\s*\(/ .. /^\}/) {
+		next unless s/^(static\s+)?(gnm_float|int)\s+([a-zA-Z0-9_]+)\s*\(.*//;
+		$_ = "/* Definition of function $3 removed.  */";
+	    }
+
+	    if ((/^(static\s*)?gnm_float\s*(dbinom_raw|logspace_sum|[dpq]nbinom_mu|bessel_[ik]_ex|dpois_raw)\s*\(/ && ($victim = $2)) .. /^\}/) {
+		if (!/^\}/) {
+		    $removing = 1;
+		    next;
+		}
+		$_ = "/* Definition of function $victim removed.  */";
+		$removing = 0;
+	    }
+
+	    if ($filename =~ m|/bessel_j\.c$|) {
+		if (/^\s*static const gnm_float fact\[/) {
+		    while (!/;$/) {
+			$_ .= <$src>;
+		    }
+		    $_ = '/* removed array fact */';
+		} else {
+		    s/\bfact\s*\[([^][]*)\]/fact($1)/g;
+		}
+	    }
+
+	    # Somewhat risky.
+	    s/\%([-0-9.]*)([efgEFG])/\%$1\" GNM_FORMAT_$2 \"/g;
+
+	    s/int give_log/gboolean give_log/g;
+	    s/int log_p/gboolean log_p/g;
+	    s/int lower_tail/gboolean lower_tail/g;
+
+	    # Fix pbinom
+	    s/\bpbeta\s*\(1\s*-\s*([^,]*),\s*([^,]*),\s*([^,]*),\s*([^,]*),\s*([^,]*)\)/pbeta ($1, $3, $2, !$4, $5)/;
+
+	    # Fix pt.
+	    if ($filename =~ m|/pt\.c$|) {
+		s/(n > 4e5)/0 && $1/;
+		if (/(^.*\s*=\s*)pbeta\s*(\(.*\);)/) {
+		    $_ = "$1 (n > x * x)\n" .
+			"\t? pbeta (x * x / (n + x * x), 0.5, n / 2, /*lower_tail*/0, log_p)\n" .
+			"\t: pbeta $2";
+		}
+	    }
+
+
+	    if ($filename =~ m|/qbeta\.c$| && /xinbta = 0\.5;/) {
+		s/0\.5/(xinbta < lower) ? gnm_sqrt (lower) : 1 - gnm_sqrt (lower)/;
+	    }
+
+	    if (defined $comment) {
+		s{ MAGIC_C_COMMENT }{$comment};
+	    }
+
+	    $incomment = 1 if m|/\*$|;
+	}
+
+	print $dst "$_\n";
+    }
+    close ($src);
+
+    if ($cleandefs && keys %defines) {
+	print $dst "/* Cleaning up done by $0:  */\n";
+	foreach my $def (sort keys %defines) {
+	    print $dst "#undef $def\n";
+	}
+    }
+
+    print $dst "\n";
+    print $dst "/* ", ('-' x 72), " */\n";
+}
+
+# -----------------------------------------------------------------------------
+
+sub read_source_file {
+    my ($filename) = @_;
+
+    my $prefix = '';
+    my $postfix = '';
+
+    open (my $src, '<', $filename) or
+	die "$0: Cannot read $filename: $!\n";
+    my $state = 'pre';
+    while (<$src>) {
+	if ($state eq 'pre') {
+	    $prefix .= $_;
+	    $state = 'mid' if m"--- BEGIN MAGIC R SOURCE MARKER ---";
+	}
+	if ($state eq 'mid') {
+	    $state = 'post' if m"--- END MAGIC R SOURCE MARKER ---";
+	}
+	if ($state eq 'post') {
+	    $postfix .= $_;
+	}
+    }
+    close ($src);
+
+    die "$0: wrong set of magic markers in $filename.\n" if $state ne 'post';
+
+    return ($prefix,$postfix);
+}
+
+# -----------------------------------------------------------------------------

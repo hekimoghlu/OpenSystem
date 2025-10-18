@@ -1,0 +1,176 @@
+2007-11-04  Morten Welinder <terra@gnome.org>
+
+	* Release 1.7.14
+
+2007-11-04  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c (gnm_stf_fs_set_export_options): Adapt to
+	goffice changes.
+
+2007-11-03  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_options_guess): Guess using 1000
+	first lines.
+
+	* src/stf-export.c (gnm_stf_export_options_sheet_list_get): New
+	function.
+	(try_auto_date): Use gnm_format_is_time_for_value.
+	(gnm_stf_file_saver_new): Don't create exporter here.
+	(gnm_stf_file_saver_save): Create exporter here and hang it unto
+	the workbook.
+
+	* src/gnm-format.c (gnm_format_is_time_for_value): New function.
+
+	* src/stf-export.c (gnm_stf_file_saver_new): Set the right scope.
+	(cb_set_export_option): Use go_object_set_property and allow
+	setting of quoting-on-whitespace.
+	(gnm_stf_file_saver_save): Steamline.  Make sure to disconnect
+	from sink.  Send our own GnmStfExport to stf_export_dialog.
+
+	* src/ssconvert.c (convert): Plug leak.
+
+2007-11-02  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (adjust_repetition): new
+	(compute_sheet_pages_down_then_across): new
+	(compute_sheet_pages_across_then_down): move code from here to
+	  compute_sheet_pages
+	(compute_sheet_pages): receive code from ...across_then_down
+
+2007-11-02  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Bumped goffice dependency as the STF export now uses
+	go_file_saver_parse_options which is new.
+
+2007-11-02  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (print_init): Plug leak.
+	(print_shutdown): Unregister the PDF saver.
+
+	* src/ssconvert.c (handle_export_options): New function to handle
+	new option --export-options.
+	(convert): Call handle_export_options.
+
+2007-11-01  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c (gnm_stf_file_saver_new): New function based on
+	code from Hib Eris, see #170767.
+
+2007-11-01  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_paginate_cb): handle sheets without printable
+	  pages correctly and cancel printing if there are no pages at all.
+	(gnm_request_page_setup_cb): gtk may call this function even for
+	  non-existing pages. Be graceful. Fixes #491775
+
+2007-11-01  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_page): print the row and column headers also
+	  for the repeated rows and columns.
+
+2007-11-01  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-so-line.c (gnm_so_line_prep_sax_parser): Survive missing
+	"type" attribute.  Fixes #492391.
+
+	* src/print-info.c (page_setup_set_paper): Handle "US-Letter" too.
+
+2007-10-31  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_init): Plug leaks.
+	(stf_shutdown): New function.
+
+	* src/libgnumeric.c (gnm_shutdown): Hook up stf_shutdown.
+
+2007-10-31  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_sheet_pages_across_then_down): consider
+	the repeated rows and columns when doing pagination
+
+2007-10-30  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c (gnumeric_table) : Fix.  It is apparently a bad
+	  idea to free something then use it a couple of lines later.
+
+2007-10-30  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_page_repeated_rows): deleted
+	(print_page_repeated_cols): deleted
+	(print_page_repeated_intersect): deleted
+	(print_page): handle repeated rows and columns
+	(compute_sheet_pages_add_range): add repeated rows and cols
+	  info
+	(compute_sheet_pages_across_then_down): pass repeated rows
+	  and cols info to compute_sheet_pages_add_range
+	(gnm_draw_page_cb): adjust for change in data type
+	(gnm_request_page_setup_cb): ditto
+	
+2007-10-28  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_cell_gtk): Handle cell->rendered_value
+	changing underneath us.  Fixes #478552.
+
+2007-10-27  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_create_data_table) : New.  Wrapper to set_area
+	  that creates a data table with undo capabilities.
+
+	* src/func-builtin.c (gnumeric_table) : clear the val point in a cell
+	  before destroying it because the value was a temporary and has
+	  already been released.  Cache and restore the x_iter value to avoid
+	  leaving the last calculated value in the cell after evaluating for
+	  TABLE(,ADDR)
+
+	* src/parser.y : convert from distinct gboolean flags to using a
+	  simple bit mask.  Switch from distinct ABS_COL/ABS_ROW to ABS and
+	  REL.  There was no need to split COL vs ROW, but there was a need
+	  [Data->Table] to force relative (XL requires rel refs).
+
+2007-10-27  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_read_obj): Survive a missing
+	ObjectBound attribute.  Fixes #490859.
+
+	* src/mstyle.c: Add a pile of preconditions.
+
+2007-10-26  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_date_conventions_as_attr): New
+	function...
+	(xml_write_calculation): ...extracted from here.
+	(gnm_cellregion_to_xml): Call xml_write_date_conventions_as_attr
+	if we have a sheet.
+
+	* src/clipboard.c (cellregion_to_string): Use the value format
+	  when appropriate.
+
+2007-10-25  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (cb_bounds_changed) : update the ctrl pt positions if
+	  the objects position changes.
+
+	* src/sheet-object.c (sheet_object_anchor_assign) : renamed from
+	  sheet_object_anchor_cpy to clarify the purpose and follow naming
+	  conventions.
+	(sheet_object_anchor_dup) : new.
+	(cb_so_snap_to_grid) : new callback to snap an object to the
+	  containing grid.
+	(sheet_object_populate_menu_real) : use it here.
+
+2007-10-25  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (cb_style_list_add_node): Handle the case
+	where the last tile is partial in either dimension.
+
+2007-10-22  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_repeat_left, xml_sax_repeat_top):
+	Kill warnings.
+
+2007-10-21  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_group_fetch_with_translation): Fix warning.
+
+2007-10-21  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

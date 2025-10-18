@@ -1,0 +1,29 @@
+Functions
+=========
+
+.. currentmodule:: gi.repository.{{ namespace }}
+
+{% for name, sig, doc, parameters, return_doc, deprecated, since in functions %}
+
+.. function:: {{ name }}{{ sig }}
+
+   {{ doc | indent(3) }}
+
+{% if since %}
+   .. versionadded:: {{ since }}
+{% endif %}
+
+{% if deprecated %}
+{% set version, doc_ = deprecated %}
+   .. deprecated:: {{ version }}
+      {{ doc_ | indent(6) }}
+{% endif %}
+
+   {% for pname, pdoc in parameters %}
+   :param {{ pname }}: {{ pdoc | indent(6) }}
+   {% endfor %}
+   {% if return_doc %}
+   :return: {{ return_doc | indent(6) }}
+   {% endif %}
+
+{% endfor %}

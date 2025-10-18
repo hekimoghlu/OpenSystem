@@ -1,0 +1,112 @@
+{
+    "app-id": "org.gnome.Console.Devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "kgx-devel",
+    "tags": [
+        "devel",
+        "development",
+        "nightly"
+    ],
+    "finish-args": [
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--talk-name=org.gtk.vfs.*",
+        "--filesystem=xdg-run/gvfsd"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name": "fast_float",
+            "buildsystem": "cmake-ninja",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/fastfloat/fast_float.git",
+                    "tag": "v6.1.6"
+                }
+            ]
+        },
+        {
+            "name": "simdutf",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
+                "-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE",
+                "-DCMAKE_VISIBILITY_INLINES_HIDDEN=TRUE"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/simdutf/simdutf",
+                    "tag": "v6.4.0"
+                }
+            ]
+        },
+        {
+            "name": "vte",
+            "config-opts": [
+                "-Dgir=false",
+                "-Dvapi=false",
+                "-Dgtk3=false",
+                "-Dgtk4=true"
+            ],
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/vte.git"
+                }
+            ]
+        },
+        {
+            "name": "libgtop",
+            "buildsystem": "autotools",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libgtop.git"
+                }
+            ]
+        },
+        {
+            "name": "gnome-console",
+            "run-tests": true,
+            "builddir": true,
+            "buildsystem": "meson",
+            "build-options": {
+                "test-args": [
+                    "--device=dri",
+                    "--share=ipc",
+                    "--socket=fallback-x11",
+                    "--socket=wayland",
+                    "--talk-name=org.gtk.vfs.*",
+                    "--filesystem=xdg-run/gvfsd"
+                ]
+            },
+            "config-opts": [
+                "-Ddevel=true"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "../../"
+                }
+            ]
+        }
+    ]
+}

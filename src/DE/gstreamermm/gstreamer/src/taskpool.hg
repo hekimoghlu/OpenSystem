@@ -1,0 +1,104 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2009 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/object.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** A class representing a pool of GStreamer streaming threads.
+ * This object provides an abstraction for creating threads. The default
+ * implementation uses a regular Glib::ThreadPool to start tasks.
+ *
+ * Subclasses can be made to create custom threads.
+ *
+ * Last reviewed on 2009-04-23 (0.10.24)
+ */
+class TaskPool : public Object
+{
+  _CLASS_GOBJECT(TaskPool, GstTaskPool, GST_TASK_POOL, Object, GstObject)
+
+protected:
+  _CTOR_DEFAULT()
+
+public:
+  /** For example,
+   * void on_do_push();.
+   */
+  typedef sigc::slot<void> SlotPush;
+
+public:
+  /** Create a new default task pool. The default task pool will use a regular
+   * Glib::ThreadPool for threads.
+   * @return A new Gst::TaskPool.
+   */
+  _WRAP_CREATE()
+
+  /** @throw Glib::Error.
+   */
+  _WRAP_METHOD(void prepare(), gst_task_pool_prepare, errthrow)
+
+  /** Start the execution of a new thread from pool.
+   *
+   * @param slot The function to call.
+   * @return A pointer that should be used for the join() method. This pointer
+   * can be 0, you must check error to detect errors.
+   * @throw Glib::Error.
+   */
+  gpointer push(const SlotPush& slot);
+  _IGNORE(gst_task_pool_push)
+
+  _WRAP_METHOD(void join(gpointer id), gst_task_pool_join)
+  _WRAP_METHOD(void cleanup(), gst_task_pool_cleanup)
+
+  /** Virtual function which prepares the thread pool.
+   * @throw Glib::Error.
+   */
+  virtual void prepare_vfunc();
+
+  /** Virtual function to cleanup the thread pool.
+   */
+  _WRAP_VFUNC(void cleanup(), "cleanup")
+
+  /** Virtual function which starts a new thread.
+   * @throw Glib::Error.
+   */
+  virtual gpointer push_vfunc(const SlotPush& slot);
+
+  /** Virtual function to join a thread.
+   */
+  _WRAP_VFUNC(void join(gpointer id), "join")
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->prepare = &prepare_vfunc_callback;
+  klass->push = &push_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static void prepare_vfunc_callback(GstTaskPool* self, GError** error);
+  static gpointer push_vfunc_callback(GstTaskPool* self,
+    GstTaskPoolFunction func, gpointer user_data, GError** error);
+  _POP()
+#m4end
+};
+
+} // namespace Gst

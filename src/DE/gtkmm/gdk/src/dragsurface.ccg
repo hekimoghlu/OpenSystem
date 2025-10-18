@@ -1,0 +1,49 @@
+/* Copyright (C) 2020 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gdk/gdk.h>
+
+namespace
+{
+extern "C"
+{
+// Hand-coded because the slot can't be called with a non-const temporary DragSurfaceSize.
+static void DragSurface_signal_compute_size_callback(GdkDragSurface* self, GdkDragSurfaceSize* p0,void* data)
+{
+  using namespace Gdk;
+  using SlotType = sigc::slot<void(DragSurfaceSize&)>;
+
+  auto obj = dynamic_cast<DragSurface*>(Glib::ObjectBase::_get_current_wrapper((GObject*) self));
+  // Do not try to call a signal on a disassociated wrapper.
+  if(obj)
+  {
+    try
+    {
+      if (const auto slot = Glib::SignalProxyNormal::data_to_slot(data))
+      {
+        // This works because Gdk::DragSurfaceSize neither copies nor deletes *p0.
+        DragSurfaceSize dragsurfacesize(p0);
+        (*static_cast<SlotType*>(slot))(dragsurfacesize);
+      }
+    }
+    catch (...)
+    {
+       Glib::exception_handlers_invoke();
+    }
+  }
+}
+} // extern "C"
+} // anonymous namespace

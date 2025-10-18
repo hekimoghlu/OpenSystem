@@ -1,0 +1,202 @@
+[Template]
+Name=cli
+Description=Create a command line project using Meson
+Tags=Meson;
+
+[Input name]
+Type=text
+Title=Project Name
+Subtitle=The name for your project which should not contain spaces
+Validate=^[-\\w0-9]+$
+
+[Input license]
+Type=license
+Title=License
+Default=GPL-3.0-or-later
+
+[Input language]
+Type=language
+Title=Language
+Choices=c;cpp;rust;vala;
+
+[Input git]
+Type=switch
+Title=Version Control
+Default=true
+
+
+```
+require GLib
+
+name_ = GLib.strjoinv("_", GLib.strsplit(name, "-", i32(0)))
+```
+
+
+```{{name}}/meson.build
+project('{{name}}', '{{language.meson_id}}',
+          version: '0.1',
+    meson_version: '>= 1.0.0',
+  default_options: ['warning_level=2', 'werror=false'],
+{{if license.id}}
+          license: '{{license.id}}',
+{{end}}
+)
+
+{{if language.id == "rust"}}
+cargo_bin  = find_program('cargo')
+cargo_opt  = [ '--manifest-path', meson.project_source_root() / 'Cargo.toml' ]
+cargo_opt += [ '--target-dir', meson.project_build_root() / 'src' ]
+cargo_env  = [ 'CARGO_HOME=' + meson.project_build_root() / 'cargo-home' ]
+
+if get_option('buildtype') == 'release'
+  cargo_opt += [ '--release' ]
+  rust_target = 'release'
+else
+  rust_target = 'debug'
+endif
+
+cargo_build = custom_target(
+  'cargo-build',
+  build_by_default: true,
+  build_always_stale: true,
+  output: meson.project_name(),
+  console: true,
+  install: true,
+  install_dir: get_option('bindir'),
+  command: [
+    'env', cargo_env,
+    cargo_bin, 'build',
+    cargo_opt, '&&', 'cp', 'src' / rust_target / meson.project_name(), '@OUTPUT@',
+  ]
+)
+{{else}}
+{{name_}}_deps = [
+{{if (language.id == "c") || (language.id == "vala")}}
+  dependency('gobject-2.0'),
+{{end}}
+]
+
+{{name_}}_sources = [
+{{if language.id == "c"}}
+  'main.c',
+{{else if language.id == "cpp"}}
+  'main.cpp',
+{{else if language.id == "vala"}}
+  'main.vala',
+{{end}}
+]
+
+executable('{{name}}', {{name_}}_sources,
+{{if language.id == "vala"}}
+  vala_args: '--target-glib=2.82',
+{{end}}
+  dependencies: {{name_}}_deps,
+  install: true,
+)
+
+config_h = configuration_data()
+config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
+configure_file(output: 'config.h', configuration: config_h)
+{{end}}
+```
+
+if language.id == "rust"
+```{{name}}/Cargo.toml
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2025"
+```
+end
+
+if language.id == "c"
+```{{name}}/main.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include <glib.h>
+
+int
+main (int   argc,
+      char *argv[])
+{
+  g_autoptr(GOptionContext) context = NULL;
+  g_autoptr(GError) error = NULL;
+  gboolean version = FALSE;
+  GOptionEntry main_entries[] = {
+    { "version", 0, 0, G_OPTION_ARG_NONE, &version, "Show program version", "" },
+    { NULL }
+  };
+
+  context = g_option_context_new ("- my command line tool");
+  g_option_context_add_main_entries (context, main_entries, NULL);
+
+  if (!g_option_context_parse (context, &argc, &argv, &error))
+    {
+      g_printerr ("%s\n", error->message);
+      return EXIT_FAILURE;
+    }
+
+  if (version)
+    {
+      g_printerr ("%s\n", PACKAGE_VERSION);
+      return EXIT_SUCCESS;
+    }
+
+  return EXIT_SUCCESS;
+}
+```
+end
+
+if language.id == "cpp"
+```{{name}}/main.cpp
+#include <iostream>
+
+int main()
+{
+  std::cout << "Hello World\n";
+  return 0;
+}
+```
+end
+
+if language.id == "vala"
+```{{name}}/main.vala
+{{include "license.vala"}}
+
+int main (string[] args) {
+    stdout.printf ("Hello World\n");
+    return 0;
+}
+```
+end
+
+```{{name}}/README.md
+# {{name}}
+```
+
+```{{name}}/LICENSE
+{{license.text}}
+```
+
+```{{name}}/.foundry/.gitignore
+tmp/
+user/
+cache/
+```
+
+```{{name}}/.foundry/project/settings.keyfile
+[project]
+build-system='meson'
+default-license='{{license.id}}'
+```
+
+if git
+{{name}}/.git/objects/
+{{name}}/.git/refs/heads/
+
+```{{name}}/.git/HEAD
+ref: refs/heads/main
+```
+end

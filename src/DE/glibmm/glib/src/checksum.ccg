@@ -1,0 +1,51 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/utility.h>
+#include <glibmm/checksum.h>
+
+namespace Glib
+{
+
+Checksum::Checksum(Type type) : gobject_(g_checksum_new((GChecksumType)type))
+{
+}
+
+Checksum::operator bool() const
+{
+  return gobject_ != nullptr;
+}
+
+gssize
+Checksum::get_length(Type checksum_type)
+{
+  return g_checksum_type_get_length((GChecksumType)checksum_type);
+}
+
+std::string
+Checksum::compute_checksum(Type checksum_type, const std::string& data)
+{
+  return Glib::convert_return_gchar_ptr_to_stdstring(
+    g_compute_checksum_for_string(((GChecksumType)checksum_type), data.c_str(), data.size()));
+}
+
+void
+Checksum::update(const std::string& data)
+{
+  g_checksum_update(gobj(), (const guchar*)data.c_str(), data.size());
+}
+
+} // Glib namespace

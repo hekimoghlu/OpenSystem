@@ -1,0 +1,327 @@
+Today is 20180412.  If that seems a long time ago, this document might
+be outdated.
+
+Note: For tests you must either "make install" first or else run the
+python script via the corresponding *.pl file.
+
+test/t3001-introspection-simple.py shows a sample of using introspection
+to work with a spreadsheet.
+
+test/t3002-introspection-io.py shows a sample of using introspection
+to load and save files.
+
+
+The following is a list of types and the API that is expected to both
+be useful in this setting and actually work.
+
+This is incomplete.  In particular, I'll have to look at
+* Expressions other than via text
+* Installing a gi override module for more pythony structure handling
+
+-----------------------------------------------------------------------------
+Note: the Python version of type names excludes the Gnm prefix.
+
+Workbook: [GObject, derived from GODoc]
+  new_with_sheets(count)
+  sheet_by_index(no)
+  sheet_by_name(string)
+  recalc()
+  recalc_all()
+  cells(qcomments,visibility)
+  props.recalc_mode
+
+
+GODoc: [GObject]
+  props.uri
+  props.dirty
+  props.pristine
+
+
+WorkbookView: [GObject]
+  new_from_uri(uri,opener,iocontext,encoding)
+  save(cmdctx)
+  save_as(uri,saver,cmdctx)
+  props.workbook
+  props.preferred_width
+  props.preferred_height
+
+
+Sheet: [GObject]
+  get_size()
+  cell_set_value(col,row,value)      [1]
+  cell_set_text(col,row,string)      [1]
+  cell_get_value(col,row)
+  cell_get(col,row)
+  cell_fetch(col,row)
+  cells(range)
+  cells_count()
+  is_cell_empty(col,row)
+  apply_style(range,style)           [1]
+  style_get(col,row)
+  col_is_hidden(col)
+  row_is_hidden(row)
+  col_get_info(col)
+  row_get_info(row)
+  col_set_size_pts(col,pts)
+  row_set_size_pts(row,pts)
+  col_set_size_pixels(col,pix)
+  row_set_size_pixels(row,pix)
+  col_size_fit_pixels(col,startrow,endrow,ignorestrings)
+  row_size_fit_pixels(row,startcol,endcol,ignorestrings)
+  props.name
+  props.workbook
+  props.rtl
+  props.visibility
+  props.display_formulas
+  props.display_zeros
+  props.display_grid
+  props.display_column_header
+  props.display_row_header
+  props.display_outlines
+  props.display_outlines_below
+  props.display_outlines_right
+  props.protected
+  props.protected_allow_edit_objects
+  props.protected_allow_edit_scenarios
+  props.protected_allow_cell_formatting
+  props.protected_allow_column_formatting
+  props.protected_allow_row_formatting
+  props.protected_allow_insert_columns
+  props.protected_allow_insert_rows
+  props.protected_allow_insert_hyperlinks
+  props.protected_allow_delete_columns
+  props.protected_allow_delete_rows
+  props.protected_allow_select_locked_cells
+  props.protected_allow_sort_ranges
+  props.protected_allow_edit_auto_filters
+  props.protected_allow_edit_pivottable
+  props.protected_allow_select_unlocked_cells
+  props.use_r1c1
+  props.tab_foreground
+  props.tab_background
+  props.zoom_factor
+  props.columns
+  props.rows
+
+
+GnmCell: [Boxed structure] [2]
+  name()
+  get_value()
+  get_entered_text()
+  get_format()
+  pos
+
+
+ColRowInfo: [Boxed structure]
+  is_default()
+  is_empty()
+
+GnmSheetSize: [Simple structure]
+  max_cols
+  max_rows
+
+
+GnmValue: [Boxed union]
+  new_int(int)
+  new_bool(bool)
+  new_float(double)
+  new_string(string)
+  new_empty()
+  get_as_string()
+  get_as_int()
+  get_as_float()
+  type_of()
+  hash()
+
+
+GnmValueType: [Enum]
+  EMPTY
+  BOOLEAN
+  FLOAT
+  ERROR
+  STRING
+  CELLRANGE
+  ARRAY
+
+
+GnmRange: [Simple structure]
+  init(col,row,col,row)
+  init_full_sheet(sheet)
+  init_cols(sheet,start,end)
+  init_rows(sheet,start,end)
+  init_cellpos(sheet,cellpos)
+  is_singleton()
+  is_full(sheet,horiz)
+  contained(other)
+  as_string()
+  start
+  end
+
+
+GnmCellPos: [Simple structure]
+  col
+  row
+
+
+GnmSheetVisibility: [Enum]
+  VISIBLE
+  HIDDEN
+  VERY_HIDDEN
+
+
+PasteFlags: [Enum]
+  CONTENTS
+  AS_VALUES
+  FORMATS
+  COMMENTS
+  OBJECTS
+  OPER_ADD
+  OPER_SUB
+  OPER_MULT
+  OPER_DIV
+  TRANSPOSE
+  LINK
+  SKIP_BLANKS
+  DONT_MERGE
+  IGNORE_COMMENTS_AT_ORIGIN
+  UPDATE_ROW_HEIGHT
+  EXPR_LOCAL_RELOCATE
+  NO_RECALC
+  FLIP_H
+  FLIP_V
+  ALL_CELL
+  ALL_SHEET
+  DEFAULT
+
+
+GnmStyle: [Boxed structure]
+  new()
+  new_default()
+  is_complete()
+  is_element_set()
+  unset_element()
+  set_pattern(int)
+  get_pattern()
+  set_font_name(string)
+  get_font_name()
+  set_font_bold(bool)
+  get_font_bold()
+  set_font_italic(bool)
+  get_font_italic()
+  set_font_uline(uline)
+  get_font_uline()
+  set_font_strike(bool)
+  get_font_strike()
+  set_font_script(script)
+  get_font_script()
+  set_font_size(pts)
+  get_font_size()
+  set_format(fmt)
+  set_format_text(fmtstring)
+  get_format()
+  set_align_h(halign)
+  get_align_h()
+  set_align_v(valign)
+  get_align_v()
+  set_indent(int)
+  get_indent()
+  set_rotation(degs)
+  get_rotation()
+  set_text_dir(dir)
+  get_text_dir()
+  set_text_wrap(bool)
+  get_text_wrap()
+  set_shrink_to_fit(bool)
+  get_shrink_to_fit()
+  set_contents_locked(bool)
+  get_contents_locked()
+  set_contents_hidden(bool)
+  get_contents_hidden()
+  get_effective_text_wrap()
+  visible_in_blank()
+
+
+GOFormat: [Boxed structure]
+  new_from_XL(string)
+  as_XL()
+  general
+  empty
+  default_date
+  default_time
+  default_date_time
+  default_percentage
+  default_money
+  default_accounting
+  is_invalid
+  is_general
+  is_markup
+  is_text
+  is_var_width
+  is_date
+  is_time
+  month_before_day
+  has_hour
+  has_minute
+  inc_precision
+  dec_precision
+  toggle_1000sep
+
+
+GOIOContext: [GObject]
+  new(cmdctx)
+
+
+GnmCmdContextStderr: [GObject]
+  new()
+
+
+GOFileSaver: [GObject]
+  get_default()
+  for_file_name(filename_or_uri)
+  for_mime_type(mimetype)
+  for_id(saverid)
+  props.id,
+  props.mime_type
+  props.extension
+  props.description
+  props.overwrite
+  props.interactive_only
+  props.format_level
+  props.scope
+
+
+GOFileOpener: [GObject]
+  get_suffixes()
+  get_mimes()
+  props.id,
+  props.description
+  props.interactive_only
+
+
+GOFileFormatLevel: [Enum]
+  NONE
+  WRITE_ONLY
+  NEW
+  MANUAL
+  MANUAL_REMEMBER
+  AUTO
+  LAST
+
+
+Gnm (i.e., not in a class):
+  clipboard_copy_range(sheet,range)
+  plugins_init(cmdctx)
+
+
+GOffice (i.e., not in a class):
+  filename_to_uri(filename)
+  get_file_savers()
+  get_file_openers()
+
+
+
+Footnotes:
+[1] This function is not calling the obvious C function, but uses
+    introspection's rename-to feature to present a better API.
+[2] Cells are owned by the sheet.  GnmCell's boxed type uses no-op
+    copying and freeing.

@@ -1,0 +1,44 @@
+#! /usr/bin/env python
+
+# Postr, a Flickr Uploader
+#
+# Copyright (C) 2006-2007 Ross Burton <ross@burtonini.com>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+# St, Fifth Floor, Boston, MA 02110-1301 USA
+
+import gettext
+gettext.install('postr')
+
+import sys
+from twisted.internet import gtk3reactor
+reactor = gtk3reactor.install()
+
+# Import from src first so that we can run directly from the source tree for
+# development.
+try:
+    from src import postr
+except ImportError, e:
+    from postr import postr
+
+p = postr.Postr()
+if p.is_running():
+    for url in sys.argv[1:]:
+        p.open_uri(url)
+    sys.exit(0)
+else:
+    p.window.show()
+    p.add_window(p.window)
+    for url in sys.argv[1:]:
+        p.add_image_filename(url)
+    reactor.run()

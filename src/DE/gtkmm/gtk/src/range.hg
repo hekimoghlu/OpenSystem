@@ -1,0 +1,122 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/enums.h> //For SensitivityType.
+#include <gtkmm/border.h>
+#include <gtkmm/orientable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+
+namespace Gtk
+{
+
+class GTKMM_API Adjustment;
+
+//TODO: Derive from (and implement) AccessibleRange when we can break ABI.
+
+/** Base class for widgets which visualize an adjustment.
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Range
+: public Widget,
+  public Orientable
+{
+  _CLASS_GTKOBJECT(Range,GtkRange,GTK_RANGE,Gtk::Widget,GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Orientable)
+protected:
+  _CTOR_DEFAULT
+public:
+
+  _WRAP_METHOD(void set_adjustment(const Glib::RefPtr<Adjustment>& adjustment), gtk_range_set_adjustment)
+  void unset_adjustment();
+
+  _WRAP_METHOD(Glib::RefPtr<Adjustment> get_adjustment(), gtk_range_get_adjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_adjustment() const, gtk_range_get_adjustment, refreturn, constversion)
+  _WRAP_METHOD(void set_inverted(bool setting = true), gtk_range_set_inverted)
+  _WRAP_METHOD(bool get_inverted() const, gtk_range_get_inverted)
+  _WRAP_METHOD(void set_flippable(bool flippable = true), gtk_range_set_flippable)
+  _WRAP_METHOD(bool get_flippable() const, gtk_range_get_flippable)
+
+  _WRAP_METHOD(void set_slider_size_fixed(bool size_fixed = true), gtk_range_set_slider_size_fixed)
+  _WRAP_METHOD(bool get_slider_size_fixed() const, gtk_range_get_slider_size_fixed)
+
+  /** This method returns the area that contains the range's trough
+   * and its steppers, in the widget's Gdk::Surface coordinates.
+   *
+   * This method is useful mainly for Range subclasses.
+   *
+   * @result The range rectangle.
+   */
+  Gdk::Rectangle get_range_rect() const;
+  _IGNORE(gtk_range_get_range_rect)
+
+  _WRAP_METHOD(void  get_slider_range(int& slider_start, int& slider_end) const, gtk_range_get_slider_range)
+
+  _WRAP_METHOD(void set_increments(double step, double  page), gtk_range_set_increments)
+  _WRAP_METHOD(void set_range(double min, double max), gtk_range_set_range)
+  _WRAP_METHOD(void set_value(double value), gtk_range_set_value)
+  _WRAP_METHOD(double get_value() const, gtk_range_get_value)
+
+  _WRAP_METHOD(void set_show_fill_level(bool show_fill_level = true), gtk_range_set_show_fill_level)
+  _WRAP_METHOD(bool get_show_fill_level() const, gtk_range_get_show_fill_level)
+  _WRAP_METHOD(void set_restrict_to_fill_level(bool restrict_to_fill_level = true), gtk_range_set_restrict_to_fill_level)
+  _WRAP_METHOD(bool get_restrict_to_fill_level() const, gtk_range_get_restrict_to_fill_level)
+  _WRAP_METHOD(void set_fill_level(double fill_level), gtk_range_set_fill_level)
+  _WRAP_METHOD(double get_fill_level() const, gtk_range_get_fill_level)
+  _WRAP_METHOD(void set_round_digits(int round_digits), gtk_range_set_round_digits)
+  _WRAP_METHOD(int get_round_digits() const, gtk_range_get_round_digits)
+
+  _WRAP_SIGNAL(void value_changed(), "value_changed")
+  _WRAP_SIGNAL(void adjust_bounds(double new_value), "adjust_bounds")
+  _WRAP_SIGNAL(void move_slider(ScrollType scroll), "move_slider")
+  _WRAP_SIGNAL(bool change_value(ScrollType scroll, double new_value), "change_value")
+
+  _WRAP_PROPERTY("adjustment", Glib::RefPtr<Adjustment>)
+  _WRAP_PROPERTY("inverted", bool)
+  _WRAP_PROPERTY("show-fill-level", bool)
+  _WRAP_PROPERTY("restrict-to-fill-level", bool)
+  _WRAP_PROPERTY("fill-level", double)
+  _WRAP_PROPERTY("round-digits", int)
+
+protected:
+  virtual void get_range_border_vfunc(Gtk::Border& border) const;
+
+#m4begin
+dnl /* get_range_border_vfunc is wrapped partially by hand (C callback is
+dnl  * custom), because this vfunc is a getter with a "return value" as
+dnl  * parameter. This complicates things a bit - we cannot use Glib::wrap in
+dnl  * obj->get_range_border_vfunc(Glib::wrap(c_border));
+dnl  * because compiler complains about passing `Gtk::Border', when expecting
+dnl  * `Gtk::Border&'. Using `Gtk::Border(c_border)' also does not work, because
+dnl  * it is making a copy of passed C border and, when went out of scope,
+dnl  * destroys it without copying contents to a C border. See:
+dnl  * https://bugzilla.gnome.org/show_bug.cgi?id=603926#c3
+dnl  */
+dnl // _VFUNC_H is not used - prototype is written above.
+  _VFUNC_PH(get_range_border, void,
+    `GtkRange* self, GtkBorder* border',,dnl // C prototype
+    `self, border')dnl // C argument names
+  _VFUNC_CC(get_range_border_vfunc, get_range_border, void, void,
+    `Gtk::Border& border', `border.gobj()', 1)
+dnl // _VFUNC_PCC is not used - custom C callback is implemented in range.ccg.
+#m4end
+};
+
+} // namespace Gtk

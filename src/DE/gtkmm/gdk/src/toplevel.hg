@@ -1,0 +1,120 @@
+/* Copyright (C) 2020 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/interface.h>
+#include <gdkmm/surface.h>
+#include <gdkmm/texture.h>
+#include <gdkmm/toplevellayout.h>
+#include <gdkmm/toplevelsize.h>
+#include <vector>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/interface_p.h)
+_PINCLUDE(gdk/gdk.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+extern "C"
+{
+typedef struct _GdkToplevelInterface GdkToplevelInterface;
+}
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gdk
+{
+
+_WRAP_ENUM(SurfaceEdge, GdkSurfaceEdge, decl_prefix GDKMM_API)
+_WRAP_ENUM(FullscreenMode, GdkFullscreenMode,
+  s#^CURRENT_MONITOR$#ON_CURRENT_MONITOR#,
+  s#^ALL_MONITORS$#ON_ALL_MONITORS#,
+  decl_prefix GDKMM_API)
+_WRAP_ENUM(TitlebarGesture, GdkTitlebarGesture, decl_prefix GDKMM_API)
+
+/** Interface for toplevel surfaces.
+ *
+ * A %Gdk::Toplevel is a freestanding toplevel surface.
+ *
+ * The %Gdk::Toplevel interface provides useful APIs for
+ * interacting with the windowing system, such as controlling
+ * maximization and size of the surface, setting icons and
+ * transient parents for dialogs.
+ *
+ * @see Gdk::Surface, Gdk::Popup
+ * @newin{3,98}
+ */
+class GDKMM_API Toplevel : public Glib::Interface
+{
+  _CLASS_INTERFACE(Toplevel, GdkToplevel, GDK_TOPLEVEL, GdkToplevelInterface, , , GDKMM_API)
+
+public:
+  _WRAP_ENUM(State, GdkToplevelState, decl_prefix GDKMM_API)
+  _WRAP_ENUM(Capabilities, GdkToplevelCapabilities, decl_prefix GDKMM_API)
+
+  _WRAP_METHOD(void present(const Glib::RefPtr<ToplevelLayout>& layout),
+    gdk_toplevel_present)
+  _WRAP_METHOD(bool minimize(), gdk_toplevel_minimize)
+  _WRAP_METHOD(bool lower(), gdk_toplevel_lower)
+  _WRAP_METHOD(void focus(guint32 timestamp), gdk_toplevel_focus)
+  _WRAP_METHOD(State get_state() const, gdk_toplevel_get_state)
+  _WRAP_METHOD(void set_title(const Glib::ustring& title), gdk_toplevel_set_title)
+  _WRAP_METHOD(void set_startup_id(const Glib::ustring& startup_id), gdk_toplevel_set_startup_id)
+  _WRAP_METHOD(void set_transient_for(const Glib::RefPtr<Surface>& parent),
+    gdk_toplevel_set_transient_for)
+  _WRAP_METHOD(void set_modal(bool modal = true), gdk_toplevel_set_modal)
+
+#m4 _CONVERSION(`const std::vector<Glib::RefPtr<Texture>>&',`GList*',`Glib::ListHandler<Glib::RefPtr<Texture>>::vector_to_list($3).data()')
+  _WRAP_METHOD(void set_icon_list(const std::vector<Glib::RefPtr<Texture>>& surfaces),
+    gdk_toplevel_set_icon_list)
+
+  _WRAP_METHOD(bool show_window_menu(const Glib::RefPtr<Event>& event),
+    gdk_toplevel_show_window_menu)
+  _WRAP_METHOD(void set_decorated(bool decorated = true), gdk_toplevel_set_decorated)
+  _WRAP_METHOD(void set_deletable(bool deletable = true), gdk_toplevel_set_deletable)
+  _WRAP_METHOD(bool supports_edge_constraints() const, gdk_toplevel_supports_edge_constraints)
+
+  _WRAP_METHOD(void inhibit_system_shortcuts(const Glib::RefPtr<Event>& event),
+    gdk_toplevel_inhibit_system_shortcuts)
+  _WRAP_METHOD(void restore_system_shortcuts(), gdk_toplevel_restore_system_shortcuts)
+
+  _WRAP_METHOD(void begin_resize(SurfaceEdge edge, const Glib::RefPtr<Device>& device,
+    int button, double x, double y, guint32 timestamp), gdk_toplevel_begin_resize)
+  _WRAP_METHOD(void begin_move(const Glib::RefPtr<Device>& device, int button,
+    double x, double y, guint32 timestamp), gdk_toplevel_begin_move)
+
+  _WRAP_METHOD(bool titlebar_gesture(TitlebarGesture gesture),
+    gdk_toplevel_titlebar_gesture, newin "4,20")
+
+  _WRAP_METHOD(Capabilities get_capabilities() const, gdk_toplevel_get_capabilities)
+  _WRAP_METHOD(Gravity get_gravity() const, gdk_toplevel_get_gravity)
+  _WRAP_METHOD(void set_gravity(Gravity gravity), gdk_toplevel_set_gravity)
+
+  _WRAP_SIGNAL(void compute_size(ToplevelSize& size), "compute-size",
+    no_default_handler, custom_c_callback)
+
+  _WRAP_PROPERTY("state", State)
+  _WRAP_PROPERTY("title", Glib::ustring)
+  _WRAP_PROPERTY("startup-id", Glib::ustring)
+  _WRAP_PROPERTY("transient-for", Glib::RefPtr<Surface>)
+  _WRAP_PROPERTY("modal", bool)
+  //TODO: _WRAP_PROPERTY("icon-list", std::vector<Glib::RefPtr<Texture>>)
+  _WRAP_PROPERTY("decorated", bool)
+  _WRAP_PROPERTY("deletable", bool)
+  _WRAP_PROPERTY("fullscreen-mode", FullscreenMode)
+  _WRAP_PROPERTY("shortcuts-inhibited", bool)
+  _WRAP_PROPERTY("capabilities", Capabilities)
+  _WRAP_PROPERTY("gravity", Gravity)
+};
+
+} // namespace Gdk

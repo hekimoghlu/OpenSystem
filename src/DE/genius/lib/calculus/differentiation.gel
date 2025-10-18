@@ -1,0 +1,172 @@
+# Numerial differentiation
+# 
+# The algorithms are described in:
+# BurdenFaires
+
+# In the below, f indicates the function whose derivative we wish to
+# determine, x0 the point at which we wish to differentiate, and h how
+# close to f we want to take secant lines
+#
+# FIXME:
+# The main problem with numerical differentiation is that it is
+# numerically unstable, in that you can't just let h go to zero and
+# hope that the derivative converges, because in the definition of the
+# derivative you take the difference of f(x+h) and f(x), which are very
+# close numbers, so the difference is small and known to ever fewer digits of
+# accuracy.
+# Thus, it would make sense to jack up the precision when letting h get small
+# if doing this in an automated way
+# However, with the default precision in Genius 0.4.5, these methods
+# seem to be pretty stable down to h=10^-20, and only start getting really bad
+# around 10^-70
+
+# These methods all return one value, f'(x0)
+
+# FIXME:
+# Currently only works for real/complex functions of a *real* variable
+# Allow higher order (arbitrary order) derivatives
+
+# One-sided three-point formula, Section 4.1, Formula 4.4, p. 160
+function OneSidedThreePointFormula(f,x0,h) =
+# This has error term max(f''')h^2/3
+	(
+	local *;
+# check arguments
+## check types
+	if not IsFunctionOrIdentifier(f) then
+		(error("OneSidedThreePointFormula: argument 1 must be a function");bailout)
+	else if not IsReal(h) then
+		(error("OneSidedThreePointFormula: argument 2 must be real values");bailout);
+## check bounds
+	if h==0  then
+		(error("OneSidedThreePointFormula: argument 2 must be non-zero (negative for left-handed derivative, positive for right-handed)");bailout);
+
+# Start calculating
+        (-3*f(x0)+4*(f call (x0+h))-(f call (x0+2*h)))/(2*h)
+	)
+SetHelp("OneSidedThreePointFormula","calculus","Compute one-sided derivative using three-point formula");
+
+# Two-sided three-point formula, Section 4.1, Formula 4.5, p. 161
+function TwoSidedThreePointFormula(f,x0,h) =
+# This has error term max(f''')h^2/6
+	(
+	local *;
+# check arguments
+## check types
+	if not IsFunctionOrIdentifier(f) then
+		(error("TwoSidedThreePointFormula: argument 1 must be a function");bailout)
+	else if not IsReal(h) then
+		(error("TwoSidedThreePointFormula: argument 2 must be real values");bailout);
+## check bounds
+	if h==0 then (error("TwoSidedThreePointFormula: argument 2 must be non-zero");bailout);
+
+# Start calculating
+        ((f call (x0+h))-(f call (x0-h)))/(2*h)
+	)
+SetHelp("TwoSidedThreePointFormula","calculus","Compute two-sided derivative using three-point formula");
+
+# One-sided five-point formula, Section 4.1, Formula 4.7, p. 161
+function OneSidedFivePointFormula(f,x0,h) =
+# This has error term max(f''''')h^4/5
+	(
+	local *;
+# check arguments
+## check types
+	if not IsFunctionOrIdentifier(f) then
+		(error("OneSidedFivePointFormula: argument 1 must be a function");bailout)
+	else if not IsReal(h) then
+		(error("OneSidedFivePointFormula: argument 2 must be real values");bailout);
+## check bounds
+	if h==0 then (error("OneSidedFivePointFormula: argument 2 must be non-zero (negative for left-handed derivative, positive for right-handed)");bailout);
+
+# Start calculating
+        (-25*(f call (x0))+48*(f call (x0+h))-36*(f call (x0+2*h))+16*(f call (x0+3*h))-3*(f call (x0+4*h)))/(12*h)
+	)
+SetHelp("OneSidedFivePointFormula","calculus","Compute one-sided derivative using five point formula");
+
+# Two-sided five-point formula, Section 4.1, Formula 4.6, p. 161
+function TwoSidedFivePointFormula(f,x0,h) =
+# This has error term max(f''''')h^4/30
+	(
+	local *;
+# check arguments
+## check types
+	if(not IsFunctionOrIdentifier(f)) then
+		(error("TwoSidedFivePointFormula: argument 1 must be a function");bailout)
+	else if(not IsReal(h)) then
+		(error("TwoSidedFivePointFormula: argument 2 must be a real value");bailout);
+## check bounds
+	if(h==0) then (error("TwoSidedFivePointFormula: argument 2 must be non-zero");bailout);
+
+# Start calculating
+        ((f call (x0-2*h))-8*(f call (x0-h))+8*(f call (x0+h))-(f call (x0+2*h)))/(12*h)
+	)
+SetHelp("TwoSidedFivePointFormula","calculus","Compute two-sided derivative using five-point formula");
+
+SetHelp ("DerivativeTolerance", "parameters", "Tolerance for calculating the derivatives of functions")
+parameter DerivativeTolerance=10.0^(-5);
+SetHelp ("DerivativeSFS", "parameters", "How many successive steps to be within tolerance for calculation of derivative")
+parameter DerivativeSFS=20;
+SetHelp ("DerivativeNumberOfTries", "parameters", "How many iterations to try to find the limit for derivative")
+parameter DerivativeNumberOfTries=100;
+
+# Simple test for differentiability
+function IsDifferentiable(f,x0) =
+(
+	local *;
+	# differentiable functions have to be continuous and left and right derivatives must
+	# be equal
+	IsContinuous (f, x0) and
+	| NumericalLeftDerivative (f,x0) - NumericalRightDerivative (f,x0) | < 2*DerivativeTolerance
+)
+SetHelp("IsDifferentiable","calculus","Test for differentiability by approximating the left and right limits and comparing");
+
+# Simple derivative function
+#FIXME!!!! BROKEN!!!! ???
+function NumericalDerivative(f,x0) =
+# returns f'(x0)
+(
+    local *;
+    # FIXME: perhaps check differentiability first, but then we're doing so many limits already
+    NumericalLimitAtInfinity (`(n)[f,x0]=(TwoSidedFivePointFormula(f,x0,2.0^(-n))),
+			      Identity,
+			      DerivativeTolerance,
+			      DerivativeSFS,
+			      DerivativeNumberOfTries)
+)
+SetHelp("NumericalDerivative","calculus","Attempt to calculate numerical derivative");
+SetHelpAlias ("NumericalDerivative", "NDerivative");
+NDerivative = NumericalDerivative
+
+function NumericalLeftDerivative(f,x0) =
+(
+    local *;
+    NumericalLimitAtInfinity (`(n)[f,x0]=(OneSidedFivePointFormula(f,x0,-(2.0^(-n)))),
+			      Identity,
+			      DerivativeTolerance,
+			      DerivativeSFS,
+			      DerivativeNumberOfTries)
+)
+SetHelp("NumericalLeftDerivative","calculus","Attempt to calculate numerical left derivative");
+
+function NumericalRightDerivative(f,x0) =
+(
+    local *;
+    NumericalLimitAtInfinity (`(n)[f,x0]=(OneSidedFivePointFormula(f,x0,2.0^(-n))),
+			      Identity,
+			      DerivativeTolerance,
+			      DerivativeSFS,
+			      DerivativeNumberOfTries)
+)
+SetHelp("NumericalRightDerivative","calculus","Attempt to calculate numerical right derivative");
+
+function Derivative(f,x0) =
+(
+	local *;
+	df = SymbolicDerivativeTry (f);
+	if IsNull(df) then
+		NumericalDerivative (f, x0)
+	else
+		df(x0)
+)
+SetHelp("Derivative","calculus","Attempt to calculate derivative by trying first symbolically and then numerically");

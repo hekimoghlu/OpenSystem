@@ -1,0 +1,115 @@
+image: fedora:latest
+
+stages:
+  - check
+  - test
+  - deploy
+
+include:
+  - project: "GNOME/citemplates"
+    file: "templates/default-rules.yml"
+  - project: "GNOME/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak@x86_64"
+  - component: "gitlab.gnome.org/GNOME/citemplates/basic-deploy-docs@master"
+    inputs:
+      docs-job-name: "cargo-doc"
+
+variables:
+  BUNDLE: "org.gnome.Snapshot.Devel.flatpak"
+  MANIFEST_PATH: "build-aux/org.gnome.Snapshot.Devel.json"
+  FLATPAK_MODULE: "snapshot"
+  APP_ID: "org.gnome.Snapshot.Devel"
+  RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+
+flatpak@x86_64:
+  extends: ".flatpak@x86_64"
+
+flatpak@aarch64:
+  extends: ".flatpak@aarch64"
+
+rustfmt:
+  image: "rust:slim"
+  stage: check
+  script:
+    - rustup component add rustfmt
+    - echo -e "" >> src/config.rs
+    - rustc -Vv && cargo -Vv
+    - cargo fmt --version
+    - cargo fmt --all -- --color=always --check
+
+codespell:
+  stage: check
+  script:
+    - dnf install --quiet -y codespell
+    - codespell -S "*.png,*.po,.git,*.jpg" -L crate -f
+
+cargo-doc:
+  stage: test
+  image: "ghcr.io/gtk-rs/gtk4-rs/gtk4:latest"
+  interruptible: true
+  artifacts:
+    name: 'Code Documentation'
+    paths:
+      - ${CI_PROJECT_NAME}-docs.tar.gz
+  variables:
+    DOC_OPTIONS: |
+      --extern-html-root-url=gtk4=https://gtk-rs.org/gtk4-rs/stable/latest/docs/
+      --extern-html-root-url=gio=https://gtk-rs.org/gtk-rs-core/stable/latest/docs/
+      --extern-html-root-url=glib=https://gtk-rs.org/gtk-rs-core/stable/latest/docs/
+      --extern-html-root-url=gio=https://gtk-rs.org/gtk-rs-core/stable/latest/docs/
+      --extern-html-root-url=gstreamer=https://gstreamer.pages.freedesktop.org/gstreamer-rs/stable/latest/docs/
+  before_script:
+    - sudo dnf install -y gstreamer1-devel gstreamer1-plugins-base-devel
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
+    - source $HOME/.cargo/env
+    - rustup toolchain install nightly --profile minimal --allow-downgrade
+  script:
+    - cargo +nightly rustdoc -p aperture -- -Z unstable-options ${DOC_OPTIONS}
+    - tar --auto-compress --create --file "$CI_PROJECT_DIR/${CI_PROJECT_NAME}-docs.tar.gz" --directory "target/doc" .
+
+cargo-audit:
+  stage: test
+  interruptible: true
+  allow_failure: true
+  script:
+    - dnf install --quiet -y cargo-deny cargo
+    - cargo-deny check
+
+nightly@x86_64:
+  extends: ".publish_nightly"
+  needs: ["flatpak@x86_64"]
+
+nightly@aarch64:
+  extends: ".publish_nightly"
+  needs: ["flatpak@aarch64"]
+
+.flatpak-command: &flatpak-command
+  image: '${RUNTIME_IMAGE}'
+  tags:
+    - flatpak
+  script:
+    - flatpak-builder --user --disable-rofiles-fuse --keep-build-dirs --stop-at=${FLATPAK_MODULE} flatpak_app ${MANIFEST_PATH}
+    - flatpak build-finish --share=network flatpak_app
+    - echo "cd .. && ${COMMAND}" | flatpak-builder --user --disable-rofiles-fuse --build-shell=${FLATPAK_MODULE} flatpak_app ${MANIFEST_PATH}
+
+cargo-clippy:
+  <<: *flatpak-command
+  variables:
+    COMMAND: "cargo clippy --all-targets --workspace --all-features -- -D warnings"
+
+cargo-test:
+  <<: *flatpak-command
+  variables:
+    COMMAND: "cargo test --workspace --all-features --all-targets"
+
+check-potfiles:
+  stage: check
+  script:
+    - dnf install --quiet -y gettext python3 git-core
+    - git clone --quiet --depth=1 https://gitlab.gnome.org/msandova/check-potfiles.git
+    - python3 check-potfiles/check_potfiles.py
+        --directory src --directory data
+        --keyword=i18n_f --exclude=src/i18n.rs

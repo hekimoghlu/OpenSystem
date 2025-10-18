@@ -1,0 +1,583 @@
+                   ------------------------------
+                   GNU Image Manipulation Program
+                         Development Branch
+                   ------------------------------
+
+This is the development branch of GIMP.
+
+
+Overview of Changes from GIMP 3.1.4 to GIMP 3.2-RC1
+===================================================
+
+Core:
+
+  - macOS: "Quit" from the dock's right-click menu will now follow our
+    standard Quit procedure, by intercepting the
+    applicationShouldTerminate signal, instead of forcing the
+    application to close (hence losing unsaved changes).
+  - "Add Layer Mask" will now have an "Edit mask immediately" checkbox
+    allowing to decide whether to go into Edit Mask state or not. This
+    setting is saved across repetitive actions, as all other settings in
+    this dialog.
+  - Filters on pass-through group layers will no longer be limited to
+    its children layers' bounding box, but to the actual bounding box,
+    which includes all lower layers. This also implies that empty
+    pass-through group layers can have an effect which will work like
+    "adjustment layers" in other software.
+  - New actions "layers-rasterize" and "layers-revert-rasterize" to
+    respectively rasterize and un-rasterize text, link or vector layers
+    (rasterizing these layers is now always revertable, though any
+    painting edit done after the rasterization is obviously lost).
+  - Actions "layers-link-discard", "layers-vector-discard" and
+    "layers-text-discard" have been removed. Only the latter existed in
+    previous stable versions so any custom shortcut associated to
+    "layers-text-discard" will be migrated as shortcut of
+    "layers-rasterize".
+  - When the GUI binary is run with --no-interface (-i) CLI option, we
+    branch on the same codebase as gimp-console. Therefore even though
+    this GUI binary still links with GTK, it won't run any GTK code and
+    can therefore be run on headless servers.
+  - Action "layers-vector-fill-stroke" removed (only available since
+    3.1.4, not in any stable release).
+
+Tools:
+
+  - Bucket Fill tool: it will be prevented to work on non-rasterized
+    link and vector layers.
+  - All tools drawing directly on layers are now blocked when a text,
+    link or vector layer is selected. An error message will suggest you
+    rasterize these layers explicitly first, in order to be able to do
+    any "destructive" action.
+  - Text tool: dialog when trying to edit a rasterized layer text has
+    been reworded.
+  - Path tool: selecting a vector layer when the Path tool is active
+    will pop a dialog up, similar to the one which we have in Text tool
+    when a text layer is picked.
+
+Graphical User Interface:
+
+  - "Monitor Linked Image" and "Discard Link Information" menu items
+    added to Layer menu when the selected layer is a link layer.
+  - The GimpColorHexEntry will now update the chosen color as you type.
+  - Use a standard, yet extended, AppMenu on macOS.
+  - Advertize the menu path to "Rasterize" items in error messages when
+    trying to edit a rasterizable drawable.
+
+Plug-Ins:
+
+  - file-compressor: add zip decompression support. This allows support
+    for .hgt.zip files, as well as other formats compressed with zip.
+  - SVG: initial export support, including support for vector, text and
+    link layers natively. Raster layers and masks are optionally
+    embedded as either PNG or JPEG base64-encoded data.
+  - Gimpressionist: edit button labels to more appropriate wording.
+
+API:
+
+  - The following libgimpbase API are now deprecated:
+    * gimp_pixpipe_params_init
+    * gimp_pixpipe_params_parse
+    * gimp_pixpipe_params_build
+    * gimp_pixpipe_params_free
+  - New libgimp functions:
+    * gimp_vector_layer_get_enable_fill
+    * gimp_vector_layer_get_enable_stroke
+    * gimp_vector_layer_get_fill_color
+    * gimp_vector_layer_get_fill_pattern
+    * gimp_vector_layer_get_path
+    * gimp_vector_layer_get_stroke_cap_style
+    * gimp_vector_layer_get_stroke_color
+    * gimp_vector_layer_get_stroke_pattern
+    * gimp_vector_layer_get_stroke_dash_offset
+    * gimp_vector_layer_get_stroke_dash_pattern
+    * gimp_vector_layer_get_stroke_join_style
+    * gimp_vector_layer_get_stroke_miter_limit
+    * gimp_vector_layer_get_stroke_width
+    * gimp_vector_layer_get_stroke_width_unit
+    * gimp_vector_layer_set_enable_fill
+    * gimp_vector_layer_set_enable_stroke
+    * gimp_vector_layer_set_fill_color
+    * gimp_vector_layer_set_stroke_cap_style
+    * gimp_vector_layer_set_stroke_color
+    * gimp_vector_layer_set_stroke_dash_offset
+    * gimp_vector_layer_set_stroke_dash_pattern
+    * gimp_vector_layer_set_stroke_join_style
+    * gimp_vector_layer_set_stroke_miter_limit
+    * gimp_vector_layer_set_stroke_width
+    * gimp_vector_layer_set_stroke_width_unit
+    * gimp_item_is_vector_layer
+    * gimp_item_id_is_link_layer
+    * gimp_item_is_link_layer
+    * gimp_link_layer_get_by_id
+    * gimp_link_layer_get_file
+    * gimp_link_layer_get_type
+    * gimp_link_layer_new
+    * gimp_link_layer_set_file
+    * gimp_param_link_layer_get_type
+    * gimp_param_spec_link_layer
+    * gimp_procedure_add_link_layer_argument
+    * gimp_procedure_add_link_layer_aux_argument
+    * gimp_procedure_add_link_layer_return_value
+    * gimp_link_layer_get_mime_type
+    * gimp_text_layer_get_outline
+    * gimp_text_layer_get_outline_antialias
+    * gimp_text_layer_get_outline_cap_style
+    * gimp_text_layer_get_outline_color
+    * gimp_text_layer_get_outline_dash_offset
+    * gimp_text_layer_get_outline_direction
+    * gimp_text_layer_get_outline_join_style
+    * gimp_text_layer_get_outline_miter_limit
+    * gimp_text_layer_get_outline_width
+    * gimp_text_layer_set_outline
+    * gimp_text_layer_set_outline_antialias
+    * gimp_text_layer_set_outline_cap_style
+    * gimp_text_layer_set_outline_color
+    * gimp_text_layer_set_outline_dash_offset
+    * gimp_text_layer_set_outline_direction
+    * gimp_text_layer_set_outline_join_style
+    * gimp_text_layer_set_outline_miter_limit
+    * gimp_text_layer_set_outline_width
+    * gimp_param_rasterizable_get_type
+    * gimp_param_spec_rasterizable
+    * gimp_rasterizable_get_type
+    * gimp_rasterizable_is_rasterized
+    * gimp_rasterizable_rasterize
+    * gimp_rasterizable_restore
+  - Removed libgimp functions:
+    * gimp_vector_layer_discard (since 3.1.4, but never in a stable
+      release).
+  - New libgimp class: GimpLinkLayer
+  - New libgimpbase enum types:
+    * GimpTextOutline
+    * GimpTextOutlineDirection
+  - New libgimpwidgets macros:
+    * GIMP_ICON_LAYER_LINK_LAYER
+    * GIMP_ICON_LAYER_VECTOR_LAYER
+  - libgimpwidgets: GimpBrowser search entry ported to GtkSearchEntry.
+  - New libgimp interface: GimpRasterizable. GimpLinkLayer,
+    GimpTextLayer and GimpVectorLayer now implement this interface.
+  - gimp_item_is_is_text_layer() will now always return TRUE for a layer
+    which is a text layer in backend, even if it has been rasterized. It
+    used not to, probably because the "Discard Text Information" was not
+    reversible (except by undoing), whereas now we can "Revert
+    Rasterize". Instead you should use gimp_rasterizable_is_rasterized()
+    to determine whether to consider a GimpTextLayer as a raster layer
+    or as a text layer.
+  - GimpLabelEntry (libgimpwidgets) accepts a NULL value and will
+    convert it to empty string.
+
+Build:
+
+  - Depends on babl 0.1.116 and GEGL 0.4.64.
+  - The stable Snap package (on Snap Store) has been officially passed
+    over to the GIMP team.
+
+
+Overview of Changes from GIMP 3.1.2 to GIMP 3.1.4
+=================================================
+
+Core:
+
+  - About dialog now shows "Up to date as of <date>" text for more
+    clarity.
+  - Fixed config migration when updating to GIMP 3.1/2.
+  - Reorganizing layer search code into generic item tree view search
+    code for further reusing into other use cases.
+  - Internal classes, config items and actions renamed from "vectors" to
+    "path".
+  - Some cleanup of outdated disabled unit tests and other warnings.
+  - Restructuration of internal GimpControllerManager and
+    GimpContainerView API.
+  - GimpContainerListView now uses a GtkListBox. A Playground switch was
+    added to use the new widgets in all views that can be switched
+    between list and grid view (brushes, patterns etc.). This won't
+    likely get out of Playground before GIMP 4 because it is far too
+    slow right now (and apparently we'll need GTK4 for making it fast as
+    our current lists).
+  - Various code have been moving away from GtkTreeView and some new
+    internal classes were added as a preparation for GTK4 port.
+  - GEX format updated to use standard <custom/> instead of <metadata/>
+    per update in the AppStream specs in the last few years. This
+    doesn't make any compatibility issue since this format is purely
+    internal only for now, not public.
+  - New setting "Update metadata automatically" in Preferences > Image
+    Import & Export > Export Policies. When enabled, add and update
+    metadata automatically. When disabled, only the minimum necessary
+    metadata changes are made, without changing modification date,
+    synchronizing tags, or updating the software and change history
+    metadata. This new setting is enabled by default.
+  - Fix palette import to properly import colors with alpha values from
+    palettes.
+  - New layer types:
+    * vector layers
+    * link layers
+  - Fill/Stroke editor are now live-previewing color changes for vector
+    layer fill/stroke and text layer outlines.
+
+Tools:
+
+  - MyPaint brush tool was ported to the newer MyPaintSurface2 API. A
+    consequence is that we now depend on mypaint-brushes-2.0 instead of
+    mypaint-brushes-1.0.
+  - Seamless Clone (Playground): made to work again, but is still too
+    slow to move out of Playground.
+  - The Paths tool has updated UI to create vector layers.
+  - Text tool: bold, italic and underline can now be applied with
+    commonly used shortcuts (Ctrl+b, i and u respectively).
+  - Vector and Link layers cannot be painted on, and filters cannot be
+    merged on them. They now need to be explicitly downgraded to raster
+    layers.
+
+Graphical User Interface:
+
+  - More consistent capitalization across text in UI.
+  - Use system colors on Windows title bar when System colors theme is
+    set.
+  - Make the comment text area sensitive in Export procedure dialogs
+    depending on whether "Save Comment" checkbox is checked or not.
+  - In various GUI using a GtkStack (Input Controller dialogue,
+    Preferences dialogue, and Welcome dialogue), we now turn off
+    animations when it is set OFF system-wide.
+  - "System" color scheme now also works on macOS.
+  - GimpSpinScale cursors now changed to "pointer" when hovering the
+    slider area and "col-resize" when actually grabbing the cursor.
+  - The Welcome dialog will now recognize your standard shortcuts to
+    create a new file, open a file or open one of the 10 most recent
+    files.
+
+Plug-Ins:
+
+  - TIFF - Add support for the following features, based on unofficial
+    documentation and user-provided sample files:
+    * Sets the selected layer based on the image-level metadata.
+    * Sets the visibility of the background layer based on the image
+      level metadata.
+    * Sets the blend mode and color tag of each layer, based on extended
+      layer-level metadata. Legacy blend modes are used, based on
+      user feedback and comparison with Sketchbook.
+    * Creates group layers and stores layers in them. Layers are read from
+      top to bottom, and layer groups are added and filled based on layer
+      level metadata.
+  - Animation Playback was redesigned to more closely resemble standard
+    playback UIs. The redesign also changes the progress bar to a
+    GtkScale, so users can more easily move to different frames on the
+    timeline.
+  - New GEGL Filter Browser plug-in to list and inspect all available
+    filters for development purpose.
+  - New import support:
+    * PAA textures: initial import support (includes RGBA 4444, 5551,
+      8888, and Grayscale with Alpha channel. It does not yet cover DXT1
+      - 5 texture import support).
+    * Seattle Filmworks photos (earliest format SFW93A, and the most
+      common format SFW94A). Both formats are essentially mangled JPEGs,
+      though mangled in different ways.
+    * HRZ Slow Scan Television Images (restored, as it used to be
+      implemented and removed in 2004).
+  - Raw Image data plug-in dialog redesigned to be on a two-column
+    layout to avoid over-high dialog.
+  - Print: in sandboxed environments (Flatpak, Snap), the print Settings
+    are now displayed as a second dialog after the portal print dialog.
+    This 2-step workflow is a work-around to the inability to tweak the
+    print dialog when the print portal is in use.
+
+API:
+
+  - GimpTRCType enum type made available in libgimp and PDB.
+  - gimp-file-save properly sets associated save or exported files.
+  - New PDB/libgimp functions:
+    * gimp_drawable_filter_operation_get_available()
+    * gimp_drawable_filter_operation_get_details()
+    * gimp_drawable_filter_operation_get_pspecs()
+    * gimp_context_get_paint_fade_length()
+    * gimp_context_get_paint_fade_repeat()
+    * gimp_context_set_paint_fade_length()
+    * gimp_context_set_paint_fade_repeat()
+    * gimp_item_id_is_vector_layer()
+    * gimp_param_spec_vector_layer()
+    * gimp_procedure_add_vector_layer_argument()
+    * gimp_procedure_add_vector_layer_aux_argument()
+    * gimp_procedure_add_vector_layer_return_value()
+    * gimp_vector_layer_discard()
+    * gimp_vector_layer_get_by_id()
+    * gimp_vector_layer_new()
+    * gimp_vector_layer_refresh()
+  - GimpSizeEntry (libgimpwidget) can now parse mathematical expressions
+    in their reference value spin buttons too.
+  - GimpColorScales (libgimpwidget) will now set its decimals to 0 when
+    creating u8 RGB color selectors. This change will help further
+    distinguish between the 0...00 and 0..255 views in the Color
+    Selectors. It will also better convey to users that u8 is an integer
+    value rather than a floating point.
+  - Favor existing image comment instead of always loading comment from
+    metadata.
+  - Improve handling of comment metadata with
+    "charset=[ascii|InvalidCharsetId]" prefixes.
+  - New GIMP_METADATA_SAVE_UPDATE value in enum type
+    GimpMetadataSaveFlags (libgimpbase).
+  - Modernize setting "Exif.Image.DateTime" metadata by setting the
+    timezone additionally.
+
+Build:
+
+  - Add nightly Snap package.
+  - Add nightly Aarch64 flatpak.
+  - appstream-glib dependency replaced with libappstream
+  - Installer uses latest InnoSetup now.
+  - New configure option -Dwin-debugging allowing to choose DWARF debug
+    symbols on Windows instead of the native (CodeView) symbols. This
+    will be useful for people wishing to debug with GDB in particular.
+
+
+Overview of Changes from GIMP 3.0.4 to GIMP 3.1.2
+=================================================
+
+Core:
+
+  - Layer mask created from layer's alpha when there is no alpha
+    channel is now a fully opaque mask.
+  - Major non-destructive filter code refactoring.
+  - Lock Content now generates undo steps.
+  - NDE filters are now allowed on channels.
+  - Merging filter will now add an alpha channel to a layer if required.
+  - Refactoring Photoshop stream loading functions.
+  - Loading Photoshop RGB and grayscale patterns (.pat, unfortunately
+    the same extension as our own pattern format) now supported.
+  - The histogram editor now shows a "Compute unique colors:" checkbox
+    which will display the unique color count in the image.
+  - Deleting current palette entry now selects the next entry in the
+    palette.
+  - New paint mode: Overwrite. Note that this mode is only available for
+    paint tools right now (in particular not for layers, neither in
+    filters).
+
+Graphical User Interface:
+
+  - Brushes and Fonts dockables: new "Use theme colors for preview"
+    toggle button.
+  - The Palettes and Palette Editor dockables, and the Palette tab in
+    FB/BG Color dockable, also follow theme colors for grid display.
+  - New "System" color scheme which will follow the system's color
+    scheme setting (on Unix-like systems when XDG Settings portal is
+    installed and on Windows).
+
+Tools:
+
+  - Curves tool: Photoshop curves file format (.acv) can now be loaded.
+  - Levels tool: Photoshop levels file format (.alv) can now be loaded.
+  - Text tool: new "Outline Direction" settings.
+
+Plug-Ins:
+
+  - Jigsaw: the plug-in now draws on transparent layers too.
+  - Playstation TIM images now supported (import/export).
+  - Palettes can now be exported as Krita .kpl palette.
+  - Over The Air Bitmap (Nokia mobile image format) now supported for
+    import.
+  - PSD:
+    * legacy Drop Shadow layer style is now imported on loading.
+    * legacy Inner Shadow layer style is now imported on loading.
+  - file-raw: new support for ART (Another RawTherapee, fork of the
+    latter) as a RAW loader.
+  - OpenEXR: support for importing multi-layer OpenEXR images.
+  - JPEG 2000: export support added.
+  - APNG: initial import support.
+  - JIF: new import support for Jeff's Image Format.
+  - ORA: support the extensions storing layer's "pixel locked" and
+    "selected" status on import and export.
+  - Script-Fu: new function (script-fu-register-i18n) for setting up
+    localization of Script-Fu plug-ins.
+  - HEIF:
+    * new AVCI import support (requires libheif 1.19.6 with OpenH264
+      decoder enabled);
+    * new HEJ2 export support (requires libheif 1.19.8 with OpenJPEG
+      support).
+  - New export support for PSB.
+
+Modules:
+
+  - CMYK selector: Total Ink Coverage (total percentage of ink that
+    would be needed to print a particular color) information is now
+    shown.
+
+API:
+
+  - Changes in libgimpwidgets:
+    * New functions:
+      + gimp_prop_toggle_new()
+  - Changes in libgimpui:
+    * New functions:
+      + gimp_procedure_dialog_get_coordinates()
+    * gimp_procedure_dialog_get_widget() will now generate a radio frame
+      widget for GimpChoice arguments of 2 choices only (and will still
+      default to a combo box for larger choices list).
+
+PDB:
+
+  - none_ok tag now allowed on sample_point and guide PDB types.
+
+Build:
+
+  - File format associations list now generated by the build system for
+    Windows and OSes using the Desktop file.
+  - Flatpak: verify nightly flatpak dependencies with the
+    flatpak-external-data-checker (like we do for stable and beta
+    flatpaks).
+  - Various non-portable scripts were ported to be properly
+    POSIX-compliant and to allow native builds on all OS (e.g. Windows).
+  - Some soft checks were also added to the build system to prevent
+    re-introduction of non-portable code.
+
+
+Overview of Changes from GIMP 3.0.2 to GIMP 3.0.4
+=================================================
+
+Core:
+
+  - Make maximum radius for generated brushes consistent across
+    codebase.
+  - Use NDE filter name for undo history.
+  - Module loading improved to be better cross-platform (in particular
+    on macOS both .so and .dylib modules are supported).
+  - Code compliant with GCC 15 (C23).
+  - Filter size updated when its drawable is rotated.
+  - Font loading (at startup) optimized.
+  - Set the proper program name for KDE/Wayland to map the process to
+    the correct desktop file.
+  - "windows-display-*" are hidden from the Shortcuts dialog (they are
+    not meant to be remapped).
+  - Editing non-destructive effects now triggers undo steps.
+  - When migrating from GIMP 2.x to GIMP 3, shortcuts for actions
+    "edit-paste-as-new-layer*" are now converted to "edit-paste-merged*"
+    (and not "edit-paste*" anymore which was confusing and
+    counter-productive).
+
+Graphical User Interface:
+
+  - Highlight selected device in GimpDeviceStatus.
+  - Various theme leak fixes.
+  - UX improvement: GimpViewableDialog (e.g. Fill/Stroke path and more)
+    now has "OK" as default response.
+  - Icon size settings now also applying to Move and Transform icon
+    boxes.
+  - Commit hash is now shown in About dialog in all non-release builds
+    (i.e. even in stable series, when we are in-between releases).
+  - Hide Force slider for Pencil Tool (rather than just making it
+    insensitive).
+  - Define merged titlebar icon colors.
+  - Keep menubar color consistent when out of focus.
+  - We don't show Fx icon for tool-based filters.
+  - Updated splash without micro version in it.
+  - Removed size restrictions on Display Filters.
+  - Don't show hidden tools on toolbox tooltips.
+  - Fix "Keep above" Window Manager hint.
+  - Multi-Window mode on Windows: dock windows' title bars now adapt to
+    the Windows system theme colors too.
+  - Show palette name in Palette Color Selector.
+
+Tools:
+
+  - MyPaint Brush: have consistent options layout compared to other
+    paint tools.
+  - Scissors Select Tool: close the curve on Enter, similar to the Path
+    tool.
+  - Path Tool: connect path on click in design mode.
+
+Plug-ins:
+
+  - Restore GUI to Difference Clouds script. This had been lost since
+    GIMP 2.8!
+  - Fixes in various file format support, such as: DDS, SVG, TIFF, PSD,
+    BMP, ICO…
+  - Screenshot dropdowns replaced by radio buttons, as part of a new UX
+    decision that choice settings with 2 or 3 choices should be dropdown
+    (faster 1-click access), unless there are a lot more settings making
+    the dialog too crowded already.
+
+PDB:
+
+  - Make "gimp-plug-ins-query" public again (yet still not available in
+    libgimp).
+
+Build:
+
+  - Windows Installer:
+    * Make the installer aware of Install, Reinstall and Update modes.
+    * Add Repair mode to Windows installer: in particular we can now fix
+      installations when the previous install directory cannot be
+      accessed anymore.
+    * The feature to delete the config folder on Windows uninstall will
+      now make a backup on the Desktop first (allowing people to delete
+      it themselves, move it, or even restore it later if needed).
+    * Uninstalling while GIMP is running is made impossible (among other
+      issues, it was causing partial uninstallation).
+    * Downgrading is only possible by uninstalling first.
+    * Development warning is shown in dev build of stable series too.
+    * Add fractional scaling support to Installer welcome image.
+    * Restore points now have a timeout to prevent stuckness.
+  - Our AppImage won't ship debug symbols anymore. Better debugging can
+    be set with: export DEBUGINFOD_URLS="https://debuginfod.debian.net"
+  - Windows builds:
+    * Ship babl/GEGL and libgimp headers, static libs and pkg-config
+      files for plug-in developers.
+    * Dedicated file icon for XCF files.
+    * Generate native .pdb CodeView symbols on Windows (smaller debug
+      data files, usable by MSIX and better debugging ability), except
+      on x86 (32-bit).
+  - Crossbuilds are dropped from CI.
+  - Shell scripts used in the meson build are ported to Python (more
+    portable and much faster on some platforms, in particular Windows).
+  - Some build scripts were moved around for reorganization.
+  - Depency requirement bumped:
+    * babl 0.1.114
+    * GEGL 0.4.62
+  - New "Inputs" feature for simpler Gitlab pipelines running.
+  - Some in-repository documentation was cleaned up.
+
+
+Overview of Changes from GIMP 3.0.0 to GIMP 3.0.2
+=================================================
+
+This is a bug-fix only release.
+
+Core:
+
+  - Mark some strings translatable.
+  - Fix crash when choosing a brush in grid view.
+  - Windows: temporary revert of some Input Device handling code which
+    was breaking pressure sensitivity for some graphics tablets (though
+    this revert may make issues with the eraser tip).
+  - Fix crash when choosing a non-existing font in text tool options.
+
+Tools:
+
+  - Reorder Line Art Detection options per design decision.
+
+Graphical User Interface:
+
+  - Keep headerbar color consistent when out of focus.
+  - Histogram uses the luminance value of the foreground color as a
+    threshold to lighten or darken the border color for contrast with
+    the histogram itself.
+  - Improve separation between panels in dark theme.
+  - Add default response for GimpQueryBox dialogues.
+  - Spacing between toolbox widgets improved.
+  - GimpSpinScale slider colors inverted.
+  - New icons: "gimp-toggle-on" and "gimp-toggle-off" and using them in
+    the Search Action's list as icons for toggle actions.
+
+Plug-ins:
+
+  - Python Console uses the luminance of the background color for error
+    text.
+  - Metadata Editor: fix buffer overflow.
+  - Gradient Flare: fix crash when setting the size to 0.
+  - Screenshot: X11 implementation is bypassed (in favor of portals)
+    when running on XWayland.
+
+Build:
+
+  - Various packaging fixes and cleanup.
+  - The Windows installer now prompts (only in user installation) about
+    deleting GIMP config files when uninstalling.
+  - GEGL 0.4.58 is now our minimum requirement.
+  - Windows installer: create Restore Point on system-wide install.

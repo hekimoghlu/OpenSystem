@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE appendix PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                          "http://www.docbook.org/xml/4.3/docbookx.dtd"[
+  <!ENTITY % entities SYSTEM "../../../stylesheets/entities.xml">
+  %entities;
+]>
+
+<appendix id="gimp-contributing">
+  <!--TO TRANSLATORS: No need to translate this document since only English
+    knowing peoples can contribute-->
+  <title>How to Contribute</title>
+
+  <indexterm>
+    <primary>GIMP</primary>
+    <secondary>How to contribute</secondary>
+  </indexterm>
+  <para>
+    Welcome to the GIMP-Help team!
+  </para>
+
+  <para>
+    This tutorial is intended for writing documentation. If you want to
+    <emphasis>translate</emphasis> the documentation or the user interface,
+    please go to "https://l10n.gnome.org/teams/xx" where "xx"
+    is your language code: ISO 639-1 language codes can be found at
+    <ulink url="https://www.loc.gov/standards/iso639-2/php/code_list.php"/>.
+  </para>
+
+  <sect1>
+    <title>Prerequisites</title>
+
+    <sect2>
+      <title>Join Discourse</title>
+      <para>You can join <ulink url='https://discourse.gnome.org/'>Gnome's
+      Discourse server</ulink> and subscribe to the
+      <ulink url="https://discourse.gnome.org/tag/gimp">gimp</ulink> and
+      <ulink url="https://discourse.gnome.org/tag/documentation">documentation</ulink>
+      tags. Please, feel free to ask questions. If you do, remember to set
+      the relevant tags, or we may not see the message.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Create a Local Working Copy of Code</title>
+      <para>
+        The GIMP help Manual is lodged in a central repository at
+        https://gitlab.gnome.org/GNOME/gimp-help. Creating a local copy of this
+        repository to work on makes sure that everyone can work on his own
+        without fuzzing around into works of other contributors.
+      </para>
+      <para>
+        As a newbie, you will access the git repository anonymously (without an
+        account). Open a terminal and type:
+        <emphasis>
+          git clone https://gitlab.gnome.org/GNOME/gimp-help.git
+        </emphasis>.
+      </para>
+      <para>
+        If you have a GNOME account, the command is:
+        <emphasis>
+          git clone git@gitlab.gnome.org:GNOME/gimp-help.git
+        </emphasis>.
+      </para>
+      <para>
+        This will create a <quote>gimp-help</quote> folder in your current
+        directory. Be patient! That's a big download: about 700 MB.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Installing your sandbox</title>
+      <para>
+        After downloading your local copy, run:
+        <emphasis>cd gimp-help</emphasis> then
+        <emphasis>./autogen.sh --without-gimp ALL_LINGUAS="en xx"</emphasis>.
+      </para>
+
+      <para>
+        When running ./autogen.sh, you can notice some not found packages, for
+        example <quote>checking for dblatex... no</quote>. Most of them are
+        related to PDF files and you have to install them before running
+        ./autogen.sh again if you want to create PDF files.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>The gimp-help folder</title>
+      <para>
+        The GIMP User Manual is maintained in the xml files of the
+        <quote>src</quote> folder. You will use these xml files to work on.
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1>
+    <title>Workflow</title>
+    <sect2>
+      <title>Writing</title>
+      <para>
+        The language is English (USA).
+      </para>
+      <para>
+        To edit XML files, use your preferred text editor (this guide's
+        author prefers the free editor Kate). You must set the editor for:
+        <itemizedlist>
+          <listitem>
+            <para>
+              English-US language.
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Indent with 2 spaces (the <keycap>Tab</keycap> key must move
+              pointer by two spaces).
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Replace tabs with spaces (for compatibility with all text
+              editors and web browsers).
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              80 characters per line.
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Automatic spell checking with English (USA) for default
+              language.
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+
+      <para>
+        Source files are written in the XML language according to the DocBook
+        DTD. DocBook specifications can be found at
+        <ulink url="https://tdg.docbook.org/tdg/4.5/docbook.html"/>.
+      </para>
+
+      <para>
+        Don't be afraid. We don't use all these items and you will learn XML
+        progressively reading existing XML files. For new files, please use
+        the templates you can find in the gimp-help/docs/templates folder.
+      </para>
+
+      <note>
+        <para>
+          If you write a new file, you must add it in the src/gimp.xml file,
+          or in the XML file that calls it (for example, the
+          src/menus/edit.xml file calls undo.xml, redo.xml, fade.xml, and so
+          on).
+        </para>
+      </note>
+    </sect2>
+
+    <sect2>
+      <title>Validating</title>
+      <para>
+        When you have finished writing, you should validate your work:
+        <itemizedlist>
+          <listitem>
+            <para>
+              For a single file, you can use the following command line:
+              <command>xmllint --noout --nonet --valid your-file.xml</command>.
+              This command displays nothing if your file is OK. When an error
+              is found it will show a message indicating the kind of error and
+              where in your file it was encountered.
+            </para>
+            <para>
+              This command can be used for quickly checking an xml file. It
+              can miss or may not find some errors. In case of external
+              references to other files it also may show incorrect error
+              messages, because this command only checks a single file.
+            </para>
+            <para>
+              (The Kate editor has an option (a plug-in) to validate the active
+              xml file.)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              When you want to check multiple files or the whole gimp-help
+              repository you should run <command>make validate-en</command>.
+              You should get a <quote>No error</quote> message.
+            </para>
+            <para>
+              If not, a list of validity errors is displayed with line numbers
+              referring to the en.xml log file that you can find in the /log
+              folder.
+            </para>
+            <para>
+              Open this en.xml file in a text editor, use the
+              <quote>jump to line</quote> command of your editor (the Kate
+              editor command is
+              <keycombo><keycap>Ctrl</keycap><keycap>G</keycap></keycombo>),
+              and enter the line number to jump to the concerned line in the
+              en.xml file. There, you will find the error.
+            </para>
+            <para>
+              If you have worked on several XML files, look above in the en.xml
+              file to find (in the <quote>xml:base</quote> field of the
+              <quote>id</quote> tag), in which xml file the error is.
+            </para>
+
+            <para>
+              Fix the error. Don't forget to save the file and run
+              <command>make validate-en</command> again.
+            </para>
+            <note>
+              <para>
+                A common mistake is editing the en.xml log file instead of the
+                XML file.
+              </para>
+            </note>
+          </listitem>
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Images</title>
+      <para>
+        You also have to manage screenshots. Here are some hints for
+        making good screenshots:
+        <itemizedlist>
+          <listitem>
+            <para>
+              reduce screenshot area as much as possible cropping the window
+              manager borders and disabling the help button (you can do it
+              in the preference dialog),
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              set the image mode to indexed 255 colors
+              <menuchoice>
+                <guimenu>Image</guimenu>
+                <guisubmenu>Mode</guisubmenu>
+                <guimenuitem>Indexed</guimenuitem>
+              </menuchoice>
+            </para>
+            <para>
+              This is not necessary for icons and if your image has only few
+              colors. In these cases, indexed images are bigger than
+              non-indexed.
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              set print resolution to 144 ppi (not for small images like
+              icons). You can do this easily with GIMP from
+              <menuchoice>
+                <guimenu>Image</guimenu>
+                <guisubmenu>Print Size…</guisubmenu>
+              </menuchoice>
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Export images in the PNG format.
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+
+      <para>
+        Don't include English text in images. Translators can't translate it
+        and many users don't like that. Use XML captions instead, or provide a
+        .xcf file in the
+        <menuchoice>
+          <guimenu>Docs</guimenu>
+          <guisubmenu>xcf images</guisubmenu>
+        </menuchoice>
+        folder, indicating it by a comment in the XML file:
+        <markup>&lt;!--TO TRANSLATORS: Corresponding .xcf file is in https://gitlab.gnome.org/GNOME/gimp-help/tree/master/docs/xcf%20images --&gt;</markup>
+      </para>
+
+      <para>
+        Icons for GIMP are in
+        <filename class="directory">/usr/share/gimp/&gimp.api.version;/icons/</filename>.
+        GTK icons are in
+        <filename class="directory">/usr/share/icons/</filename>.
+      </para>
+
+      <para>
+        To include an icon in the text:
+        <markup>
+          &lt;guiicon&gt; &lt;inlinemediaobject&gt; &lt;imageobject&gt;
+          &lt;imagedata fileref="path-to-icon"/&gt; &lt;/imageobject&gt;
+          &lt;/inlinemediaobject&gt; &lt;/guiicon&gt;
+        </markup>
+      </para>
+
+      <para>
+        Three commands to manage your images:
+        <itemizedlist>
+          <listitem>
+            <para>
+              <command>make check-image-resolutions-en</command>: gives the
+              references of images whose resolution is not 144 ppi.
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              <command>make check-images-en</command>: give references of
+              missing or orphaned images.
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              <command>mogrify units PixelsPerTrack -density 144x144
+              *.png</command> to set the print resolution of all PNG images.
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Create HTML Files</title>
+      <para>
+        Once XML files have been validated, run <command>make
+        html-en</command>. Creating HTML files is important to have
+        an idea about what users will see. You will probably notice
+        some improvements to be made on your XML file.
+      </para>
+      <para>
+        You can make an HTML draft (when the folder xml/en has been created
+        during validation) for a single source xml file, by running, for
+        instance, the command
+        <command>make preview-xml/en/path-to-file.xml</command>. This creates
+        draft.html file in the html folder.
+      </para>
+      <para>
+        You can also use <acronym>yelp</acronym> and run <command>yelp
+        file:///your-file.xml</command>.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Sending your files</title>
+      <para>
+        When your files are ready:
+      </para>
+      <variablelist>
+        <varlistentry>
+          <term>You don't have a GNOME account</term>
+          <listitem>
+            <para>
+              if you don't have a GNOME account, you must find a correspondent
+              who accepts to "push" files for you; that will not be difficult
+              if you send a message to the list. Either you send your xml
+              files and the attached images in a compressed file, (in a tree
+              reproducing that of the src and images folders if you send
+              several files to make your correspondent's task easier), or you
+              send a "patch" that you have to create.
+            </para>
+            <para>
+              Before creating a patch, you have to get all your xml files
+              and images in the index. Being in the gimp-help folder, do
+              <command>git status</command>. If you have files in the
+              Untracked files section, run <command>git add -A</command>.
+            </para>
+            <para>
+              Then run <command>git diff --full-index --binary origin >
+              name-of-the-patch</command> to create the patch.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>You have a GNOME account</term>
+          <listitem>
+            <para>All being well, you know how to manage Git. There are many
+              tutorials for that on the Web.
+            </para>
+            <para>
+              A common workflow is:
+            </para>
+            <para>- make validate-en</para>
+            <para>- git status</para>
+            <para>- git stash</para>
+            <para>- git pull</para>
+            <para>- git status</para>
+            <para>- git stash apply</para>
+            <para>- Fix any conflicts</para>
+            <para>- git add -A</para>
+            <para>- git status</para>
+            <para>- git commit -m "a message"</para>
+            <para>- git push</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </sect2>
+  </sect1>
+
+  <sect1>
+    <title>Annexes</title>
+    <variablelist>
+
+      <varlistentry>
+        <term>XML notes</term>
+        <listitem>
+          <para><emphasis role="bold">ID's</emphasis></para>
+          <para>
+            ID's, which identify commands and are used when pressing the F1 key
+            in the GIMP interface, are in
+            https://git.gnome.org/browse/gimp/tree/app/widgets/gimphelp-ids.h
+          </para>
+
+          <para><emphasis role="bold">XML Tags Examples</emphasis></para>
+          <para>
+            <emphasis>procedure</emphasis>: in using/web.xml.
+          </para>
+          <para>
+            <emphasis>table</emphasis>: in
+            toolbox/tools-painting.xml.
+          </para>
+          <para>
+            <emphasis>programlisting</emphasis>: in
+            using/script-fu-tutorial.xml.
+          </para>
+          <para>
+            <emphasis>segmentedlist</emphasis>: in
+            dialogs/path-dialog.xml for a n columns list.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Parents and Children</term>
+        <listitem>
+          <para>
+            Here is a diagram I often use.
+            <mediaobject>
+              <imageobject>
+                <imagedata fileref="images/contribute/xml-tags.png"/>
+              </imageobject>
+            </mediaobject>
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect1>
+
+  <sect1>
+    <title>Working under Windows</title>
+    <para>
+      The documentation here was outdated. For now, please refer to
+      <ulink url="https://gitlab.gnome.org/GNOME/gimp-help/-/blob/master/README.md#how-to-help-writing-the-manual">our
+      README</ulink> for the gimp-help repository.
+    </para>
+  </sect1>
+</appendix>

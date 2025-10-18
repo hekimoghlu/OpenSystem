@@ -1,0 +1,278 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+#include <gtkmm/application.h>
+#include <gtkmm/buildercscope.h>
+
+#include <gtk/gtk.h>
+
+namespace Gtk
+{
+// Called from Buildable
+void Builder::set_no_gtkmm_derived_types(bool status)
+{
+  no_gtkmm_derived_types = status;
+}
+
+// Called from BuilderScope
+bool Builder::get_no_gtkmm_derived_types() const
+{
+  return no_gtkmm_derived_types;
+}
+
+Builder::Builder()
+: // Set a scope that can find gtkmm-derived GTypes.
+  _CONSTRUCT("scope", BuilderCScope::create()->gobj())
+{  
+}
+
+// static
+Glib::RefPtr<Builder> Builder::create_from_file(const std::string& filename)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_file(filename))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+// static
+Glib::RefPtr<Builder> Builder::create_from_file(const std::string& filename, const char* object_id)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_file(filename, object_id))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_file(const std::string& filename, const Glib::ustring& object_id)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_file(filename, object_id))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_file(const std::string& filename, const std::vector<Glib::ustring>& object_ids)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_file(filename, object_ids))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+// static
+Glib::RefPtr<Builder> Builder::create_from_resource(const std::string& resource_path)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_resource(resource_path))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+// static
+Glib::RefPtr<Builder> Builder::create_from_resource(const std::string& resource_path, const char* object_id)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_resource(resource_path, object_id))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_resource(const std::string& resource_path, const Glib::ustring& object_id)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_resource(resource_path, object_id))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_resource(const std::string& resource_path, const std::vector<Glib::ustring>& object_ids)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_resource(resource_path, object_ids))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_string(const Glib::ustring& buffer)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_string(buffer))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_string(const Glib::ustring& buffer,
+                                                  const char* object_id)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_string(buffer, object_id))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_string(const Glib::ustring& buffer,
+                                                  const Glib::ustring& object_id)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_string(buffer, object_id))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+//static
+Glib::RefPtr<Builder> Builder::create_from_string(const Glib::ustring& buffer,
+                                                  const std::vector<Glib::ustring>& object_ids)
+{
+  auto builder = Builder::create();
+  if(builder->add_from_string(buffer, object_ids))
+    return builder;
+  else
+    return Glib::RefPtr<Builder>();
+}
+
+bool Builder::add_from_file(const std::string& filename, const char* object_id)
+{
+  std::vector<Glib::ustring> object_ids (1, object_id);
+
+  return add_from_file(filename, object_ids);
+}
+
+bool Builder::add_from_file(const std::string& filename, const Glib::ustring& object_id)
+{
+  std::vector<Glib::ustring> object_ids (1, object_id);
+
+  return add_from_file(filename, object_ids);
+}
+
+bool Builder::add_from_resource(const std::string& resource_path, const char* object_id)
+{
+  std::vector<Glib::ustring> object_ids (1, object_id);
+
+  return add_from_resource(resource_path, object_ids);
+}
+
+bool Builder::add_from_resource(const std::string& resource_path, const Glib::ustring& object_id)
+{
+  std::vector<Glib::ustring> object_ids (1, object_id);
+
+  return add_from_resource(resource_path, object_ids);
+}
+
+bool Builder::add_from_string(const Glib::ustring& buffer)
+{
+  GError* gerror = nullptr;
+  bool retvalue = gtk_builder_add_from_string(gobj(), buffer.c_str(), -1 /* means null-terminated */, &(gerror));
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+
+bool Builder::add_from_string(const Glib::ustring& buffer, const char* object_id)
+{
+  std::vector<Glib::ustring> object_ids (1, object_id);
+
+  return add_from_string(buffer, object_ids);
+}
+
+bool Builder::add_from_string(const Glib::ustring& buffer, const Glib::ustring& object_id)
+{
+  std::vector<Glib::ustring> object_ids (1, object_id);
+
+  return add_from_string(buffer, object_ids);
+}
+
+bool Builder::add_from_string(const Glib::ustring& buffer, const std::vector<Glib::ustring>& object_ids)
+{
+  GError* gerror = nullptr;
+  bool retvalue = gtk_builder_add_objects_from_string(
+    gobj(),
+    buffer.c_str(),
+    -1 /* means null-terminated */,
+    Glib::ArrayHandler<Glib::ustring>::vector_to_array(object_ids).data(),
+    &(gerror));
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+GtkWidget* Builder::get_cwidget(const Glib::ustring& name)
+{
+  auto *cobject = gtk_builder_get_object (gobj(), name.c_str());
+  if(!cobject)
+  {
+    g_critical("gtkmm: object `%s' not found in GtkBuilder file.", name.c_str());
+    return nullptr;
+  }
+
+  if (!GTK_IS_WIDGET (cobject))
+  {
+    g_critical("gtkmm: object `%s' (type=`%s') (in GtkBuilder file) is not a widget type.",
+               name.c_str(), G_OBJECT_TYPE_NAME(cobject));
+    // Don't unref cobject. gtk_builder_get_object() does not give us a reference.
+    return nullptr;
+  }
+
+  return GTK_WIDGET (cobject);
+}
+
+Gtk::Widget* Builder::get_widget_checked(const Glib::ustring& name, GType type)
+{
+  // Get the widget from the GtkBuilder file.
+  auto *cobject = get_cwidget(name);
+  if(!cobject)
+  {
+    g_critical("gtkmm: Gtk::Builder: widget `%s' was not found in the GtkBuilder file, or the specified part of it.",
+      name.c_str());
+    return nullptr;
+  }
+
+  // Check if it has the correct type.
+  if(!g_type_is_a(G_OBJECT_TYPE(cobject), type))
+  {
+    g_critical("gtkmm: widget `%s' (in GtkBuilder file) is of type `%s' but `%s' was expected",
+               name.c_str(), G_OBJECT_TYPE_NAME(cobject), g_type_name(type));
+    return nullptr;
+  }
+
+  // Don't take a reference. That's done only in methods that return
+  // a Glib::RefPtr<Something>.
+  return Glib::wrap (GTK_WIDGET (cobject), false /* take ref */);
+}
+
+} // namespace Gtk

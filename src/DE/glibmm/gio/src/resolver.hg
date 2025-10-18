@@ -1,0 +1,204 @@
+/* Copyright (C) 2009 jonathon jongsma
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/inetaddress.h>
+#include <giomm/cancellable.h>
+#include <giomm/srvtarget.h>
+#include <giomm/asyncresult.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+
+// Forward declarations for classes in the Glib namespace.
+namespace Glib
+{
+
+class GLIBMM_API VariantContainerBase;
+
+}
+
+namespace Gio
+{
+
+/** Asynchronous and cancellable DNS resolver
+ *
+ * Resolver provides cancellable synchronous and asynchronous DNS resolution,
+ * for hostnames (lookup_by_address(), lookup_by_name() and their async
+ * variants) and SRV (service) records (lookup_service()).
+ *
+ * NetworkAddress and NetworkService provide wrappers around Resolver
+ * functionality that also implement SocketConnectable, making it easy to
+ * connect to a remote host/service.
+ *
+ * @newin{2,24}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API Resolver
+: public Glib::Object
+{
+  _CLASS_GOBJECT(Resolver, GResolver, G_RESOLVER, Glib::Object, GObject, , , GIOMM_API)
+
+protected:
+
+public:
+  _WRAP_ENUM(RecordType, GResolverRecordType, decl_prefix GIOMM_API)
+  _WRAP_ENUM(NameLookupFlags, GResolverNameLookupFlags, decl_prefix GIOMM_API, newin "2,74")
+
+  static Glib::RefPtr<Resolver> get_default();
+  _IGNORE(g_resolver_get_default)
+  static void set_default(const Glib::RefPtr<Resolver>& resolver);
+  _IGNORE(g_resolver_set_default)
+
+  // g_resolver_free_addresses is just a C convenience function
+  _IGNORE(g_resolver_free_addresses)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::RefPtr<InetAddress>>',`Glib::ListHandler<Glib::RefPtr<InetAddress>>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<InetAddress>> lookup_by_name(const Glib::ustring& hostname, const Glib::RefPtr<Cancellable>& cancellable{?}), g_resolver_lookup_by_name, errthrow)
+
+  /** Begins asynchronously resolving hostname to determine its associated IP address(es), and eventually calls @a slot, which must call
+   * lookup_by_name_finish() to get the result. See lookup_by_name() for more details.
+   *
+   * @param hostname The hostname to look up.
+   * @param slot A callback slot to call after the resolution completes.
+   * @param cancellable A Cancellable object which can be used to cancel the operation.
+   */
+  void lookup_by_name_async(const Glib::ustring& hostname, const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable);
+
+  /** Begins asynchronously resolving hostname to determine its associated IP address(es), and eventually calls @a slot, which must call
+   * lookup_by_name_finish() to get the result. See lookup_by_name() for more details.
+   *
+   * @param hostname The hostname to look up.
+   * @param slot A callback slot to call after the resolution completes.
+   */
+  void lookup_by_name_async(const Glib::ustring& hostname, const SlotAsyncReady& slot);
+  _IGNORE(g_resolver_lookup_by_name_async)
+
+  _WRAP_METHOD(std::vector<Glib::RefPtr<InetAddress>> lookup_by_name_finish(
+    const Glib::RefPtr<AsyncResult>& result), g_resolver_lookup_by_name_finish, errthrow)
+
+  _WRAP_METHOD(std::vector<Glib::RefPtr<InetAddress>> lookup_by_name_with_flags(const Glib::ustring& hostname,
+    NameLookupFlags flags, const Glib::RefPtr<Cancellable>& cancellable = {}), g_resolver_lookup_by_name_with_flags,
+    errthrow, newin "2,74")
+
+  _WRAP_METHOD(void lookup_by_name_with_flags_async(const Glib::ustring& hostname,
+    NameLookupFlags flags, const SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Cancellable>& cancellable{.} = {}), g_resolver_lookup_by_name_with_flags_async,
+    slot_name slot, slot_callback giomm_SignalProxy_async_callback, newin "2,74")
+
+  _WRAP_METHOD(std::vector<Glib::RefPtr<InetAddress>> lookup_by_name_with_flags_finish(
+    const Glib::RefPtr<AsyncResult>& result), g_resolver_lookup_by_name_with_flags_finish,
+    errthrow, newin "2,74")
+
+  _WRAP_METHOD(Glib::ustring lookup_by_address(const Glib::RefPtr<InetAddress>& address, const Glib::RefPtr<Cancellable>& cancellable{?}), g_resolver_lookup_by_address, errthrow)
+
+  /** Begins asynchronously reverse-resolving an address to determine its associated hostname, and eventually calls callback, which must call
+   * lookup_by_address_finish() to get the final result.
+   *
+   * @param address The address to reverse-resolve.
+   * @param slot A callback slot to call after the resolution completes.
+   * @param cancellable A Cancellable object which can be used to cancel the operation.
+   */
+  void lookup_by_address_async(const Glib::RefPtr<InetAddress>& address, const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable);
+
+  /** Begins asynchronously reverse-resolving an address to determine its associated hostname, and eventually calls callback, which must call
+   * lookup_by_address_finish() to get the final result.
+   *
+   * @param address The address to reverse-resolve.
+   * @param slot A callback slot to call after the resolution completes.
+   */
+  void lookup_by_address_async(const Glib::RefPtr<InetAddress>& address, const SlotAsyncReady& slot);
+  _IGNORE(g_resolver_lookup_by_address_async)
+
+  _WRAP_METHOD(Glib::ustring lookup_by_address_finish(const Glib::RefPtr<AsyncResult>& result), g_resolver_lookup_by_address_finish, errthrow)
+
+#m4 _CONVERSION(`GList*',`std::vector<SrvTarget>',`Glib::ListHandler<SrvTarget, SrvTargetListTraits>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<SrvTarget> lookup_service(const Glib::ustring& service, const Glib::ustring& protocol, const Glib::ustring& domain, const Glib::RefPtr<Cancellable>& cancellable{?}), g_resolver_lookup_service, errthrow)
+
+  /** Begins asynchronously performing a DNS SRV lookup for the given service and protocol in the given domain, and eventually calls callback,
+   * which must call lookup_service_finish() to get the final result. See glookup_service() for more details.
+   *
+   * @param service The service type to look up (eg, "ldap").
+   * @param protocol The networking protocol to use for service (eg, "tcp")
+   * @param domain The DNS domain to look up the service in.
+   * @param slot A callback slot to call after the resolution completes.
+   * @param cancellable A Cancellable object which can be used to cancel the operation.
+   */
+  void lookup_service_async(const Glib::ustring& service, const Glib::ustring& protocol, const Glib::ustring& domain, const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable);
+
+  /** Begins asynchronously performing a DNS SRV lookup for the given service and protocol in the given domain, and eventually calls callback,
+   * which must call lookup_service_finish() to get the final result. See glookup_service() for more details.
+   *
+   * @param service The service type to look up (eg, "ldap").
+   * @param protocol The networking protocol to use for service (eg, "tcp")
+   * @param domain The DNS domain to look up the service in.
+   * @param slot A callback slot to call after the resolution completes.
+   */
+  void lookup_service_async(const Glib::ustring& service, const Glib::ustring& protocol, const Glib::ustring& domain, const SlotAsyncReady& slot);
+  _IGNORE(g_resolver_lookup_service_async)
+
+  _WRAP_METHOD(std::vector<SrvTarget> lookup_service_finish(const Glib::RefPtr<AsyncResult>& result), g_resolver_lookup_service_finish, errthrow)
+
+#m4 _CONVERSION(`GList*',`std::vector<Glib::VariantContainerBase>',`Glib::ListHandler<Glib::VariantContainerBase>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+
+  _WRAP_METHOD(std::vector<Glib::VariantContainerBase> lookup_records(const Glib::ustring& rrname, RecordType record_type, const Glib::RefPtr<Cancellable>& cancellable{?}), g_resolver_lookup_records, errthrow)
+
+  /** Begins asynchronously performing a DNS lookup for the given @a rrname,
+   * and eventually calls @a slot, which must call lookup_records_finish() to
+   * get the final result. See lookup_records() for more details.
+   *
+   * @param rrname The DNS name to lookup the record for.
+   * @param record_type The type of DNS record to lookup.
+   * @param cancellable A Cancellable.
+   * @param slot The slot to call after the resolution completes.
+   * @newin{2,36}
+   */
+  void lookup_records_async(const Glib::ustring& rrname,
+    RecordType record_type, const SlotAsyncReady& slot,
+    const Glib::RefPtr<Cancellable>& cancellable);
+  _IGNORE(g_resolver_lookup_records_async)
+
+  /// A non-cancellable version of lookup_records_async().
+  void lookup_records_async(const Glib::ustring& rrname,
+    RecordType record_type, const SlotAsyncReady& slot);
+
+  _WRAP_METHOD(std::vector<Glib::VariantContainerBase> lookup_records_finish(const Glib::RefPtr<AsyncResult>& result), g_resolver_lookup_records_finish, errthrow)
+
+  _WRAP_METHOD(unsigned get_timeout() const, g_resolver_get_timeout)
+  _WRAP_METHOD(void set_timeout(unsigned timeout_ms), g_resolver_set_timeout)
+
+  _WRAP_PROPERTY("timeout", unsigned int)
+
+  _WRAP_SIGNAL(void reload(), reload)
+};
+
+GIOMM_API
+std::string hostname_to_ascii (const Glib::ustring& hostname);
+
+GIOMM_API
+Glib::ustring hostname_to_unicode (const Glib::ustring& hostname);
+
+GIOMM_API
+bool hostname_is_non_ascii (const Glib::ustring& hostname);
+
+GIOMM_API
+bool hostname_is_ascii_encoded (const Glib::ustring& hostname);
+
+GIOMM_API
+bool hostname_is_ip_address (const Glib::ustring& hostname);
+
+} // namespace Gio

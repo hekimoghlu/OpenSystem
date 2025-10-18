@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=meson --without autoreconf
+
+# Compile options
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-Dautocrypt=true \
+		-Dcanberra=true \
+		-Dcompface=true \
+		-Dgss=true \
+		-Dgtksourceview=true \
+		-Dhelp-files=true \
+		-Dldap=true \
+		-Dspell-checker=gspell \
+		-Dlibsecret=true \
+		-Dgcr=true \
+		-Dsystray=true \
+		-Dhtml-widget=webkit2 \
+		-Dwebdav=true
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/tmp

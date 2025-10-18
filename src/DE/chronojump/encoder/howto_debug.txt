@@ -1,0 +1,223 @@
+if you want to debug a vector just print like this:
+
+print(displacement)
+
+will produce in console:
+
+  [1]  1 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1 -1  0 -1 -1
+ [26] -1  0 -1 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1 -1  0 -1 -1 -1  0 -1
+ [51] -1 -1  0 -1 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1  0 -1 -1 -1  0 -1
+ ....
+
+copy paste in vim and there remove the initial [xxx] using:
+:%s/\[.*\]//
+
+save:
+:w
+
+then open in R
+a=scan("myfile.txt")
+
+
+If you want to check better eg what graph.R is doing, just do:
+
+Do the graph with Chronojump, some files will be created like: /tmp/Roptions.txt, /tmp/chronojump-encoder-graph-input-multi.csv, /tmp/chronojump_enc_curve_1.txt
+at encoder folder call R
+
+# 1st time
+source ("util.R")
+source ("graphSmoothingEC.R")
+source ("graph.R")
+optionsFile = "/tmp/Roptions.txt"
+optionsCj <- scan(optionsFile, comment.char="#", what=character(), sep="\n")
+DebugFileName <- paste(optionsCj[5], "/chronojump-debug.txt", sep="")
+English = unlist(strsplit(optionsCj[29], "\\;"))
+Translated = unlist(strsplit(optionsCj[30], "\\;"))
+Debug <- TRUE
+
+# each time you do an analyze on Chronojump (and Roptions.txt changed)
+optionsCj <- scan(optionsFile, comment.char="#", what=character(), sep="\n")
+doProcess (optionsCj)
+
+# plot displacement curves graph and write files in order to compare them with vim
+displacementCurvesDebug (TRUE)
+
+# About Warning: Note warnings sometimes continue appearing even when code has changed and source has done, is best to close/open terminal console
+# using optionsCj variable above instead of options in order to be able to turn warnings into errors with:
+options (warn = 2)
+
+#using debug is very useful, eg:
+
+d <- scan ("tests/fixEccConCutOnNotSingleFile/curve1.txt", sep = ",")
+d  = d[!is.na(d)]
+debug (reduceCurveByPredictStartEnd)
+reduceCurveByPredictStartEnd (d, "ec", 20)
+
+#then you can press
+n for seeing NEXT line of code and print (variable) to print the value, note if a you see var <- "my var", this is going to be assigned on next step
+c to continue until end
+Q to quit debug (but strangely continues to being associated)
+ls () will show the local objects in the debug function, and you can print them writing the variable and enter or using print (variable) if they are named n, c, Q
+
+
+Example of usage:
+-----------------
+Chronojump session borrame3 person provaEnc
+
+A)
+Analyze currentSession Select repetition (2) (2023-05-25 10:44:43)
+mode: bars ecS
+Click on Analyze
+on a terminal:
+
+- paste the 1st time code
+- paste the each time code
+
+result:
+"curves before pafGenerate"
+   start  end startH   exerciseName massBody massExtra            dateTime
+2e     1  899      0 Press de Banca       50        70 2023-05-25 10:44:43
+2c   907 2016      0 Press de Banca       50        70 2023-05-25 10:44:43
+   myEccon seriesName percentBodyWeight econfName econfd econfD econfAnglePush
+2e       e   provaEnc                 0    LINEAR     -1     -1             -1
+2c       c   provaEnc                 0    LINEAR     -1     -1             -1
+
+889 - 1 = 898
+2016 - 907 = 1109
+
+B)
+Now load that set and analyze current set, bars, ecS, click on analyze
+on a terminal paste the each time codde
+
+result:
+"curves before pafGenerate"
+  startStored endStored startHStored
+1      1002.5    1900.5            0
+2      2123.5    3017.5            0
+3      3095.0    4128.0            0
+4      4317.5    5250.5            0
+
+we care about 1 and 2
+1900.5 - 1002.5 = 898
+3017.5 -2123.5 = 894
+
+1109 != 894
+
+check displacementDebug curvesDebug with:
+displacementCurvesDebug(TRUE)
+see images: fixEccConCutOnNotSingleFile/current-set.png fixEccConCutOnNotSingleFile/current-session.png
+the problem is on current-session.png (! singleFile)
+
+finally (with some prints) we found that on ! singleFile the passed minHeight was always -1
+we changed it on C# to send the value regarding to weights or inertial (preferences.encoderCaptureMinHeightGravitatory, preferences.encoderCaptureMinHeightInertial)
+and now 2c is 1123 and 2016.
+2016 - 1123 = 893.
+893 == 894
+
+now all the values on C# analyze table are almost the same except mean power. Check propulsive end.
+at the moment I have propulsive FALSE on preferences
+
+Found the 2nd bug, pafGenerate was called with repOp$eccon instead of repOpSeparated$eccon making the mean power to be abs
+
+
+Another example:
+----------------
+source ("util.R")
+source ("graphSmoothingEC.R")
+source ("graph.R")
+
+displacement <- scan ("tests/fixEccConCutOnNotSingleFile/three_curves.txt", sep=",") #session borrame3, person prova enc ec (serie 3)
+displacement <- displacement[!is.na(displacement)]
+position=cumsum(displacement)
+
+op = NULL
+op$EncoderConfigurationName="LINEAR"
+op$Eccon = 20
+op$MinHeight = 20
+
+curves <- findCurvesNew(displacement, op$Eccon,
+		isInertial(op$EncoderConfigurationName), op$MinHeight)
+
+plot(cumsum(displacement), type="l")
+abline(v=curves$startStored, col="red")
+abline(v=curves$endStored, col="blue")
+
+curvesSaved = curves #save this curves right now for debugging
+
+curvesHeight = NULL
+n=length(curves[,1])
+for(i in 1:n)
+{
+	reducedCurve_l = NULL
+	displacementTemp = displacement[curves[i,1]:curves[i,2]]
+				
+	#else if (op$Eccon == "ecS")
+	#{
+		reducedCurve_l <- NULL
+			if (position[curves[i,1]] < position[curves[i,2]])
+				reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+						"c", op$MinHeight)
+			else
+				reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+						"e", op$MinHeight)
+
+#1st assign end because start will also change
+					curves[i,2] <- curves[i,1] + (reducedCurve_l$endPos -1)
+					curves[i,1] <- curves[i,1] + (reducedCurve_l$startPos -1)
+
+#curves[i,3] <- position[reducedCurve_l$startPos] - position [curves[i,1]]
+#TODO: fix above line
+					curves[i,3] <- 0
+	#}
+                        
+	myPosition = cumsum(displacement[curves[i,1]:curves[i,2]])
+	curvesHeight[i] = max(myPosition) - min(myPosition)
+}
+print("curves after reduceCurveBySpeed")
+print(curves)
+
+abline(v=curves$startStored, col="orange")
+abline(v=curves$endStored, col="cyan")
+
+#let's check better the ecc end of 3rd curve using the curvesSaved
+displacementTemp = displacement[curvesSaved[5,1]:curvesSaved[5,2]]
+plot(cumsum(displacementTemp), type="l")
+reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+		"e", op$MinHeight)
+
+positionTemp = cumsum(displacementTemp)
+points(reducedCurve_l$startPos, positionTemp[reducedCurve_l$startPos], cex=4)
+points(reducedCurve_l$endPos, positionTemp[reducedCurve_l$endPos], cex=4)
+
+#abline(v=reducedCurve_l$endPos) #this should go 1 pixel below and then some pixels to the right, because below to the right there is a bigger sequence of 0s than in this height
+
+
+
+# see for the last e
+displacementTemp = displacement[curvesSaved[5,1]:curvesSaved[5,2]]
+plot(cumsum(displacementTemp), type="l")
+reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+		"e", op$MinHeight)
+# zerosAtLeft, zerosAtRight, 98, 24
+
+# see how it works if e is converted to c
+displacementTemp <- -1 * displacementTemp
+plot(cumsum(displacementTemp), type="l")
+reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+		"c", op$MinHeight)
+# zerosAtLeft, zerosAtRight, 98, 24
+
+# see for the ec curve
+displacementTemp = displacement[curvesSaved[5,1]:curvesSaved[6,2]]
+plot(cumsum(displacementTemp), type="l")
+reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+		"ec", op$MinHeight)
+# zerosAtLeft, zerosAtRight, 98, 5
+
+# see last c
+displacementTemp = displacement[curvesSaved[6,1]:curvesSaved[6,2]]
+plot(cumsum(displacementTemp), type="l")
+reducedCurve_l <- reduceCurveByPredictStartEnd (displacementTemp,
+		"c", op$MinHeight)
+# zerosAtLeft, zerosAtRight, 19, 5
+

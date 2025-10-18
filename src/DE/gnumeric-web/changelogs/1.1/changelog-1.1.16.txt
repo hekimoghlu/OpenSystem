@@ -1,0 +1,226 @@
+2003-01-28  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.16
+
+2003-01-27  Jody Goldberg <jody@gnome.org>
+
+	* schemas/gnumeric-general.schemas.in : Override the default toolbar
+	  layout to be icon only.  It can still be changed by clicking on the
+	  toolbar, but at least the default is less ugly.
+
+2003-01-26  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-file.h : remove unnecessary bonobo specific interface.
+	  libgsf wraps all of that now.
+
+2003-01-27  Morten Welinder  <terra@diku.dk>
+
+	* src/print.c (print_page, print_job_info_get,
+	print_job_info_destroy): Make robust with respect to missing
+	fonts.
+
+2003-01-25  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Consistently require libgsf 1.7.1. Thanks Christian
+	Biesinger.
+
+2003-01-24  Morten Welinder  <terra@diku.dk>
+
+	* src/format.c (format_number): Allow more digits in fractions and
+	use continued_fraction.
+
+	* src/mathfunc.c (continued_fraction): New function.
+
+2003-01-23  Jody Goldberg <jody@gnome.org>
+
+	For Murray Cumming  <murrayc@usa.net>
+	* configure.in: Now uses libgnomeprint*-2.2 instead of 2.0, for GNOME
+ 	2.2. It is an API-incompatible, parallel-installable separate library.
+ 	* src/print.c, src/dialogs/dialog-printer-setup.c:
+ 	Made code changes (search/replace) as per Chema's instructions.
+ 
+2003-01-23  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (table_cellregion_read): Initalize wb and
+	wb_view to NULL, check against NULL before unrefing.
+	(complex_content_received): const char* reader_id.
+	(x_clipboard_clear_cb): Remove incorrect comment.
+	(x_request_clipboard): Update confusing variable name 'primary' to
+	'clipboard'.
+
+2003-01-23  Jody Goldberg <jody@gnome.org>
+
+	For Wayne Schuller  <k_wayne@linuxpower.org>
+	* src/print-info.c (print_info_new, print_info_save): Implement the 'fit-to' feature.
+	  Scaling is now broken into x and y. They are equal when normal
+	  scaling is being used (so we just use the x value)
+	 * src/print.c (print_page_cells, setup_scale, print_page,
+	   compute_group, compute_scale_fit_to,
+	   print_range_down_then_right, print_range_right_then_down): Ditto.
+	* src/xml-io.c (xml_write_print_info), (xml_read_print_info): We
+	  don't save the x and y attributes, but just the x attribute for
+	  general percentage scaling.
+
+	* plugins/excel/ms-excel-read.c (excel_read_SETUP): Ditto. 
+	* plugins/xml_sax/xml-sax-read.c (xml_sax_print_scale): Ditto.
+
+2003-01-22  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the gsf req to reflect the updated xml api
+	  names.
+
+2003-01-21  Jody Goldberg <jody@gnome.org>
+
+	* src/format.c (append_hour_elapsed) : rewrite to use rounding and to
+	  handle negatives.  Still not really correct and can not handle
+	  fractional seconds.
+	(append_minute_elapsed) : ditto.
+	(append_second_elapsed) : ditto.
+	(split_time) : remove vile static variable.
+
+	For Nicolas Peninguy :
+	http://bugzilla.gnome.org/show_bug.cgi?id=102236
+	* src/formats.c : decrease dependence on glibc regexp extensions.
+
+2003-01-20  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (table_cellregion_read): New function. Read
+	from selection, interpreting as table.
+	(text_received): New function. Receive text from
+	gtk_clipboard_receive_text.
+	(complex_content_received): New function. Receive non-textual
+	content from clipboard. Factored out of x_clipboard_received.
+	Fix leak of clipboard_paste_callback_data.
+	(x_clipboard_received): Accept html and OpenOffice archive
+	format. Factor out receipt of text and other formats to
+	text_received and complex_content_received. 
+
+2003-01-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/io-context-gtk.[ch] (icg_set_transient_for): New
+	function. Set transient_parent attribute, and call
+	gtk_window_set_transient if we already have a window. On most
+	window managers, this will put the splash screen on top of the
+	transient parent.
+
+	* src/io-context-gtk.c (struct _IOContextGtk): Add
+	transient_parent attribute.
+	(cb_icg_window_destroyed): Clear transient_parent attribute.
+	(icg_show_gui): Call gtk_window_set_transient if transient_parent
+	attribute is set.
+
+	* src/main-application.c (main): Call icg_set_transient_for after
+	each workbook is opened - yet another hack to keep the splash
+	screen on top of the workbooks.
+
+2003-01-14  Morten Welinder  <terra@diku.dk>
+
+	* src/rendered-value.h: Delete render_color member.
+
+	* src/rendered-value.c (cell_get_render_color): Change to return a
+	PangoColor pointer that includes any explicit foreground colour.
+	All callers changed.
+	(rendered_value_new): Don't store render_color.
+	(rendered_value_destroy): Don't release render_color.
+
+	* src/print-cell.c (print_cell): Use cell_get_render_color (for
+	now).
+
+2003-01-13  Morten Welinder  <terra@diku.dk>
+
+	* src/rendered-value.c (rendered_value_new): Create a matching
+	PangoAttrList.
+	(rendered_value_calc_size_ext): Constify.
+
+	* src/cell-draw.c (cell_draw): Use the rendered value's
+	attributes.
+
+	* src/mstyle.c (mstyle_get_pango_attrs): New function.
+
+	* src/style.c (style_font_new_simple): Explicitly set a colour map
+	for the pango context.
+
+	* src/item-grid.c (cb_cursor_come_to_rest): Constify.
+
+2003-01-10  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-control-gui.c (zoom_changed): buffer size paranoia.
+
+	* src/workbook-format-toolbar.c (workbook_create_format_toolbar):
+	Ditto.
+	(workbook_feedback_set): Ditto.
+
+2003-01-08  Jody Goldberg <jody@gnome.org>
+
+	Patch from Theppitak Karoonboonyanan for
+	http://bugzilla.gnome.org/show_bug.cgi?id=84062
+	* src/gnumeric-canvas.c (gnm_canvas_retrieve_surrounding_cb) : new.
+	(gnm_canvas_delete_surrounding_cb) : new.
+	(gnm_canvas_init) : connect them up.
+
+2003-01-07  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.h (GnmParseFunctionHandler): don't take a user
+	pointer, but the conventions instead.
+
+	* src/parser.y: Supply convs to handlers.  Look up functions in
+	rewriter hash and act accordingly.
+
+2003-01-07  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c (matrix_invert): Return value was transposed.
+	Not good.
+
+2003-01-04  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-widget.c (sheet_widget_scrollbar_user_config) 
+	(sheet_widget_checkbox_user_config): Remove grab_focus. Not needed
+	in GTK2, plus didn't work since expr_entry no longer is a subclass
+	of GtkEntry.
+
+2003-01-03  Jon K Hellan  <hellan@acm.org>
+
+	* src/item-grid.c (cb_cursor_come_to_rest): Don't display empty
+	tooltip.
+
+	* src/hlink.c (gnm_hlink_cur_wb_activate): Test and complain if
+	target is neither range nor name.
+
+2003-01-03  Jody Goldberg <jody@gnome.org>
+
+	* src/position.h : Some minor arg name cleanup.
+
+	* src/commands.c (cmd_area_set_text_redo) : really fix it this time.
+
+	* src/sheet.c (sheet_foreach_cell_in_range) : fix minor typo.
+
+	* src/rendered-value.c (rendered_value_new) : handle preview grid's
+	  use without a sheet.
+
+2003-01-02  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_workbook_write) : export quick hack for 1904 date
+	  convention.  The positioning is silly.
+	(xml_workbook_read) : read it back.
+
+2003-01-01  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.desktop.in : Add StartupNotify=true
+
+2003-01-02  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c (matrix_invert): New function.
+	(matrix_determinant): New function.
+	(LUPDecomp): Add an argument in which to return determinant.
+	(rescale): Add an argument in which to return determinant scaling.
+
+	* src/mathfunc.c (mdeterm, minverse): Delete.
+
+2003-01-01  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* debian/changelog, debian/control, debian/gnumeric-doc.dirs,
+	debian/rules: Updated.
+
+2003-01-01  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

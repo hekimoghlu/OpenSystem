@@ -1,0 +1,486 @@
+; NSIS script for EasyTAG mingw
+;
+; TODO: Write better introductory text (do not _need_ to agree to the GPL, not
+;       necessary to quit other applications before installing).
+
+!define PREFIX @PREFIX@
+!define PRODUCT_NAME @PACKAGE_NAME@
+!define PRODUCT_EXE_NAME @PACKAGE_TARNAME@.exe
+!define PRODUCT_VERSION @PACKAGE_VERSION@
+!define PRODUCT_PUBLISHER "EasyTAG project"
+!define PRODUCT_WEB_SITE @PACKAGE_URL@
+!define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_EXE_NAME}"
+!define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
+!define PRODUCT_UNINST_ROOT_KEY "HKLM"
+!define PRODUCT_STARTMENU_REGVAL "NSIS:StartMenuDir"
+
+SetCompressor /SOLID lzma
+ShowInstDetails show
+ShowUninstDetails show
+
+; Modern UI
+!include "MUI2.nsh"
+!include "FileFunc.nsh"
+
+; MUI Settings
+!define MUI_ABORTWARNING
+!define MUI_COMPONENTSPAGE_SMALLDESC
+!define MUI_ICON "data/icons/win32/easytag.ico"
+;!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico" ;"data/pixmaps/EasyTAG.ico"
+
+; Modern UI Configuration
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP "data/nsis/easytag-header.bmp"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "data/nsis/easytag-sidebar.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "data/nsis/easytag-sidebar.bmp"
+
+; Language Selection Dialog Settings
+!define MUI_LANGDLL_REGISTRY_ROOT "${PRODUCT_UNINST_ROOT_KEY}"
+!define MUI_LANGDLL_REGISTRY_KEY "${PRODUCT_UNINST_KEY}"
+!define MUI_LANGDLL_REGISTRY_VALUENAME "NSIS:Language"
+
+; Version resource
+VIProductVersion "0.0.0.0"
+VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
+VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}"
+VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
+VIAddVersionKey "LegalCopyright" ""
+VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Installer"
+
+; Welcome page
+!insertmacro MUI_PAGE_WELCOME
+
+; License page
+!insertmacro MUI_PAGE_LICENSE "./COPYING"
+
+; Components page
+!insertmacro MUI_PAGE_COMPONENTS
+
+; Directory page
+!insertmacro MUI_PAGE_DIRECTORY
+
+; Start menu page
+var ICONS_GROUP
+!define MUI_STARTMENUPAGE_NODISABLE
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${PRODUCT_NAME}"
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT "${PRODUCT_UNINST_ROOT_KEY}"
+!define MUI_STARTMENUPAGE_REGISTRY_KEY "${PRODUCT_UNINST_KEY}"
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "${PRODUCT_STARTMENU_REGVAL}"
+!insertmacro MUI_PAGE_STARTMENU Application $ICONS_GROUP
+
+; Instfiles page
+!insertmacro MUI_PAGE_INSTFILES
+
+; Finish page
+!define MUI_FINISHPAGE_RUN "$INSTDIR\bin\${PRODUCT_EXE_NAME}"
+!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.txt"
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+!define MUI_FINISHPAGE_LINK "${PRODUCT_NAME} Web site"
+!define MUI_FINISHPAGE_LINK_LOCATION ${PRODUCT_WEB_SITE}
+!insertmacro MUI_PAGE_FINISH
+
+; Uninstaller pages
+!insertmacro MUI_UNPAGE_WELCOME
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
+
+; Language files
+!insertmacro MUI_LANGUAGE "Afrikaans"
+!insertmacro MUI_LANGUAGE "Albanian"
+!insertmacro MUI_LANGUAGE "Arabic"
+!insertmacro MUI_LANGUAGE "Basque"
+!insertmacro MUI_LANGUAGE "Belarusian"
+!insertmacro MUI_LANGUAGE "Bosnian"
+!insertmacro MUI_LANGUAGE "Breton"
+!insertmacro MUI_LANGUAGE "Bulgarian"
+!insertmacro MUI_LANGUAGE "Catalan"
+!insertmacro MUI_LANGUAGE "Croatian"
+!insertmacro MUI_LANGUAGE "Czech"
+!insertmacro MUI_LANGUAGE "Danish"
+!insertmacro MUI_LANGUAGE "Dutch"
+!insertmacro MUI_LANGUAGE "English"
+!insertmacro MUI_LANGUAGE "Estonian"
+!insertmacro MUI_LANGUAGE "Farsi"
+!insertmacro MUI_LANGUAGE "Finnish"
+!insertmacro MUI_LANGUAGE "French"
+!insertmacro MUI_LANGUAGE "Galician"
+!insertmacro MUI_LANGUAGE "German"
+!insertmacro MUI_LANGUAGE "Greek"
+!insertmacro MUI_LANGUAGE "Hebrew"
+!insertmacro MUI_LANGUAGE "Hungarian"
+!insertmacro MUI_LANGUAGE "Icelandic"
+!insertmacro MUI_LANGUAGE "Indonesian"
+!insertmacro MUI_LANGUAGE "Irish"
+!insertmacro MUI_LANGUAGE "Italian"
+!insertmacro MUI_LANGUAGE "Japanese"
+!insertmacro MUI_LANGUAGE "Korean"
+!insertmacro MUI_LANGUAGE "Kurdish"
+!insertmacro MUI_LANGUAGE "Latvian"
+!insertmacro MUI_LANGUAGE "Lithuanian"
+!insertmacro MUI_LANGUAGE "Luxembourgish"
+!insertmacro MUI_LANGUAGE "Macedonian"
+!insertmacro MUI_LANGUAGE "Malay"
+!insertmacro MUI_LANGUAGE "Mongolian"
+!insertmacro MUI_LANGUAGE "Norwegian"
+!insertmacro MUI_LANGUAGE "NorwegianNynorsk"
+!insertmacro MUI_LANGUAGE "Polish"
+!insertmacro MUI_LANGUAGE "Portuguese"
+!insertmacro MUI_LANGUAGE "PortugueseBR"
+!insertmacro MUI_LANGUAGE "Romanian"
+!insertmacro MUI_LANGUAGE "Russian"
+!insertmacro MUI_LANGUAGE "Serbian"
+!insertmacro MUI_LANGUAGE "SerbianLatin"
+!insertmacro MUI_LANGUAGE "SimpChinese"
+!insertmacro MUI_LANGUAGE "Slovak"
+!insertmacro MUI_LANGUAGE "Slovenian"
+!insertmacro MUI_LANGUAGE "Spanish"
+!insertmacro MUI_LANGUAGE "SpanishInternational"
+!insertmacro MUI_LANGUAGE "Swedish"
+!insertmacro MUI_LANGUAGE "Thai"
+!insertmacro MUI_LANGUAGE "TradChinese"
+!insertmacro MUI_LANGUAGE "Turkish"
+!insertmacro MUI_LANGUAGE "Ukrainian"
+!insertmacro MUI_LANGUAGE "Uzbek"
+!insertmacro MUI_LANGUAGE "Welsh"
+
+; MUI end ------
+
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+OutFile "easytag-${PRODUCT_VERSION}-setup.exe"
+InstallDir "$PROGRAMFILES\${PRODUCT_NAME}"
+InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
+ShowInstDetails show
+ShowUnInstDetails show
+
+Function .onInit
+  !insertmacro MUI_LANGDLL_DISPLAY ; Open the language selection window
+FunctionEnd
+
+
+;------------------------------------
+; EasyTAG executable install Section
+;------------------------------------
+Section "Core ${PRODUCT_NAME} Files" SecProgram
+  SectionIn 1 RO ; User cannot unselect it!
+
+  ; Fedora mingw paths. FIXME: Find these automatically.
+  SetOutPath "$INSTDIR\bin"
+  File "${PREFIX}/bin/iconv.dll"
+  File "${PREFIX}/bin/libatk-1.0-0.dll"
+  File "${PREFIX}/bin/libbz2-1.dll"
+  File "${PREFIX}/bin/libcairo-2.dll"
+  File "${PREFIX}/bin/libcairo-gobject-2.dll"
+  File "${PREFIX}/bin/libepoxy-0.dll"
+  File "${PREFIX}/bin/libexpat-1.dll"
+  File "${PREFIX}/bin/libFLAC-8.dll"
+  File "${PREFIX}/bin/libffi-6.dll"
+  File "${PREFIX}/bin/libfontconfig-1.dll"
+  File "${PREFIX}/bin/libfreetype-6.dll"
+  File "${PREFIX}/bin/libgcc_s_sjlj-1.dll"
+  File "${PREFIX}/bin/libgdk-3-0.dll"
+  File "${PREFIX}/bin/libgdk_pixbuf-2.0-0.dll"
+  File "${PREFIX}/bin/libgio-2.0-0.dll"
+  File "${PREFIX}/bin/libglib-2.0-0.dll"
+  File "${PREFIX}/bin/libgmodule-2.0-0.dll"
+  File "${PREFIX}/bin/libgobject-2.0-0.dll"
+  File "${PREFIX}/bin/libgtk-3-0.dll"
+  File "${PREFIX}/bin/libid3-3-8-3.dll"
+  File "${PREFIX}/bin/libid3tag-0.dll"
+  File "${PREFIX}/bin/libintl-8.dll"
+  File "${PREFIX}/bin/libogg-0.dll"
+  File "${PREFIX}/bin/libopus-0.dll"
+  File "${PREFIX}/bin/libopusfile-0.dll"
+  File "${PREFIX}/bin/libpango-1.0-0.dll"
+  File "${PREFIX}/bin/libpangocairo-1.0-0.dll"
+  File "${PREFIX}/bin/libpangowin32-1.0-0.dll"
+  File "${PREFIX}/bin/libpcre-1.dll"
+  File "${PREFIX}/bin/libpixman-1-0.dll"
+  File "${PREFIX}/bin/libpng16-16.dll"
+  File "${PREFIX}/bin/libstdc++-6.dll"
+  File "${PREFIX}/bin/libspeex-1.dll"
+  File "${PREFIX}/bin/libtag.dll"
+  File "${PREFIX}/bin/libvorbis-0.dll"
+  File "${PREFIX}/bin/libvorbisfile-3.dll"
+  File "${PREFIX}/bin/libwavpack-1.dll"
+  File "${PREFIX}/bin/libwinpthread-1.dll"
+  File "${PREFIX}/bin/glib-compile-schemas.exe"
+  File "${PREFIX}/bin/gspawn-win32-helper.exe"
+  File "${PREFIX}/bin/gtk-update-icon-cache.exe"
+  File "${PREFIX}/bin/zlib1.dll"
+
+  SetOutPath "$INSTDIR\etc"
+  File /r "${PREFIX}/etc/fonts"
+  File /r "${PREFIX}/etc/gtk-3.0"
+
+  SetOutPath "$INSTDIR\lib"
+  File /r "${PREFIX}/lib/gdk-pixbuf-2.0"
+  File /r "${PREFIX}/lib/gtk-3.0"
+
+  SetOutPath "$INSTDIR\etc\gtk-3.0"
+  FileOpen $0 settings.ini w
+  FileWrite $0 "gtk-theme-name = $\"win32$\" $\r$\n"
+  FileWrite $0 "gtk-toolbar-style = GTK_TOOLBAR_ICONS$\r$\n"
+  FileClose $0
+
+  SetOutPath "$INSTDIR\share\icons\hicolor"
+  File "/usr/share/icons/hicolor/index.theme"
+
+  SetOutPath "$INSTDIR\share\icons"
+  File /r "/usr/share/icons/Adwaita"
+
+  SetOutPath "$INSTDIR\share\icons\hicolor\32x32\apps"
+  File "${DESTDIR}${PREFIX}/share/icons/hicolor/32x32/apps/easytag.png"
+  SetOutPath "$INSTDIR\share\icons\hicolor\48x48\apps"
+  File "${DESTDIR}${PREFIX}/share/icons/hicolor/48x48/apps/easytag.png"
+
+  SetOutPath "$INSTDIR\share\glib-2.0\schemas"
+  File "${DESTDIR}${PREFIX}/share/glib-2.0/schemas/org.gnome.EasyTAG.enums.xml"
+  File "${DESTDIR}${PREFIX}/share/glib-2.0/schemas/org.gnome.EasyTAG.gschema.xml"
+  File "${PREFIX}/share/glib-2.0/schemas/org.gtk.Settings.FileChooser.gschema.xml"
+
+  SetOutPath "$INSTDIR\bin"
+  File "${DESTDIR}${PREFIX}/bin/${PRODUCT_EXE_NAME}"
+
+  ReadEnvStr $0 COMSPEC
+  SetOutPath "$INSTDIR"
+  nsExec::ExecToLog '"$0" /C bin\glib-compile-schemas.exe share\glib-2.0\schemas'
+  nsExec::ExecToLog '"$0" /C bin\gtk-update-icon-cache.exe share\icons\Adwaita'
+  nsExec::ExecToLog '"$0" /C bin\gtk-update-icon-cache.exe share\icons\hicolor'
+
+  ; FIXME: ChangeLog should come from the dist dir, otherwise it does not
+  ; contain the generated changelog.
+  File /oname=ChangeLog.txt ChangeLog
+  File /oname=COPYING.txt COPYING
+  File /oname=README.txt README
+  File /oname=SOURCES.txt SOURCES
+
+  ; Shortcuts
+  ;!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  ;CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
+  ;CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\EasyTAG ${PRODUCT_VERSION}.lnk" "$INSTDIR\easytag.exe"
+  ;!insertmacro MUI_STARTMENU_WRITE_END
+SectionEnd
+
+;------------------------------------
+; EasyTAG shortcut install Section
+;------------------------------------
+SectionGroup /e "Shortcuts" SecShortcuts
+  Section /o "Desktop" SecDesktopShortcut
+    SetOverwrite on
+    CreateShortCut "$DESKTOP\${PRODUCT_NAME} ${PRODUCT_VERSION}.lnk" "$INSTDIR\bin\${PRODUCT_EXE_NAME}"
+    SetOverwrite off
+  SectionEnd
+
+  Section "Start Menu" SecStartMenuShortcut
+    SetOverwrite on
+    !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+    CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
+    CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\${PRODUCT_NAME} ${PRODUCT_VERSION}.lnk" "$INSTDIR\bin\${PRODUCT_EXE_NAME}"
+    !insertmacro MUI_STARTMENU_WRITE_END
+    SetOverwrite off
+  SectionEnd
+
+  Section "Context Menu" SecContextMenuShortcut
+    SetOverwrite on
+    WriteRegStr HKCR "Directory\shell\${PRODUCT_NAME}" "" "Browse with EasyTAG"
+    WriteRegStr HKCR "Directory\shell\${PRODUCT_NAME}\command" "" '"$INSTDIR\bin\${PRODUCT_EXE_NAME}" "%1"'
+    SetOverwrite off
+  SectionEnd
+SectionGroupEnd
+
+
+;------------------------------------
+; Translation install Section
+;------------------------------------
+!macro Locale LOCALE
+Section "${LOCALE} Translation"
+  SetOutPath "$INSTDIR\share\locale\${LOCALE}\LC_MESSAGES"
+  File "${DESTDIR}${PREFIX}/share/locale/${LOCALE}/LC_MESSAGES/easytag.mo"
+  File "${PREFIX}/share/locale/${LOCALE}/LC_MESSAGES/atk10.mo"
+  File "${PREFIX}/share/locale/${LOCALE}/LC_MESSAGES/gdk-pixbuf.mo"
+  File "${PREFIX}/share/locale/${LOCALE}/LC_MESSAGES/glib20.mo"
+  File "${PREFIX}/share/locale/${LOCALE}/LC_MESSAGES/gtk30.mo"
+  File "${PREFIX}/share/locale/${LOCALE}/LC_MESSAGES/gtk30-properties.mo"
+SectionEnd
+!macroend
+
+SectionGroup "Translations" SecTranslations
+  !insertmacro Locale "bg"
+  !insertmacro Locale "bs"
+  !insertmacro Locale "ca"
+  !insertmacro Locale "cs"
+  !insertmacro Locale "da"
+  !insertmacro Locale "de"
+  !insertmacro Locale "el"
+  !insertmacro Locale "en_GB"
+  !insertmacro Locale "es"
+  !insertmacro Locale "fr"
+  !insertmacro Locale "he"
+  !insertmacro Locale "hu"
+  !insertmacro Locale "id"
+  !insertmacro Locale "it"
+  !insertmacro Locale "ja"
+  !insertmacro Locale "ko"
+  !insertmacro Locale "lt"
+  !insertmacro Locale "nb"
+  !insertmacro Locale "nl"
+  !insertmacro Locale "pl"
+  !insertmacro Locale "pt"
+  !insertmacro Locale "pt_BR"
+  !insertmacro Locale "ro"
+  !insertmacro Locale "ru"
+  !insertmacro Locale "sl"
+  !insertmacro Locale "sr"
+  !insertmacro Locale "sr@latin"
+  !insertmacro Locale "sv"
+  !insertmacro Locale "te"
+  !insertmacro Locale "tr"
+  !insertmacro Locale "uk"
+  !insertmacro Locale "zh_CN"
+  !insertmacro Locale "zh_TW"
+SectionGroupEnd
+
+Section -AdditionalIcons
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+  WriteIniStr "$INSTDIR\${PRODUCT_NAME}.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\${PRODUCT_NAME} Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url"
+  CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\Uninstall ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall ${PRODUCT_NAME}.exe"
+  !insertmacro MUI_STARTMENU_WRITE_END
+SectionEnd
+
+Section -Post
+  WriteUninstaller "$INSTDIR\Uninstall ${PRODUCT_NAME}.exe"
+  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\${PRODUCT_EXE_NAME}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\Uninstall ${PRODUCT_NAME}.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "QuietUninstallString" "$\"$INSTDIR\Uninstall ${PRODUCT_NAME}.exe$\" /S"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\bin\${PRODUCT_EXE_NAME}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Readme" "$INSTDIR\README.txt"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "InstallSource" "$EXEDIR"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "InstallLocation" "$INSTDIR"
+  ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+  IntFmt $0 "0x%08X" $0
+  WriteRegDword ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "EstimatedSize" "$0"
+  WriteRegDword ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoModify" 1
+  WriteRegDword ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoRepair" 1
+SectionEnd
+
+; Section descriptions
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecProgram} "The ${PRODUCT_NAME} program and associated core files"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecTranslations} "Translation catalogs. You can skip installing these if you only want to see the UI in US English"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecShortcuts} "Application shortcuts"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktopShortcut} "Create a shortcut to the program on the desktop"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenuShortcut} "Create shortcuts in the start menu"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecContextMenuShortcut} "Launch ${PRODUCT_NAME} from the Explorer context menu"
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+
+;------------------------------------
+; Uninstall Section
+;------------------------------------
+Section Uninstall
+  !insertmacro MUI_STARTMENU_GETFOLDER "Application" $ICONS_GROUP
+  Delete /rebootok "$DESKTOP\${PRODUCT_NAME} ${PRODUCT_VERSION}.lnk"
+  Delete /rebootok "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME} ${PRODUCT_VERSION}.lnk"
+  Delete /rebootok "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall ${PRODUCT_NAME}.lnk"
+  RMDir "$SMPROGRAMS\${PRODUCT_NAME}"
+
+  Delete /rebootok "$INSTDIR\bin\${PRODUCT_EXE_NAME}"
+
+  RMDir /r "$INSTDIR\lib\pango"
+  RMDir /r "$INSTDIR\lib\gtk-3.0"
+  RMDir /r "$INSTDIR\lib\gdk-pixbuf-2.0"
+  RMDir /r "$INSTDIR\etc\gtk-3.0"
+  RMDir /r "$INSTDIR\etc\fonts"
+
+  Delete /rebootok "$INSTDIR\bin\zlib1.dll"
+  Delete /rebootok "$INSTDIR\bin\gtk-update-icon-cache.exe"
+  Delete /rebootok "$INSTDIR\bin\gspawn-win32-helper.exe"
+  Delete /rebootok "$INSTDIR\bin\glib-compile-schemas.exe"
+  Delete /rebootok "$INSTDIR\bin\libwinpthread-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libwavpack-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libvorbisfile-3.dll"
+  Delete /rebootok "$INSTDIR\bin\libvorbis-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libtag.dll"
+  Delete /rebootok "$INSTDIR\bin\libstdc++-6.dll"
+  Delete /rebootok "$INSTDIR\bin\libspeex-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libpng16-16.dll"
+  Delete /rebootok "$INSTDIR\bin\libpixman-1-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libpcre-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libpangowin32-1.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libpangocairo-1.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libpango-1.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libopusfile-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libopus-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libogg-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libintl-8.dll"
+  Delete /rebootok "$INSTDIR\bin\libid3tag-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libid3-3-8-3.dll"
+  Delete /rebootok "$INSTDIR\bin\libgtk-3-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libgobject-2.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libgmodule-2.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libglib-2.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libgio-2.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libgdk_pixbuf-2.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libgdk-3-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libgcc_s_sjlj-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libfreetype-6.dll"
+  Delete /rebootok "$INSTDIR\bin\libfontconfig-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libffi-6.dll"
+  Delete /rebootok "$INSTDIR\bin\libFLAC-8.dll"
+  Delete /rebootok "$INSTDIR\bin\libexpat-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libepoxy-0.dll"
+  Delete /rebootok "$INSTDIR\bin\libcairo-gobject-2.dll"
+  Delete /rebootok "$INSTDIR\bin\libcairo-2.dll"
+  Delete /rebootok "$INSTDIR\bin\libbz2-1.dll"
+  Delete /rebootok "$INSTDIR\bin\libatk-1.0-0.dll"
+  Delete /rebootok "$INSTDIR\bin\iconv.dll"
+  RMDir /r "$INSTDIR\usr"
+  RMDir /r "$INSTDIR\share"
+  RMDir /r "$INSTDIR\lib"
+  RMDir /r "$INSTDIR\etc"
+  Delete "$INSTDIR\${PRODUCT_NAME}.url"
+  Delete "$INSTDIR\Uninstall ${PRODUCT_NAME}.exe"
+  Delete "$INSTDIR\ChangeLog.txt"
+  Delete "$INSTDIR\COPYING.txt"
+  Delete "$INSTDIR\bin\${PRODUCT_EXE_NAME}"
+  Delete "$INSTDIR\README.txt"
+  RMDir /r "$INSTDIR\lib\locale\"
+
+  Delete "$SMPROGRAMS\$ICONS_GROUP\Uninstall ${PRODUCT_NAME}.lnk"
+  Delete "$SMPROGRAMS\$ICONS_GROUP\${PRODUCT_NAME} Website.lnk"
+  Delete "$SMPROGRAMS\$ICONS_GROUP\${PRODUCT_NAME} ${PRODUCT_VERSION}.lnk"
+  Delete "$SMPROGRAMS\$ICONS_GROUP\${PRODUCT_NAME} Documentation.lnk"
+
+  Delete "$DESKTOP\${PRODUCT_NAME} ${PRODUCT_VERSION}.lnk"
+
+  RMDir "$SMPROGRAMS\$ICONS_GROUP"
+  RMDir "$INSTDIR"
+
+  DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+  DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
+  ; Delete "Browse with EasyTAG" context menu
+  DeleteRegKey HKCR "Directory\shell\${PRODUCT_NAME}"
+
+  ; Delete personal settings?
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+             "Do you want to remove your personal settings?" IDYES deletesettings IDNO dontdeletesettings
+  deletesettings:
+    ; Get 'Application Data' user's directory
+    RMDir /r "$LOCALAPPDATA\@PACKAGE_TARNAME@"
+  dontdeletesettings:
+
+  SetAutoClose true
+SectionEnd
+
+
+Function un.onInit
+!insertmacro MUI_UNGETLANGUAGE
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" IDYES +2
+  Abort
+FunctionEnd

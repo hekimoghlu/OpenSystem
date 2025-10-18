@@ -1,0 +1,101 @@
+include:
+  - project: 'gnome/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      job-stage: deploy
+      dist-job-name: "build-flatpak"
+  - component: gitlab.gnome.org/GNOME/citemplates/gnomeos-build-sysext@master
+  - component: "gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master"
+    inputs:
+      meson-options: "-Ddocumentation=true"
+      lsan-options: "suppressions=${CI_PROJECT_DIR}/tests/lsan.supp"
+
+variables:
+  APP_ID: 'org.gnome.Adwaita1.Demo'
+  BUNDLE: 'org.gnome.Adwaita1.Demo.flatpak'
+  RUNTIME_REPO: 'https://nightly.gnome.org/gnome-nightly.flatpakrepo'
+  MANIFEST_PATH: 'demo/org.gnome.Adwaita1.Demo.json'
+  FLATPAK_MODULE: 'libadwaita'
+  FLATPAK_BUILD_DIR: build
+  # Instead of -nightly, -48 can be used for stable
+  GNOMEOS_IMAGE_VERSION: "nightly"
+  GNOMEOS_IMAGE: "quay.io/gnome_infrastructure/gnome-build-meta:core-$GNOMEOS_IMAGE_VERSION"
+
+stages:
+  - build
+  - deploy
+
+api-visibility:
+  stage: build
+  before_script: []
+  needs: []
+  script:
+    - ./.gitlab-ci/api-visibility.sh
+
+doc:
+  image: "$GNOMEOS_IMAGE"
+  stage: build
+  needs: []
+  tags:
+    - flatpak
+  variables:
+    MESON_ARGS: >-
+      -Ddocumentation=true
+      -Dtests=false
+      -Dvapi=false
+  script:
+    - meson setup --fatal-meson-warnings --prefix=/app ${MESON_ARGS} _build
+    - ninja -C _build
+    - meson test -C _build --suite libadwaita:doc
+    - mv _build/doc/libadwaita-1 _doc/
+  artifacts:
+    expose_as: 'Browse documentation'
+    paths:
+      - _doc/index.html
+      - _doc
+
+build-flatpak:
+  extends: '.flatpak@x86_64'
+  stage: build
+  before_script: []
+  needs: []
+
+build-flatpak-aarch64:
+  extends: '.flatpak@aarch64'
+  stage: build
+  before_script: []
+  needs: []
+
+abi-check:
+  image: "$GNOMEOS_IMAGE"
+  stage: build
+  needs: []
+  variables:
+    LAST_ABI_BREAK: "8896cb224e7bd737b7f99bba5a10b56e89f034c4"
+  script:
+    - ./.gitlab-ci/check-abi ${LAST_ABI_BREAK} $(git rev-parse HEAD)
+
+potfiles:
+  image: fedora
+  stage: build
+  script:
+    - .gitlab-ci/check-potfiles.sh
+
+refresh-doc:
+  image: fedora
+  stage: deploy
+  needs: ['doc']
+  only:
+    refs:
+    - 'main'
+  script:
+    - "curl -X POST -F token=${PAGES_TRIGGER_TOKEN} -F ref=pages https://gitlab.gnome.org/api/v4/projects/14079/trigger/pipeline"
+
+nightly:
+  extends: '.publish_nightly'
+  needs: ['build-flatpak']
+
+nightly-aarch64:
+  extends: '.publish_nightly'
+  needs: ['build-flatpak-aarch64']

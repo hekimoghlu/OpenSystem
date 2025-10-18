@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="xdg-desktop-portal-gnome">
+  <requires lib="gtk" version="4.0"/>
+  <template class="AppChooserDialog" parent="AdwWindow">
+    <property name="title" translatable="yes">Open With…</property>
+    <property name="resizable">0</property>
+
+    <property name="content">
+      <object class="AdwToolbarView">
+
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <property name="show-start-title-buttons">False</property>
+            <property name="show-end-title-buttons">False</property>
+            <child>
+              <object class="GtkButton" id="cancel_button">
+                <property name="label" translatable="yes">_Cancel</property>
+                <property name="use-underline">1</property>
+                <signal name="clicked" handler="cancel_clicked"/>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkButton" id="open_button">
+                <property name="sensitive">0</property>
+                <property name="label" translatable="yes">_Open</property>
+                <property name="use-underline">1</property>
+                <signal name="clicked" handler="open_clicked"/>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <property name="content">
+          <object class="GtkStack" id="stack">
+            <child>
+              <object class="GtkStackPage">
+                <property name="name">list</property>
+                <property name="child">
+                  <object class="AdwPreferencesPage" id="prefs_page">
+                    <property name="description-centered">True</property>
+                    <child>
+                      <object class="AdwPreferencesGroup">
+                        <child>
+                          <object class="GtkListBox" id="list">
+                            <style>
+                              <class name="boxed-list"/>
+                            </style>
+                            <signal name="row-activated" handler="row_activated"/>
+                            <signal name="row-selected" handler="row_selected"/>
+                            <property name="activate-on-single-click">0</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkStackPage">
+                <property name="name">empty</property>
+                <property name="child">
+                  <object class="AdwStatusPage" id="empty_box">
+                    <property name="icon-name">org.gnome.Software-symbolic</property>
+                    <property name="title" translatable="yes">No Apps Available</property>
+                    <property name="description">No apps installed that are able to open file.extension. You can find more apps in Software.</property>
+                    <property name="child">
+                      <object class="GtkButton" id="find_software_button">
+                        <property name="halign">center</property>
+                        <property name="child">
+                          <object class="AdwButtonContent">
+                            <property name="icon-name">org.gnome.Software-symbolic</property>
+                            <property name="label" translatable="yes">_Find More in Software</property>
+                            <property name="use-underline">True</property>
+                          </object>
+                        </property>
+                        <style>
+                          <class name="suggested-action"/>
+                          <class name="pill"/>
+                        </style>
+                        <signal name="clicked" handler="find_in_software"/>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </property>
+
+      </object>
+    </property>
+
+  </template>
+</interface>

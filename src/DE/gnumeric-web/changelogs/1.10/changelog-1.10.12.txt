@@ -1,0 +1,171 @@
+2010-11-25  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.12
+
+2010-11-19  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_save_as): Better fix for 634792.
+
+2010-11-16  Morten Welinder  <terra@gnome.org>
+
+	* src/*.c: Constify GOFormat handling.
+
+2010-11-15  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_save_as): Clear "pristine" flag.  Fixes
+	#634792.
+
+2010-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-so-filled.c (so_filled_view_set_bounds): Ensure that
+	clipping width and height do not become non-positive.  Fixes #634597.
+
+2010-11-07  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (so_image_view_set_bounds): fixed image
+	bounds in zoomed sheets.
+
+2010-11-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/dead-kittens.h: fixed property name in
+	gtk_table_get_size. [#634149]
+
+2010-11-05   Andreas J. Guelzow <aguelzow@pyrshep.ca>
+	for Sameer Morar <smorar@gmail.com>
+
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet): Enable the key combinations
+	<control><shift>Page_Up and <control><shift>Page_Down to move the
+	currently selected sheet left or right respectively.  [#634139]
+
+2010-11-04  Morten Welinder  <terra@gnome.org>
+
+	* src/item-cursor.c (cb_autofill_scroll): Limit size of tooltip to
+	200x200 characters.
+
+	* src/sheet-autofill.c (gnm_autofill_hint)
+	(sheet_autofill_internal): Change to return GString* instead of
+	char*.  All callers changed.
+
+	* src/cell.c (gnm_cell_convert_expr_to_value): Handle array
+	corners.
+
+2010-10-29  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (sog_cb_copy_to_new_sheet),
+	(gnm_sog_populate_menu): New contextual menu item: copy a graph
+	to a new graph sheet.
+
+2010-10-27  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (parser_simple_val_or_name): Check whether a name
+	is valid before defining it.  See bug #633140.
+
+	* src/expr-name.c (expr_name_validate): Improve check for clash
+	with boolean constants.  Also check untranslated.
+
+2010-10-20  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnm_xml_get_widget): Elminate.  Change all
+	callers to go_gtk_builder_get_widget.  ("The light that burns
+	twice as bright burns for half as long - and you have burned so
+	very, very brightly, Roy.")
+
+2010-10-19  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_keyed_dialog): When dialog is
+	destroyed, clear "state" to trigger the tear-down even if someone
+	(i.e., gtkbuilder) holds a ref.
+
+2010-10-18  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_glade_group_value): Make this work for
+	gtk builder guis too.
+	(gnm_xml_get_widget): New function wrapping
+	go_gtk_builder_get_widget and glade_xml_get_widget.
+
+	* src/sheet-object-image.c (gnm_soi_draw_cairo): Fix printing
+	crash.  [#632439]
+
+2010-10-15  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-widget.c (sheet_widget_frame_user_config): Use
+	gnm_gtk_builder_new and handle failures.
+
+	* src/gui-util.c (gnm_gtk_builder_new): New function that knows
+	about Gnumeric's directory structure.
+
+2010-10-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/undo.c (gnm_undo_colrow_set_sizes_undo): plug leak
+
+2010-10-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (cb_frame_config_destroy),
+	(sheet_widget_frame_user_config), (cb_button_config_destroy),
+	(sheet_widget_button_user_config), (cb_adjustment_config_destroy),
+	(sheet_widget_adjustment_user_config_impl),
+	(cb_checkbox_config_destroy), (sheet_widget_checkbox_user_config),
+	(cb_radio_button_config_destroy),
+	(sheet_widget_radio_button_user_config): use GtkBuiler instead of GladeXML.
+
+2010-10-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add menu items
+	* src/GNOME_Gnumeric-gtk.xml.in: add menu items
+	* src/HILDON_Gnumeric-gtk.xml.in: add menu items
+	* src/commands.c(cmd_page_breaks_clear): new
+	(cmd_page_break_toggle): new
+	(cmd_page_breaks_set_breaks): new
+	* src/commands.h (cmd_page_breaks_clear): new
+	(cmd_page_break_toggle): new
+	* src/print-info.c (print_info_has_manual_breaks): new
+	* src/print-info.h (print_info_has_manual_breaks): new
+	* src/sheet-view.c (sv_update): add MS_PAGE_BREAKS
+	* src/wbc-gtk-actions.c (cb_file_print_area_toggle_col): new
+	(cb_file_print_area_toggle_row): new
+	(cb_file_print_area_clear_pagebreaks): new
+	(permanent_actions): change meu item title
+	(actions): connect the above
+	* src/wbc-gtk.c (wbcg_menu_state_update): handle MS_PAGE_BREAKS
+	* src/workbook-control.h (MS_PAGE_BREAKS): new
+
+2010-10-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (print_info_set_paper_orientation): correct
+	  argument description
+	* src/print-info.h (page_breaks): add comment
+	* src/print.c (compute_sheet_pages): switch vertical and horizontal
+	  page breaks
+
+2010-10-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_so_set_links): add argument
+	* src/commands.c (cmd_so_set_links): add argument
+	(cmd_so_set_links_redo): handle output ttpe
+	* src/sheet-object-widget.h
+	(sheet_widget_list_base_set_result_type): new
+	(sheet_widget_list_base_result_type_is_index): new
+	* src/sheet-object-widget.c
+	(sheet_widget_list_base_set_result_type): new
+	(sheet_widget_list_base_result_type_is_index): new
+	(sheet_widget_list_base_set_selection): consider swl->result_as_index
+	(sheet_widget_list_base_set_selection_value): new
+	(sheet_widget_list_base_init): initialize swl->result_as_index
+
+2010-10-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (cb_list_model_changed): save current
+	  selection and flag selection as saved.
+	(cb_selection_changed): don't bother if the selection was saved
+	(sheet_widget_list_create_widget): try to set the selection only if
+	  we have one.
+
+2010-10-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (sheet_widget_list_create_widget): set the
+	  correct selection
+	(sheet_widget_combo_create_widget): ditto
+
+2010-10-01  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

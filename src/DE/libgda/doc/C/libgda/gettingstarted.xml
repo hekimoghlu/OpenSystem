@@ -1,0 +1,483 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<chapter id="getting_started" xmlns:xi="http://www.w3.org/2003/XInclude">
+  <title>Code examples</title>
+  <sect1 id="initializing">
+    <title>Initializing</title>
+    <para>
+      First of all you have to initialise the gda library, i.e. to call the
+      <link linkend="gda-init">gda_init ()</link> function, for example:
+    </para>
+    <programlisting>
+gda_init ();
+    </programlisting>
+    <para>
+      After initializing you can work as usual or make &LIBGDA; 
+    </para>
+    <para>For example a basic program would look like:
+      <programlisting>
+void
+do_stuff () 
+{
+	GdaConnection *connection;
+      
+        /* open a connection */
+	g_print ("CONNECTING\n");
+	connection = gda_connection_open_from_dsn ("calvaris", NULL, 
+                                                   GDA_CONNECTION_OPTIONS_READ_ONLY, NULL);
+	g_print ("CONNECTED\n");
+      
+        /* use the connection */
+	execute_some_queries (connection);
+      
+        /* close the connection */
+        g_object_unref (G_OBJECT (connection));
+}
+      
+      
+int
+main (int argc, char **argv)
+{
+	g_print ("STARTING\n");
+
+	gda_init ();
+      	do_stuff();
+
+	g_print("ENDING\n");      
+}
+      </programlisting>
+    </para>
+  </sect1>
+
+  
+  <sect1 id="connections">
+    <title>Connecting</title>
+    <para>
+      &LIBGDA; allows data sources (DSN) to be defined and referred to by a unique name which contains all the 
+      required information to actually open a connection (except the name and password if they are required);
+      see the <link linkend="libgda-6.0-Configuration">Configuration section</link> for more information about
+      how to manage data sources. Of
+      course it's still possible to open a connection without having defined a DSN, in which case a <emphasis>connection
+      string</emphasis> is used to specify all the parameters required to open a connection. For more information
+      about connection strings, see the <link linkend="gda-connection-open-from-string">gda_connection_open_from_string ()</link>'s documentation.
+    </para>
+    <para>
+      Connections are opened using <link linkend="gda-connection-open-from-dsn">gda_connection_open_from_dsn ()</link> for
+      connections which are defined as a data source (DSN), or
+      or <link linkend="gda-connection-open-from-string">gda_connection_open_from_string ()</link> otherwise. 
+      Each connection object can then be used to actually execute queries, for example:
+      <programlisting>
+void
+do_stuff () {
+	GdaConnection *connection;
+      
+        /* open a connection */
+	g_print ("CONNECTING\n");
+	connection = gda_connection_open_from_dsn ("calvaris", NULL, 
+                                                   GDA_CONNECTION_OPTIONS_READ_ONLY, NULL);
+	if (!connection) {
+		g_print ("CONNECTION FAILED\n");
+		return;
+	}
+	g_print ("CONNECTED\n");
+      
+        /* use the connection */
+	execute_some_queries (connection);
+      
+        /* close the connection */
+        g_object_unref (G_OBJECT (connection));
+}
+      </programlisting>
+    </para>
+    <para>
+      Closing the connection can be ordered using <link linkend="gda-connection-close">gda_connection_close ()</link>,
+      or is automatically done when the connection object is destroyed (as is the case in the example above when 
+      <link linkend="g-object-unref">g_object_unref()</link> is called with the connection as argument).
+    </para>
+  </sect1>
+
+
+  <sect1>
+    <title>Executing queries</title>
+    <para>
+      Any query within &LIBGDA; is represented as a <link linkend="GdaStatement">GdaStatement</link> object. Each 
+      <link linkend="GdaStatement">GdaStatement</link> object can store exactly one SQL statement (SQL statements
+      are generally separated by semi-colons). Several statements can be grouped into a 
+      <link linkend="GdaBatch">GdaBatch</link> object.
+    </para>
+
+    <para>
+      &LIBGDA; can execute any SQL understood by the database to which a connection is opened, even SQL code containing
+      extensions specific to a database.
+    </para>
+    <para>
+      When creating an SQL string which contains values (literals), one can be tempted (as it is the easiest solution) to
+      create a string containing the values themselves, execute that statement and apply the same process the next time the same
+      statement needs to be executed with different values. This approach has two major flaws outlined below which is why &LIBGDA;
+      recommends using variables in statements (also known as parameters or place holders) and reusing the same
+      <link linkend="GdaStatement">GdaStatement</link> object when only the variable's values change. The flaws are:
+      <itemizedlist>
+	<listitem>
+	  <para>The performances of the resulting application are not optimized because the database needs to parse the SQL
+	    string each time and build its own internal representation of the statement, execute the statement using its 
+	    internal representation, then discard that internal representation. Using variables and reusing the same statement,
+	    the database only parses once the SQL statement, builds its internal representation, and reuses it every time
+	    the statement is executed.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>Literals in SQL strings are an open invitation to SQL injection problems. Using variables prevents SQL injection.
+	  </para>
+	</listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      Because each database has its own way of representing variables in an SQL string, and because those ways of representing
+      variables don't contain enough information (it is usually impossible to specify the expected type for a variable for example)
+      &LIBGDA; has defined a standard way of defining them, and translates it into the syntax understood by the database when
+      needed. For more information about that syntax, see the <link linkend="GdaSqlParser.description">GdaSqlParser's object description</link>.
+    </para>
+    <para>
+      GdaStatement objects can be created by:
+      <itemizedlist>
+	  <listitem><para>parsing SQL code using <link linkend="gda-sql-parser-parse-string">gda_sql_parser_parse_string ()</link>
+	  from a <link linkend="GdaSqlParser">GdaSqlParser</link> object.</para></listitem>
+	  <listitem><para>building a <link linkend="GdaSqlStatement">GdaSqlStatement</link> structure and creating 
+	  a <link linkend="GdaStatement">GdaStatement</link> object around that structure. This method requires more
+	  knowledge but is more portable across databases</para></listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      Executing a statement is a matter of calling 
+      <link linkend="gda-connection-statement-execute">gda_connection_statement_execute ()</link> or one of its simplified
+      versions if the nature of the statement (SELECT or not) is known.
+    </para>
+    <para>
+      The following example shows how to use a GdaStatement to list the details of some data while making a variable
+      (named "the_id") vary from 0 to 9 (for simplicity, error checking has been removed):
+      <programlisting>
+GdaConnection *cnc;
+GdaSqlParser *parser;
+GdaStatement *stmt;
+GdaSet *params;
+GdaHolder *p;
+GValue *value;
+gint i;
+
+cnc = ...;
+
+[...]
+
+stmt = gda_sql_parser_parse_string (parser, "SELECT * FROM customers WHERE id=##the_id::gint", NULL, NULL);
+gda_statement_get_parameters (stmt, &amp;params, NULL);
+
+p = gda_set_get_holder (params, "the_id");
+value = gda_value_new (G_TYPE_INT);
+for (i = 0; i &lt; 10; i++) {
+	GdaDataModel *res;
+	g_value_set_int (value, i);
+	gda_holder_set_value (p, value);
+	res = gda_connection_statement_execute_select (cnc, stmt, params, NULL);
+	gda_data_model_dump (res, stdout);
+	g_object_unref (res);
+}
+g_object_unref (params);
+g_object_unref (stmt);
+      </programlisting>
+    </para>
+  </sect1>
+  
+  <sect1 id="data-model">
+    <title>Managing data models</title>
+    <para>
+      Each time a SELECT query is executed, it returns a <link linkend="GdaDataModel">GdaDataModel</link>
+      object, which contains methods to access the returned data. Note that <link linkend="GdaDataModel">GdaDataModel</link>
+      is in fact an interface and is implemented in very various ways depending on the database provider executing the
+      query; however any GdaDataModel object is used the same way. Note that GdaDataModel objects are also generally used to 
+      represent an array of data where all the data in a column is of the same type.
+    </para>
+    <para>
+      Some data models can be modified, some can't and knowing the features of a specific data model instance
+      can be done using the <link linkend="gda-data-model-get-access-flags">gda_data_model_get_access_flags ()</link>
+      and <link linkend="gda-data-model-get-attributes-at">gda_data_model_get_attributes_at ()</link> methods.
+      Data models returned when SELECT queries are executed usually are not modifiable.
+    </para>
+    <para>
+      The value stored in each cell of a data model (at a <emphasis>(column, row)</emphasis> position) is a 
+      read-only <link linkend="GValue">GValue</link> pointer. 
+      Accessing the data in a GdaDataModel can be done using two methods:
+      <itemizedlist>
+	<listitem><para>in a random access way using 
+	    <link linkend="gda-data-model-get-value-at">gda_data_model_get_value_at ()</link> if the data model
+	    supports random access</para></listitem>
+	<listitem><para>using a data model iterator as a cursor: a 
+	    <link linkend="GdaDataModelIter">GdaDataModelIter</link> object which is always supported by any data model.
+	</para></listitem>
+      </itemizedlist>
+    </para>
+    <sect2 id="data-model-table-access">
+      <title>Example using random access</title>
+      <para>
+        The following example displays the contents of a GdaDataModel using random access:
+        <programlisting>
+void
+show_data_model (GdaDataModel *dm)
+{
+          gint row_id;
+          gint column_id;
+          const GValue *value;
+          
+          for (column_id = 0; column_id &lt; gda_data_model_get_n_columns (dm);
+               column_id++)
+          g_print("%s\t", gda_data_model_get_column_title (dm, column_id));
+          g_print("\n");
+          
+          for (row_id = 0; row_id &lt; gda_data_model_get_n_rows (dm); row_id++) {
+                    for (column_id = 0; column_id &lt; gda_data_model_get_n_columns (dm);
+                         column_id++) {
+                              char *str;
+
+                              value = gda_data_model_get_value_at (dm, column_id, row_id, NULL);
+                              str = gda_value_stringify (value);
+                              g_print ("%s\t", str);
+                              g_free (str);
+                    }
+                    g_print("\n");
+          }
+}
+        </programlisting>
+      </para>
+    </sect2>
+
+    <sect2 id="data-model-row-access">
+      <title>Example using an iterator</title>
+      <para>
+        <programlisting>
+void
+show_data_model (GdaDataModel *dm)
+{
+          gint column_id;
+          GdaDataModelIter *iter;
+          
+          for (column_id = 0; column_id &lt; gda_data_model_get_n_columns (dm);
+               column_id++)
+          g_print("%s\t", gda_data_model_get_column_title (dm, column_id));
+          g_print("\n");
+          
+          iter = gda_data_model_create_iter (dm);
+          gda_data_model_iter_move_next (iter);
+          while (gda_data_model_iter_is_valid (iter)) {
+                    GSList *list;
+                    for (list = GDA_SET (iter)-&gt;holder; list; list = list-&gt;next) {
+                              str = gda_holder_get_value_str (GDA_HOLDER (list-&gt;data), NULL);
+                              g_print ("%s\t", str);
+                              g_free (str);
+                    }
+                    g_print("\n");
+          }
+          g_object_unref (iter);
+}
+        </programlisting>
+      </para>
+    </sect2>
+
+    <sect2 id="data-model-free">
+      <title>Freeing data models</title>
+      <para>
+        When you finish using data models you must free it, using <link linkend="g-object-unref">g_object_unref ()</link>.
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="transactions">
+    <title>Managing transactions</title>
+    <para>
+      On any connection (as a <link linkend="GdaConnection">GdaConnection</link> object), 
+      if the database provider used by the connection supports it, 
+      transactions may be started, committed or rolledback, or savepoints added, removed or rolledback. 
+      These operations can be performed using Libgda's API (such as 
+      <link linkend="gda-connection-begin-transaction">gda_connection_begin_transaction</link>()), 
+      or directly using some SQL on the connection (usually a "BEGIN;" command). 
+    </para>
+    <para>
+      The <emphasis>transaction status</emphasis> of any connection can be obtained using 
+      <link linkend="gda-connection-get-transaction-status">gda_connection_get_transaction_status ()</link>, which
+      returns a <link linkend="GdaTransactionStatus">GdaTransactionStatus's</link> object which can be interrogated. That
+      object also makes it easy to keep up with the evolution of the transaction status of the connection.
+    </para>
+  </sect1>
+
+  <sect1 id="managing-errors">
+    <title>Managing connection's events and errors</title>
+    <para>
+      Each <link linkend="GdaConnection">GdaConnection</link> object maintains a list of events which occurred on the
+      connection. Each event is stored as a <link linkend="GdaConnectionEvent">GdaConnectionEvent</link> object, and the
+      possible event <emphasis>kinds</emphasis> are:
+      <itemizedlist>
+	<listitem><para>GDA_CONNECTION_EVENT_NOTICE: for notices which are general purpose information</para></listitem>
+	<listitem><para>GDA_CONNECTION_EVENT_WARNING: for warnings</para></listitem>
+	<listitem><para>GDA_CONNECTION_EVENT_ERROR: for errors</para></listitem>
+	<listitem><para>GDA_CONNECTION_EVENT_COMMAND: for SQL statements which have been executed</para></listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      The list of events for a GdaConnection can be obtained using 
+      <link linkend="gda-connection-get-events">gda_connection_get_events()</link>, the list of events can be manually cleared
+      anytime using <link linkend="gda-connection-clear-events-list">gda_connection_clear_events_list ()</link>, and
+      is automatically cleared before any command or query is executed.
+    </para>
+  </sect1>
+  <sect1 id="main_example">
+    <title>Full example</title>
+    <para>
+      The following example is a complete program which creates a <filename>example_db.db</filename>
+      SQLite database in the current
+      directory, creates a "products" table,add a few rows to it, and then displays its contents. The example uses
+      an SQLite database as it does not require any server setup and can thus be run as-is. 
+      That example can be found in the <filename>examples/SimpleExample/example.c</filename>.
+    </para>
+    <para>
+      To compile it, run:
+      <programlisting>
+cc -o example example.c `pkg-config --cflags --libs libgda-3.0`
+      </programlisting>
+    </para>
+    <para>
+      The code is:
+<xi:include href="examples/full_example.c"/>
+      and executing should output something like:
+      <programlisting>> ./example 
+ref   | name  | price   
+------+-------+---------
+p1    | chair | 2.000000
+p2    | table | 5.000000
+p3    | glass | 1.100000
+p1000 | ???   | NULL    
+p1001 | ???   | NULL    
+(5 rows)
+ref   | name    | price   
+------+---------+---------
+p1    | chair   | 2.000000
+p2    | table   | 5.000000
+p3    | glass   | 1.100000
+p1000 | flowers | 1.990000
+p1001 | ???     | NULL    
+(5 rows)
+ref   | name    | price   
+------+---------+---------
+p1    | chair   | 2.000000
+p3    | glass   | 1.100000
+p1000 | flowers | 1.990000
+(3 rows)
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="ddl_example">
+    <title>DDL example</title>
+    <para>
+      The following example illustrates (in a very simple way) how to use the 
+      <link linkend="GdaServerOperation">GdaServerOperation</link> object to perform a CREATE TABLE query.
+      For more information about how &LIBGDA; handles DDL queries, see <link linkend="DDLIntro">the DDL introduction</link>.
+      The following code simply executes the equivalent of "CREATE TABLE products (id int PRIMARY KEY, product_name string NOT NULL);" 
+      in a generic way, where the "id" field is the primary key and should be auto incremented (the SQL is generally 
+      specific to each DBMS for that last part).
+    </para>
+    <para>
+      For SQLite, the actual executed SQL statement is:
+      <programlisting>
+	CREATE TABLE products (id integer PRIMARY KEY AUTOINCREMENT, product_name varchar(50) NOT NULL);
+      </programlisting>
+      whereas for MySQL, the code would be:
+      <programlisting>
+	CREATE TABLE products (id integer AUTO_INCREMENT PRIMARY KEY, product_name varchar(50) NOT NULL) ENGINE=InnoDB;
+      </programlisting>
+    </para>
+    <para>
+      The code is:
+      <programlisting><![CDATA[
+void
+create_table (GdaConnection *cnc)
+{
+	GError *error = NULL;
+	GdaServerProvider *provider;
+	GdaServerOperation *op;
+	gint i;
+
+	/* create a new GdaServerOperation object */
+	provider = gda_connection_get_provider (cnc);
+	op = gda_server_provider_create_operation (provider, cnc, GDA_SERVER_OPERATION_CREATE_TABLE, NULL, &error);
+	if (!op) {
+		g_print ("CREATE TABLE operation is not supported by the provider: %s\n",
+			 error && error->message ? error->message : "No detail");
+		exit (1);
+	}
+
+	/* Set parameter's values */
+	/* table name */
+	if (!gda_server_operation_set_value_at (op, "products", &error, "/TABLE_DEF_P/TABLE_NAME")) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "InnoDB", &error, "/TABLE_OPTIONS_P/TABLE_ENGINE")) goto on_set_error;
+
+	/* "id' field */
+	i = 0;
+	if (!gda_server_operation_set_value_at (op, "id", &error, "/FIELDS_A/@COLUMN_NAME/%d", i)) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "integer", &error, "/FIELDS_A/@COLUMN_TYPE/%d", i)) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "TRUE", &error, "/FIELDS_A/@COLUMN_AUTOINC/%d", i)) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "TRUE", &error, "/FIELDS_A/@COLUMN_PKEY/%d", i)) goto on_set_error;
+	
+	/* 'product_name' field */
+	i++;
+	if (!gda_server_operation_set_value_at (op, "product_name", &error, "/FIELDS_A/@COLUMN_NAME/%d", i)) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "varchar", &error, "/FIELDS_A/@COLUMN_TYPE/%d", i)) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "50", &error, "/FIELDS_A/@COLUMN_SIZE/%d", i)) goto on_set_error;
+	if (!gda_server_operation_set_value_at (op, "TRUE", &error, "/FIELDS_A/@COLUMN_NNUL/%d", i)) goto on_set_error;
+
+
+	/* Actually execute the operation */
+	if (! gda_server_provider_perform_operation (provider, cnc, op, &error)) {
+		g_print ("Error executing the operation: %s\n",
+			 error && error->message ? error->message : "No detail");
+		exit (1);
+	}
+	g_object_unref (op);
+	return;
+
+ on_set_error:
+	g_print ("Error setting value in GdaSererOperation: %s\n",
+		 error && error->message ? error->message : "No detail");
+	exit (1);
+}]]>
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="blobs_example">
+    <title>Binary large objects (BLOBs) example</title>
+    <para>
+       The following example is available in the <filename>examples/Blobs</filename> source directory
+       and illustrate how to manipulate BLOBs. This test program offers 2 operations which are to
+       store the contents of a file to the database (which returns the ID of the stored data), and to
+       fetch a stored data from the database from its ID (which creates a fetched_&lt;ID&gt; file).
+    </para>
+    <para>
+      The code is:
+<xi:include href="examples/blobtest.c"/>
+    </para>
+  </sect1>
+
+  <sect1 id="other_examples">
+    <title>Other examples</title>
+    <para>
+      There are other sources of examples in &LIBGDA;'s source code:
+      <itemizedlist>
+	<listitem><para>in the <filename>examples/</filename> directory with complete examples</para></listitem>
+	<listitem><para>in the <filename>tools/</filename> directory where &LIBGDA;'s tools exist and are
+	    also a good starting point</para></listitem>
+      </itemizedlist>
+      Finally this documentation includes a <link linkend="howto">HOWTO for common tasks</link> with more code.
+    </para>
+  </sect1>
+</chapter>

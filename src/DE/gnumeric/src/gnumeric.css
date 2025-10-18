@@ -1,0 +1,358 @@
+/* ------------------------------------------------------------------------- */
+
+/* GnmPane is the canvas we use for sheets.  We store custom properties
+   here because there is no un-deprecated way to store them for the
+   canvas items which aren't widgets.  */
+GnmPane,
+pane {
+  -GnmPane-function-indicator-size: 10px;
+  -GnmPane-comment-indicator-size: 6px;
+  -GnmPane-extension-indicator-size: 12px;
+  -GnmPane-resize-guide-width: 1px;
+  -GnmPane-pane-resize-guide-width: 7px;
+  -GnmPane-control-circle-size: 5px;
+  -GnmPane-control-circle-outline: 1px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* The GnmItemGrid is the canvas area that holds all the cells.  */
+/* GnmPreviewGrid is the canvas used for auto-format previews. */
+GnmItemGrid,
+GnmPreviewGrid,
+GocCanvas.full-sheet,
+GtkBin.auto-expr {
+  /* GnmItemGrid requires that the background be solid and rectangular
+     since we cheat and print only parts of it.  */
+  background-image: none;
+  background-color: white;
+  padding: 0;
+  border-style: none;
+  border-width: 0;
+}
+
+GnmItemGrid:selected {
+  background-color: lavender;
+}
+
+GnmItemGrid.grid,
+GnmPreviewGrid.grid {
+    color: #c7c7c7;
+}
+
+/* Function markers are enabled from View->View Properties->Cell Markers */
+GnmItemGrid.function-marker {
+  color: #80ff80;
+  border-color: #555555;
+  /* Size defined for GnmPane */
+}
+
+/* Extension markers are enabled from View->View Properties->Cell Markers */
+GnmItemGrid.extension-marker {
+    color: rgba(255,0,0,0.7);
+    /* Size defined for GnmPane */
+}
+
+/* This is the divider between panes when an area is frozen.  */
+GnmItemGrid.pane-divider {
+  color: #333333;
+
+  /* This isn't working well yet: */
+  border-style: solid;
+  border-width: 1px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* The GnmItemCursor item is what marks a cell or selection on the sheet.  */
+
+/* The default cursor.  */
+GnmItemCursor.normal {
+  color: #000000;
+}
+
+/* The anted cursor.  We clearly should be using an animation, but neither
+   we nor gtk are ready for that.  */
+GnmItemCursor.ant {
+  color: #333333;
+  background-color: #c7c7c7;
+}
+
+/* The dragging/autofill cursor.  These colors are combined in a stipple.  */
+GnmItemCursor.drag,
+GnmItemCursor.autofill {
+  color: white;
+  background-color: black;
+}
+
+/* ------------------------------------------------------------------------- */
+
+CommentView {
+  color: red;
+  /* See also GnmPane */
+}
+
+/* ------------------------------------------------------------------------- */
+/* GnmItemEdit canvas items are the in-sheet editing area. */
+
+GnmItemEdit {
+  background-color: #ffffe0;
+
+  /* This doesn't seem to kick in.  We seem to get the color from the
+     style.  */
+  color: black;
+}
+
+/* ------------------------------------------------------------------------- */
+/* GnmItemBar canvas items are the header buttons "A".."IV" and "1".."65536" */
+/* These are also styled with class button */
+
+GnmItemBar {
+  padding-left: 5px;
+  padding-right: 5px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* The whole column/row selected. */
+GnmItemBar:active {
+  color: red;
+  font-weight: bold;
+}
+
+/* Some, but not all, of a column/row selected. */
+GnmItemBar:hover {
+  color: red;
+  font-weight: bold;
+}
+
+/* ------------------------------------------------------------------------- */
+/* This GtkDrawingArea is the select-all button above the row buttons.  */
+
+GtkDrawingArea.button.all, widget.button.all {
+}
+
+/* ------------------------------------------------------------------------- */
+
+/* GnmNotebook is a fake notebook holding just the sheet tabs area */
+
+GnmNotebook, notebook.buttons {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* ------------------------------------------------------------------------- */
+
+GtkHandleBox {
+  padding: 0;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Add a little bit of space around our pseudo tooltips, but not so much as
+   to be a problem if the theme somehow adds its own.  */
+
+GtkWindow>GtkFrame.pseudo-tooltip {
+  border-style: none;
+  border-width: 0;
+  padding: 5px;
+}
+
+GtkWindow>GtkFrame>GtkLabel.pseudo-tooltip {
+  border-style: none;
+  border-width: 0;
+  padding: 0;
+}
+
+GtkWindow *.pseudo-tooltip {
+  background-image: none;
+  background-color: rgba(0,0,0,0);
+}
+
+GtkTextView.pseudo-tooltip {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------------------- */
+/* This is used for the eight circles put around a sheet object being sized. */
+
+GnmControlCircle {
+  background-color: white;
+  color: black;
+  /* See also GnmPane */
+}
+
+GnmControlCircle:hover {
+  background-color: green;
+}
+
+GocItem.object-size.rubber-band {
+  color: black;
+}
+
+/* ------------------------------------------------------------------------- */
+/* GnmNotebookButton is the sheet name buttons used to select sheets.  */
+
+GnmNotebookButton:active,
+notebook.buttons tab label {
+  font-weight: bold;
+}
+
+
+#if GTK_CHECK_VERSION(3,20,0)
+/* ------------------------------------------------------------------------- */
+/* Styles for Gtk+ 3.20 and later */
+/* ------------------------------------------------------------------------- */
+/* See bug 765921 as to why we duplicate the selectors.  */
+
+button.itembar, button.itembar * {
+  padding-left: 5px;
+  padding-right: 5px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  /* The font setup here shouldn't be needed, but we've had a report
+     indicating that it might be with newer Gtk+.  */
+  font-family: Sans;
+  font-style: normal;
+  font-variant: normal;
+  /* Could set background-image and background-color here, but it is
+     probably better to stick to the theme.  */
+}
+
+/* The whole column/row selected. */
+button:active.itembar, button:active.itembar * {
+    color: red;
+    font-weight: bold;
+}
+
+/* Some, but not all, of a column/row selected. */
+button:hover.itembar, button:hover.itembar * {
+  color: red;
+  font-weight: bold;
+}
+
+
+/* Small padding between and around toolbars, but not double between */
+box > box > toolbar.horizontal {
+    padding-top: 1pt;
+    padding-bottom: 0pt;
+}
+
+box > box:last-child > toolbar.horizontal {
+    padding-top: 1pt;
+    padding-bottom: 1pt;
+}
+
+/* This is the vertical line used in the fixed-width part of the stf */
+/* import dialog to show where a new column division will be placed */
+dialog.fixed-format-ruler {
+  color: red;
+}
+
+/* The resize guide used when resizing columns or rows.  This can be
+   subclassed with "row" or "col" as well as with "start" or "end".  */
+pane GocLine.resize-guide {
+  color: black;
+}
+
+/* The resize guide used when resizing panes.  This can be subclassed with
+   "row" or "col".  */
+pane GocLine.pane-resize-guide {
+  color: #c0c0c0;
+}
+
+
+/* Auto filter in two versions: the first one for "all", second for others.  */
+button > *.auto-filter {
+  color: black;
+}
+button > *.auto-filter:active {
+  color: #ff6000;
+}
+
+toolbar.horizontal gocombobox {
+    /* Some spacing to make the arrow appear closer to the (correct) button */
+    padding-left: 3px;
+    padding-right: 3px;
+    margin: 0;
+}
+
+toolbar.horizontal gocombobox button.toggle {
+    padding: 0;
+}
+
+toolbar.horizontal combobox button.combo {
+    padding: 0;
+}
+
+toolbar.horizontal combobox button.combo box {
+    padding: 0;
+    /* Unsure why something isn't symmetric.  */
+    padding-right: 2px;
+}
+
+/* The zoom entry box shows digits only so no need for padding.  */
+toolbar.horizontal combobox entry.combo {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* The font button should not be so tall.  */
+toolbar.horizontal button#font {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Squeeze hard -- vertical space is at a premium.  */
+toolbar.vertical button {
+    padding-top: 1pt;
+    padding-bottom: 1pt;
+}
+
+#else
+
+/* Extra space around multiple toolbars adds up quickly so avoid it. */
+GtkBox.toolbarzone GtkToolbar {
+  padding: 0px;
+}
+GtkBox.toolbarzone GtkToolbar * {
+  padding: 1px;
+}
+
+/* This is the vertical line used in the fixed-width part of the stf */
+/* import dialog to show where a new column division will be placed */
+GtkDialog.fixed-format-ruler {
+  color: red;
+}
+
+/* Auto filter in two versions: the first one for "all", second for others.  */
+GtkDrawingArea.auto-filter {
+  color: black;
+}
+GtkDrawingArea.auto-filter:active {
+  color: #ff6000;
+}
+
+/* Functions' arguments link-like appearance in pseudo-tooltips.  */
+GtkTextView.pseudo-tooltip.function-help {
+  -GtkWidget-link-color: #4040ff;
+}
+/* Ditto in the function selector.  */
+GtkDialog GtkTextView.function-help {
+  -GtkWidget-link-color: #4040ff;
+}
+
+/* The resize guide used when resizing columns or rows.  This can be
+   subclassed with "row" or "col" as well as with "start" or "end".  */
+GnmPane GocLine.resize-guide {
+  color: black;
+  /* See also GnmPane */
+}
+
+/* The resize guide used when resizing panes.  This can be subclassed with
+   "row" or "col".  */
+GnmPane GocLine.pane-resize-guide {
+  color: #c0c0c0;
+  /* See also GnmPane */
+}
+
+#endif
+
+/* ------------------------------------------------------------------------- */

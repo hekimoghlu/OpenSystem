@@ -1,0 +1,553 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+# The invoke code is compiled on the app side.
+# The invoke code must assign to each result var
+
+
+$palette_arg_spec = { name => 'palette', type => 'palette', non_empty => 1,
+  desc => 'The palette' };
+
+sub palette_new {
+    $blurb = "Creates a new palette";
+    $help = <<'HELP';
+Creates a new palette.
+The new palette has no color entries.
+You must add color entries for a user to choose.
+The actual name might be different than the requested name,
+when the requested name is already in use.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The requested name of the new palette' }
+    );
+
+    @outargs = (
+    	${palette_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  palette = (GimpPalette*) gimp_data_factory_data_new (gimp->palette_factory,
+                                                       context, name);
+}
+CODE
+    );
+}
+
+sub palette_get_by_name {
+    $blurb = "Returns the palette with the given name.";
+    $help  = <<HELP;
+Returns an existing palette having the given name.
+Returns %NULL when no palette exists of that name.
+HELP
+
+    &mitch_pdb_misc('2023', '3.0');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The name of the palette' }
+    );
+
+    @outargs = (
+      { name => 'palette',
+        type => 'palette',
+        desc => 'The palette',
+        none_ok => 1 }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  palette = GIMP_PALETTE (gimp_pdb_get_resource (gimp, GIMP_TYPE_PALETTE, name,
+                                                 GIMP_PDB_DATA_ACCESS_READ, error));
+
+  /* Ignore "not found" error, just return NULL. */
+  g_clear_error (error);
+}
+CODE
+    );
+}
+
+sub palette_get_color_count {
+    $blurb = 'Get the count of colors in the palette.';
+
+    $help = 'Returns the number of colors in the palette.';
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+      ${palette_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'num_colors', type => 'int32',
+          desc => 'The number of colors in the palette' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  num_colors = gimp_palette_get_n_colors (palette);
+}
+CODE
+    );
+}
+
+sub palette_get_colors {
+    $blurb = 'Gets colors in the palette.';
+
+    $help = "Returns an array of colors in the palette. Free the returned array with gimp_color_array_free().";
+
+    &neo_pdb_misc('2006', '2.6');
+
+    @inargs = (
+        ${palette_arg_spec}
+    );
+
+    @outargs = (
+    	{ name => 'colors', type => 'colorarray',
+        desc => 'The colors in the palette' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *list = gimp_palette_get_colors (palette);
+  gint   num_colors;
+  gint   i;
+
+  num_colors = gimp_palette_get_n_colors (palette);
+  colors     = g_new0 (GeglColor *, num_colors + 1);
+
+  for (i = 0; i < num_colors; i++, list = g_list_next (list))
+    {
+      GimpPaletteEntry *entry = list->data;
+
+      colors[i] = gegl_color_duplicate (entry->color);
+    }
+}
+CODE
+    );
+}
+
+sub palette_get_columns {
+    $blurb = "Gets the number of columns used to display the palette";
+    $help = "Gets the preferred number of columns to display the palette.";
+
+    &neo_pdb_misc('2005', '2.4');
+
+    @inargs = (
+        ${palette_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'num_columns', type => 'int32',
+          desc => "The number of columns used to display this palette" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  num_columns = gimp_palette_get_columns (palette);
+}
+CODE
+    );
+}
+
+sub palette_set_columns {
+    $blurb = "Sets the number of columns used to display the palette";
+    $help = <<'HELP';
+Set the number of colors shown per row when the palette is displayed.
+Returns an error when the palette is not editable.
+The maximum allowed value is 64.
+HELP
+
+    &neo_pdb_misc('2005', '2.4');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'columns', type => '0 <= int32 <= 64',
+          desc => "The new number of columns" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (palette)))
+    gimp_palette_set_columns (palette, columns);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub palette_add_entry {
+    $blurb = 'Appends an entry to the palette.';
+
+    $help = <<'HELP';
+Appends an entry to the palette.
+Neither color nor name must be unique within the palette.
+When name is the empty string, this sets the entry name to "Untitled".
+Returns the index of the entry.
+Returns an error when palette is not editable.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'entry_name', type => 'string', none_ok => 1,
+          desc => 'A name for the entry' },
+        { name => 'color', type => 'geglcolor',
+          desc => 'The color for the added entry.' }
+    );
+
+    @outargs = (
+        { name => 'entry_num', type => 'int32', void_ret => 1,
+          desc => 'The index of the added entry' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* Must check writeable here, because add_entry does not fail when not writeable. */
+  if (gimp_data_is_writable (GIMP_DATA (palette)))
+    {
+      /* -1 for the index means append. */
+      GimpPaletteEntry *entry = gimp_palette_add_entry (palette, -1, entry_name, color);
+
+      entry_num = gimp_palette_get_entry_position (palette, entry);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub palette_delete_entry {
+    $blurb = 'Deletes an entry from the palette.';
+
+    $help = <<'HELP';
+This function will fail and return %FALSE if the index is out or range or if the
+palette is not editable.
+
+Additionally if the palette belongs to an indexed image, it will only be possible
+to delete palette colors not in use in the image.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'entry_num', type => 'int32',
+          desc => 'The index of the entry to delete' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (palette)))
+    {
+      GimpPaletteEntry *entry = gimp_palette_get_entry (palette, entry_num);
+
+      if (entry)
+        {
+          GimpImage *image = gimp_data_get_image (GIMP_DATA (palette));
+
+          if (image != NULL)
+            success = gimp_image_delete_colormap_entry (image, entry_num, TRUE);
+          else
+            gimp_palette_delete_entry (palette, entry);
+        }
+      else
+        {
+          success = FALSE;
+        }
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub palette_get_entry_color {
+    $blurb = 'Gets the color of an entry in the palette.';
+
+    $help = <<'HELP';
+Returns the color of the entry at the given zero-based index into the palette.
+Returns %NULL when the index is out of range.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'entry_num', type => 'int32',
+          desc => 'The index of the entry to get the color of.' }
+    );
+
+    @outargs = (
+        { name => 'color', type => 'geglcolor',
+          desc => 'The color at the index.' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaletteEntry *entry = gimp_palette_get_entry (palette, entry_num);
+
+  if (entry)
+    color = gegl_color_duplicate (entry->color);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub palette_set_entry_color {
+    $blurb = 'Sets the color of an entry in the palette.';
+
+    $help = <<'HELP';
+Sets the color of the entry at the zero-based index into the palette.
+Returns an error when the index is out of range.
+Returns an error when the palette is not editable.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'entry_num', type => 'int32',
+          desc => 'The entry to get' },
+        { name => 'color', type => 'geglcolor',
+          desc => 'The new color' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (palette)))
+    success = gimp_palette_set_entry_color (palette, entry_num, color, TRUE);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub palette_get_entry_name {
+    $blurb = 'Gets the name of an entry in the palette.';
+
+    $help = <<'HELP';
+Gets the name of the entry at the zero-based index into the palette.
+Returns an error when the index is out of range.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'entry_num', type => 'int32',
+          desc => 'The entry to get' }
+    );
+
+    @outargs = (
+        { name => 'entry_name', type => 'string', void_ret => 1,
+          desc => 'The name of the entry.' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaletteEntry *entry = gimp_palette_get_entry (palette, entry_num);
+
+  if (entry)
+    entry_name = g_strdup (entry->name);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub palette_set_entry_name {
+    $blurb = 'Sets the name of an entry in the palette.';
+
+    $help = <<'HELP';
+Sets the name of the entry at the zero-based index into the palette.
+Returns an error if the index is out or range.
+Returns an error if the palette is not editable.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+        ${palette_arg_spec},
+        { name => 'entry_num', type => 'int32',
+          desc => 'The entry to get' },
+        { name => 'entry_name', type => 'string', none_ok => 1,
+          desc => 'The new name' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (palette)))
+    success = gimp_palette_set_entry_name (palette, entry_num, entry_name);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub palette_get_bytes {
+    $blurb = "Returns the palette's colormap";
+
+    $help = <<'HELP';
+This procedure returns a palette's colormap as a bytes array with all
+colors converted to a given Babl @format.
+
+The byte-size of the returned colormap depends on the number of colors
+and on the bytes-per-pixel size of @format. E.g. that the following equality is ensured:
+
+```C
+g_bytes_get_size (colormap) == num_colors * babl_format_get_bytes_per_pixel (format)
+```
+HELP
+
+    &jehan_pdb_misc('2024', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'palette', type => 'palette',
+          desc => 'The palette' },
+        { name => 'format', type => 'format',
+          desc => 'The desired color format' },
+    );
+
+    @outargs = (
+        { name => 'colormap', type => 'bytes',
+          desc => "The image's colormap." },
+        { name => 'num_colors', type => 'int32',
+          desc => 'The number of colors in the palette', }
+    );
+
+    %invoke = (
+        headers => [ qw("core/gimpimage-colormap.h") ],
+        code => <<'CODE'
+{
+  guchar *colormap_data;
+  gint    bpp = babl_format_get_bytes_per_pixel (format);
+
+  colormap_data = gimp_palette_get_colormap (palette, format, &num_colors);
+  colormap = g_bytes_new_take (colormap_data, bpp * num_colors);
+}
+CODE
+    );
+}
+
+sub palette_set_bytes {
+    $blurb = "Sets the entries in the image's colormap.";
+
+    $help = <<'HELP';
+This procedure sets the entries in the specified palette in one go. The number
+of entries depens on the size of @colormap and the bytes-per-pixel size of @format.
+
+The procedure will fail if the size of @colormap is not an exact
+multiple of the number of bytes per pixel of @format.
+HELP
+
+    &jehan_pdb_misc('2024', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'palette', type => 'palette',
+          desc => 'The palette' },
+        { name => 'format', type => 'format',
+          desc => 'The desired color format' },
+        { name => 'colormap', type => 'bytes',
+          desc => 'The new colormap values' }
+    );
+
+    %invoke = (
+        headers => [ qw("core/gimpimage-colormap.h") ],
+        code => <<'CODE'
+{
+  gint bpp;
+
+  bpp = babl_format_get_bytes_per_pixel (format);
+
+  if (g_bytes_get_size (colormap) % bpp == 0)
+    {
+      const guchar *data;
+      gsize         n_bytes;
+      gint          n_colors;
+
+      data     = g_bytes_get_data (colormap, &n_bytes),
+      n_colors = n_bytes / bpp;
+      gimp_palette_set_colormap (palette, format, (guchar *) data, n_colors, TRUE);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+@headers = qw(<string.h>
+              "core/gimp.h"
+              "core/gimpcontext.h"
+              "core/gimpdatafactory.h"
+              "core/gimpimage-colormap.h"
+              "core/gimppalette.h"
+              "gimppdb-utils.h");
+
+@procs = qw(palette_new
+            palette_get_by_name
+            palette_get_color_count
+            palette_get_colors
+            palette_get_columns palette_set_columns
+            palette_add_entry palette_delete_entry
+            palette_get_entry_color palette_set_entry_color
+            palette_get_entry_name palette_set_entry_name
+            palette_get_bytes palette_set_bytes);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Palette';
+$doc_title = 'gimppalette';
+$doc_short_desc = 'Installable object, a small set of colors a user can choose from.';
+$doc_long_desc = 'Installable object, a small set of colors a user can choose from.';
+
+1;

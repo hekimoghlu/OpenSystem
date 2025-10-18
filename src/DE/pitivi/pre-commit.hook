@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# This is symlinked from .git/hooks/pre-commit when entering
+# the dev env with `. bin/pitivi-env`, or manually.
+
+TOPLEVEL=$(git rev-parse --show-toplevel)
+export PYTHONPATH=$TOPLEVEL/pitivi/coptimizations/.libs:$PYTHONPATH
+
+PRECOMMIT=""
+if test -n "${PITIVI_REPO_DIR}"
+then
+    PRECOMMIT="$TOPLEVEL/build/flatpak/pitivi-flatpak pre-commit"
+elif test -n "${INSIDE_GNOME_BUILDER}"
+then
+    PRECOMMIT=$(which /app/bin/pre-commit)
+fi
+
+if test -z "$PRECOMMIT"
+then
+    cat <<EOF
+ERROR: Cannot find the flatpak sandbox.
+
+       If you are using GNOME Builder, you can commit only
+       from a Build Terminal.
+
+       If you are using the Pitivi development environment,
+       enter it by running:
+           $ . bin/pitivi-env
+
+       See http://developer.pitivi.org/HACKING.html for details.
+
+EOF
+    exit 1
+fi
+
+
+$PRECOMMIT run --config .pre-commit-config.yaml || exit 1

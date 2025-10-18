@@ -1,0 +1,25 @@
+image: fedora:41
+stages:
+  - build
+  - deploy
+before_script:
+  - dnf install -y gcc meson ninja-build gettext gi-docgen glib2-devel gobject-introspection-devel vala redhat-rpm-config
+
+build-libcloudproviders:
+  stage: build
+  script:
+  - meson setup _build
+  - meson compile -C _build
+  - meson install -C _build
+
+pages:
+  stage: deploy
+  script:
+  - meson setup _build -Ddocumentation=true
+  - meson compile -C _build
+  - mv _build/docs/libcloudproviders-0.3 public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

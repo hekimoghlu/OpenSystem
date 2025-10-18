@@ -1,0 +1,96 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/error.h>
+#include <glibmm/exceptionhandler.h>
+#include <giomm/dbusconnection.h>
+#include <giomm/dbusauthobserver.h>
+
+using Flags = Gio::DBus::Server::Flags;
+
+namespace Gio
+{
+
+namespace DBus
+{
+
+Server::Server(const std::string& address, const std::string& guid,
+  const Glib::RefPtr<AuthObserver>& observer, const Glib::RefPtr<Cancellable>& cancellable,
+  Flags flags)
+: _CONSTRUCT("address", Glib::c_str_or_nullptr(address), "flags",
+    static_cast<GDBusServerFlags>(flags), "guid", Glib::c_str_or_nullptr(guid),
+    "authentication-observer", Glib::unwrap(observer))
+{
+  init(cancellable);
+}
+
+Server::Server(const std::string& address, const std::string& guid,
+  const Glib::RefPtr<Cancellable>& cancellable, Flags flags)
+: _CONSTRUCT("address", Glib::c_str_or_nullptr(address), "flags",
+    static_cast<GDBusServerFlags>(flags), "guid", Glib::c_str_or_nullptr(guid),
+    "authentication-observer", static_cast<GDBusAuthObserver*>(nullptr))
+{
+  init(cancellable);
+}
+
+Server::Server(const std::string& address, const std::string& guid,
+  const Glib::RefPtr<AuthObserver>& observer, Flags flags)
+: _CONSTRUCT("address", Glib::c_str_or_nullptr(address), "flags",
+    static_cast<GDBusServerFlags>(flags), "guid", Glib::c_str_or_nullptr(guid),
+    "authentication-observer", Glib::unwrap(observer))
+{
+  init();
+}
+
+Server::Server(const std::string& address, const std::string& guid, Flags flags)
+: _CONSTRUCT("address", Glib::c_str_or_nullptr(address), "flags",
+    static_cast<GDBusServerFlags>(flags), "guid", Glib::c_str_or_nullptr(guid),
+    "authentication-observer", static_cast<GDBusAuthObserver*>(nullptr))
+{
+  init();
+}
+
+Glib::RefPtr<Server>
+Server::create_sync(const std::string& address, const std::string& guid,
+  const Glib::RefPtr<AuthObserver>& observer, const Glib::RefPtr<Cancellable>& cancellable,
+  Flags flags)
+{
+  return Glib::make_refptr_for_instance<Server>(new Server(address, guid, observer, cancellable, flags));
+}
+
+Glib::RefPtr<Server>
+Server::create_sync(const std::string& address, const std::string& guid,
+  const Glib::RefPtr<Cancellable>& cancellable, Flags flags)
+{
+  return Glib::make_refptr_for_instance<Server>(new Server(address, guid, cancellable, flags));
+}
+
+Glib::RefPtr<Server>
+Server::create_sync(const std::string& address, const std::string& guid,
+  const Glib::RefPtr<AuthObserver>& observer, Flags flags)
+{
+  return Glib::make_refptr_for_instance<Server>(new Server(address, guid, observer, flags));
+}
+
+Glib::RefPtr<Server>
+Server::create_sync(const std::string& address, const std::string& guid, Flags flags)
+{
+  return Glib::make_refptr_for_instance<Server>(new Server(address, guid, flags));
+}
+
+} // namespace DBus
+} // namespace Gio

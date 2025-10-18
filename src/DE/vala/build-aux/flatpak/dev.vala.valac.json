@@ -1,0 +1,50 @@
+{
+    "id": "dev.vala.valac",
+    "runtime": "org.gnome.Platform",
+    "sdk": "org.gnome.Sdk",
+    "runtime-version": "44",
+    "sdk-extensions" : [
+        "org.freedesktop.Sdk.Extension.vala"
+    ],
+    "finish-args" : ["--socket=session-bus"],
+    "build-options": {
+        "append-path" : "/usr/lib/sdk/vala/bin",
+        "append-ld-library-path" : "/usr/lib/sdk/vala/lib",
+        "build-args": ["--share=network"]
+    },
+    "command": "valac",
+    "modules": [
+        {
+            "name": "valac",
+            "buildsystem": "autotools",
+            "config-opts": ["--enable-debug"],
+            "builddir": false,
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/gnome/vala",
+                    "branch": "main"
+                }
+            ],
+            "run-tests": true,
+            "modules": [
+                {
+                    "name": "graphviz",
+                    "buildsystem": "autotools",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://gitlab.com/graphviz/graphviz/-/archive/10.0.1/graphviz-10.0.1.tar.gz",
+                            "sha256": "28f452ef1cb12288c8758a62f8c3fcfefdb91b251f7aae61d0d703f851bde931"
+                        }
+                    ]
+                },
+                {
+                    "name": "sphinx-build",
+                    "buildsystem": "simple",
+                    "build-commands": ["pip3 install --prefix=/app sphinx furo"]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,80 @@
+/* mark.cc
+ *
+ * Copyright (C) 2008 Jonathon Jongsma
+ * Copyright (C) 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gtksourceview/gtksource.h>
+
+namespace Gsv
+{
+
+// Both constructors are implemented by hand because the C _new() function
+// specifies an extra left-gravity property.
+Mark::Mark(const Glib::ustring& category)
+:
+  _CONSTRUCT("name", 0, "category", category.c_str(), "left-gravity", TRUE)
+{}
+
+Mark::Mark(const Glib::ustring& name, const Glib::ustring& category)
+:
+  _CONSTRUCT("name", name.c_str(), "category", category.c_str(), "left-gravity", TRUE)
+{}
+
+Glib::RefPtr<Mark> Mark::next()
+{
+  Glib::RefPtr<Mark> result = Glib::wrap (gtk_source_mark_next(const_cast<GtkSourceMark*>(gobj()), 0));
+  if (result)
+  {
+    result->reference();
+  }
+  return result;
+}
+
+Glib::RefPtr<const Mark> Mark::next() const
+{
+  Glib::RefPtr<const Mark> result = Glib::wrap (gtk_source_mark_next(const_cast<GtkSourceMark*>(gobj()), 0));
+  if (result)
+  {
+    result->reference();
+  }
+  return result;
+}
+
+Glib::RefPtr<Mark> Mark::prev()
+{
+  Glib::RefPtr<Mark> result =  Glib::wrap (gtk_source_mark_prev(const_cast<GtkSourceMark*>(gobj()), 0));
+  if (result)
+  {
+    result->reference();
+  }
+  return result;
+}
+
+Glib::RefPtr<const Mark> Mark::prev() const
+{
+  Glib::RefPtr<const Mark> result =  Glib::wrap (gtk_source_mark_prev(const_cast<GtkSourceMark*>(gobj()), 0));
+  if (result)
+  {
+    result->reference();
+  }
+  return result;
+}
+
+
+} //namespace Gsv
+

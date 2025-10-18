@@ -1,0 +1,243 @@
+:right-sidebar: True
+
+{{ class_name }}
+===================================================================
+
+.. currentmodule:: gi.repository.{{ namespace }}
+
+{% if since %}
+.. versionadded:: {{ since }}
+{% endif %}
+
+{% if deprecated %}
+{% set version, doc_ = deprecated %}
+.. deprecated:: {{ version }}
+
+   {{ doc_ | indent(3) }}
+{% endif %}
+
+.. class:: {{ class_name }}{{ class_signature }}
+   :no-contents-entry:
+
+{% if ancestors %}
+Superclasses: {% for p in ancestors %}{% if not loop.first %}, {% endif %}:class:`~{{p}}`{% endfor %}
+{% endif %}
+{% if descendants %}
+Subclasses: {% for p in descendants %}{% if not loop.first %}, {% endif %}:class:`~{{p}}`{% endfor %}
+{% endif %}
+{% if implements %}
+Implemented Interfaces: {% for p in implements %}{% if not loop.first %}, {% endif %}:class:`~{{p}}`{% endfor %}
+{% endif %}
+{% if implementations %}
+Implementations: {% for p in implementations %}{% if not loop.first %}, {% endif %}:class:`~{{p}}`{% endfor %}
+{% endif %}
+
+{{ doc }}
+
+{% if constructors %}
+Constructors
+------------
+
+.. rst-class:: interim-class
+
+.. class:: {{ class_name }}
+   :no-index:
+
+   {% for cons_name, signature, cons_doc, parameters, return_doc, cons_depr, cons_since in constructors %}
+   .. classmethod:: {{ cons_name }}{{ signature }}
+
+      {{ cons_doc | indent(6) }}
+
+      {% if cons_since %}
+      .. versionadded:: {{ cons_since }}
+      {% endif %}
+
+      {% if cons_depr %}
+      {% set version, doc_ = cons_depr %}
+      .. deprecated:: {{ version }}
+
+         {{ doc_ | indent(9) }}
+      {% endif %}
+
+      {% for name, doc in parameters %}
+      :param {{ name }}: {{ doc | indent(9) }}
+      {% endfor %}
+      {% if return_doc %}
+      :return: {{ return_doc | indent(9) }}
+      {% endif %}
+
+   {% endfor %}
+
+{% endif %}
+
+{% if methods %}
+Methods
+-------
+
+.. rst-class:: interim-class
+
+.. class:: {{ class_name }}
+   :no-index:
+
+   {% for method_name, signature, method_doc, parameters, return_doc, is_classmethod, is_async, method_depr, method_since in methods %}
+   .. {% if is_classmethod %}class{% endif %}method:: {{ method_name }}{{ signature }}
+      {% if is_async %}      :async:
+
+      This is the `awaitable <https://pygobject.gnome.org/guide/asynchronous.html>`_ version of :meth:`{{ method_name }}`.
+      {% else %}
+      {{ method_doc | indent(6) }}
+      {% endif %}
+
+      {% if method_since %}
+      .. versionadded:: {{ method_since }}
+      {% endif %}
+
+      {% if method_depr %}
+      {% set version, doc_ = method_depr %}
+      .. deprecated:: {{ version }}
+
+         {{ doc_ | indent(9) }}
+      {% endif %}
+
+      {% for name, doc in parameters %}
+      :param {{ name }}: {{ doc | indent(9) }}
+      {% endfor %}
+      {% if return_doc %}
+      :return: {{ return_doc | indent(9) }}
+      {% endif %}
+
+   {% endfor %}
+
+{% endif %}
+
+{% if properties %}
+Properties
+----------
+
+.. rst-class:: interim-class
+
+.. class:: {{ class_name }}
+   :no-index:
+   
+   {% for name, type, doc, prop_depr, prop_since in properties %}
+   .. attribute:: props.{{ name | replace("-", "_") }}
+      :type: {{ type }}
+
+      {{ doc | indent(6) }}
+
+      {% if prop_since %}
+      .. versionadded:: {{ prop_since }}
+      {% endif %}
+
+      {% if prop_depr %}
+      {% set version, doc_ = prop_depr %}
+      .. deprecated:: {{ version }}
+
+         {{ doc_ | indent(9) }}
+      {% endif %}
+
+   {% endfor %}
+
+{% endif %}
+
+{% if signals %}
+Signals
+-------
+
+.. rst-class:: interim-class
+
+.. class:: {{ class_name }}.signals
+   :no-index:
+   
+   {% for signal_name, sig, signal_doc, parameters, return_doc, signal_depr, signal_since in signals %}
+   .. method:: {{ signal_name | replace("-", "_") }}{{ sig }}
+
+      {{ signal_doc | indent(6) }}
+
+      {% if signal_since %}
+      .. versionadded:: {{ signal_since }}
+      {% endif %}
+
+      {% if signal_depr %}
+      {% set version, doc_ = signal_depr %}
+      .. deprecated:: {{ version }}
+
+         {{ doc_ | indent(9) }}
+      {% endif %}
+
+      {% for name, doc in parameters %}
+      :param {{ name }}: {{ doc | indent(9) }}
+      {% endfor %}
+      {% if return_doc %}
+      :return: {{ return_doc | indent(9) }}
+      {% endif %}
+
+   {% endfor %}
+
+{% endif %}
+
+{% if virtual_methods %}
+Virtual Methods
+---------------
+
+.. rst-class:: interim-class
+
+.. class:: {{ class_name }}
+   :no-index:
+   
+   {% for method_name, signature, method_doc, parameters, return_doc, method_depr, method_since in virtual_methods %}
+   .. method:: {{ method_name }}{{ signature }}
+
+      {{ method_doc | indent(6) }}
+
+      {% if method_since %}
+      .. versionadded:: {{ method_since }}
+      {% endif %}
+
+      {% if method_depr %}
+      {% set version, doc_ = method_depr %}
+      .. deprecated:: {{ version }}
+
+         {{ doc_ | indent(9) }}
+      {% endif %}
+
+      {% for name, doc in parameters %}
+      :param {{ name }}: {{ doc | indent(9) }}
+      {% endfor %}
+      {% if return_doc %}
+      :return: {{ return_doc | indent(9) }}
+      {% endif %}
+
+   {% endfor %}
+
+{% endif %}
+
+{% if fields %}
+Fields
+------
+
+.. rst-class:: interim-class
+
+.. class:: {{ class_name }}
+   :no-index:
+   
+   {% for name, doc, field_depr, field_since in fields %}
+   .. attribute:: {{ name }}
+
+      {{ doc | capfirst | indent(6)}}
+
+      {% if field_since %}
+      .. versionadded:: {{ field_since }}
+      {% endif %}
+
+      {% if field_depr %}
+      {% set version, doc_ = field_depr %}
+      .. deprecated:: {{ version }}
+
+         {{ doc_ | indent(9) }}
+      {% endif %}
+
+   {% endfor %}
+
+{% endif %}
+

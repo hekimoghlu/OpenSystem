@@ -1,0 +1,141 @@
+2018-04-29  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.40
+
+2018-04-26  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.c (col_row_collection_foreach): move to...
+	* src/sheet.c (sheet_colrow_foreach): ...here.  Allow -1 to mean
+	last column or row.
+	(sheet_foreach_cell_in_range): Change to take a range.
+	(sheet_foreach_cell_in_region): Preserve the old
+	sheet_foreach_cell_in_range api.  Most callers changed.  Allow -1
+	to mean last column or row.
+
+2018-04-25  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Read shared array
+	expressions as we used to, but immediately unshare.  I had an old
+	file with such a thing and it not supposed to happen.  That
+	formula would likely have been created in early 2007.
+
+2018-04-24  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_paste_copy_impl): Simplify now that
+	clipboard handles colrow sizes.
+
+2018-04-21  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-image.c (gnm_soi_write_image): If the format
+	doesn't match what is requested, convert.
+
+2018-04-20  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (merge_single): Avoid a
+	hash-changed-while-iterating problem.  [#795408]
+
+	* src/xml-sax-write.c (xml_write_cell_and_position): In the
+	clipboard case, write result values too.
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Rework this rat's
+	nest of conditionals.  Accept values for expressions.
+
+2018-04-18  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_get_cond_style): Flip reversed
+	pre-condition.
+
+	* src/gui-clipboard.c (gnm_x_claim_clipboard): Offer biff8,
+	including LO's weird name for that.  The don't seem to take
+	"Biff8" and they don't seem to take Citrix' variant either.
+
+2018-04-16  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (gnm_x_claim_clipboard): Plug leak.  Debug
+	improvements.
+	(table_cellregion_read): Improve paste-range heuristic for
+	clipboard formats that lack that information, notably
+	LibreOffice's.
+
+	* src/workbook-view.c (get_uri_modtime): Fix criticals on paste
+	from LibreOffice.  (Which sends a zipfile over the clipboard.)
+
+2018-04-14  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_count_args): Rename from
+	function_def_count_args for introspection.
+	(gnm_func_get_arg_type): Rename from function_def_get_arg_type
+	for introspection.
+	(gnm_func_get_arg_type_sring): Rename from
+	function_def_get_arg_type_string for introspection.
+
+	* src/workbook-view.c (workbook_view_save_as): Rename from
+	wb_view_save_as for introspection.
+	(workbook_view_save): Rename from wb_view_save for introspection.
+
+2018-04-13  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (workboook_view_save_to_uri): Renamed from
+	wb_view_save_to_uri for introspection.
+	(workbook_view_save_to_output): Renamed from
+	wb_view_save_to_output for introspection.
+
+	* src/style-color.c (gnm_style_color_get_type): Duplicate of
+	gnm_color_get_type, more or less.
+
+	* src/validation.c (gnm_validation_ref): Must return a value to be
+	used as a boxed copy function.
+
+	* src/expr.c (gnm_expr_top_ref): Must return a value to be used
+	as a boxed copy function.
+
+	* src/expr-name.c (expr_name_ref): Must return a value to be used
+	as a boxed copy function.
+
+	* src/mstyle.c (gnm_style_ref): Must return a value to be used
+	as a boxed copy function.
+
+	* src/clipboard.c (cellregion_ref): Must return a value to be used
+	as a boxed copy function.
+
+	* src/criteria.c (gnm_criteria_unref): Rename from free_criteria.
+
+	* src/mstyle.c: Hide internals.
+	src/gnm-style-impl.h: Remove.
+
+	* src/cell.c (gnm_cell_set_format): Remove.  Unused and badly
+	named.
+
+2018-04-12  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-merge.c (gnm_sheet_merge_remove): Drop unused command
+	context argument.  All callers changed.
+
+2018-04-11  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c: Make Workbook a more proper object by adding a
+	constructor to setup the object correctly.  Introspection fixes.
+
+	(workbook_view_class_init): Make this a more proper object by
+	adding a constructor and init function to setup the object
+	correctly.
+
+2018-04-11  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c: Introspection fixes, mostly from Dean
+	McCarron.
+	src/workbook-control.c: Ditto.
+	src/wbc-gtk.c: Ditto.
+
+2018-03-25  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_set_last_export_uri): Constify
+	argument.  Callers fixed.
+
+2018-03-23  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (cpu_sanity_check): New function.
+
+2018-03-13  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

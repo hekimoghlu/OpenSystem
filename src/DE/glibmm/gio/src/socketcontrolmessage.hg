@@ -1,0 +1,124 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/object.h>
+#include <set>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+/** A Socket control message.
+ * A %SocketControlMessage is a special-purpose utility message that can be
+ * sent to or received from a Socket. These types of messages are often
+ * called "ancillary data".
+ *
+ * The message can represent some sort of special instruction to or
+ * information from the socket or can represent a special kind of transfer to
+ * the peer (for example, sending a file description over a UNIX socket).
+ *
+ * These messages are sent with Gio::Socket::send() and received with
+ * Gio::Socket::receive().
+ *
+ * To extend the set of control message that can be sent, subclass this class
+ * and override the get_size_vfunc(), get_level_vfunc(), get_type_vfunc() and
+ * serialize_vfunc() methods.
+ *
+ * To extend the set of control messages that can be received, subclass this
+ * class and implement a DeserializeFunc function. Typically it would be a
+ * static class method. Also, make sure you register the DeserializeFunc
+ * function with a call to add_deserialize_func() before calling
+ * Gio::Socket::receive() to read such a message.
+ *
+ * @ingroup NetworkIO
+ * @newin{2,28}
+ */
+class GIOMM_API SocketControlMessage : public Glib::Object
+{
+  _CLASS_GOBJECT(SocketControlMessage, GSocketControlMessage, G_SOCKET_CONTROL_MESSAGE, Glib::Object, GObject, , , GIOMM_API)
+
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_METHOD(static Glib::RefPtr<SocketControlMessage> deserialize(int level, int type, gsize size, gpointer data), g_socket_control_message_deserialize)
+  _WRAP_METHOD(int get_level() const, g_socket_control_message_get_level)
+  _WRAP_METHOD(int get_msg_type() const, g_socket_control_message_get_msg_type)
+  _WRAP_METHOD(gsize get_size() const, g_socket_control_message_get_size)
+  _WRAP_METHOD(void serialize(gpointer data), g_socket_control_message_serialize)
+
+protected:
+  // The deserialize vfunc in GLib is a class virtual function (not associated
+  // with an instance). Such functions don't exist in C++.
+  // But it must be wrapped in one way or another. g_socket_control_message_deserialize()
+  // assumes that all subclasses of GSocketControlMessage override this vfunc.
+  // A user-program can crash, if any subclass does not.
+  // https://gitlab.gnome.org/GNOME/glibmm/issues/52
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->deserialize = &SocketControlMessage_deserialize_vfunc_c_callback;
+  SocketControlMessage_deserialize_vfunc_funcptr = &deserialize_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static GSocketControlMessage* deserialize_vfunc_callback(
+    int level, int type, gsize size, gpointer data);
+  _POP()
+#m4end
+
+  /** Pointer to a function that can be called from deserialize() or
+   * g_socket_control_message_deserialize().
+   *
+   * For instance,
+   * @code
+   * Glib::RefPtr<SocketControlMessage> my_deserialize_func(
+   *   int level, int type, gsize size, gpointer data);
+   * @endcode
+   *
+   * @param level A socket level.
+   * @param type A socket control message type for the given @a level.
+   * @param size The size of the data in bytes.
+   * @param data Pointer to the message data (element-type guint8).
+   * @return The deserialized message or an empty Glib::RefPtr.
+   *         The returned message can be a subclass of %SocketControlMessage.
+   */
+  using DeserializeFunc = Glib::RefPtr<SocketControlMessage> (*)
+    (int level, int type, gsize size, gpointer data);
+
+  /** Register a deserialize function.
+   *
+   * If the same function is registered multiple times, only the first
+   * registration has an effect.
+   *
+   * In GLib, %deserialize() is a class virtual function (not associated
+   * with an instance). Such functions don't exist in C++. A function registered
+   * with %add_deserialize_func() is a kind of replacement.
+   */
+  static void add_deserialize_func(DeserializeFunc func);
+
+  _WRAP_VFUNC(gsize get_size() const, "get_size")
+  _WRAP_VFUNC(int get_level() const, "get_level")
+  _WRAP_VFUNC(int get_type() const, "get_type")
+  _WRAP_VFUNC(void serialize(gpointer data), "serialize")
+
+private:
+  // Functions registered with add_deserialize_func(). 
+  static std::set<DeserializeFunc> m_deserialize_funcs;  
+};
+
+} // namespace Gio

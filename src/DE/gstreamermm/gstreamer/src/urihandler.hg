@@ -1,0 +1,104 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <glibmm/interface.h>
+#include <gstreamermm/enums.h>
+#include <glibmm/arrayhandle.h>
+#include <cstdio>
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Element;
+
+_WRAP_ENUM(URIType, GstURIType)
+_WRAP_ENUM(URIError, GstURIError)
+
+/** An interface to ease URI handling in plugins.
+ * The Gst::URIHandler is an interface that is implemented by Source and Sink
+ * Gst::Element to simplify then handling of URI.
+ *
+ * An application can use the following functions to quickly get an element
+ * that handles the given URI for reading or writing (make_element_from_uri()).
+ *
+ * Source and Sink plugins should implement this interface when possible.
+ *
+ * Last reviewed on 2016-08-27 (1.8.0)
+ * @ingroup GstInterfaces
+ */
+class URIHandler : public Glib::Interface
+{
+  _CLASS_INTERFACE(URIHandler, GstURIHandler, GST_URI_HANDLER, GstURIHandlerInterface)
+
+public:
+  _WRAP_METHOD(static bool protocol_is_valid(const Glib::ustring& protocol), gst_uri_protocol_is_valid)
+  _WRAP_METHOD(static bool protocol_is_supported(const Gst::URIType type, const Glib::ustring& protocol), gst_uri_protocol_is_supported)
+  _WRAP_METHOD(static bool uri_is_valid(const Glib::ustring& uri), gst_uri_is_valid)
+  _WRAP_METHOD(static bool uri_has_protocol(const Glib::ustring& uri, const Glib::ustring& protocol), gst_uri_has_protocol)
+  _WRAP_METHOD(static Glib::ustring get_protocol(const Glib::ustring& uri), gst_uri_get_protocol)
+  _WRAP_METHOD(static Glib::ustring get_location(const Glib::ustring& uri), gst_uri_get_location)
+  _WRAP_METHOD(static Glib::ustring construct_uri(const Glib::ustring& protocol, const Glib::ustring& location), gst_uri_construct)
+  _WRAP_METHOD(static Glib::ustring filename_to_uri(const Glib::ustring& filename), gst_filename_to_uri, errthrow)
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Element> make_element_from_uri(const Gst::URIType type, const Glib::ustring& uri, const Glib::ustring& name), gst_element_make_from_uri, errthrow)
+
+  _WRAP_METHOD(URIType get_uri_type() const, gst_uri_handler_get_uri_type)
+
+#m4 _CONVERSION(`const gchar* const*',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_protocols() const, gst_uri_handler_get_protocols)
+
+  _WRAP_METHOD(Glib::ustring get_uri() const, gst_uri_handler_get_uri)
+  _WRAP_METHOD(bool set_uri(const Glib::ustring& uri), gst_uri_handler_set_uri, errthrow)
+
+#m4 _CONVERSION(`Glib::ustring', `const gchar*', `($3).c_str()')
+
+  /** Virtual method which should be implemented to return the URI currently
+   * handled by the element.
+   */
+  _WRAP_VFUNC(Glib::ustring get_uri() const, "get_uri")
+
+  /** Virtual method which should be implemented to set a new URI.
+   */
+  _WRAP_VFUNC(bool set_uri(const Glib::ustring& uri, GError** error), "set_uri")
+
+  /**
+   * Method to return the list of protocols handled by the element.
+   */
+  virtual const gchar * const * get_protocols_vfunc() const;
+
+  /**
+   * Method to tell whether the element handles source or sink URI.
+   */
+  virtual URIType get_type_vfunc();
+
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->get_type = &get_type_vfunc_callback;
+  klass->get_protocols = &get_protocols_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static GstURIType get_type_vfunc_callback(GType type);
+  static const gchar * const * get_protocols_vfunc_callback(GType type);
+_POP()
+#m4end
+};
+
+} // namespace Gst

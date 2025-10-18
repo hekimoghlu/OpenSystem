@@ -1,0 +1,1602 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!--Section History
+  2007-07-14 bug fixed in Color Erase
+  2007-01-19 lexA: moved en over from the glossary
+  2007-01-13 lexA: relocated from the layer dialog and added
+                   examples and equations
+  2006-09-06 scb: thorough review and/or rewrite of English
+-->
+<sect1 id="gimp-concepts-layer-modes">
+  <title>Layer Modes</title>
+
+  <indexterm>
+    <primary>Layer</primary>
+    <secondary>Modes</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Layer Modes</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Layer</primary>
+    <secondary>Blending Modes</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Blending Modes</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Modes of layers</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Color</primary>
+    <secondary>Merging layer Modes</secondary>
+  </indexterm>
+
+  <para>
+    <acronym>GIMP</acronym> has a wide variety of layer modes, split up in seven
+    groups: <link linkend="layer-mode-group-normal">Normal</link>,
+    <link linkend="layer-mode-group-lighten">Lighten</link>,
+    <link linkend="layer-mode-group-darken">Darken</link>,
+    <link linkend="layer-mode-group-contrast">Contrast</link>,
+    <link linkend="layer-mode-group-inversion">Inversion</link>,
+    <link linkend="layer-mode-group-hsv">HSV components</link>, and
+    <link linkend="layer-mode-group-lch">LCh components</link>.
+    In addition to these layer modes, there are also the so-called
+    <link linkend="gimp-concepts-layer-modes-legacy">legacy layer modes</link>,
+    which were used before <acronym>GIMP</acronym> 2.10.
+  </para>
+  <para>
+    These legacy layer modes are still available, both for backwards
+    compatibility with saved images from older GIMP versions, and also for
+    specific effects, or for compatibility with other image formats, e.g.
+    Photoshop PSD. In general, they are not used when creating new images.
+  </para>
+  <para>
+    Layer modes are also called <quote>blending modes</quote>. Selecting a layer
+    mode changes the appearance of the layer or image, based on the layer or
+    layers beneath it.
+    Each layer in an image can have a different layer mode. The effects of these
+    layer modes are cumulative. However, setting the mode to anything but Normal
+    for the bottom layer of any layer group and the bottom layer of the image
+    has no effect.
+  </para>
+  <para>
+    In addition to the generic layer modes, there is one more layer mode called
+    <quote>Pass through</quote>, which is only available for
+    <link linkend="gimp-layer-groups">group layers</link>.
+  </para>
+  <para>
+    <guilabel>Pass through</guilabel> mode, is less a blending mode in and of
+    itself than an instruction for the group as a whole: it indicates that
+    layers inside the group are to be rendered in combination with other layers
+    below the group, instead of being rendered separately from them.
+  </para>
+  <para>
+    For more details about <guilabel>Pass through</guilabel>, see
+    <xref linkend="glossary-pass-through"/> in the Glossary.
+  </para>
+
+  <para>
+    You can set the layer mode in the <guilabel>Mode</guilabel> drop-down menu
+    at the top of the <link linkend="gimp-layer-dialog">Layers Dialog</link>.
+    <acronym>GIMP</acronym> uses the layer mode to determine how to combine
+    each pixel in the top layer with the pixel in the same location in the
+    layer below it.
+  </para>
+  <note>
+    <para>
+      When the active tool is a painting tool, there is a drop-down list in the
+      Tool Options which contains modes that affect the painting tools in a
+      similar way to the layer modes. You can use all of the same modes for
+      painting that are available for layers, and there are additional modes
+      just for the painting tools. See
+      <xref linkend="gimp-paint-mode-examples"/>.
+    </para>
+  </note>
+  <para>
+    Layer modes permit complex color changes in the image. They are often used
+    with a new layer which acts as a kind of mask.
+    For example, if you put a solid white layer over an image and set the layer
+    mode of the new layer to <quote>HSV Saturation</quote>, the underlying
+    visible layers will appear in shades of gray.
+  </para>
+
+  <figure>
+    <title>Images used for the layer mode examples</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata fileref="images/using/duck_orig.png" format="PNG"/>
+      </imageobject>
+      <caption>
+        <para>Background image (bottom layer)</para>
+      </caption>
+    </mediaobject>
+    <mediaobject>
+      <imageobject>
+        <imagedata format="PNG"
+          fileref="images/using/original-layer-modes-mask.png"/>
+      </imageobject>
+      <caption>
+        <para>Mask (top layer)</para>
+      </caption>
+    </mediaobject>
+  </figure>
+
+  <para>
+    The examples below show the effects of each of the layer modes. Each
+    example will also describe the effect of the layer mode.
+  </para>
+  <para>
+    Since the results of each mode vary greatly depending upon the colors on
+    the layers, these images can only give you a general idea of how the modes
+    work. You are encouraged to try them out yourself. You might start with
+    two similar layers, where one is a copy of the other, but slightly
+    modified (by being blurred, moved, rotated, scaled, color-inverted, etc.),
+    and see what happens when you change the layer mode of the top layer.
+  </para>
+
+  <sect2 id="layer-mode-group-normal">
+    <title>Normal Layer Modes</title>
+    <para>
+      The <quote>Normal</quote> group is a bit of a misnomer. Most of the
+      modes besides <quote>Normal</quote> are
+      <emphasis>cancellation</emphasis> modes.
+    </para>
+    <variablelist>
+      <varlistentry id="layer-mode-normal">
+        <term>Normal</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Normal</secondary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Normal</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-normal-50.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer is at 50% Opacity.
+                </para>
+              </caption>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-normal-100.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  With 100% opacity for the top layer, only the upper layer is
+                  shown when blending with <quote>Normal</quote>, except for
+                  the transparent areas.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Normal</guilabel>
+            mode is the default layer mode. The layer on top covers the layers
+            below it. If you want to see anything below the top layer when you
+            use this mode, the layer must have some transparent areas.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-dissolve">
+        <term>Dissolve</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Dissolve</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Dissolve</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Dissolve</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-dissolve-50.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer is at 50% Opacity. The effect of
+                  <quote>Dissolve</quote> is visible everywhere, except in areas
+                  that are completely transparent.
+                </para>
+              </caption>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-dissolve-100.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  With 100% opacity of the top layer, only some edges that are
+                  semi transparent are affected by <quote>Dissolve</quote>.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Dissolve</guilabel>
+            mode dissolves the upper layer into the layer beneath it by drawing
+            a random pattern of pixels in areas of partial transparency. This is
+            especially visible along the edges within an image. It can be useful
+            as a layer mode, but it is also often used as a painting mode.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-color-erase">
+        <term>Color Erase</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Color Erase</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Color Erase</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Color Erase</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/using/default-layer-mode-color-erase.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Color Erase</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Color Erase</guilabel>
+            mode erases the colors in the upper layer from the lower layer.
+            Black pixels in the upper layer make those parts in the bottom layer
+            transparent, while white pixels have no effect. Anything in between
+            removes those specific colors from the bottom layer, leaving the
+            other color components intact.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-erase">
+        <term>Erase</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Erase</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Erase</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Erase</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/using/default-layer-mode-erase.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Erase</quote> mode.
+                  The white parts here are transparent.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Erase</guilabel>
+            mode erases any non transparent area of the upper layer from the
+            lower layer, making those parts in the bottom layer transparent.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-merge">
+        <term>Merge</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Merge</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Merge</primary>
+          </indexterm>
+            <figure>
+            <title>Example for layer mode <quote>Merge</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-merge.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Merge</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Merge</guilabel>
+            mode lays the source layer on top of the destination, the same as
+            normal mode. However, it assumes the source and destination are two
+            parts of an original whole, and are therefore mutually exclusive.
+            This is useful for blending cut and pasted content without
+            artifacts, or for replacing erased content in general.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-split">
+        <term>Split</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Split</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Split</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Split</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/using/default-layer-mode-split.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Split</quote> mode.
+                  The white parts here are transparent.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Split</guilabel>
+            mode subtracts the source layer from the destination, such that
+            recompositing the result with the source using merge mode reproduces
+            the original content.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+  <sect2 id="layer-mode-group-lighten">
+    <title>Lighten Layer Modes</title>
+    <para>
+      The <quote>Lighten</quote> group contains layer modes that make the result
+      lighter.
+    </para>
+    <variablelist>
+      <varlistentry id="layer-mode-lighten-only">
+        <term>Lighten only</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Lighten only</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Lighten only</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Lighten only</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-lighten-only.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Lighten only</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guimenuitem>Lighten only</guimenuitem>
+            mode compares each component of each pixel in the upper layer with
+            the corresponding one in the lower layer and uses the larger value
+            in the resulting image. Completely black layers have no effect on
+            the final image and completely white layers result in a white image.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter
+            (except for transparent areas in the bottom layer).
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-luma-luminance-lighten-only">
+        <term>Luma/Luminance lighten only</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Luma/Luminance lighten only</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Luma/luminance lighten only</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Luma/Luminance lighten
+             only</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-luma-lighten-only.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Luma/Luminance Lighten
+                  only</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guimenuitem>Luma/Luminance Lighten only</guimenuitem>
+            mode compares the luminance of each pixel in the upper layer with
+            the corresponding one in the lower layer and uses the larger value
+            in the resulting image. Completely black layers have no effect on
+            the final image and completely white layers result in a white image.
+            Luma is the perceptual version of Luminance.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter
+            (except for transparent areas in the bottom layer).
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-screen">
+        <term>Screen</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Screen</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Screen</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Screen</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-screen.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Screen</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Screen</guilabel>
+            mode inverts the values of each of the visible pixels in the two
+            layers of the image. (That is, it subtracts each of them from 1.0.)
+            Then it multiplies them together, and inverts this value again.
+            The resulting image is usually brighter, and sometimes
+            <quote>washed out</quote> in appearance. The exceptions to this are
+            a black layer, which does not change the other layer, and a white
+            layer, which results in a white image. Darker colors in the image
+            appear to be more transparent.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-dodge">
+        <term>Dodge</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Dodge</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Dodge</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Dodge</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-dodge.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Dodge</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Dodge</guilabel>
+            mode divides the pixel value of the lower layer by the inverse of
+            the pixel value of the top layer. The resulting image is usually
+            lighter, but some colors may be inverted.
+          </para>
+          <para>
+            In photography, dodging is a technique used in a darkroom to
+            decrease the exposure in particular areas of the image. This brings
+            out details in the shadows. When used for this purpose, dodge may
+            work best on Grayscale images and with a painting tool, rather than
+            as a layer mode.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-addition">
+        <term>Addition</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Addition</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Addition</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Addition</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-addition.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Addition</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Addition</guilabel>
+            mode is very simple. The pixel values of the upper and lower layers
+            are added to each other. The resulting image is usually lighter. The
+            equation can result in color values greater than 1.0.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+  <sect2 id="layer-mode-group-darken">
+    <title>Darken Layer Modes</title>
+    <para>
+      The <quote>Darken</quote> group contains layer modes that make the result
+      darker.
+    </para>
+    <variablelist>
+      <varlistentry id="layer-mode-darken-only">
+        <term>Darken only</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Darken only</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Darken only</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Darken only</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-darken-only.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Darken only</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guimenuitem>Darken only</guimenuitem>
+            mode compares each component of each pixel in the upper layer with
+            the corresponding one in the lower layer and uses the smaller value
+            in the resulting image. Completely white layers have no effect on
+            the final image and completely black layers result in a black image.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-luma-luminance-darken-only">
+        <term>Luma/Luminance darken only</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Luma/Luminance darken only</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Luma/luminance darken only</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Luma/luminance darken
+            only</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-luma-luminance-darken-only.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Luma/Luminance Darken
+                  only</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guimenuitem>Luma/luminance Darken only</guimenuitem>
+            mode compares the luminance of each pixel in the upper layer with
+            the corresponding one in the lower layer and uses the smaller value
+            in the resulting image. Completely white layers have no effect on
+            the final image and completely black layers result in a black image.
+            Luma is the perceptual version of Luminance.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter
+            (except for transparent areas in the bottom layer).
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-multiply">
+        <term>Multiply</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Multiply</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Multiply</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Multiply</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-multiply.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Multiply</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Multiply</guilabel>
+            mode multiplies the pixel values of the upper layer with those of
+            the layer below it. The result is usually a darker image. If either
+            layer is white, the resulting image is the same as the other layer.
+            If either layer is black, the resulting image is completely black.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter
+            (except for transparent areas in the bottom layer).
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-burn">
+        <term>Burn</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Burn</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Burn</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Burn</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-burn.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Burn</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Burn</guilabel>
+            mode inverts the pixel value of the lower layer, divides that by the
+            pixel value of the upper layer, then inverts the result. It tends to
+            make the image darker, somewhat similar to <quote>Multiply</quote>
+            mode.
+          </para>
+          <para>
+            In photography, burning is a technique used in a darkroom to
+            increase the exposure in particular areas of the image. This brings
+            out details in the highlights. When used for this purpose, burn may
+            work best on Grayscale images and with a painting tool, rather than
+            as a layer mode.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-linear-burn">
+        <term>Linear burn</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Linear burn</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Linear burn</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Linear burn</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-linear-burn.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Linear Burn</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Linear Burn</guilabel>
+            mode adds the pixel values of the upper and lower layers, and then
+            subtracts 1.0. It tends to
+            make the image darker, somewhat similar to <quote>Multiply</quote>
+            mode.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+  <sect2 id="layer-mode-group-contrast">
+    <title>Contrast Layer Modes</title>
+    <para>
+      The <quote>Contrast</quote> group contains layer modes that enhance
+      contrast.
+    </para>
+    <variablelist>
+      <varlistentry id="layer-mode-overlay">
+        <term>Overlay</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Overlay</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Overlay</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Overlay</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-overlay.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Overlay</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Overlay</guilabel>
+            mode multiplies the upper layer with two times the lower layer when
+            the component value of the lower layer is less than 0.5.
+            When the component value is greater than or equal to 0.5, it
+            inverts the components of the lower and upper layer, multiplies
+            those values, then multiplies with 2.0, and then inverts the result.
+            It darkens the image, but not as much as with
+            <quote>Multiply</quote> mode.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-soft-light">
+        <term>Soft light</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Soft light</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Soft light</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Soft light</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-soft-light.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Soft Light</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Soft light</guilabel> is not related to
+            <quote>Hard light</quote> in anything but the name, but it
+            does tend to make the edges softer and the colors not so
+            bright. It is similar to <quote>Overlay</quote> mode.
+            <guilabel>Soft light</guilabel> has a more complicated formula. It
+            uses the result of <guilabel>Multiply</guilabel> mode, then
+            multiplies that with the inverse of the lower layer; then adds to
+            that the multiplication of the result of <guilabel>Screen</guilabel>
+            mode with the lower layer.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-hard-light">
+        <term>Hard light</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Hard light</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Hard light</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Hard light</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-hard-light.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Hard Light</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Hard light</guilabel>
+            mode is rather complicated because the equation consists of two
+            parts, one for darker color components and one for lighter ones. If
+            the color component of the upper layer is greater than 0.5, the
+            inverse of the lower layer is multiplied with the inverse of: the
+            upper layer minus 0.5 times 2.0. Then the result of this is compared
+            with the inverse of this result and the lower value of both is used.
+            If the color component of the upper layer is less than or equal to
+            0.5, the lower layer is multiplied with 2 times the upper layer. The
+            result of that is compared with 1.0 and the lower value of that is
+            used. You might use this mode to combine two photographs and obtain
+            bright colors and sharp edges.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-vivid-light">
+        <term>Vivid light</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Vivid light</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Vivid light</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Vivid light</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-vivid-light.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Vivid Light</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Vivid light</guilabel>
+            mode, increases contrast very strongly, especially in highlights and
+            shadows. The effect is a combination of Burn (in the shadows) and
+            Dodge (in the highlights), apart from the doublings in the
+            denominators.
+            This mode also consists of two parts depending on the color
+            component value, where 0.5 is the limit, the same as with Hard
+            light.
+            If the upper layer value is smaller than or equal to 0.5: divide the
+            inverse of the lower layer by 2 times the upper layer and invert
+            the result. If the result is less than zero, return zero.
+            If the upper layer value is greater than 0.5: divide the lower layer
+            by two times the inverse of the upper layer. If the result is larger
+            than 1.0, return 1.0.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-pin-light">
+        <term>Pin light</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Pin light</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Pin light</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Pin light</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-pin-light.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Pin Light</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Pin light</guilabel>
+            mode is a combination of the Darken and Lighten modes. Mid-tone
+            regions remain almost uninfluenced.
+            If the component value of the upper layer is greater than 0.5:
+            subtract 0.5 from the upper layer and multiply by 2.0. Then the
+            result is the maximum from this value and the value of the lower
+            layer.
+            If the component value is less than or equal to 0.5: take the
+            minimum value of the lower layer and two times the upper layer.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-linear-light">
+        <term>Linear light</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Linear light</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Linear light</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Linear light</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-linear-light.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Linear Light</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Linear light</guilabel>
+            mode increases contrast slightly less than vivid light. It resembles
+            Burn, but with twice the impact on the foreground's tonal values.
+            If the component value is less than or equal to 0.5: the result is
+            the lower layer plus two times the upper layer minus 1.0.
+            If the component value is greater than 0.5: subtract 0.5 from the
+            upper layer and multiply by 2.0, then add the lower layer.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-hard-mix">
+        <term>Hard mix</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Hard mix</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Hard mix</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Hard mix</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-hard-mix.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Hard Mix</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Hard mix</guilabel>
+            mode only contains the six primary colors, black and white.
+            The upper and lower layer components are added together. Any
+            component which is more than or equal to 1.0 is set to 1. Anything
+            else is set to 0.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+  <sect2 id="layer-mode-group-inversion">
+    <title>Inversion Layer Modes</title>
+    <para>
+      The <quote>Inversion</quote> group contains layer modes that invert the
+      colors in one way or another.
+    </para>
+    <variablelist>
+      <varlistentry id="layer-mode-difference">
+        <term>Difference</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Difference</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Difference</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Difference</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-difference.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Difference</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Difference</guilabel>
+            mode subtracts the pixel value of the upper layer from that of the
+            lower layer and then takes the absolute value of the result. This
+            mode can be used to compare two layers. If they are identical the
+            difference is zero (black), otherwise the result shows the variance
+            of the tonal values in each pixel. A white foreground inverts the
+            background whereas a white background inverts the foreground.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-exclusion">
+        <term>Exclusion</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Exclusion</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Exclusion</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Exclusion</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-exclusion.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Exclusion</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Exclusion</guilabel>
+            mode causes inversion to the other layer for bright regions, very
+            dark regions change nothing at all. In this way this mode resembles
+            Difference mode. However, medium gray values greatly decrease
+            contrast of the respective other layer, in extreme cases up to zero.
+          </para>
+          <para>
+            The mode is commutative; the order of the two layers doesn't matter.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-subtract">
+        <term>Subtract</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Subtract</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Subtract</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Subtract</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-subtract.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Subtract</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Subtract</guilabel>
+            mode subtracts the pixel values of the upper layer from the pixel
+            values of the lower layer. The resulting image is normally darker.
+            You might get a lot of black or near-black in the resulting image.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-grain-extract">
+        <term>Grain extract</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Grain extract</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Grain extract</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Grain extract</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-grain-extract.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Grain Extract</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Grain extract</guilabel>
+            mode is supposed to extract the <quote>film grain</quote>
+            from a layer to produce a new layer that is pure grain, but it can
+            also be useful for giving images an embossed appearance. It
+            subtracts the pixel value of the upper layer from that of the lower
+            layer and adds 0.5.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-grain-merge">
+        <term>Grain merge</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Grain merge</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Grain merge</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Grain merge</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-grain-merge.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Grain Merge</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Grain merge</guilabel> mode merges a grain layer
+            (possibly one created from the <quote>Grain extract</quote>
+            mode) into the current layer, leaving a grainy version of the
+            original layer. It does just the opposite of
+            <quote>Grain extract</quote>. It adds the pixel values of the
+            upper and lower layers together and subtracts 0.5.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="layer-mode-divide">
+        <term>Divide</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Divide</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Divide</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Divide</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-divide.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Divide</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Divide</guilabel>
+            mode divides each pixel value in the lower layer by the
+            corresponding pixel value of the upper layer (while avoiding
+            dividing by zero).
+            The resulting image is often lighter, and sometimes looks
+            <quote>burned out</quote>.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+  <sect2 id="layer-mode-group-hsv">
+    <title>HSV Components Layer Modes</title>
+    <para>
+      The <quote>HSV</quote> group contains layer modes that make use of the
+      HSV color model.
+    </para>
+    <variablelist>
+      <varlistentry id="layer-mode-hsv-hue">
+        <term>HSV Hue</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>HSV Hue</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>HSV Hue</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>HSV Hue</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-hsv-hue.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>HSV Hue</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>HSV Hue</guilabel>
+            mode uses the Hue of the upper layer and the Saturation and Value of
+            the lower layer to form the resulting image. However, if the
+            Saturation of the upper layer is zero, the Hue is taken from the
+            lower layer, too.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-hsv-saturation">
+        <term>HSV Saturation</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>HSV Saturation</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>HSV Saturation</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>HSV Saturation</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-hsv-saturation.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>HSV Saturation</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>HSV Saturation</guilabel>
+            mode uses the Saturation of the upper layer and the Hue and Value of
+            the lower layer to form the resulting image.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-hsl-color">
+        <term>HSL Color</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>HSL Color</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>HSL Color</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>HSL Color</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-hsl-color.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>HSL Color</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>HSL Color</guilabel>
+            mode uses the Hue and Saturation of the upper layer and the
+            Lightness of the lower layer to form the resulting image.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-hsv-value">
+        <term>HSV Value</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>HSV Value</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>HSV Value</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>HSV Value</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-hsv-value.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>HSV Value</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>HSV Value</guilabel>
+            mode uses the Value of the upper layer and the Saturation and Hue of
+            the lower layer to form the resulting image. You can use this mode
+            to reveal details in dark and light areas of an image without
+            changing the Saturation.
+          </para>
+      </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+  <sect2 id="layer-mode-group-lch">
+    <title>LCh Components Layer Modes</title>
+    <variablelist>
+      <para>
+        The <quote>LCh</quote> group contains layer modes that make use of the
+        LCh color model. <quote>LCh</quote> stands for Lightness, Chroma, Hue.
+        It is mathematically derived from the CIELAB reference color space.
+        See also <ulink
+        url="https://en.wikipedia.org/wiki/LCHab#CIEHLC_cylindrical_model">CIELCh</ulink>.
+      </para>
+      <varlistentry id="layer-mode-lch-hue">
+        <term>LCh Hue</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>LCh Hue</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>LCh Hue</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>LCh Hue</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-lch-hue.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>LCh Hue</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>LCh Hue</guilabel>
+            mode corresponds to HSV Hue but is based on different mathematical
+            formulas.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-lch-chroma">
+        <term>LCh Chroma</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>LCh Chroma</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>LCh Chroma</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>LCh Chroma</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-lch-chroma.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>LCh Chroma</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>LCh Chroma</guilabel>
+            mode corresponds to HSV Saturation but is based on different
+            mathematical formulas.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-lch-color">
+        <term>LCh Color</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>LCh Color</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>LCh Color</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>LCh Color</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-lch-color.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>LCh Color</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>LCh Color</guilabel>
+            mode is a combination of LCh Chroma and LCh Hue, and corresponds to
+            HSV Color, but is based on different mathematical formulas.
+            See <ulink url="https://ninedegreesbelow.com/photography/gimp-lch-blend-modes.html">A tutorial on GIMP's very awesome LCH
+            Blend Modes</ulink> for information on using this layer mode.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-lch-lightness">
+        <term>LCh Lightness</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>LCh Lightness</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>LCh Lightness</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>LCh Lightness</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-lch-lightness.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>LCh Lightness</quote>
+                  mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>LCh Lightness</guilabel>
+            mode corresponds to HSV Value, but is based on different
+            mathematical formulas. See <ulink url="https://ninedegreesbelow.com/photography/gimp-lch-blend-modes.html">A tutorial on GIMP's very
+            awesome LCH Blend Modes</ulink> for information on using this layer
+            mode.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry id="layer-mode-luminance">
+        <term>Luminance</term>
+        <listitem>
+          <indexterm>
+            <primary>Layer Modes</primary>
+            <secondary>Luminance</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Luminance</primary>
+          </indexterm>
+          <figure>
+            <title>Example for layer mode <quote>Luminance</quote></title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="JPG"
+                  fileref="images/using/default-layer-mode-luminance.jpg"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Top layer at 100% opacity using <quote>Luminance</quote> mode.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <para>
+            <guilabel>Luminance</guilabel>
+            mode is similar to CIE luminance, but does not alter saturation.
+            It divides the upper layer luminance by the lower layer luminance;
+            then uses that result to multiply with the lower layer component.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+</sect1>

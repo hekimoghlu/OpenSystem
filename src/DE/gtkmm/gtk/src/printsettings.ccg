@@ -1,0 +1,156 @@
+/* Copyright (C) 2006 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+
+#include <gtk/gtk.h>
+#include <glib.h>
+
+namespace // anonymous
+{
+extern "C"
+{
+static void proxy_foreach_callback(const char* key, const char* value, void* data)
+{
+  typedef Gtk::PrintSettings::SlotForeach SlotType;
+  auto& slot = *static_cast<SlotType*>(data);
+
+  try
+  {
+    slot(Glib::convert_const_gchar_ptr_to_ustring(key), Glib::convert_const_gchar_ptr_to_ustring(value));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gtk
+{
+
+//Initialize static members:
+const Glib::ustring PrintSettings::Keys::PRINTER = GTK_PRINT_SETTINGS_PRINTER;
+const Glib::ustring PrintSettings::Keys::ORIENTATION = GTK_PRINT_SETTINGS_ORIENTATION;
+const Glib::ustring PrintSettings::Keys::PAPER_FORMAT = GTK_PRINT_SETTINGS_PAPER_FORMAT;
+const Glib::ustring PrintSettings::Keys::PAPER_WIDTH = GTK_PRINT_SETTINGS_PAPER_WIDTH;
+const Glib::ustring PrintSettings::Keys::PAPER_HEIGHT = GTK_PRINT_SETTINGS_PAPER_HEIGHT;
+const Glib::ustring PrintSettings::Keys::NUM_COPIES = GTK_PRINT_SETTINGS_N_COPIES;
+const Glib::ustring PrintSettings::Keys::DEFAULT_SOURCE = GTK_PRINT_SETTINGS_DEFAULT_SOURCE;
+const Glib::ustring PrintSettings::Keys::QUALITY = GTK_PRINT_SETTINGS_QUALITY;
+const Glib::ustring PrintSettings::Keys::RESOLUTION = GTK_PRINT_SETTINGS_RESOLUTION;
+const Glib::ustring PrintSettings::Keys::USE_COLOR = GTK_PRINT_SETTINGS_USE_COLOR;
+const Glib::ustring PrintSettings::Keys::DUPLEX = GTK_PRINT_SETTINGS_DUPLEX;
+const Glib::ustring PrintSettings::Keys::COLLATE = GTK_PRINT_SETTINGS_COLLATE;
+const Glib::ustring PrintSettings::Keys::REVERSE = GTK_PRINT_SETTINGS_REVERSE;
+const Glib::ustring PrintSettings::Keys::MEDIA_TYPE = GTK_PRINT_SETTINGS_MEDIA_TYPE;
+const Glib::ustring PrintSettings::Keys::DITHER = GTK_PRINT_SETTINGS_DITHER;
+const Glib::ustring PrintSettings::Keys::SCALE = GTK_PRINT_SETTINGS_SCALE;
+const Glib::ustring PrintSettings::Keys::PRINT_PAGES = GTK_PRINT_SETTINGS_PRINT_PAGES;
+const Glib::ustring PrintSettings::Keys::PAGE_RANGES = GTK_PRINT_SETTINGS_PAGE_RANGES;
+const Glib::ustring PrintSettings::Keys::PAGE_SET = GTK_PRINT_SETTINGS_PAGE_SET;
+const Glib::ustring PrintSettings::Keys::FINISHINGS = GTK_PRINT_SETTINGS_FINISHINGS;
+const Glib::ustring PrintSettings::Keys::NUMBER_UP = GTK_PRINT_SETTINGS_NUMBER_UP;
+const Glib::ustring PrintSettings::Keys::OUTPUT_BIN = GTK_PRINT_SETTINGS_OUTPUT_BIN;
+
+const Glib::ustring PrintSettings::Keys::OUTPUT_FILE_FORMAT = GTK_PRINT_SETTINGS_OUTPUT_FILE_FORMAT;
+const Glib::ustring PrintSettings::Keys::OUTPUT_URI = GTK_PRINT_SETTINGS_OUTPUT_URI;
+
+const Glib::ustring PrintSettings::Keys::WIN32_DRIVER_VERSION = GTK_PRINT_SETTINGS_WIN32_DRIVER_VERSION;
+const Glib::ustring PrintSettings::Keys::WIN32_DRIVER_EXTRA = GTK_PRINT_SETTINGS_WIN32_DRIVER_EXTRA;
+
+Glib::RefPtr<PrintSettings> PrintSettings::create_from_key_file(const Glib::RefPtr<const Glib::KeyFile>& key_file)
+{
+  auto result = PrintSettings::create();
+
+  result->load_from_key_file(key_file);
+
+  return result;
+}
+
+Glib::RefPtr<PrintSettings> PrintSettings::create_from_key_file(const Glib::RefPtr<const Glib::KeyFile>& key_file, const Glib::ustring& group_name)
+{
+  auto result = PrintSettings::create();
+
+  result->load_from_key_file(key_file, group_name);
+
+  return result;
+}
+
+Glib::RefPtr<PrintSettings> PrintSettings::create_from_file(const std::string& file_name)
+{
+  auto result = PrintSettings::create();
+
+  result->load_from_file(file_name);
+
+  return result;
+}
+
+void PrintSettings::setting_foreach(const SlotForeach& slot)
+{
+  SlotForeach slot_copy(slot);
+  gtk_print_settings_foreach(const_cast<GtkPrintSettings*>(gobj()), &proxy_foreach_callback, &slot_copy);
+}
+
+PageRange::PageRange()
+:
+  start(0),
+  end(0)
+{}
+
+PageRange::PageRange(int start_, int end_)
+:
+  start(start_),
+  end(end_)
+{}
+
+std::vector<PageRange> PrintSettings::get_page_ranges() const
+{
+  int num_ranges (0);
+  GtkPageRange* page_ranges =
+    gtk_print_settings_get_page_ranges(const_cast<GtkPrintSettings*>(gobj()), &num_ranges);
+
+  // We get a copy of page_ranges. Logically our ownership is deep, but
+  // since page_ranges contains elements instead of pointers to elements,
+  // ArrayHandler shall delete only the container. Thus OWNERSHIP_SHALLOW.
+  return Glib::ArrayHandler<PageRange, PageRangeTraits>::array_to_vector(
+    page_ranges, num_ranges, Glib::OWNERSHIP_SHALLOW);
+}
+
+void PrintSettings::set_page_ranges(const std::vector<PageRange>& page_ranges)
+{
+  gtk_print_settings_set_page_ranges(gobj(),
+    Glib::ArrayHandler<PageRange, PageRangeTraits>::vector_to_array(page_ranges).data(),
+    page_ranges.size());
+}
+
+bool PrintSettings::load_from_key_file(const Glib::RefPtr<const Glib::KeyFile>& key_file)
+{
+  GError* gerror = nullptr;
+  bool retvalue = gtk_print_settings_load_key_file(gobj(), const_cast<GKeyFile*>(Glib::unwrap(key_file)), nullptr, &(gerror));
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+void PrintSettings::save_to_key_file(const Glib::RefPtr<Glib::KeyFile>& key_file) const
+{
+  gtk_print_settings_to_key_file(const_cast<GtkPrintSettings*>(gobj()), Glib::unwrap(key_file), nullptr);
+}
+
+} // namespace Gtk

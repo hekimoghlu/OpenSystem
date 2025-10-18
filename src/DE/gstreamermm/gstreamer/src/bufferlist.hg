@@ -1,0 +1,104 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2015 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/miniobject.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Buffer;
+
+/** A grouped scatter data buffer type for data-passing.
+ * Buffer lists are units of grouped scatter/gather data transfer in GStreamer.
+ *
+ * Buffer lists are created with create() and filled with data using a
+ * Gst::BufferListIterator. The iterator has no current buffer; its cursor
+ * position lies between buffers, immediately before the buffer that would be
+ * returned by Gst::BufferListIterator::next(). After iterating to the end of a group the iterator must
+ * be advanced to the next group by a call to
+ * Gst::BufferListIterator::next_group() before any further calls to
+ * Gst::BufferListIterator::next() can return buffers again. The cursor
+ * position of a newly created iterator lies before the first group; a call to
+ * Gst::BufferListIterator::next_group() is necessary before calls to
+ * Gst::BufferListIterator::next() can return buffers.
+ *
+ * For more details, see the C API docs.
+ */
+class BufferList : public MiniObject
+{
+  _CLASS_OPAQUE_REFCOUNTED(BufferList, GstBufferList, gst_buffer_list_new, gst_buffer_list_ref, gst_buffer_list_unref)
+  _IGNORE(gst_buffer_list_ref, gst_buffer_list_unref)
+
+public:
+  /** For example,
+   * Gst::BufferListItem on_foreach(const Glib::RefPtr<Gst::Buffer>& buffer,
+   * guint group, guint idx);.
+   * A slot that will be called from foreach(). The buffer field will be a
+   * reference to the buffer at idx in group.
+   *
+   * When this function returns Gst::BUFFER_LIST_CONTINUE, the next buffer will
+   * be returned. When Gst::BUFFER_LIST_SKIP_GROUP is returned, all remaining
+   * buffers in the current group will be skipped and the first buffer of the
+   * next group is returned (if any). When Gst::BUFFER_LIST_END is returned,
+   * foreach() will return.
+   *
+   * When the buffer is set to 0, the item will be removed from the bufferlist.
+   * When the buffer has been made writable, the new buffer reference can be
+   * assigned to the buffer.
+   */
+  typedef sigc::slot< bool, Glib::RefPtr<Gst::Buffer>&, guint> SlotForeach;
+
+public:
+
+  _WRAP_METHOD(void remove(guint idx, guint length), gst_buffer_list_remove)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Buffer> remove(guint idx), gst_buffer_list_get)
+
+  _WRAP_METHOD(guint length() const, gst_buffer_list_length)
+
+  _WRAP_METHOD(void copy() const, gst_buffer_list_copy)
+
+  _WRAP_METHOD(void copy_deep() const, gst_buffer_list_copy_deep)
+
+  _WRAP_METHOD(void insert(gint idx, Glib::RefPtr<Gst::Buffer>&& buffer), gst_buffer_list_insert)
+
+  /// A insert() convenience overload. Allows to re-use @a buffer parameter after function call.
+  void insert(gint idx, const Glib::RefPtr<Gst::Buffer>& buffer);
+
+  /** Call @a slot for each buffer in @a list.
+   *
+   * @a slot can modify the passed buffer pointer or its contents. The return
+   * value of @a slot define if this function returns or if the remaining
+   * buffers in a group should be skipped.
+   *
+   * @param slot A SlotForeach to call on each buffer.
+   *
+   * Since 0.10.24
+   */
+  void foreach(const SlotForeach& slot);
+  _IGNORE(gst_buffer_list_foreach)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Buffer> get(guint idx), gst_buffer_list_get)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Buffer> get(guint idx) const, gst_buffer_list_get, constversion)
+
+};
+
+} // namespace Gst

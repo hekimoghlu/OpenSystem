@@ -1,0 +1,269 @@
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      job-stage: "deploy"
+      dist-job-name: "dist-build"
+      tarball-artifact-path: "_build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz"
+
+stages:
+  - check
+  - build
+  - analysis
+  - docs
+  - deploy
+
+.build-default:
+  script:
+    - meson setup ${MESON_EXTRA_FLAGS} --prefix /usr _build .
+    - meson compile -C _build
+    - meson test -C _build
+    - meson install -C _build
+  artifacts:
+    reports:
+      junit:
+        - _build/meson-logs/testlog.junit.xml
+        - _build/meson-logs/testlog-*.junit.xml
+    name: "json-glib-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    expire_in: 1 week
+    paths:
+      - "_build/meson-logs"
+
+.build-scan:
+  script:
+    - meson setup ${MESON_EXTRA_FLAGS} --prefix /usr _scan_build .
+    - ninja -C _scan_build scan-build
+  artifacts:
+    name: "json-glib-static-scan-${CI_COMMIT_REF_NAME}"
+    when: always
+    expire_in: 1 week
+    paths:
+      - "_scan_build/meson-logs"
+
+.build-asan:
+  script:
+    - meson setup ${MESON_EXTRA_FLAGS} -Db_sanitize=address,undefined -Db_lundef=false --prefix /usr _asan_build .
+    - meson compile -C _asan_build
+    - meson test -C _asan_build
+  artifacts:
+    name: "json-glib-asan-${CI_COMMIT_REF_NAME}"
+    when: always
+    expire_in: 1 week
+    paths:
+      - "_asan_build/meson-logs"
+
+.build-dist:
+  script:
+    - git config --global --add safe.directory ${CI_PROJECT_DIR}
+    - meson setup ${MESON_EXTRA_FLAGS} --prefix /usr _build .
+    # We need to compile here in order to get the docs into the dist
+    # because meson dist uses a custom build root
+    - meson compile -C _build
+    - meson dist -C _build
+  artifacts:
+    name: "${env:CI_JOB_NAME}-${env:CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-dist/${CI_PROJECT_NAME}-*.tar.xz"
+
+.fedora-build:
+  image: fedora:40
+  before_script:
+    - export PATH="$PATH:$HOME/.local/bin"
+    - dnf install -y ${FEDORA_DEPS}
+    - pip3 install --break-system-packages meson==${MESON_VERSION}
+
+.fedora-docs-build:
+  image: fedora:40
+  before_script:
+    - export PATH="$HOME/.local/bin:$PATH"
+    - dnf install -y ${FEDORA_DEPS}
+    - pip3 install --break-system-packages meson==${MESON_VERSION} gi-docgen jinja2 Markdown markupsafe packaging pygments toml typogrify
+
+.debian-build:
+  image: debian:bookworm
+  before_script:
+    - apt-get update -qq && apt-get install --no-install-recommends -qq -y ${DEBIAN_DEPS}
+    - pip3 install --break-system-packages meson==${MESON_VERSION}
+    - export PATH="$PATH:$HOME/.local/bin"
+
+.gidocgen-build:
+  script:
+    - meson setup ${MESON_EXTRA_FLAGS} ${DOCS_FLAGS} _docs .
+    - meson compile -C _docs
+    - |
+      pushd "_docs/${DOCS_PATH}" > /dev/null
+      tar cf ${CI_PROJECT_NAME}-docs.tar .
+      popd > /dev/null
+    - mv _docs/${DOCS_PATH}/${CI_PROJECT_NAME}-docs.tar .
+  artifacts:
+    when: always
+    name: 'Documentation'
+    expose_as: 'Download the API reference'
+    paths:
+      - ${CI_PROJECT_NAME}-docs.tar
+
+reuse:
+  image: fedora:latest
+  stage: check
+  needs: []
+  before_script:
+    - dnf install -y python3 python3-pip
+    - pip3 install --user reuse
+    - export PATH="$PATH:$HOME/.local/bin"
+  script:
+    - reuse --suppress-deprecation lint
+
+debian-stable-x86_64:
+  extends:
+    - .debian-build
+    - .build-default
+  stage: build
+  needs: []
+  variables:
+    DEBIAN_DEPS:
+      gcc
+      gettext
+      git
+      gobject-introspection
+      libgirepository1.0-dev
+      libglib2.0-dev
+      ninja-build
+      python3
+      python3-docutils
+      python3-pip
+      python3-wheel
+    MESON_VERSION: "1.2.0"
+    MESON_EXTRA_FLAGS: "--buildtype=debug --default-library=both -Dwerror=true -Dglib:werror=false -Dintrospection=enabled -Ddocumentation=disabled"
+
+fedora-latest-x86_64:
+  extends:
+    - .fedora-build
+    - .build-default
+  stage: build
+  needs: []
+  variables:
+    FEDORA_DEPS:
+      gcc
+      gettext
+      git
+      glib2-devel
+      gobject-introspection-devel
+      ninja-build
+      python3
+      python3-docutils
+      python3-pip
+      python3-wheel
+      redhat-rpm-config
+    MESON_VERSION: "1.2.0"
+    MESON_EXTRA_FLAGS: "--buildtype=debug --default-library=both -Dwerror=true -Dglib:werror=false -Dintrospection=enabled -Ddocumentation=disabled"
+
+static-scan:
+  extends:
+    - .fedora-build
+    - .build-scan
+  stage: analysis
+  needs: []
+  variables:
+    FEDORA_DEPS:
+      clang
+      clang-analyzer
+      gettext
+      git
+      glib2-devel
+      ninja-build
+      python3
+      python3-docutils
+      python3-pip
+      python3-setuptools
+      python3-wheel
+      redhat-rpm-config
+    MESON_VERSION: "1.2.0"
+    MESON_EXTRA_FLAGS: "--buildtype=debug -Dintrospection=disabled -Ddocumentation=disabled"
+    CC: clang
+ 
+# Run tests with the address sanitizer. We need to turn off introspection,
+# since it is incompatible with asan
+asan-debug-build:
+  extends:
+    - .fedora-build
+    - .build-asan
+  tags: [ asan ]
+  stage: analysis
+  needs: []
+  variables:
+    FEDORA_DEPS:
+      clang
+      gettext
+      git
+      glib2-devel
+      libasan
+      libubsan
+      ninja-build
+      python3
+      python3-docutils
+      python3-pip
+      python3-setuptools
+      python3-wheel
+      redhat-rpm-config
+    MESON_VERSION: "1.2.0"
+    MESON_EXTRA_FLAGS: "--buildtype=debug -Dintrospection=disabled -Ddocumentation=disabled"
+    CC: clang
+
+dist-build:
+  extends:
+    - .fedora-docs-build
+    - .build-dist
+  stage: build
+  needs: []
+  variables:
+    FEDORA_DEPS:
+      gcc
+      gettext
+      git
+      glib2-devel
+      gobject-introspection-devel
+      graphviz
+      ninja-build
+      python3
+      python3-docutils
+      python3-pip
+      python3-wheel
+      redhat-rpm-config
+    MESON_VERSION: "1.2.0"
+    MESON_EXTRA_FLAGS: "--buildtype=release --default-library=both -Dwerror=true -Dglib:werror=false -Dintrospection=enabled -Ddocumentation=enabled"
+
+reference:
+  stage: docs
+  needs: []
+  extends:
+    - .fedora-docs-build
+    - .gidocgen-build
+  variables:
+    FEDORA_DEPS:
+      gcc
+      gettext
+      git
+      glib2-devel
+      gobject-introspection-devel
+      graphviz
+      ninja-build
+      python3
+      python3-docutils
+      python3-pip
+      python3-wheel
+    MESON_VERSION: "1.2.0"
+    MESON_EXTRA_FLAGS: "-Dman=true -Dintrospection=enabled -Ddocumentation=enabled"
+    DOCS_PATH: doc/json-glib-1.0
+
+pages:
+  stage: deploy
+  needs: ['reference']
+  script:
+    - mkdir public && cd public
+    - tar xf ../${CI_PROJECT_NAME}-docs.tar
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

@@ -1,0 +1,430 @@
+2004-10-05  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.3.91
+
+2004-10-05  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in (gnumeric_reqs): Add pangoft2 requirement.  (Fixes
+	#153701.)
+
+2004-10-04  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add a test for mkfifo
+
+2004-09-13  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in: Cleanup the mono detection code.  This way it
+	  won't get to the ``configure --help'' which is good for the
+	  upcoming stable release.
+
+2004-10-01  Jody Goldberg <jody@gnome.org>
+
+	* src/colrow.c (colrow_set_sizes) : no need to calculate the size if
+	  we're assigning the default.  Clean up the logic for assigning the
+	  default to
+	  1) Not assign to an empty col/row
+	  2) Break XL compat and have autosize of empty do the same thing for
+	    col and row.
+
+2004-10-01  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_open): Specifically list "*.csv" and
+	"*.tsv" until we get a proper fix.  (Fixes #143135.)
+
+2004-09-29  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (go_file_is_writable): Make the file-exist dialog
+	use GTK_MESSAGE_WARNING and have buttons OK and Cancel.
+	(gui_file_save_as): Cleaup.
+	(do_save_as): Cleanup and move parts up to sole caller.
+
+	* src/Makefile.am: Link in egg-recent.
+
+	* src/clipboard.c (clipboard_copy_range): Fix
+	gboolean/CellIterFlags confusion.
+	* src/workbook-control-gui.c (cb_workbook_debug_info): Ditto.
+	* src/sheet-view.c (sv_is_region_empty_or_selected): Ditto.
+	* src/print.c (print_page): Ditto.
+
+	* src/sheet.c (sheet_foreach_cell_in_range): Don't consider a cell
+	with an un-evaluated expression empty.  Add paranoia.
+
+2004-09-29  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_object_move) : extend to handle insertion too.
+
+	* src/gnumeric-pane.c (cb_control_point_event) : Play fast and lose
+	  with the undo records when duplicating an object by ctrl-click.
+	  Assign the object the sheet as soon as we duplicate it but do not
+	  list the undo until we record the resize on button release.
+
+	* src/workbook-view.c (gnm_mailto_url_show) : fix.
+
+	* src/session.c : suppress warning in the --without-gnome case
+
+	* src/sheet-control-gui.c (scg_set_current_object) : new. uses the
+	  handy dandy unrealized signal on a SheetObject.  With code split from
+	(scg_object_stop_editing) : here.
+	(scg_mode_edit_object) : and here.
+	* src/gnumeric-pane.c (cb_control_point_event) : so that we could use
+	  it here.
+
+2004-09-28  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_mode_edit_object) :  fall back to edit
+	  mode if the object is unrealized.
+
+	* src/sheet-object.c (sheet_object_clear_sheet.) : merge some of the
+	  nice features from finalize
+	(sheet_object_finalize) : use sheet_object_clear_sheet.
+	* src/sheet.c (sheet_destroy) : ditto.
+
+	* src/gnumeric-pane.c (cb_control_point_event) : Make the copy
+	  operation undo-able.
+
+2004-09-28  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Add check for pango_context_set_matrix.  We're
+	going to need that for rotated text.
+
+2004-09-28  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_object_raise_redo) : Don't use MAXINT/MININT it
+	  causes trouble becaue -MININT is not expressable
+
+2004-09-28  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=153871
+	* src/gnm-so-filled.c (cb_filled_update_bounds) : line width counts
+	  when sizing.
+
+	* src/commands.c (cmd_object_delete) : Take an optional descriptor
+	  string.  All callers changed.
+
+	* src/application.c (gnm_app_clipboard_cut_copy_obj) : Use
+	  cmd_object_delete for cuts to get undo.
+
+	* src/sheet-object.c (sheet_objects_relocate) : properly clear the
+	  sheet before we unref an object.
+	(sheet_objects_get) : use range_contained.
+	(sheet_objects_clear) : ditto.  This simplifies undo/redo.
+
+2004-09-27  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c (gnm_app_clipboard_cut_copy_obj) : translate the
+	  anchor back to a pseudo origin to make pasting easier.
+
+	* src/clipboard.c (clipboard_paste_region) : handle paste contents
+	  with only objects.  No need to do tiling or to clear things.
+
+	* src/gutils.c (gnm_ptr_array_insert) : Make this smarter.
+	  Just append if the requested element is >= len
+
+	* src/item-grid.c (item_grid_event) : only auto-slide when we're
+	  outside.  Inside we handle it locally fixes artificial movement that
+	  seems to jump back to the start of the previous row/col
+
+	* src/gnumeric-pane.c (cb_control_point_event) : Store the button that
+	  initiated the object drag and check that when releasing.
+
+	* src/commands.c (cmd_paste_copy) : handle pasting objects with no
+	  content.
+
+	* src/gutils.h : Fix the name spacing to be gnm_ in all cases.
+	  gnumeric_ is too damn big, and we have not business using g_
+	* src/gutils.c (gnm_usr_dir) : Check for empty home_dir
+
+	* src/graph.c (gnm_go_data_vector_load_len) : handle missing
+	  expression
+
+	* src/gnm-so-filled.c (gnm_so_filled_read_xml_dom) : We still need to
+	  Type field even though it is ugly.
+
+	* src/xml-io.c (xml_cellregion_write) : cut-n-paste-o to fix
+	  inter-process pasting
+	(xml_cellregion_read) : Actually store the resulting objects
+	(xml_read_sheet_object) : Don't set the sheet when extracting a
+	  cellregion.
+
+2004-09-27  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_sendto): Bring !WITH_GNOME case a
+	lot closer to sanity.  Properly handle case where mkdir fails.
+	(gnm_mailto_url_show): New function factored out from
+	wb_view_sendto.
+
+2004-09-27  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : drop the test for caddr_t we do not need it and it
+	  does not work win32.
+	  Export the epoch, major, minor version elements
+
+	* src/workbook-view.c (wb_view_sendto) : a win32 portability patch for
+	  mkdir.
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (gnumeric_xml_write_workbook) : respect the xml
+	  compression preference a bit.  It's still uncompressed, or
+	  compressed.  We'll need to patch gsf to be able to tune that
+	  parameter.
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_sendto) : encode the right portion of
+	  the url.
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_sendto) : cleanup and use the new url
+	  encoding routine.
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml : Add InsertCurrentDateTime
+
+	* src/wbcg-actions.c (cb_insert_current_date_time) : new
+
+	* src/format.c (style_format_default_date_time) : new return
+	  concatination of default date and time formats
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wbv_save_to_uri) : renamed from wbv_save_to_file
+	  to clarify that it does not work for a simple path.
+	(wb_view_sendto) : fix to use a uri.
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (cb_sheet_object_canvas_event) : Use the pane in
+	  GnmCanvas rather than adding one to GnmSimpleCanvas
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (gnm_pane_object_move) :  handle symetric
+	  movement via ctrl-click and object duplicate via ctrl-click on
+	  acetate
+
+	* src/gnumeric-pane.c (build_so_menu) : new
+	(display_object_menu) : create a GtkMenu based on the actions.
+
+	* src/sheet-object.c (sheet_object_populate_menu) : Rework the
+	  interface to return action descririptors rather than a GtkMenu
+	  Change all implementations
+
+2004-09-26  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_cellregion_read) : read objects
+	(xml_cellregion_write) : write them too
+
+2004-09-25  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (cb_edit_copy) : Use
+	  gnm_app_clipboard_cut_copy_obj for objects
+	(cb_edit_cut) : ditto.
+
+	* src/sheet-object.c (sheet_object_populate_menu) : put the stacking
+	  items into a sub menu.
+
+2004-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (paste_object) : new.
+	(clipboard_paste_region) : use it.
+	(cb_dup_objects) : new.
+	(clipboard_copy_range) : dup the objects in the range.
+	(cellregion_new) : init the object list
+	(cellregion_unref) : free the object list
+
+	* src/sheet-object.c (sheet_object_dup) : make public, and tweak
+	  interface.
+	(sheet_object_clone_sheet) : adjust to the interface change.
+
+2004-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-image.c (sheet_object_image_copy) : implement
+
+	* src/wbcg-actions.c : update the actions to handle the new drawing
+	  object types.
+
+	* src/sheet-object.c (sheet_object_clone) : Change the interface to
+	  have the wrapper create the object.  Then s/clone/copy/ and have it
+	  just do the assignament rather, not allocation.
+	* src/sheet-object*.c : s/clone/copy/ with related semantic changes
+
+	* src/rendered-value.c (rendered_value_render) : trivial
+	  constification
+
+	* src/main-application.c (main) : Use bonobo_main WITH_GNOME just in
+	  case.
+
+	* src/gnumeric-pane.c (gnm_pane_object_register) : Change return type
+	  to GObject.  There's no need to be more specific.
+	(gnm_pane_widget_register) : ditto.
+
+	* src/gnm-so-filled.c : Rewrite of the old SheetObjectGraphic
+	  to use GogStyle, merge text into the base, and use GObject properties
+	* src/gnm-so-line.c : Rewrite of the old SheetObjectFilled
+	  to use GogStyle  and use GObject properties
+
+	* src/Makefile.am : Adjust to the file changes for
+	  sheet-object-graphic.c
+
+2004-09-13  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (GCONF_SCHEMAS_INSTALL): AM_CONDITIONAL has to be
+	  called in all branches.
+
+2004-09-24  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_read_sheet_object) : add hooks to the old names
+	  for GnmSOFilled, and GnmSOLine
+
+2004-09-23  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_object_format) : undo redo for the new line and
+	  filled objects.
+
+2004-09-23  Jody Goldberg <jody@gnome.org>
+
+	* configure.in (GNUMERIC_PLUGIN_LDFLAGS) : new macro to give the win32
+	  folk a hook for the plugins.
+	* plugins/*/Makefile.am : Use it
+	* plugins/*/plugin.xml.in : Remove the .la for module names.  Core of
+	  glib adds just before checking platform specific names.
+
+2004-09-23  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (cb_view_zoom_out) : in and out were reversed
+	(cb_view_zoom_in) : ditto
+
+2004-09-24  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_cell): New wrapper function.  Turn on
+	new printing by default.
+
+	* src/gui-util.c (entry_to_int): Plug leak.
+	(entry_to_float_with_format): Plug leak.
+
+2004-09-23  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (cb_activate_default): New function to avoid
+	endless recursion.
+	(gnumeric_editable_enters): Activate via cb_activate_default.
+
+	* src/rendered-value.c (rendered_value_recontext): Don't require
+	Pango 1.6, but use it if we have it.
+
+2004-09-23  Morten Welinder  <terra@gnome.org>
+
+	* src/rendered-value.c (rendered_value_recontext): Force
+	wrap==FALSE when the source layout has only one line.
+	(Mostly fixes #152265)
+
+	* src/rendered-value.h (struct _RenderedValue): switch
+	layout_natural_width and layout_natural_height be in terms of
+	pango units.  All users changed.
+
+	* src/cell-draw.c (cell_calc_layout): Switch srguments width,
+	height, h_center, res_x, and res_y to be in terms of pango units.
+	Ditto for internal variables rect_x, rect_y, hoffset, indent, and
+	text_base.  All callers changed.
+
+2004-09-23  Morten Welinder  <terra@gnome.org>
+
+	* src/rendered-value.c (rendered_value_remeasure): New function.
+	(rendered_value_new): Use rendered_value_remeasure.
+	(rendered_value_recontext): New function.
+
+	* src/cell-draw.c (cell_calc_layout): Use
+	rendered_value_remeasure.
+
+	* src/print-cell.c (print_cell_NEW): Use rendered_value_recontext.
+
+2004-09-22  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.c (cb_clear_variable_width_content): Force a redraw.
+
+	* src/cell-draw.c (cell_calc_layout): Drop rect argument.  Replace
+	printing argument by y_direction argument.  Drop x1 and y1
+	arguments.  Callers changed.
+	(cell_calc_layout): Insert zero_width_space characters in the
+	right spot.
+
+	* src/print-cell.c (print_cell_NEW): Use size_pts.
+
+2004-09-22  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_merged_range, print_cell): Take extra
+	  PangoContext argument.  All callers changed.
+	(print_cell_range): Create a pango context.
+
+	(print_cell_OLD): Renamed from print_cell.
+	(print_cell_NEW): New function.
+	(print_cell): New macro to call _OLD or _NEW as appropriate.
+
+	* src/rendered-value.c (rendered_value_new): Get rid of quantify
+	  artifacts.
+
+2004-09-22  Morten Welinder  <terra@gnome.org>
+
+	* src/cell-draw.c (cell_draw): Get rid of quantify artefacts.
+	(cell_calc_layout): Add rv and printing arguments, drop res_layout
+	argument.  Make extern.  Caller changed.
+
+2004-09-21  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (print_hf_element): Print using pango layouts when
+	possible.  Code adapted from bug #152939, kzamir@walla.co.il.
+
+2004-09-16  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (cb_clear_rendered_cells) : fix the 'Serious Error'
+	  warnings on zoom changes.
+
+	* src/workbook-control-gui.c (wbcg_create_status_area) : drop some
+	  frames in the status area and use GtkStatusbar to get the resize grip
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=152636
+	* src/style.c (style_font_new_simple) : sizes in pts should not
+	  include the zoom scaling, pretend that we actually measure that.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=152244
+	* src/sheet-object.c (cell_offset_calc_pixel) : return double to avoid
+	  problems when we are at integer-epsilon, which would round to
+	  integer-1 and systematicly lose precision.
+	* src/sheet-control-gui.c (scg_object_view_position) : Use
+	  foo_canvas_window_to_world instead of foo_canvas_w2c to move the
+	  pixels back into canvas space.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=152512
+	* src/gnumeric-pane.c (control_point_set_cursor) : new.
+	(cb_control_point_event) : use it.
+	(new_control_point) : no longer a  need to specify the cursor
+	(set_item_x_y) : ditto.
+	(gnm_pane_object_set_bounds) : cursor are dynamic now.
+	(set_acetate_coords) : ditto.
+
+2004-09-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-image.c (soi_get_image_fmt): g_free is a poor
+	substitute for g_slist_free.
+
+2004-09-10  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_colrow_hide_correct_selection) : disable because
+	  it irritates me.
+
+	* src/wbcg-actions.c : Add ctrl-9, ctrl-shift-9 (hide,unhide rows)
+	Add ctrl-0, ctrl-shift-0 (hide,unhide cols)
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars) : toggle std toolbar should be
+	  ctrl-7
+
+2004-09-10  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_new): Generate a proper URI here.
+
+2004-09-09  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release bump
+

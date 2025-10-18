@@ -1,0 +1,206 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/error.h>
+#include <glibmm/exceptionhandler.h>
+#include <glibmm/vectorutils.h>
+#include <giomm/asyncresult.h>
+#include <giomm/dbusconnection.h>
+#include <giomm/dbusintrospection.h>
+#include <giomm/slot_async.h>
+
+namespace Gio
+{
+
+namespace DBus
+{
+
+// Help the generate code:
+using MapChangedProperties = Proxy::MapChangedProperties;
+
+Proxy::Proxy(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+: _CONSTRUCT("g-connection", Glib::unwrap(connection), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init_async(slot, cancellable);
+}
+
+Proxy::Proxy(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+: _CONSTRUCT("g-connection", Glib::unwrap(connection), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init_async(slot);
+}
+
+Proxy::Proxy(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+: _CONSTRUCT("g-connection", Glib::unwrap(connection), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init(cancellable);
+}
+
+Proxy::Proxy(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+: _CONSTRUCT("g-connection", Glib::unwrap(connection), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init();
+}
+
+Proxy::Proxy(BusType bus_type, const Glib::ustring& name, const Glib::ustring& object_path,
+  const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+: _CONSTRUCT("g-bus-type", static_cast<GBusType>(bus_type), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init_async(slot, cancellable);
+}
+
+Proxy::Proxy(BusType bus_type, const Glib::ustring& name, const Glib::ustring& object_path,
+  const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+: _CONSTRUCT("g-bus-type", static_cast<GBusType>(bus_type), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init_async(slot);
+}
+
+Proxy::Proxy(BusType bus_type, const Glib::ustring& name, const Glib::ustring& object_path,
+  const Glib::ustring& interface_name, const Glib::RefPtr<Cancellable>& cancellable,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+: _CONSTRUCT("g-bus-type", static_cast<GBusType>(bus_type), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init(cancellable);
+}
+
+Proxy::Proxy(BusType bus_type, const Glib::ustring& name, const Glib::ustring& object_path,
+  const Glib::ustring& interface_name, const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+: _CONSTRUCT("g-bus-type", static_cast<GBusType>(bus_type), "g-flags",
+    static_cast<GDBusProxyFlags>(flags), "g-interface-info", Glib::unwrap(info), "g-name",
+    Glib::c_str_or_nullptr(name), "g-object-path", Glib::c_str_or_nullptr(object_path),
+    "g-interface-name", Glib::c_str_or_nullptr(interface_name))
+{
+  init();
+}
+
+void
+Proxy::create(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+{
+  Proxy(connection, name, object_path, interface_name, slot, cancellable, info, flags);
+}
+
+void
+Proxy::create(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+{
+  Proxy(connection, name, object_path, interface_name, slot, info, flags);
+}
+
+Glib::RefPtr<Proxy>
+Proxy::create_sync(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+{
+  return Glib::make_refptr_for_instance<Proxy>(
+    new Proxy(connection, name, object_path, interface_name, cancellable, info, flags));
+}
+
+Glib::RefPtr<Proxy>
+Proxy::create_sync(const Glib::RefPtr<Connection>& connection, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+{
+  return Glib::make_refptr_for_instance<Proxy>(new Proxy(connection, name, object_path, interface_name, info, flags));
+}
+
+void
+Proxy::create_for_bus(BusType bus_type, const Glib::ustring& name, const Glib::ustring& object_path,
+  const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+{
+  Proxy(bus_type, name, object_path, interface_name, slot, cancellable, info, flags);
+}
+
+void
+Proxy::create_for_bus(BusType bus_type, const Glib::ustring& name, const Glib::ustring& object_path,
+  const Glib::ustring& interface_name, const SlotAsyncReady& slot,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+{
+  Proxy(bus_type, name, object_path, interface_name, slot, info, flags);
+}
+
+Glib::RefPtr<Proxy>
+Proxy::create_for_bus_sync(BusType bus_type, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name,
+  const Glib::RefPtr<Cancellable>& cancellable, const Glib::RefPtr<InterfaceInfo>& info,
+  ProxyFlags flags)
+{
+  return Glib::make_refptr_for_instance<Proxy>(
+    new Proxy(bus_type, name, object_path, interface_name, cancellable, info, flags));
+}
+
+Glib::RefPtr<Proxy>
+Proxy::create_for_bus_sync(BusType bus_type, const Glib::ustring& name,
+  const Glib::ustring& object_path, const Glib::ustring& interface_name,
+  const Glib::RefPtr<InterfaceInfo>& info, ProxyFlags flags)
+{
+  return Glib::make_refptr_for_instance<Proxy>(new Proxy(bus_type, name, object_path, interface_name, info, flags));
+}
+
+void
+Proxy::get_cached_property(Glib::VariantBase& property, const Glib::ustring& property_name) const
+{
+  GVariant* const g_variant =
+    g_dbus_proxy_get_cached_property(const_cast<GDBusProxy*>(gobj()), property_name.c_str());
+
+  property.init(g_variant, false /* no extra reference needed */);
+}
+
+} // namespace DBus
+
+} // namespace Gio

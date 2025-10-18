@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2017-10-14 j.h: some updates
+-->
+<sect2 id="script-fu-tile-blur">
+  <title>Tileable Blur</title>
+
+  <indexterm>
+    <primary>Filters</primary>
+    <secondary>Blur</secondary>
+    <tertiary>Tileable Blur</tertiary>
+  </indexterm>
+  <indexterm>
+    <primary>Tileable Blur</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Example for the <quote>Tileable</quote> filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/taj_orig.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Original</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/blur-taj-tblur.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Filter <quote>Tileable Blur</quote> applied</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      Tileable Blur is actually implemented by a Script-Fu script that invokes
+      the Gaussian blur plug-in.
+    </para>
+    <para>
+      This filter is used to soften tile seams in images used in tiled
+      backgrounds. It does this by blending and blurring the boundary between
+      images that will be next to each other after tiling.
+    </para>
+    <tip>
+      <para>
+        If you want to treat only images borders, you can't apply filter
+        to the whole image. The solution to get the wanted effect is as
+        follows:
+      </para>
+      <procedure>
+        <step>
+          <para>
+            Duplicate layer
+            (<menuchoice>
+              <guimenu>Layer</guimenu>
+              <guimenuitem>Duplicate Layers</guimenuitem>
+            </menuchoice>)
+            and select it to work on it.
+          </para>
+        </step>
+        <step>
+          <para>
+            Apply <quote>Tileable Blur</quote> filter with a 20 pixels radius
+            to this layer.
+          </para>
+        </step>
+        <step>
+          <para>
+            Select all
+            (<keycombo><keycap>Ctrl</keycap><keycap>A</keycap></keycombo>) and
+            reduce selection
+            (<menuchoice>
+              <guimenu>Selection</guimenu>
+              <guimenuitem>Shrink</guimenuitem>
+            </menuchoice>)
+            to create a border with the wanted width.
+          </para>
+        </step>
+        <step>
+          <para>
+            Give a feathered border to the selection by using
+            <menuchoice>
+              <guimenu>Selection</guimenu>
+              <guimenuitem>Feather</guimenuitem>
+            </menuchoice>.
+          </para>
+        </step>
+        <step>
+          <para>
+            Delete selection with
+            <keycombo><keycap>Ctrl</keycap><keycap>K</keycap></keycombo>.
+          </para>
+        </step>
+        <step>
+          <para>
+            Merge layers with
+            <menuchoice>
+              <guimenu>Layer</guimenu>
+              <guimenuitem>Merge down</guimenuitem>
+            </menuchoice>.
+          </para>
+        </step>
+      </procedure>
+    </tip>
+  </sect3>
+
+  <sect3>
+    <title>Activating the Filter</title>
+    <para>
+      This filter is found in the main menu under
+      <menuchoice>
+        <guimenu>Filters</guimenu>
+        <guisubmenu>Blur</guisubmenu>
+        <guimenuitem>Tileable Blur…</guimenuitem>
+      </menuchoice>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title><quote>Tileable Blur</quote> filter options</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/blur/tileable-options.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Radius</term>
+        <listitem>
+          <para>
+            The bigger the radius, the more marked is the blur. By selecting
+            <guilabel>Horizontal</guilabel> and <guilabel>Vertical</guilabel>,
+            you can make the horizontal and vertical borders tileable.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Blur vertically</term>
+        <term>Blur horizontally</term>
+        <listitem>
+          <para>
+            These options are self-explanatory.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Blur type</term>
+        <listitem>
+          <para>Choose the algorithm to be applied:</para>
+          <variablelist>
+            <varlistentry>
+              <term>IIR</term>
+              <listitem>
+                <para>for photographic or scanned images.</para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>RLE</term>
+              <listitem>
+                <para>for computer-generated images.</para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

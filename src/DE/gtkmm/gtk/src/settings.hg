@@ -1,0 +1,130 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <gdkmm/display.h>
+#include <gtkmm/enums.h>
+#include <gtkmm/styleprovider.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+
+/** Provides a mechanism to share global settings between applications.
+ *
+ * On the X window system, this sharing is realized by an
+ * [XSettings](http://www.freedesktop.org/wiki/Specifications/xsettings-spec)
+ * manager that is usually part of the desktop environment, along with
+ * utilities that let the user change these settings.
+ *
+ * On Wayland, the settings are obtained either via a settings portal,
+ * or by reading desktop settings from Gio::Settings.
+ *
+ * On macOS, the settings are obtained from `NSUserDefaults`.
+ *
+ * In the absence of these sharing mechanisms, GTK reads default values for
+ * settings from `settings.ini` files in `/etc/gtk-4.0`, `$XDG_CONFIG_DIRS/gtk-4.0`
+ * and `$XDG_CONFIG_HOME/gtk-4.0`. These files must be valid key files (see
+ * Glib::KeyFile), and have a section called %Settings. Themes can also provide
+ * default values for settings by installing a `settings.ini` file
+ * next to their `gtk.css` file.
+ *
+ * Applications can override system-wide settings by setting the property
+ * of the %Gtk::Settings object. This should be restricted
+ * to special cases though; %Gtk::Settings are not meant as an application
+ * configuration facility.
+ *
+ * There is one %Gtk::Settings instance per display. It can be obtained with
+ * get_for_display(), but in many cases, it is more
+ * convenient to use Gtk::Widget::get_settings().
+ */
+class GTKMM_API Settings : public Glib::Object, public StyleProvider
+{
+  _CLASS_GOBJECT(Settings, GtkSettings, GTK_SETTINGS, Glib::Object, GObject, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(StyleProvider)
+
+public:
+  _WRAP_METHOD(static Glib::RefPtr<Settings> get_default(), gtk_settings_get_default, refreturn)
+
+  _WRAP_METHOD(static Glib::RefPtr<Settings> get_for_display(const Glib::RefPtr<Gdk::Display>& display), gtk_settings_get_for_display, refreturn)
+
+  _WRAP_METHOD(void reset_property(const Glib::ustring& name), gtk_settings_reset_property)
+
+  _WRAP_PROPERTY("gtk-double-click-time", int)
+  _WRAP_PROPERTY("gtk-double-click-distance", int)
+  _WRAP_PROPERTY("gtk-cursor-blink", bool)
+  _WRAP_PROPERTY("gtk-cursor-blink-time", int)
+  _WRAP_PROPERTY("gtk-cursor-blink-timeout", int) //since 3.4
+  _WRAP_PROPERTY("gtk-split-cursor", bool)
+  _WRAP_PROPERTY("gtk-cursor-aspect-ratio", double)
+  _WRAP_PROPERTY("gtk-theme-name", Glib::ustring)
+  _WRAP_PROPERTY("gtk-dnd-drag-threshold", int)
+  _WRAP_PROPERTY("gtk-font-name", Glib::ustring)
+  _WRAP_PROPERTY("gtk-xft-antialias", int)
+  _WRAP_PROPERTY("gtk-xft-hinting", int)
+  _WRAP_PROPERTY("gtk-xft-hintstyle", Glib::ustring)
+  _WRAP_PROPERTY("gtk-xft-rgba", Glib::ustring)
+  _WRAP_PROPERTY("gtk-xft-dpi", int)
+  _WRAP_PROPERTY("gtk-hint-font-metrics", bool)
+  _WRAP_PROPERTY("gtk-cursor-theme-name", Glib::ustring)
+  _WRAP_PROPERTY("gtk-cursor-theme-size", int)
+  _WRAP_PROPERTY("gtk-alternative-button-order", bool)
+  _WRAP_PROPERTY("gtk-alternative-sort-arrows", bool)
+  _WRAP_PROPERTY("gtk-enable-animations", bool)
+  _WRAP_PROPERTY("gtk-error-bell", bool)
+  _WRAP_PROPERTY("gtk-show-status-shapes", bool)
+  _WRAP_PROPERTY("gtk-print-backends", Glib::ustring)
+  _WRAP_PROPERTY("gtk-print-preview-command", Glib::ustring)
+  _WRAP_PROPERTY("gtk-enable-accels", bool)
+  _WRAP_PROPERTY("gtk-im-module", Glib::ustring)
+  _WRAP_PROPERTY("gtk-recent-files-max-age", int)
+  _WRAP_PROPERTY("gtk-fontconfig-timestamp", int)
+  _WRAP_PROPERTY("gtk-sound-theme-name", Glib::ustring)
+  _WRAP_PROPERTY("gtk-enable-input-feedback-sounds", bool)
+  _WRAP_PROPERTY("gtk-enable-event-sounds", bool)
+  _WRAP_PROPERTY("gtk-application-prefer-dark-theme", bool)  // since 2.22
+  _WRAP_PROPERTY("gtk-shell-shows-app-menu", bool) //since 3.4
+  _WRAP_PROPERTY("gtk-shell-shows-menubar", bool) //since 3.4
+  _WRAP_PROPERTY("gtk-shell-shows-desktop", bool) //since 3.12
+  _WRAP_PROPERTY("gtk-enable-primary-paste", bool) //since 3.6
+
+  _WRAP_PROPERTY("gtk-label-select-on-focus", bool) //since 3.4
+  _WRAP_PROPERTY("gtk-entry-password-hint-timeout", guint) //since 3.4
+
+  _WRAP_PROPERTY("gtk-entry-select-on-focus", bool)
+
+  _WRAP_PROPERTY("gtk-icon-theme-name", Glib::ustring)
+
+  _WRAP_PROPERTY("gtk-recent-files-enabled", bool)
+  _WRAP_PROPERTY("gtk-primary-button-warps-slider", bool)
+
+  _WRAP_PROPERTY("gtk-decoration-layout", Glib::ustring) // since 3.12
+  _WRAP_PROPERTY("gtk-titlebar-double-click", Glib::ustring, newin "3,20")
+  _WRAP_PROPERTY("gtk-titlebar-middle-click", Glib::ustring, newin "3,20")
+  _WRAP_PROPERTY("gtk-titlebar-right-click", Glib::ustring, newin "3,20")
+  _WRAP_PROPERTY("gtk-dialogs-use-header", bool) // since 3.12
+
+  _WRAP_PROPERTY("gtk-long-press-time", guint) // since 3.14
+  _WRAP_PROPERTY("gtk-keynav-use-caret", bool)
+  _WRAP_PROPERTY("gtk-overlay-scrolling", bool)
+  _WRAP_PROPERTY("gtk-font-rendering", FontRendering)
+  _WRAP_PROPERTY("gtk-interface-color-scheme", InterfaceColorScheme)
+  _WRAP_PROPERTY("gtk-interface-contrast", InterfaceContrast)
+};
+
+} //namespace Gtk

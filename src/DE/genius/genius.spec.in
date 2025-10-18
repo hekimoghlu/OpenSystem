@@ -1,0 +1,91 @@
+%define  ver     @VERSION@
+%define  rel     1
+%define  prefix  /usr
+
+Summary: Genius advanced calculator
+Name: genius
+Version: %ver
+Release: %rel
+Copyright: GPL
+Group: X11/Applications
+Source: genius-%{ver}.tar.gz
+Url: http://www.gnome.org/
+BuildRoot: /var/tmp/genius-%{ver}-root
+Prefix: %prefix
+BuildRequires: vte-devel
+
+%description
+Genius is an advanced calculator and a mathematical programming language.
+It handles multiple precision floating point numbers, infinite precision
+integers, complex numbers and matrixes.
+
+%changelog
+* Wed May 10 2017 Jiri
+- Update though untested
+* Tue Aug 20 2004 Jiri
+- Update file list to include icons
+* Tue Aug 12 2004 Jiri
+- applied patch from Florin Andrei <florin@andrei.myip.org> to export custom
+  compiler flags to the build and to require vte-devel for the build
+* Tue Aug 10 2004 Jiri
+- fixed up for the update-mime-database
+* Tue Apr 20 1999 Erik Walthinsen <omega@cse.ogi.edu>
+- added spec.in file, changes to makefiles as approrpiate
+
+%prep
+%setup
+
+%build
+export CFLAGS="$RPM_OPT_FLAGS"
+export CXXFLAGS="$RPM_OPT_FLAGS"
+./configure --prefix=%prefix
+
+if [ "$SMP" != "" ]; then
+  (make "MAKE=make -k -j $SMP"; exit 0)
+  make
+else
+  make
+fi
+
+%post
+UMD=`which update-mime-database 2>/dev/null`
+if [ "$UMD" != "" ]; then
+  update-mime-database %{prefix}/share/mime
+fi
+#if which scrollkeeper-update>/dev/null 2>&1; then scrollkeeper-update; fi
+
+%postun
+#if which scrollkeeper-update>/dev/null 2>&1; then scrollkeeper-update; fi
+
+%install
+rm -rf $RPM_BUILD_ROOT
+
+make prefix=$RPM_BUILD_ROOT%{prefix} install
+rm -f $RPM_BUILD_ROOT%{prefix}/share/mime/XMLnamespaces
+rm -f $RPM_BUILD_ROOT%{prefix}/share/mime/globs
+rm -f $RPM_BUILD_ROOT%{prefix}/share/mime/magic
+#rm -rf $RPM_BUILD_ROOT%{prefix}/var/scrollkeeper
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-, root, root)
+
+%doc README ABOUT-NLS AUTHORS COPYING NEWS TODO ChangeLog
+
+%{prefix}/bin/*
+%{prefix}/share/locale/*/*/*
+%{prefix}/share/genius
+%{prefix}/lib/genius
+%{prefix}/libexec/*
+%{prefix}/include/genius
+%{prefix}/share/applications/*
+%{prefix}/share/application-registry/*
+%{prefix}/share/mime-info/*
+%{prefix}/share/mime/*/*
+%{prefix}/share/icons/*/*/*/*
+#%{_datadir}/gnome/help/genius/*/*.xml
+#%{_datadir}/gnome/help/genius/*/*.xml
+#%{_datadir}/gnome/help/genius/*/figures/*.png
+#%{_datadir}/omf/genius/genius-*.omf

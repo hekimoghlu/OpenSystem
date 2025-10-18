@@ -1,0 +1,128 @@
+## Some combinatorial functions
+
+# Subfactorial
+# Subfactorial(n)=n! times \sum_{k=0}^n (-1)^k/k!
+# This is the number of permutations of n objects that leaves none of the
+# objects unchanged.
+SetHelp("Subfactorial","combinatorics","Subfactorial: n! times sum_{k=0}^n (-1)^k/k!");
+function Subfactorial(n) = (
+	if(IsMatrix(n)) then
+		return ApplyOverMatrix(n,Subfactorial)
+	else if not IsNonNegativeInteger(n) then
+		(error("Subfactorial: argument not an integer >= 0");bailout);
+	(n!) * sum k=0 to n do ((-1)^k)/(k!)
+)
+
+SetHelp("Catalan","combinatorics","Get nth Catalan number");
+function Catalan(n) = (
+	if(IsMatrix(n)) then
+		return ApplyOverMatrix(n,Catalan)
+	else if(not IsValue(n) or not IsInteger(n) or n<0) then
+		(error("Catalan: argument not an integer >= 0");bailout);
+	nCr(2*n,n)/(n+1)
+);
+
+## Factorial
+## Defined by n! = n(n-1)(n-2)...
+SetHelp("Factorial","combinatorics","Factorial: n(n-1)(n-2)...");
+function Factorial(n) = (
+	if(IsMatrix(n)) then
+		return ApplyOverMatrix(n,Factorial)
+	else if not IsNonNegativeInteger(n) then
+		(error("Factorial: argument not an integer >= 0");bailout);
+	n!
+)
+
+## Double Factorial
+## Defined by n!! = n(n-2)(n-4)...
+SetHelp("DoubleFactorial","combinatorics","Double factorial: n(n-2)(n-4)...");
+function DoubleFactorial(n) = (
+	if(IsMatrix(n)) then
+		return ApplyOverMatrix(n,DoubleFactorial)
+	else if not IsNonNegativeInteger(n) then
+		(error("DoubleFactorial: argument not an integer >= 0");bailout);
+	n!!
+)
+
+SetHelp ("RisingFactorial", "combinatorics", "(Pochhammer) Rising factorial: (n)_k = n(n+1)...(n+(k-1))")
+## (Pochhammer) Rising factorial: (n)_k = n(n+1)...(n+(k-1))
+function RisingFactorial(n,k) =
+ (
+  if IsInteger(n) and k > 10 then
+    (n+k-1)!/(n-1)!
+  else
+   (
+    prod i=0 to (k-1) do (n+i)
+  );
+ )
+SetHelpAlias ("RisingFactorial", "Pochhammer")
+Pochhammer = RisingFactorial
+
+# Falling factorial: (n)_k = n(n-1)...(n-(k-1))
+SetHelp ("FallingFactorial", "combinatorics", "Falling factorial: (n)_k = n(n-1)...(n-(k-1))")
+function FallingFactorial(n,k) =
+(
+  if IsInteger(n) and k > 10 then
+    return (n)!/(n-k)!
+  else
+   (
+    prod i=0 to (k-1) do (n-i)
+   )
+)
+
+## Binomial Coefficients
+
+SetHelp("nPr","combinatorics","Calculate permutations");
+function nPr(n,r) = (
+	if(IsMatrix(n) or IsMatrix(r)) then
+		return ApplyOverMatrix2(n,r,nPr)
+	else if(not IsReal(n) or not IsInteger(r)) then
+		(error("nPr: arguments not real and an integer");bailout)
+	else if(r<0 or n<0 or r>n) then
+		0
+	else if(IsInteger(n)) then
+		(n!)/((n-r)!)
+	else (
+		prod i=0 to (r-1) do (n-i)
+	)
+);
+
+# nCr is built in now!
+
+## Multinomial Coefficients
+## Multinomial([a,b,c])=(a+b+c)!/a!b!c!
+SetHelp ("Multinomial", "combinatorics", "Calculate multinomial coefficients")
+function Multinomial(v,arg...) = (
+	if not IsMatrix(v) and not IsValue(v) then
+		(error("Multinomial: argument not a value or vector");bailout);
+	# Not perfect argument checking
+
+	if IsNull (arg) then
+		m = [v]
+	else
+		m = [v, arg];
+
+	MatrixSum(m)!/MatrixProduct(ApplyOverMatrix(m,`(x)[]=x!))
+)
+
+SetHelp("Pascal","combinatorics","Get the Pascal's triangle as a matrix");
+function Pascal(i) = (
+	if not IsNonNegativeInteger(i) then
+		(error("Pascal: argument not a non-negative integer");bailout);
+	m = zeros (i+1,i+1);
+	for y = 0 to i do (
+		for x = 0 to y do (
+			m@(y+1,x+1) = nCr(y,x)
+		)
+	);
+	m
+);
+
+SetHelp("Triangular", "combinatorics", "Calculate the nth triangular number");
+function Triangular(nth) = (
+        if IsMatrix(nth) then
+                return ApplyOverMatrix(nth, Triangular)
+	else if not IsInteger(nth) or not nth>=0 then
+		(error("Trianglular: argument not an integer larger than or equal to 0");bailout);
+	(nth*(nth+1))/2
+);

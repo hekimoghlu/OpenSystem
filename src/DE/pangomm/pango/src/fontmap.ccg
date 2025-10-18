@@ -1,0 +1,44 @@
+/* Copyright 2001      The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <pangomm/cairofontmapimpl.h>
+#include <pangomm/context.h>
+#include <pango/pangocairo.h>
+
+namespace Pango
+{
+
+// Custom wrap_new() because we want to create
+// a CairoFontMapImpl if the underlying C class implements the PangoCairoFontMap interface.
+Glib::ObjectBase* FontMap_Class::wrap_new(GObject* object)
+{
+  if (PANGO_IS_CAIRO_FONT_MAP(object))
+     return new CairoFontMapImpl((PangoFontMap*)object);
+  return new FontMap((PangoFontMap*)object);
+}
+
+std::vector<Glib::RefPtr<FontFamily>> FontMap::list_families() const
+{
+  //Get the array:
+  PangoFontFamily** pFamilies = nullptr;
+  int n_families = 0;
+  pango_font_map_list_families(const_cast<PangoFontMap*>(gobj()), &pFamilies, &n_families);
+
+  return Glib::ArrayHandler<Glib::RefPtr<FontFamily>>::array_to_vector
+      (pFamilies, n_families, Glib::OWNERSHIP_SHALLOW);
+}
+
+} /* namespace Pango */

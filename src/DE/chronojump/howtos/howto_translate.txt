@@ -1,0 +1,241 @@
+***********************************************
+Important !! 2016-12-15
+
+There's a bug related to intltool-update:
+https://bugzilla.gnome.org/show_bug.cgi?id=774404
+
+There's a custom intltool-update on po directoy. So call it like this:
+
+./intltool-update
+***********************************************
+
+
+2014-November-6
+- Chronojump developer use an old libglade library in order to have translations ok on Windows
+https://git.gnome.org/browse/chronojump/commit/?id=aaa0b4744969fc3ddbbb0d0246ff99ab71a21e70
+
+- Chronojump translators just follow the instructions on UPDATE below.
+
+
+
+/* based on book "Mono. A Developer's Notebook". Edd Dumbill; Niel M. Bornstein p. 162
+ * and:
+ * http://mwh.sysrq.dk/blog/archive/2004/mar-13.html
+ * http://www.monohispano.org/tutoriales/i18n_gettext-sharp/
+*/
+
+---------
+---------
+** CREATION **
+Attention!! All changed, now the rule of thumb is this email:
+http://mail.gnome.org/archives/gnome-i18n/2006-April/msg00218.html
+
+Changed also the mail of es translator, and: "Project-Id-Version: es\n"
+
+
+for ** UPDATE ** , i do:
+
+/* 
+ * this is not needed, is not working, and its done automatically on git constantly by Piotr Drąg (being a person or a script, who knows)
+ *
+ * 1 OLD .- check for missing files
+ * chronojump/po $ ./intltool-update -m
+ *
+ * 2 OLD .- add missing files to POTFILES.in
+ * if all are needed:
+ * chronojump/po $ cat missing >> POTFILES.in
+ * if some not, add them to POTFILES.skip
+*/
+
+1.- check creating a .pot (creates chronojump.pot)
+chronojump/po $ intltool-update -p
+
+2.- merge chronojump.pot with old catalan translation
+mv ca.po ca_old.po
+msgmerge -o ca.po ca_old.po chronojump.pot
+
+mv es.po es_old.po
+msgmerge -o es.po es_old.po chronojump.pot
+
+3.- edit the ca.po with a multipurpose editor like vim, or a po editor like poedit
+poedit it's better because it fast finds what needs to be translated
+
+4.- make, sudo make install
+---------
+---------
+
+
+
+This document is divided in three parts:
+
+-DOCUMENTATION FOR TRANSLATORS (when there's no translation in your language yet)
+-DOCUMENTATION FOR TRANSLATORS (when and old tranlation exists)
+-DOCUMENTATION FOR DEVELOPERS
+
+
+----------------------------------------------------------------
+DOCUMENTATION FOR TRANSLATORS (when there's no translation in your language yet)
+----------------------------------------------------------------
+
+
+1.- download the sources
+
+(press enter when you are asked for a password)
+cvs -d:pserver:anonymous@cvs.software-libre.org:/cvsroot/chronojump login
+cvs -z3 -d:pserver:anonymous@cvs.software-libre.org:/cvsroot/chronojump co chronojump
+
+2.- create the es.po file (example A for spanish, B for portuguese)
+
+(A) msginit -l es --input chronojump.pot --output-file es.po
+(B) msginit -l pt --input chronojump.pot --output-file pt.po
+(write xavi@xdeblas.com when you are asked for a email)
+
+4.- edit the es.po or pt.po file, example:
+
+when you see:
+
+#: chronojump.cs:9
+msgid "Hello"
+msgstr ""
+
+Change it like this:
+
+#: chronojump.cs:9
+msgid "Hello"
+msgstr "Hola"
+
+NOTE: The values starting by "#fuzzy" mean that are automatically made and probably are not good. 
+Check, correct them, and delete the fuzzy line
+
+5.- send the es.po or pt.po translated to xavi@xdeblas.com
+
+NOTE: Developers should put the es.po file in 
+locale/es/LC_MESSAGES/es.po
+
+----------------------------------------------------------------
+DOCUMENTATION FOR TRANSLATORS (when and old translation exists)
+----------------------------------------------------------------
+
+When there's an old translation, we have to manage for not repeating all the old translated phrases.
+
+1.- We download the sources as said before
+
+2.- Then create a new po file, with the new code but without any translations (spanish sample)
+
+msginit -l es --input chronojump.pot --output-file es_new.po
+(write xavi@xdeblas.com when you are asked for a email)
+
+NOTE: if some of the strings are not in the new file: es_new.po is because the pot file is old. 
+Every time developers change the code, they have to update the pot file
+See documentation for developers below. When done, repeat this msginit and continue with 3, 4 and 5
+
+3.- merge the old but translated po with the new untranslated (the old is in locale/es/LC_MESSAGES/es.po)
+
+msgmerge -o es.po locale/es/LC_MESSAGES/es.po es_new.po
+
+4.- Edit the new merged file: es.po
+
+NOTE: The values starting by "#fuzzy" mean that are automatically made and probably are not good. 
+Check, correct them, and delete the fuzzy line
+
+5.- send the es.po translated to xavi@xdeblas.com
+
+
+NOTE: Developers should put the es.po file in 
+locale/es/LC_MESSAGES/es.po
+
+
+----------------------------------------------------------------
+DOCUMENTATION FOR DEVELOPERS
+----------------------------------------------------------------
+
+
+1.- download the sources
+
+(press enter when you are asked for a password)
+cvs -d:pserver:anonymous@cvs.software-libre.org:/cvsroot/chronojump login
+cvs -z3 -d:pserver:anonymous@cvs.software-libre.org:/cvsroot/chronojump co chronojump
+
+
+2.- extract the .pot file
+
+xgettext -o chronojump.pot src/*.cs src/gui/*.cs src/stats/*.cs src/stats/graphs/*.cs glade/chronojump.glade
+
+3.- create the es.po file (example A for spanish, B for portuguese)
+
+(A) msginit -l es --input chronojump.pot --output-file es.po
+(B) msginit -l pt --input chronojump.pot --output-file pt.po
+(write xavi@xdeblas.com when you are asked for a email)
+
+4.- edit the es.po or pt.po file, example:
+
+when you see:
+
+#: chronojump.cs:9
+msgid "Hello"
+msgstr ""
+
+Change it like this:
+
+#: chronojump.cs:9
+msgid "Hello"
+msgstr "Hola"
+
+5.- check if the directory ./locale/es/LC_MESSAGES exists (or ./locale/pt/LC_MESSAGES). If not, create it:
+
+(A) mkdir -p ./locale/es/LC_MESSAGES
+(B) mkdir -p ./locale/pt/LC_MESSAGES
+
+5.- create the mo file for normal texts and for glade:
+
+(A, spanish)
+msgfmt es.po -o ./locale/es/LC_MESSAGES/chronojump.mo
+msgfmt es.po -o chronojumpGlade.mo
+
+(B, portuguese)
+msgfmt pt.po -o ./locale/pt/LC_MESSAGES/chronojump.mo
+msgfmt pt.po -o chronojumpGlade.mo
+
+6.- copy chronojumpGlade.mo (as root) to a place where libglade can find it
+
+(in Debian)
+
+(A, spanish)
+sudo cp chronojumpGlade.mo /usr/share/locale/es/LC_MESSAGES/.
+(B, portuguese)
+sudo cp chronojumpGlade.mo /usr/share/locale/pt/LC_MESSAGES/.
+
+7.- copy es.po in the directory it should be for next merge
+
+cp es.po locale/es/LC_MESSAGES/.
+
+8.- execute
+
+(change the $LANG or $LANGUAGE according if needed, if doesn't work, probably you don't have that locale instaled)
+If they are installed, the best is to change in gdm (in ubuntu only use the UTF-8 locales) for example:
+export LANGUAGE="es_ES.UTF-8"
+
+for dzongkha:
+export LANGUAGE="dz_BT.UTF-8"
+with:
+dpkg -l|grep dzongkha
+ii  ttf-dzongkha                               0.3-1                                                TrueType fonts for Dzongkha language
+
+vietnamese:
+export LANGUAGE="vi_VI.UTF-8"
+ohers:
+export LANGUAGE="pt.UTF-8"
+export LANGUAGE="fr_FR.UTF-8"
+...
+
+
+if not: sudo dpkg-reconfigure locales
+
+if the code or the glade has changed, remember do 'make'
+
+./chronojump.exe
+./chronojump-mini.exe
+
+
+-- Appendix
+If somone send files not in UTF-8, convert them using vim writing: :set fileencoding=utf8

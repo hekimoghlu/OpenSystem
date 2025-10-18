@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.0"/>
+  <requires lib="Panel" version="1.0"/>
+  <template class="SysprofWindow" parent="AdwApplicationWindow">
+    <property name="default-width">1200</property>
+    <property name="default-height">750</property>
+    <child>
+      <object class="GtkShortcutController">
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;control&gt;F9</property>
+            <property name="action">action(win.show-right-sidebar)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">F9</property>
+            <property name="action">action(win.show-left-sidebar)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;control&gt;w</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;ctrl&gt;n</property>
+            <property name="action">action(app.new-window)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;ctrl&gt;o</property>
+            <property name="action">action(win.open-capture)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;ctrl&gt;s</property>
+            <property name="action">action(win.save-capture)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;control&gt;q</property>
+            <property name="action">action(app.quit)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">F1</property>
+            <property name="action">action(app.help)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;ctrl&gt;question</property>
+            <property name="action">action(app.show-help-overlay)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <property name="content">
+      <object class="AdwOverlaySplitView" id="left_split_overlay">
+        <property name="show-sidebar" bind-source="show_left_sidebar" bind-property="active" bind-flags="bidirectional|sync-create"/>
+        <property name="max-sidebar-width">200</property>
+        <property name="sidebar">
+          <object class="AdwNavigationPage">
+            <binding name="sensitive">
+              <lookup name="is-loaded">SysprofWindow</lookup>
+            </binding>
+            <property name="child">
+              <object class="AdwToolbarView">
+                <child type="top">
+                  <object class="AdwHeaderBar">
+                    <property name="show-end-title-buttons">false</property>
+                    <property name="title-widget">
+                      <object class="AdwWindowTitle">
+                        <property name="title">Sysprof</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <property name="content">
+                  <object class="SysprofSidebar">
+                    <property name="stack">section_stack</property>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </property>
+        <property name="content">
+          <object class="AdwNavigationPage">
+            <property name="child">
+              <object class="AdwOverlaySplitView" id="right_split_overlay">
+                <property name="sidebar-position">end</property>
+                <property name="show-sidebar" bind-source="show_right_sidebar" bind-property="active" bind-flags="bidirectional|sync-create"/>
+                <property name="max-sidebar-width">250</property>
+                <signal name="notify::sidebar" handler="main_view_notify_sidebar" swapped="true"/>
+                <property name="content">
+                  <object class="AdwToolbarView">
+                    <child type="top">
+                      <object class="AdwHeaderBar">
+                        <property name="title-widget">
+                          <object class="GtkCenterBox">
+                            <child type="center">
+                              <object class="AdwWindowTitle" id="stack_title">
+                                <binding name="title">
+                                  <lookup name="title" type="SysprofDocument">
+                                    <lookup name="document">SysprofWindow</lookup>
+                                  </lookup>
+                                </binding>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                        <child type="start">
+                          <object class="GtkToggleButton" id="show_left_sidebar">
+                            <property name="icon-name">sidebar-show-symbolic</property>
+                            <property name="active">true</property>
+                            <property name="tooltip-text" translatable="yes">Toggle Left Panel</property>
+                          </object>
+                        </child>
+                        <child type="start">
+                          <object class="GtkMenuButton">
+                            <property name="visible">false</property>
+                            <property name="icon-name">funnel-outline-symbolic</property>
+                            <property name="tooltip-text" translatable="yes">View Filters</property>
+                            <property name="popover">
+                              <object class="GtkPopover">
+                                <style>
+                                  <class name="menu" />
+                                </style>
+                                <property name="child">
+                                  <object class="SysprofSessionFiltersWidget">
+                                    <binding name="session">
+                                      <lookup name="session">SysprofWindow</lookup>
+                                    </binding>
+                                  </object>
+                                </property>
+                              </object>
+                            </property>
+                            <binding name="visible">
+                              <closure type="gboolean" function="n_filters_to_button_visibility">
+                                <lookup name="n-items" type="GtkMultiFilter">
+                                  <lookup name="filter" type="SysprofSession">
+                                    <lookup name="session">SysprofWindow</lookup>
+                                  </lookup>
+                                </lookup>
+                              </closure>
+                            </binding>
+                          </object>
+                        </child>
+                        <child type="start">
+                          <object class="GtkBox">
+                            <property name="margin-start">6</property>
+                            <property name="margin-end">6</property>
+                            <property name="visible" bind-source="left_split_overlay" bind-property="show-sidebar" bind-flags="sync-create|invert-boolean"/>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="tooltip-text" translatable="yes">Seek Backward</property>
+                                <property name="action-name">session.seek-backward</property>
+                                <property name="icon-name">media-seek-backward-symbolic</property>
+                                <style>
+                                  <class name="flat"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="tooltip-text" translatable="yes">Zoom Out</property>
+                                <property name="action-name">session.zoom-out</property>
+                                <property name="icon-name">zoom-out-symbolic</property>
+                                <style>
+                                  <class name="flat"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="tooltip-text" translatable="yes">Reset Zoom</property>
+                                <property name="action-name">session.zoom-one</property>
+                                <property name="icon-name">zoom-original-symbolic</property>
+                                <style>
+                                  <class name="flat"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="tooltip-text" translatable="yes">Zoom In</property>
+                                <property name="action-name">session.zoom-in</property>
+                                <property name="icon-name">zoom-in-symbolic</property>
+                                <style>
+                                  <class name="flat"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="tooltip-text" translatable="yes">Seek Forward</property>
+                                <property name="action-name">session.seek-forward</property>
+                                <property name="icon-name">media-seek-forward-symbolic</property>
+                                <style>
+                                  <class name="flat"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="end">
+                          <object class="GtkMenuButton">
+                            <property name="icon-name">open-menu-symbolic</property>
+                            <property name="primary">true</property>
+                            <property name="menu-model">primary_menu</property>
+                            <property name="tooltip-text" translatable="yes">Main Menu</property>
+                          </object>
+                        </child>
+                        <child type="end">
+                          <object class="GtkMenuButton">
+                            <property name="icon-name">document-properties-symbolic</property>
+                            <property name="menu-model">view_menu</property>
+                            <property name="tooltip-text" translatable="yes">View Options</property>
+                          </object>
+                        </child>
+                        <child type="end">
+                          <object class="GtkToggleButton" id="show_right_sidebar">
+                            <property name="icon-name">sidebar-show-right-symbolic</property>
+                            <property name="tooltip-text" translatable="yes">Toggle Right Panel</property>
+                          </object>
+                        </child>
+                        <child type="end">
+                          <object class="GtkMenuButton" id="tasks_button">
+                            <property name="always-show-arrow">true</property>
+                            <property name="focus-on-click">false</property>
+                            <child>
+                              <object class="AdwSpinner">
+                              </object>
+                            </child>
+                            <binding name="visible">
+                              <lookup name="busy" type="SysprofDocument">
+                                <lookup name="document" type="SysprofSession">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </lookup>
+                              </lookup>
+                            </binding>
+                            <property name="popover">
+                              <object class="GtkPopover">
+                                <style>
+                                  <class name="tasks"/>
+                                </style>
+                                <property name="width-request">300</property>
+                                <child>
+                                  <object class="GtkScrolledWindow">
+                                    <property name="hscrollbar-policy">never</property>
+                                    <property name="propagate-natural-height">true</property>
+                                    <property name="max-content-height">600</property>
+                                    <child>
+                                      <object class="GtkListView">
+                                        <property name="model">
+                                          <object class="GtkNoSelection">
+                                            <binding name="model">
+                                              <lookup name="tasks" type="SysprofDocumentLoader">
+                                                <lookup name="loader">SysprofWindow</lookup>
+                                              </lookup>
+                                            </binding>
+                                          </object>
+                                        </property>
+                                        <property name="factory">
+                                          <object class="GtkBuilderListItemFactory">
+                                            <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="SysprofTaskRow">
+        <binding name="task">
+          <lookup name="item">GtkListItem</lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>
+]]>
+                                            </property>
+                                          </object>
+                                        </property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <property name="content">
+                      <object class="GtkOverlay">
+                        <child type="overlay">
+                          <object class="GtkProgressBar" id="progress_bar">
+                            <property name="hexpand">true</property>
+                            <style>
+                              <class name="osd"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkStack" id="section_stack">
+                            <property name="vexpand">true</property>
+                            <child>
+                              <object class="SysprofSamplesSection">
+                                <property name="category">callgraph</property>
+                                <property name="icon-name">org.gnome.Sysprof-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofMemorySection">
+                                <property name="category">callgraph</property>
+                                <property name="icon-name">memory-allocations-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofLogsSection">
+                                <property name="category">processes</property>
+                                <property name="icon-name">system-log-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofMarksSection">
+                                <property name="category">processes</property>
+                                <property name="icon-name">mark-chart-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofProcessesSection">
+                                <property name="category">processes</property>
+                                <property name="icon-name">application-x-executable-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofDBusSection">
+                                <property name="title" translatable="yes">D-Bus</property>
+                                <property name="category">processes</property>
+                                <property name="icon-name">dbus-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofCpuSection">
+                                <property name="title" translatable="yes">CPU</property>
+                                <property name="category">counters</property>
+                                <property name="icon-name">system-run-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofEnergySection">
+                                <property name="title" translatable="yes">Energy</property>
+                                <property name="category">counters</property>
+                                <property name="icon-name">energy-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofGraphicsSection">
+                                <property name="title" translatable="yes">Graphics</property>
+                                <property name="category">counters</property>
+                                <property name="icon-name">graphics-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofNetworkSection">
+                                <property name="title" translatable="yes">Network</property>
+                                <property name="category">counters</property>
+                                <property name="icon-name">network-transmit-receive-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofStorageSection">
+                                <property name="title" translatable="yes">Storage</property>
+                                <property name="category">counters</property>
+                                <property name="icon-name">storage-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofFilesSection">
+                                <property name="category">auxiliary</property>
+                                <property name="icon-name">folder-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="SysprofMetadataSection">
+                                <property name="category">auxiliary</property>
+                                <property name="icon-name">metadata-symbolic</property>
+                                <binding name="session">
+                                  <lookup name="session">SysprofWindow</lookup>
+                                </binding>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+                <binding name="sidebar">
+                  <lookup name="utility" type="SysprofSection">
+                    <lookup name="visible-child">section_stack</lookup>
+                  </lookup>
+                </binding>
+              </object>
+            </property>
+          </object>
+        </property>
+      </object>
+    </property>
+  </template>
+  <menu id="primary_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Record Again…</attribute>
+        <attribute name="action">app.new-window</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Open Recording…</attribute>
+        <attribute name="action">win.open-capture</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Save As…</attribute>
+        <attribute name="action">win.save-capture</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+        <attribute name="action">app.show-help-overlay</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Help</attribute>
+        <attribute name="action">app.help</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">About Sysprof</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Quit</attribute>
+        <attribute name="action">app.quit</attribute>
+      </item>
+    </section>
+  </menu>
+  <menu id="view_menu">
+    <section>
+      <attribute name="label" translatable="yes">Callgraph</attribute>
+      <item>
+        <attribute name="label" translatable="yes">Categorize Frames</attribute>
+        <attribute name="action">win.callgraph.categorize-frames</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Hide System Libraries</attribute>
+        <attribute name="action">win.callgraph.hide-system-libraries</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Include Threads</attribute>
+        <attribute name="action">win.callgraph.include-threads</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Bottom Up</attribute>
+        <attribute name="action">win.callgraph.bottom-up</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Ignore Kernel Processes</attribute>
+        <attribute name="action">win.callgraph.ignore-kernel-processes</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Ignore Process 0</attribute>
+        <attribute name="action">win.callgraph.ignore-process-0</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Merge Similar Processes</attribute>
+        <attribute name="action">win.callgraph.merge-similar-processes</attribute>
+      </item>
+    </section>
+    <section>
+      <attribute name="label" translatable="yes">Flamegraph</attribute>
+      <item>
+        <!-- translators: Left Heavy means to sort larger (heavier) stack frames before others, starting from the left -->
+        <attribute name="label" translatable="yes">Left Heavy</attribute>
+        <attribute name="action">win.callgraph.left-heavy</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>

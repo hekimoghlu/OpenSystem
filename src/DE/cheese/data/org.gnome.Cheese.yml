@@ -1,0 +1,73 @@
+id: org.gnome.Cheese
+runtime: org.gnome.Platform
+sdk: org.gnome.Sdk
+runtime-version: "40"
+command: cheese
+tags:
+  - nightly
+desktop-file-name-prefix: '(Nightly) '
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --socket=wayland
+  - --device=all
+  - --metadata=X-DConf=migrate-path=/org/gnome/Cheese/
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-videos
+cleanup:
+  - /include
+  - /lib/girepository-1.0
+  - /lib/pkgconfig
+  - /man
+  - /share/aclocal
+  - /share/gir-1.0
+  - /share/pkgconfig
+  - /share/man
+  - /share/gtk-doc
+  - '*.la'
+  - '*.a'
+modules:
+  - name: gnome-desktop
+    buildsystem: meson
+    config-opts:
+      - -Ddebug_tools=false
+      - -Dudev=disabled
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/gnome-desktop.git
+  - name: totem-pl-parser
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/totem-pl-parser.git
+  - name: totem-video-thumbnailer
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/totem-video-thumbnailer.git
+  - name: gnome-video-effects
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/gnome-video-effects.git
+  - name: libcanberra
+    config-opts:
+      - --enable-gstreamer
+      - --enable-pulse
+      - --disable-oss
+      - --disable-static
+      - --with-builtin=dso
+      - --with-systemdsystemunitdir=no
+    sources:
+      - type: git
+        url: http://git.0pointer.net/clone/libcanberra.git
+        commit: c0620e432650e81062c1967cc669829dbd29b310
+        disable-shallow-clone: true
+  - name: cheese
+    buildsystem: meson
+    config-opts:
+      - -Dintrospection=false
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/cheese.git

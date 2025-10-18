@@ -1,0 +1,37 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $Gjs_Window: Adw.ApplicationWindow {
+  default-width: 650;
+  default-height: 450;
+  height-request: 260;
+  title: _("Audio Player");
+
+  content: $APDragOverlay {
+    [content]
+    Stack stack {
+      StackPage {
+        name: "empty";
+
+        child: $APEmptyState {};
+      }
+
+      StackPage {
+        name: "error";
+
+        child: $APErrorState error {};
+      }
+
+      StackPage {
+        name: "player";
+
+        child: $APPlayerState player {};
+      }
+    }
+  };
+
+  EventControllerKey {
+    propagation-phase: capture;
+    key-pressed => $key_pressed_cb();
+  }
+}

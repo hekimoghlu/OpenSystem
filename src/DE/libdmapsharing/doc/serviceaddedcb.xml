@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+               "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd" [
+]>
+<refentry id="serviceaddedcb">
+	<refmeta>
+		<refentrytitle>Service Added Callback</refentrytitle>
+		<manvolnum>3</manvolnum>
+		<refmiscinfo>Libdmapsharing</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>Service Added Callback</refname>
+		<refpurpose>
+			Defining a Service Added Callback
+		</refpurpose>
+	</refnamediv>
+
+	<refsect1>
+		<title>Service Added Callback</title>
+		<para>
+The "service-added" callback typically creates DmapDb and
+DmapRecordFactory objects, and then passes these objects to
+dmap_connection_new. A subsequent call to the dmap_connection_start
+method causes this connection object to interact with the DAAP share in order to
+populate the client's DmapDb.
+
+		</para>
+		<para>
+The following is a simple "service-added" callback which creates a DAAP connection:
+
+		</para>
+		<screen>
+static void
+service_added_cb(DmapMdnsBrowser *browser, DmapMdnsBrowserService *service, gpointer user_data)
+
+	DmapDb *db;
+	DmapRecordFactory *factory;
+	DmapConnection *conn;
+
+	db      = DMAP_DB(my_dmap_db_new());
+	factory = DMAP_RECORD_FACTORY(my_dmap_av_record_factory_new());
+	conn    = DMAP_CONNECTION(dmap_av_connection_new(service->name, service->host, service->port, db, factory));
+
+	g_signal_connect(conn, "authenticate", G_CALLBACK(authenticate_cb), NULL, NULL);
+	g_signal_connect(conn, "error", G_CALLBACK(error_cb), NULL, NULL);
+
+	dmap_connection_start(conn, (DmapConnectionFunc) connected_cb, db);
+}
+		</screen>
+	</refsect1>
+</refentry>

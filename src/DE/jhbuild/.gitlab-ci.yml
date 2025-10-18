@@ -1,0 +1,131 @@
+include:
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    ref: '84984c97d31d5b4f39cc2164353634a55d457211'
+    file:
+      - '/templates/ubuntu.yml'
+
+stages:
+  - prepare
+  - test
+  - deploy
+
+variables:
+  FDO_UPSTREAM_REPO: GNOME/jhbuild
+
+.ubuntu2004-image:
+  variables:
+    FDO_DISTRIBUTION_TAG: '2025-01-15-v4'
+    FDO_DISTRIBUTION_VERSION: '20.04'
+    FDO_USER: 'user'
+
+build-ubuntu2004-image:
+  extends:
+    - '.fdo.container-build@ubuntu'
+    - '.ubuntu2004-image'
+  stage: prepare
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: >-
+      apt-file
+      autoconf
+      automake
+      autopoint
+      build-essential
+      gettext
+      git
+      libtool
+      make
+      patch
+      pkg-config
+      python
+      python3
+      python3-flake8
+      python3-pytest
+      python3-pytest-cov
+      sudo
+      trang
+      wget
+      yelp-tools
+    FDO_DISTRIBUTION_EXEC:
+      echo 'user ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+documentation:
+  image: docker.io/sphinxdoc/sphinx
+  script:
+    - python3 -m pip install sphinx_rtd_theme sphinx-lint
+    - sphinx-build --keep-going -W ./doc ./html ./doc/*.rst
+    - sphinx-lint ./doc/*.rst
+    - |
+      for dir in ./doc/po/*/; do
+        lang="$(basename "$dir")"
+        sphinx-build -Dlanguage="$lang" --keep-going ./doc ./html/"$lang" ./doc/*.rst
+        sphinx-lint $dir/LC_MESSAGES/docs.po || true
+      done
+  artifacts:
+    paths:
+      - html
+
+test-ubuntu2004-basic:
+  stage: test
+  extends:
+    - '.fdo.distribution-image@ubuntu'
+    - '.ubuntu2004-image'
+  coverage: /TOTAL\s+\d+\s+\d+\s+(\d+)%/
+  script:
+    # verify modulesets
+    - xmllint --noout modulesets/*.{xml,xsl,modules}
+    # autotools install
+    - mkdir _build && cd _build
+    - ../autogen.sh --with-python=python3
+    - make
+    - make install
+    - make distcheck
+    - cd ..
+    # simple install
+    - ./autogen.sh --simple-install --with-python=python3
+    - make install
+    - $HOME/.local/bin/jhbuild help
+    # flake 8
+    - python3 -m flake8 .
+    # Code coverage
+    - python3 -m pytest --junit-xml=junit.xml --cov-report=xml --cov-report=term --cov=jhbuild tests --verbose || true
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+test-ubuntu2004-glib:
+  stage: test
+  extends:
+    - '.fdo.distribution-image@ubuntu'
+    - '.ubuntu2004-image'
+  before_script:
+    # Update for root cert updates
+    - sudo apt-get update
+    - sudo apt-get upgrade -y
+  script:
+    - ./autogen.sh --with-python=python3
+    - make
+    - make install
+    - export PATH=$HOME/.local/bin:$PATH
+    - mkdir -p $HOME/.config
+    - echo "use_local_modulesets = True" >> $HOME/.config/jhbuildrc
+    - sudo apt-file update
+    - jhbuild help
+    - jhbuild --no-interact --exit-on-error sysdeps --install --assume-yes glib
+    - sudo apt install -y docbook-xml docbook-xsl
+    - jhbuild --no-interact --exit-on-error build glib
+
+pages:
+  image: alpine:latest
+  stage: deploy
+  needs: ["documentation"]
+  script:
+   - echo
+  artifacts:
+    paths:
+      - html
+  publish: html
+  only:
+    - master

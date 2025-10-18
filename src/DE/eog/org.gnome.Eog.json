@@ -1,0 +1,152 @@
+{
+    "app-id" : "org.gnome.eog.Devel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "eog",
+    "rename-desktop-file" : "org.gnome.eog.desktop",
+    "rename-appdata-file" : "org.gnome.eog.metainfo.xml",
+    "tags" : [
+        "nightly"
+    ],
+    "finish-args" : [
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--filesystem=host",
+        "--filesystem=xdg-run/dconf",
+        "--filesystem=~/.config/dconf:ro",
+        "--talk-name=ca.desrt.dconf",
+        "--env=DCONF_USER_CONFIG_DIR=.config/dconf",
+        "--env=GDK_PIXBUF_MODULE_FILE=/app/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+    ],
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "gnome-desktop",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddebug_tools=false",
+                "-Dudev=disabled"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-desktop.git"
+                }
+            ]
+        },
+        {
+            "name" : "libportal",
+            "config-opts" : [
+                "--buildtype=debugoptimized",
+                "-Dbackend-gtk3=enabled",
+                "-Dbackend-gtk4=disabled",
+                "-Dbackend-qt5=disabled",
+                "-Dintrospection=false",
+                "-Ddocs=false"
+            ],
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/flatpak/libportal.git",
+                    "tag" : "0.9.1"
+                }
+            ]
+        },
+        {
+            "name" : "libpeas",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddemos=false",
+                "-Dpython3=false"
+            ],
+            "cleanup" : [
+                "/bin/*"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "branch" : "1.36",
+                    "url" : "https://gitlab.gnome.org/GNOME/libpeas.git"
+                }
+            ]
+        },
+        {
+            "name" : "exempi",
+            "config-opts" : [
+                "--disable-unittest",
+                "--disable-samples"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.freedesktop.org/libopenraw/exempi.git",
+                    "tag" : "2.6.6"
+                }
+            ]
+        },
+        {
+            "name" : "webp-pixbuf-loader",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dgdk_pixbuf_moduledir=/app/lib/gdk-pixbuf-2.0/2.10.0/loaders/"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/aruiz/webp-pixbuf-loader.git",
+                    "tag" : "0.2.7"
+                }
+            ]
+        },
+        {
+            "name" : "update-pixbuf-loaders",
+            "buildsystem" : "simple",
+            "build-commands" : [
+                "GDK_PIXBUF_MODULEDIR=/app/lib/gdk-pixbuf-2.0/2.10.0/loaders/ gdk-pixbuf-query-loaders > /app/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache",
+                "gdk-pixbuf-query-loaders >> /app/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+            ]
+        },
+        {
+            "name" : "eog",
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "config-opts" : [
+                "--libdir=/app/lib",
+                "-Dprofile=Devel"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/eog.git"
+                }
+            ]
+        },
+        {
+            "name" : "eog-plugins",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dplugin_map=false",
+                "-Dplugin_postasa=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/eog-plugins.git"
+                }
+            ]
+        }
+    ]
+}

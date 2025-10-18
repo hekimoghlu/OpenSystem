@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2018-12-01 j.h: rename to Sharpen (Unsharp mask). Fix issue #88
+  2006-12-17 Added a sect3 to explain Unsharp Mask by j.h
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-filter-unsharp-mask">
+  <title>Sharpen (Unsharp Mask)</title>
+
+  <indexterm>
+    <primary>Filters</primary>
+    <secondary>Enhance</secondary>
+    <tertiary>Sharpen (Unsharp Mask)</tertiary>
+  </indexterm>
+  <indexterm>
+    <primary>Sharpen (Unsharp mask)</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Applying example for the Sharpen filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/taj_orig.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/enhance-taj-unsharp-mask.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Filter <quote>Sharpen</quote> applied</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      Out-of-focus photographs and most digitized images often need a
+      sharpness correction. This is due to the digitizing process that has
+      to divide a color continuum in points with slightly different colors.
+      Elements smaller than the sampling frequency will be averaged into a
+      uniform color. So sharp borders will be rendered a little blurred. The
+      same phenomenon appears when printing color dots on paper.
+    </para>
+    <para>
+      The Sharpen filter (previously called Unsharp Mask) sharpens edges of the
+      elements without increasing noise or blemish.
+    </para>
+    <tip>
+      <para>
+        Some imaging devices like digital cameras or scanners offer to sharpen
+        the created images for you. We strongly recommend you disable this
+        means of sharpening and use <acronym>GIMP</acronym> filters instead.
+        This way you regain the full control over the sharpening of your images.
+      </para>
+    </tip>
+    <para>
+      To prevent color distortion while sharpening, you can
+      <link linkend="plug-in-decompose">Decompose</link> your image to
+      <guilabel>HSV</guilabel> and work only on <guilabel>Value</guilabel>.
+      Go to
+      <menuchoice>
+        <guimenu>Colors</guimenu>
+        <guisubmenu>Components</guisubmenu>
+        <guimenuitem>Decompose…</guimenuitem>
+      </menuchoice>.
+      Make sure the <guilabel>Decompose to Layers</guilabel>
+      box is checked. Choose HSV and click OK. You will get a new gray-level
+      image with three layers, one for Hue, one for Saturation, and one for
+      Value. (Close the original image so you won't get confused). Select
+      the Value layer and apply your sharpening to it. When you are done,
+      with that same layer selected, reverse the process by using
+      <link linkend="plug-in-compose">Compose</link>.
+      Go to
+      <menuchoice>
+        <guimenu>Colors</guimenu>
+        <guisubmenu>Components</guisubmenu>
+        <guimenuitem>Compose…</guimenuitem>
+      </menuchoice>.
+      Again choose HSV and click OK. You will get back your original image
+      except that it will have been sharpened in the Value component.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Activating the Filter</title>
+    <para>
+      This filter is found in the main menu under
+      <menuchoice>
+        <guimenu>Filters</guimenu>
+        <guisubmenu>Enhance</guisubmenu>
+        <guimenuitem>Sharpen (Unsharp Mask)…</guimenuitem>
+      </menuchoice>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title><quote>Sharpen</quote> filter options</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/enhance/sharpen-dialog.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Presets</term>
+        <term><quote>Input Type</quote></term>
+        <term>Clipping</term>
+        <term>Blending Options</term>
+        <term>Preview</term>
+        <term>Merge filter</term>
+        <term>Split view</term>
+        <listitem>
+          <xi:include href="../about-common-features.xml"/>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Radius</term>
+        <listitem>
+          <para>
+            The slider and input boxes (0.0-1500.0) allow you to set how many
+            pixels on either side of an edge will be affected by sharpening.
+            It is better to always sharpen an image at its final resolution.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Amount</term>
+        <listitem>
+          <para>
+            This slider and input boxes (0.0-300.0) allow you to set the
+            strength of sharpening.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Threshold</term>
+        <listitem>
+          <para>
+            This slider and input boxes (0.0-1.0) allow you to set the minimum
+            difference in pixel values that indicates an edge where sharpen
+            must be applied. So you can protect areas of smooth tonal
+            transition from sharpening, and avoid creation of blemishes in
+            face, sky or water surface.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>How does an unsharp mask work?</title>
+    <para>
+      Using an unsharp mask to sharpen an image can seem rather weird. Here is
+      the explanation:
+    </para>
+    <para>
+      Think of an image with a contrast in some place. The intensity curve of
+      the pixels on a line going through this contrast will show an abrupt
+      increase of intensity: like a stair if contrast is perfectly sharp (blue),
+      like an S if there is some blur (yellow).
+    </para>
+    <mediaobject>
+      <imageobject>
+        <imagedata fileref="images/filters/examples/unsharp-mask-1.png"/>
+      </imageobject>
+    </mediaobject>
+    <para>
+      Now, we have an original image with some blur (black curve) we want to
+      sharpen. We apply some more blur: the intensity variation will be
+      more gradual (green curve).
+    </para>
+    <para>
+      Let us subtract the difference between blurredness intensity (green
+      curve) and the intensity of the original image (black curve) to the
+      intensity of the original image (black curve). We get the red
+      curve, which is more abrupt: contrast and sharpness are increased. QED.
+    </para>
+    <mediaobject>
+      <imageobject>
+        <imagedata fileref="images/filters/examples/unsharp-mask-2.png"/>
+      </imageobject>
+    </mediaobject>
+
+    <para>
+      Unsharp mask was first used in silver photography. The photographer
+      first creates a copy of the original negative by contact, on a film,
+      placing a thin glass plate between both; that will produce a blurred
+      copy because of light diffusion. Then both films are placed in a photo
+      enlarger, to reproduce them on paper. The dark areas of the positive
+      blurred film, opposed to the clear areas of the original negative will
+      prevent light to go through and so will be subtracted from the light
+      going through the original film.
+    </para>
+
+    <procedure>
+      <para>
+        In digital photography, with GIMP, you will go through the following
+        steps:
+      </para>
+      <step>
+        <para>
+          Open your image and duplicate it
+          <menuchoice>
+            <guimenu>Image</guimenu>
+            <guimenuitem>Duplicate</guimenuitem>
+          </menuchoice>
+        </para>
+      </step>
+      <step>
+        <para>
+          In the copy, duplicate the layer
+          <menuchoice>
+            <guimenu>Layer</guimenu>
+            <guimenuitem>Duplicate layers</guimenuitem>
+          </menuchoice>, then from the Filters menu apply
+          <menuchoice>
+            <guimenu>Blur</guimenu>
+            <guimenuitem>Gaussian Blur</guimenuitem>
+          </menuchoice>
+          to the duplicated layer with the default IIR option and radius 5.
+        </para>
+      </step>
+      <step>
+        <para>
+          In the Layers dialog of the duplicated image, change Mode to
+          <quote>Subtract</quote>, and in the right-click menu, select
+          <quote>Merge down</quote>.
+        </para>
+      </step>
+      <step>
+        <para>
+          Click and drag the only layer you got into the original image, where
+          it appears as a new layer.
+        </para>
+      </step>
+      <step>
+        <para>
+          Change the Mode in this Layers dialog to <quote>Addition</quote>.
+        </para>
+      </step>
+    </procedure>
+
+    <para>
+      Voilà. The <quote>Unsharp Mask</quote> plug-in does the same for you.
+    </para>
+    <para>
+      At the beginning of the curve, you can see a dip. If blurring is
+      important, this dip is very deep; the result of the subtraction can be
+      negative, and a complementary color stripe will appear along the
+      contrast, or a black halo around a star on the light background of a
+      nebula (black eye effect).
+    </para>
+    <figure>
+      <title>Black eye effect</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="images/filters/examples/unsharp-mask-3.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+  </sect3>
+</sect2>

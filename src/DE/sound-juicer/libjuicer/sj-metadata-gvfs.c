@@ -1,0 +1,301 @@
+/*
+ * sj-metadata-gvfs.c
+ * Copyright (C) 2005 Ross Burton <ross@burtonini.com>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ */
+
+#define G_LOG_DOMAIN "sj-metadata"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include <string.h>
+#include <glib-object.h>
+#include <glib/gi18n.h>
+#include <glib.h>
+#include <gio/gio.h>
+#include <gdesktop-enums.h>
+
+#include "sj-metadata-gvfs.h"
+#include "sj-structures.h"
+#include "sj-util.h"
+#include "sj-error.h"
+
+struct SjMetadataGvfsPrivate {
+  char *cdrom;
+  char *uri;
+};
+
+enum {
+  PROP_0,
+  PROP_DEVICE,
+  PROP_PROXY_USE_AUTHENTICATION,
+  PROP_PROXY_HOST,
+  PROP_PROXY_PORT,
+  PROP_PROXY_USERNAME,
+  PROP_PROXY_PASSWORD,
+  PROP_PROXY_MODE
+};
+
+static void metadata_iface_init (gpointer g_iface, gpointer iface_data);
+
+G_DEFINE_TYPE_WITH_CODE (SjMetadataGvfs, sj_metadata_gvfs,
+                         G_TYPE_OBJECT,
+                         G_ADD_PRIVATE (SjMetadataGvfs)
+                         G_IMPLEMENT_INTERFACE (SJ_TYPE_METADATA, metadata_iface_init));
+
+
+/*
+ * Private methods
+ */
+
+static char *
+device_to_cdda_uri (const char *device)
+{
+  if (g_str_has_prefix (device, "/dev/") == FALSE)
+    return NULL;
+#ifdef __sun
+  return g_strdup_printf ("cdda://%s", device + strlen ("/dev/rdsk/"));
+#else
+  return g_strdup_printf ("cdda://%s", device + strlen ("/dev/"));
+#endif
+}
+
+static GList *
+gvfs_list_albums (SjMetadata *metadata, char **url, GCancellable *cancellable, GError **error)
+{
+  SjMetadataGvfsPrivate *priv;
+  GList *albums = NULL;
+  AlbumDetails *album;
+  GError *my_error = NULL;
+  GFile *file = NULL;
+  GFileInfo *info;
+  GFileEnumerator *e;
+  guint i = 1;
+  const char *str;
+
+  g_return_val_if_fail (SJ_IS_METADATA_GVFS (metadata), NULL);
+
+  priv = SJ_METADATA_GVFS (metadata)->priv;
+
+  if (priv->uri == NULL) {
+    g_set_error (error, SJ_ERROR, SJ_ERROR_INTERNAL_ERROR, _("Cannot access CD"));
+    goto bail;
+  }
+
+  file = g_file_new_for_uri (priv->uri);
+
+  info = g_file_query_info (file, "xattr::*",
+  			    G_FILE_QUERY_INFO_NONE, NULL, &my_error);
+  if (info == NULL)
+    goto bail;
+
+  album = g_new0(AlbumDetails, 1);
+
+  /* Get the album metadata */
+  str = g_file_info_get_attribute_string (info, "xattr::org.gnome.audio.title");
+  if (!sj_str_is_empty (str)) {
+    g_info ("Have CD TEXT");
+    album->metadata_source = SOURCE_CDTEXT;
+    album->title = g_strdup (str);
+  } else {
+    g_info ("No CD TEXT");
+    album->metadata_source = SOURCE_FALLBACK;
+    album->title = g_strdup (_("Unknown Title"));
+  }
+  str = g_file_info_get_attribute_string (info, "xattr::org.gnome.audio.artist");
+  if (!sj_str_is_empty (str))
+    album->artist = g_strdup (str);
+  else
+    album->artist = g_strdup (_("Unknown Artist"));
+  album->genre = g_strdup (g_file_info_get_attribute_string (info, "xattr::org.gnome.audio.genre"));
+
+  g_object_unref (info);
+
+  /* Get tracks metadata */
+  e = g_file_enumerate_children (file, "xattr::*",
+  				 G_FILE_QUERY_INFO_NONE, NULL, &my_error);
+  if (e == NULL)
+    goto bail;
+  g_object_unref (file);
+
+  for (info = g_file_enumerator_next_file (e, NULL, NULL) ;
+       info != NULL ;
+       info = g_file_enumerator_next_file (e, NULL, NULL), i++) {
+    TrackDetails *track;
+
+    track = g_new0 (TrackDetails, 1);
+    track->number = i;
+    track->album = album;
+    str = g_file_info_get_attribute_string (info, "xattr::org.gnome.audio.title");
+    if (!sj_str_is_empty (str))
+      track->title = g_strdup (str);
+    else
+      track->title = g_strdup_printf (_("Track %d"), i);
+    str = g_file_info_get_attribute_string (info, "xattr::org.gnome.audio.artist");
+    if (!sj_str_is_empty (str)) {
+      track->artist = g_strdup (str);
+    } else {
+      if (album->artist == NULL)
+        track->artist = g_strdup (_("Unknown Artist"));
+      else
+        track->artist = g_strdup (album->artist);
+    }
+    track->duration = g_file_info_get_attribute_uint64 (info, "xattr::org.gnome.audio.duration");
+    album->number++;
+    g_object_unref (info);
+
+    album->tracks = g_list_append (album->tracks, track);
+  }
+  g_object_unref (e);
+
+  albums = g_list_append (albums, album);
+
+  return albums;
+
+bail:
+
+  if (file)
+    g_object_unref (file);
+  if (my_error) {
+    g_set_error (error, SJ_ERROR, SJ_ERROR_INTERNAL_ERROR, _("Cannot access CD: %s"), my_error->message);
+    g_error_free (my_error);
+  }
+  return NULL;
+}
+
+/*
+ * GObject methods
+ */
+
+static void
+sj_metadata_gvfs_get_property (GObject *object, guint property_id,
+                                      GValue *value, GParamSpec *pspec)
+{
+  SjMetadataGvfsPrivate *priv = SJ_METADATA_GVFS (object)->priv;
+  g_assert (priv);
+
+  switch (property_id) {
+  case PROP_DEVICE:
+    g_value_set_string (value, priv->cdrom);
+    break;
+  case PROP_PROXY_USE_AUTHENTICATION:
+    /* Do nothing */
+    g_value_set_boolean (value, FALSE);
+    break;
+  case PROP_PROXY_HOST:
+  case PROP_PROXY_USERNAME:
+  case PROP_PROXY_PASSWORD:
+    /* Do nothing */
+    g_value_set_string (value, "");
+    break;
+  case PROP_PROXY_PORT:
+    /* Do nothing */
+    g_value_set_int (value, 0);
+    break;
+  case PROP_PROXY_MODE:
+    /* Do nothing */
+    g_value_set_enum (value, G_DESKTOP_PROXY_MODE_NONE);
+    break;
+  default:
+    G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+  }
+}
+
+static void
+sj_metadata_gvfs_set_property (GObject *object, guint property_id,
+                                      const GValue *value, GParamSpec *pspec)
+{
+  SjMetadataGvfsPrivate *priv = SJ_METADATA_GVFS (object)->priv;
+  g_assert (priv);
+
+  switch (property_id) {
+  case PROP_DEVICE:
+    g_free (priv->cdrom);
+    priv->cdrom = g_value_dup_string (value);
+    g_free (priv->uri);
+    priv->uri = device_to_cdda_uri (priv->cdrom);
+    break;
+  case PROP_PROXY_USE_AUTHENTICATION:
+  case PROP_PROXY_HOST:
+  case PROP_PROXY_PORT:
+  case PROP_PROXY_USERNAME:
+  case PROP_PROXY_PASSWORD:
+  case PROP_PROXY_MODE:
+    /* Do nothing */
+    break;
+  default:
+    G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+  }
+}
+
+static void
+sj_metadata_gvfs_finalize (GObject *object)
+{
+  SjMetadataGvfsPrivate *priv = SJ_METADATA_GVFS (object)->priv;
+  g_free (priv->cdrom);
+  g_free (priv->uri);
+}
+
+static void
+sj_metadata_gvfs_init (SjMetadataGvfs *gvfs)
+{
+  gvfs->priv = sj_metadata_gvfs_get_instance_private (gvfs);
+}
+
+static void
+metadata_iface_init (gpointer g_iface, gpointer iface_data)
+{
+  SjMetadataClass *klass = (SjMetadataClass*)g_iface;
+
+  klass->list_albums = gvfs_list_albums;
+}
+
+static void
+sj_metadata_gvfs_class_init (SjMetadataGvfsClass *class)
+{
+  GObjectClass *object_class = (GObjectClass*) class;
+
+  object_class->get_property = sj_metadata_gvfs_get_property;
+  object_class->set_property = sj_metadata_gvfs_set_property;
+  object_class->finalize = sj_metadata_gvfs_finalize;
+
+  g_object_class_override_property (object_class,
+                                    PROP_DEVICE, "device");
+  g_object_class_override_property (object_class,
+                                    PROP_PROXY_USE_AUTHENTICATION, "proxy-use-authentication");
+  g_object_class_override_property (object_class,
+                                    PROP_PROXY_HOST, "proxy-host");
+  g_object_class_override_property (object_class,
+                                    PROP_PROXY_PORT, "proxy-port");
+  g_object_class_override_property (object_class,
+                                    PROP_PROXY_USERNAME, "proxy-username");
+  g_object_class_override_property (object_class,
+                                    PROP_PROXY_PASSWORD, "proxy-password");
+  g_object_class_override_property (object_class,
+                                    PROP_PROXY_MODE, "proxy-mode");
+}
+
+
+/*
+ * Public methods
+ */
+
+GObject *
+sj_metadata_gvfs_new (void)
+{
+  return g_object_new (sj_metadata_gvfs_get_type (), NULL);
+}

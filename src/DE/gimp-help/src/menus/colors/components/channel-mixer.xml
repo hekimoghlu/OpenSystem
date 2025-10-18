@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+
+<sect2 id="gimp-filter-channel-mixer">
+  <title>Channel Mixer</title>
+
+  <indexterm>
+    <primary>Colors</primary>
+    <secondary>Components</secondary>
+    <tertiary>Channel mixer</tertiary>
+  </indexterm>
+  <indexterm>
+    <primary>Channel Mixer</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Example for the <quote>Channel Mixer</quote> filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/taj_orig.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/color-taj-channelmixer.jpg"/>
+        </imageobject>
+        <caption>
+          <para><quote>Channel Mixer</quote> applied</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      This command combines values of the RGB channels. It works with images
+      with or without an alpha channel.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Activating the Command</title>
+    <para>
+      You can access this command from the main menu through
+      <menuchoice>
+        <guimenu>Colors</guimenu>
+        <guisubmenu>Components</guisubmenu>
+        <guimenuitem>Channel Mixer</guimenuitem>
+      </menuchoice>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title><quote>Channel Mixer</quote> command options</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/menus/colors/components/channelmixer.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Presets</term>
+        <listitem>
+          <para>
+            <quote>Presets</quote> are a common feature for
+            several Colors commands. You can find its description in
+            <xref linkend="colors-common-features"/>.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Red Channel</term>
+        <term>Green Channel</term>
+        <term>Blue Channel</term>
+        <listitem>
+          <para>
+            Each of these has three sliders, which set the contribution of the
+            red, green and blue input channels in the output channel.
+            The sliders go from -2 to 2. They represent the multiplication
+            factor of the input channel that will be attributed to the output
+            channel.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Preserve luminosity</term>
+        <listitem>
+          <para>
+            The mixing can result in an image where some of the colors are too
+            light. This option lessens the luminosity of the color channels
+            while keeping a good visual ratio between them. So, you can change
+            the relative weight of the colors without changing the overall
+            luminosity.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Blending Options</term>
+        <term>Preview</term>
+        <term>Merge filter</term>
+        <term>Split view</term>
+        <listitem>
+          <para>
+            These are common features described in
+            <xref linkend="colors-common-features"/>.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>How does Channel Mixer work? </title>
+    <para>
+      Each of the output channels is based on the values you set for the three
+      RGB input channels. By default each output channel is based for 100%
+      on the corresponding input channel. This is the one set to 1.0, and the
+      others are set to 0.0. You can change each of the sliders from -2 to +2.
+    </para>
+    <para>
+      The three RGB input sliders let you give a percentage to every channel.
+      For every pixel in the image, the sum of the calculated values for
+      every channel from these percentages will be given to the output
+      channel. Here is an example:
+    </para>
+    <figure>
+      <title>The original image and its channels</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/menus/colors/components/channel-mixer-ex1.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            RGB values of the pixels in red, green, blue, gray squares
+            are displayed. The black rectangle is special, because black
+            (0;0;0) is not affected by the command (0 multiplied by any
+            percentage always gives 0). The result can't exceed 255 nor
+            be negative.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <figure>
+      <title>Output channel is red. Green Channel +50</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/menus/colors/components/channel-mixer-ex2.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            In the red square, the pixel values are 230;10;10. Relative
+            values are 1;0.5;0. The calculation result is 230*1 + 10*0,5
+            + 10*0 =235. The same reasoning is valid for the green and
+            the blue squares.
+          </para>
+          <para>
+            In the gray square, which contains red color, the
+            calculation result is above 255. It is reduced to 255. A
+            negative value would be reduced to 0.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <figure>
+      <title>
+        Output channel is red. Green Channel +50%. The Preserve
+        Luminosity option is checked.
+      </title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/menus/colors/components/channel-mixer-ex3.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            The values attributed to the Red Output channel are lower,
+            preventing a too bright image.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+  </sect3>
+</sect2>

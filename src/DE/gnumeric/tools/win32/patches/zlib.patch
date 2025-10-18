@@ -1,0 +1,98 @@
+--- zlib-1.2.8/win32/Makefile.gcc.orig	2012-05-02 23:17:59.000000000 -0400
++++ zlib-1.2.8/win32/Makefile.gcc	2013-07-17 21:15:48.000000000 -0400
+@@ -30,20 +30,20 @@
+ # the DLL name should be changed from "zlib1.dll".
+ 
+ STATICLIB = libz.a
+-SHAREDLIB = zlib1.dll
++SHAREDLIB = libz.dll
+ IMPLIB    = libz.dll.a
+ 
+ #
+ # Set to 1 if shared object needs to be installed
+ #
+-SHARED_MODE=0
++SHARED_MODE=1
+ 
+ #LOC = -DASMV
+ #LOC = -DDEBUG -g
+ 
+ PREFIX =
+-CC = $(PREFIX)gcc
+-CFLAGS = $(LOC) -O3 -Wall
++#CC = $(PREFIX)gcc
++#CFLAGS = $(LOC) -O3 -Wall
+ 
+ AS = $(CC)
+ ASFLAGS = $(LOC) -Wall
+@@ -54,7 +54,7 @@
+ AR = $(PREFIX)ar
+ ARFLAGS = rcs
+ 
+-RC = $(PREFIX)windres
++RC = $(WINDRES)
+ RCFLAGS = --define GCC_WINDRES
+ 
+ STRIP = $(PREFIX)strip
+@@ -64,14 +64,16 @@
+ INSTALL = $(CP)
+ RM = rm -f
+ 
+-prefix ?= /usr/local
+-exec_prefix = $(prefix)
++exec_prefix = $(prefix)/bin
++INCLUDE_PATH= $(prefix)/include
++LIBRARY_PATH= $(prefix)/lib
++BINARY_PATH=$(exec_prefix)
+ 
+ OBJS = adler32.o compress.o crc32.o deflate.o gzclose.o gzlib.o gzread.o \
+        gzwrite.o infback.o inffast.o inflate.o inftrees.o trees.o uncompr.o zutil.o
+ OBJA =
+ 
+-all: $(STATICLIB) $(SHAREDLIB) $(IMPLIB) example.exe minigzip.exe example_d.exe minigzip_d.exe
++all: $(SHAREDLIB) $(IMPLIB)
+ 
+ test: example.exe minigzip.exe
+ 	./example
+@@ -92,10 +94,10 @@
+ 
+ $(IMPLIB): $(SHAREDLIB)
+ 
+-$(SHAREDLIB): win32/zlib.def $(OBJS) $(OBJA) zlibrc.o
+-	$(CC) -shared -Wl,--out-implib,$(IMPLIB) $(LDFLAGS) \
+-	-o $@ win32/zlib.def $(OBJS) $(OBJA) zlibrc.o
+-	$(STRIP) $@
++$(SHAREDLIB) $(IMPLIB): win32/zlib.def $(OBJS) $(OBJA) zlibrc.o
++	$(CC) -shared -o $@ $(OBJS) $(OBJA) zlibrc.o
++	$(DLLTOOL) --def win32/zlib.def --dllname $(SHAREDLIB) --output-lib $(IMPLIB)
++	$(STRIP) $(SHAREDLIB)
+ 
+ example.exe: example.o $(STATICLIB)
+ 	$(LD) $(LDFLAGS) -o $@ example.o $(STATICLIB)
+@@ -124,7 +126,7 @@
+ 
+ .PHONY: install uninstall clean
+ 
+-install: zlib.h zconf.h $(STATICLIB) $(IMPLIB)
++install: zlib.h zconf.h $(IMPLIB)
+ 	@if test -z "$(DESTDIR)$(INCLUDE_PATH)" -o -z "$(DESTDIR)$(LIBRARY_PATH)" -o -z "$(DESTDIR)$(BINARY_PATH)"; then \
+ 		echo INCLUDE_PATH, LIBRARY_PATH, and BINARY_PATH must be specified; \
+ 		exit 1; \
+@@ -138,7 +140,7 @@
+ 	fi
+ 	-$(INSTALL) zlib.h '$(DESTDIR)$(INCLUDE_PATH)'
+ 	-$(INSTALL) zconf.h '$(DESTDIR)$(INCLUDE_PATH)'
+-	-$(INSTALL) $(STATICLIB) '$(DESTDIR)$(LIBRARY_PATH)'
++#	-$(INSTALL) $(STATICLIB) '$(DESTDIR)$(LIBRARY_PATH)'
+ 	sed \
+ 		-e 's|@prefix@|${prefix}|g' \
+ 		-e 's|@exec_prefix@|${exec_prefix}|g' \
+@@ -155,7 +157,7 @@
+ 	fi
+ 	-$(RM) '$(DESTDIR)$(INCLUDE_PATH)'/zlib.h
+ 	-$(RM) '$(DESTDIR)$(INCLUDE_PATH)'/zconf.h
+-	-$(RM) '$(DESTDIR)$(LIBRARY_PATH)'/$(STATICLIB)
++#	-$(RM) '$(DESTDIR)$(LIBRARY_PATH)'/$(STATICLIB)
+ 
+ clean:
+ 	-$(RM) $(STATICLIB)

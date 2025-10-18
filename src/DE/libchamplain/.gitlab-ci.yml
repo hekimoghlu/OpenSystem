@@ -1,0 +1,51 @@
+image: fedora:37
+
+stages:
+  - build
+  - deploy
+
+before_script:
+  - dnf install -y gcc ccache gettext gtk-doc meson ninja-build redhat-rpm-config
+  - dnf install -y glib2-devel clutter-devel gtk3-devel clutter-gtk-devel cairo-devel sqlite-devel libsoup3-devel libsoup-devel gobject-introspection-devel vala-devel
+
+.ccache-setup: &ccache-setup
+  variables:
+    CCACHE_BASEDIR: "${PWD}"
+    CCACHE_DIR: "${CCACHE_BASEDIR}/_ccache"
+
+build-champlain:
+  stage: build
+  script:
+    - mkdir -p _ccache
+    - ccache --zero-stats
+    - ccache --show-stats
+    - meson -Dwidgetry=true -Ddemos=true -Dgtk_doc=true -Dintrospection=true -Dvapi=true -Dlibsoup3=false _build .
+    - ninja -C _build
+    - ninja -C _build test
+    - meson configure _build -Dlibsoup3=true
+    - ninja -C _build
+    - ninja -C _build test
+    - ninja -C _build champlain-0.12-doc
+    - ccache --show-stats
+  artifacts:
+    name: "champlain-doc"
+    paths:
+      - _build/docs/reference/html
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - _ccache/
+  <<: *ccache-setup
+
+pages:
+  stage: deploy
+  dependencies:
+    - build-champlain
+  script:
+    - mkdir -p public/
+    - mv _build/docs/reference/html/ public/champlain/
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

@@ -1,0 +1,53 @@
+import os
+import sys
+
+gi.require_version('Gegl', '0.4')
+from gi.repository import Gegl
+
+input_path  = '@SRCDIR@/gimp-logo.svg'
+output_path = '@SRCDIR@/gimp.ico'
+# List of sizes come from these links:
+# https://learn.microsoft.com/en-us/windows/apps/design/style/iconography/app-icon-construction
+# https://learn.microsoft.com/en-us/windows/win32/uxguide/vis-icons
+# Application icons and control panel items:
+sizes       = [ 16, 32, 48, 256 ]
+# Quick Launch area:
+sizes      += [ 40 ]
+# Additional sizes: we don't generate sizes: 8, 10 and 14 because we don't have
+# pixel-perfect raster for these and it's so small that I wonder if it's worth
+# it.
+sizes      += [ 22, 24, 64, 96, 128 ]
+# A bit of prettifying for the order of generated layers.
+sizes.sort()
+
+image_size = max(sizes)
+image = Gimp.Image.new(image_size, image_size, Gimp.ImageBaseType.RGB)
+image.undo_disable()
+
+for size in sizes:
+  procedure   = Gimp.get_pdb().lookup_procedure("file-svg-load")
+  config      = procedure.create_config()
+  config.set_property("file", Gio.file_new_for_path(input_path))
+
+  config.set_property("width",  size)
+  config.set_property("height", size)
+  v = Gimp.Procedure.run(procedure, config)
+  if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+    sys.exit(70)
+
+  tmp_image = v.index(1)
+  drawables = tmp_image.get_selected_drawables()
+  layer = Gimp.Layer.new_from_drawable (drawables[0], image)
+  image.insert_layer(layer, None, 0)
+  tmp_image.delete()
+
+procedure = Gimp.get_pdb().lookup_procedure("file-ico-export")
+config    = procedure.create_config()
+drawables = image.get_selected_drawables()
+config.set_property("image", image)
+config.set_property("num-drawables", len(drawables))
+config.set_property("drawables", Gimp.ObjectArray.new(Gimp.Drawable, drawables, False))
+config.set_property("file", Gio.file_new_for_path(output_path))
+v = Gimp.Procedure.run(procedure, config)
+if v.index(0) != Gimp.PDBStatusType.SUCCESS:
+  sys.exit(70)

@@ -1,0 +1,61 @@
+include:
+  - project: 'gnome/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "build-flatpak"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+variables:
+  APP_ID: "org.gnome.clocksDevel"
+  BUNDLE: "gnome-clocks-dev.flatpak"
+  RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+  MANIFEST_PATH: "build-aux/flatpak/org.gnome.clocks.json"
+  FLATPAK_MODULE: "gnome-clocks"
+  TARBALL_ARTIFACT_PATH: ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+stages:
+  - lint
+  - build
+  - deploy
+
+build-flatpak:
+  extends: '.flatpak@x86_64'
+  stage: build
+  needs: []
+  before_script: []
+
+build-flatpak-aarch64:
+  extends: '.flatpak@aarch64'
+  stage: build
+  needs: []
+  before_script: []
+
+nightly:
+  extends: '.publish_nightly'
+  needs: ['build-flatpak']
+
+nightly-aarch64:
+  extends: '.publish_nightly'
+  needs: ['build-flatpak-aarch64']
+
+lint:
+  image: "valalang/lint:latest"
+  stage: lint
+  needs: []
+  script:
+    - io.elementary.vala-lint src
+
+# docs:
+#   image: "fedora:latest"
+#   script:
+#     - dnf install -y git valadoc vala meson glib2-devel gtk3-devel libhandy1-devel gsound-devel gnome-desktop3-devel libgweather-devel geoclue2-devel
+#     - meson -Ddocs=true _build
+#     - meson compile -C _build
+#     - rm -rf public
+#     - mv _build/docs public
+#   artifacts:
+#     paths:
+#       - public
+#   rules:
+#     - if: '$CI_COMMIT_BRANCH == "master"'

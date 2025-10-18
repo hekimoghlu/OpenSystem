@@ -1,0 +1,57 @@
+{
+    "app-id" : "org.gnome.Screenshot",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "gnome-screenshot-interactive",
+    "finish-args" : [
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--socket=pulseaudio",
+        "--talk-name=org.gnome.Shell.Screenshot",
+        "--filesystem=home"
+    ],
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "gnome-screenshot-interactive",
+            "buildsystem" : "simple",
+            "build-commands" : [
+                "mkdir -p /app/bin/",
+                "install -m755 -pD gnome-screenshot-interactive /app/bin/gnome-screenshot-interactive"
+            ],
+            "sources" : [
+                {
+                    "type" : "script",
+                    "commands" : [
+                        "gnome-screenshot -i"
+                    ],
+                    "dest-filename" : "gnome-screenshot-interactive"
+                }
+            ]
+        },
+        {
+            "name" : "gnome-screenshot",
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-screenshot.git"
+                }
+            ]
+        }
+    ]
+}

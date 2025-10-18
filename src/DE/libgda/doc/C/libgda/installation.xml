@@ -1,0 +1,367 @@
+<?xml version="1.0"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+<!ENTITY GNOMEDB         "<acronym>Gnome-Db</acronym>">
+<!ENTITY RPM             "<acronym>RPM</acronym>">
+]>
+<chapter id="installation">
+  <title>Installation</title>
+  <sect1 id="installation-introduction">
+    <title>Getting the library</title>
+    <para>
+      The &LIBGDA; library is bundled with some Linux distributions, so for these distributions, installing
+      can be done using the distribution specific tools.
+    </para>
+    <para>
+      Also &LIBGDA;'s sources are available for download from the 
+      <ulink url="http://gitlab.gnome.org/GNOME/libgda">GNOME GitLab</ulink> repository. For 
+      additional information see the <ulink url="http://www.gnome-db.org">Gnome-DB</ulink> web site.
+    </para>
+  </sect1>
+  <sect1 id="installation-installing">
+    <title>Installing from the sources</title>
+    <para>
+      Starting from version 6.0, &LIBGDA; uses <ulink url="https://mesonbuild.com">Meson</ulink>
+      build system. The following commands should work for most platforms:
+      <programlisting>
+<prompt>$ </prompt>git clone https://gitlab.gnome.org/GNOME/libgda.git
+<prompt>$ </prompt>cd libgda
+<prompt>$ </prompt>meson build
+<prompt>$ </prompt>ninja -C build
+<prompt>$ </prompt>ninja -C build install
+      </programlisting>
+    </para>
+    <para>
+      This will compile all the source tree, and install the binaries and
+      documentation in your system. This method should work on all platforms where meson and ninja
+      as well as all dependencies are available.
+    </para>
+    <para>
+      You can specify several arguments to <command>meson</command>. Some arguments are related
+      to the meson system itself, while others are project specific. To get a full list of all 
+      meson specific options a one can type:
+      <programlisting>
+<prompt>$ </prompt>meson help setup
+      </programlisting>
+      All project specific options can be found in <filename>meson_options.txt</filename> file.
+      In meson all parameters should be provided in the forms: <emphasis>-Dparameter=value</emphasis>
+    </para>
+    <para>
+	<table frame="all">
+	  <tgroup cols="4" colsep="1" rowsep="1" align="justify">
+	    <thead>
+	      <row>
+		<entry>Option</entry>
+		<entry>Type</entry>
+		<entry>Default value</entry>
+		<entry>Description</entry>
+	      </row>
+	    </thead>
+	    <tbody>
+	      <row>
+		<entry>with-help</entry>
+		<entry>boolean</entry>
+		<entry>true</entry>
+		<entry>Enable building help (GdaBrowser))</entry>
+	      </row>
+	      <row>
+		<entry>with-goocanvas</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable GooCanvas</entry>
+	      </row>
+	      <row>
+		<entry>with-graphviz</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable using Graphviz</entry>
+	      </row>
+	      <row>
+		<entry>with-json</entry>
+		<entry>boolean</entry>
+		<entry>true</entry>
+		<entry>Enable support for JSON</entry>
+	      </row>
+	      <row>
+		<entry>enable-gda-gi</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable GObject Introspection for libgda</entry>
+	      </row>
+	      <row>
+		<entry>disable-sqlcipher</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Disable SQLCipher database provider</entry>
+	      </row>
+	      <row>
+		<entry>with-libsoup</entry>
+		<entry>boolean</entry>
+		<entry>true</entry>
+		<entry>Enable libsoup support</entry>
+	      </row>
+	      <row>
+		<entry>with-libsecret</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable libsecret support</entry>
+	      </row>
+	      <row>
+		<entry>with-gnome-keyring</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable gnome-keyring support</entry>
+	      </row>
+	      <row>
+		<entry>enable-debug</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable debug mode</entry>
+	      </row>
+	      <row>
+		<entry>with-examples</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Compile examples</entry>
+	      </row>
+	      <row>
+		<entry>enable-tools</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable build experimental GUI Tools</entry>
+	      </row>
+	      <row>
+		<entry>glade-catalog-dir</entry>
+		<entry>string</entry>
+		<entry>''</entry>
+		<entry>Use the given directory to install glade catalog files. If glade is not 
+		    available this option is ignored. If it is not given the valaue from pkg-config 
+		    will be used</entry>
+	      </row>
+	      <row>
+		<entry>glade-pixmap-dir</entry>
+		<entry>string</entry>
+		<entry>''</entry>
+		<entry>Use the given directory to install glade pixmap files. If glade is not 
+		  available this option is ignored. If it is not given the valaue from pkg-config 
+		  will be used</entry>
+	      </row>
+	      <row>
+		<entry>gtk_doc</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable documentation generation</entry>
+	      </row>
+	      <row>
+		<entry>experimental</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable experimental features</entry>
+	      </row>
+	      <row>
+		<entry>enable-ldap</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable experimental LDAP provider</entry>
+	      </row>
+	      <row>
+		<entry>enable-web</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable experimental WEB provider</entry>
+	      </row>
+	      <row>
+		<entry>enable-test-flatpak</entry>
+		<entry>boolean</entry>
+		<entry>false</entry>
+		<entry>Enable Terminal Test Application</entry>
+	      </row>
+	    </tbody>
+	   </tgroup>
+	</table>
+    </para>
+    <para>
+      The custom prefix for the installation can be provided during the configuration step:
+      <programlisting>
+<prompt>$ </prompt>meson --prefix=/opt/GNOME/progs -Dgtk_doc=true
+      </programlisting>
+      Please review all available options by running:
+      <programlisting>
+<prompt>$</prompt>meson help setup
+      </programlisting>
+    </para>
+    <para>
+      Libraries needed by providers are searched by default, so, if found, providers are
+      compiled by default. Those libraries are searched in hard-coded directories, so
+      if the installation of these libraries is in an uncommon place, the above arguments
+      should be used to specify the directories where the libraries and header files
+      are installed. Note that the SQLite provider is now always built using the sources
+      of the SQLite library that are bundled within &LIBGDA;'s sources.
+    </para>
+    <para>
+      If you find any problem during the configuration, compilation or
+      installation process, do not hesitate in contacting the
+      &GNOMEDB; mailing list (<email>gnome-db-list@gnome.org</email>, first
+      send an email to <email>gnome-db-list-request@gnome.org</email> with 
+      the subject SUBSCRIBE, if you are not already subscribed).
+    </para>
+  </sect1>
+  <sect1 id="compiling">
+    <title>Compiling your code using the &LIBGDA; library</title>
+    <para>
+      To compile you will need to set the C flags and to link the library, so we recommend
+      to use the <command>pkg-config</command> command.
+    </para>
+    <programlisting>
+<prompt>$ </prompt>gcc -c full_example.c `pkg-config --cflags libgda-6.0`
+<prompt>$ </prompt>gcc -o full_example `pkg-config --libs libgda-6.0` full_example.o
+    </programlisting>
+    <para>
+      or more simply:
+      <programlisting>
+<prompt>$ </prompt>gcc -o full_example `pkg-config --cflags --libs libgda-6.0` full_example.c
+    </programlisting>
+    </para>
+    <para>
+      Doing this will add to the C compiler command line all needed header files
+      and library directories as well as all needed libraries for linking your GDA
+      application. To include header files, you can use <filename>libgda/libgda.h</filename>
+      (more headers may be needed depending on some features, and are included in the documentation).
+    </para>
+  </sect1>
+  <sect1 id="installation-configuring">
+    <title>Configuring</title>
+    <para>
+      Depending on the use you're going to get out of &LIBGDA;, you may have
+      to dig deep into its internals, but don't be afraid, things have been
+      implemented to be easy to use.
+    </para>
+    <sect2 id="installation-development">
+      <title>Configuration for development</title>
+      <para>
+        If you want to develop applications using &LIBGDA;, you should 
+        install the libgda-dev[el] package if you do a &RPM; or <link linkend="installation-debian">Debian-based</link>
+        installation. If you compiled the source code, development files are
+        installed in your system.
+      </para>
+      <para>
+        The only step you need to do to make sure everything is well 
+        installed, is to check that &LIBGDA; libraries and binaries are seen
+        by your system. That is, make sure that the &LIBGDA; 
+        <filename class="directory">bin/</filename> directory is in your
+        <envar>PATH</envar> environment variable, as well as the
+        <filename class="directory">lib/</filename> in your 
+        <envar>LD_LIBRARY_PATH</envar> (or 
+        <filename>/etc/ld.so.conf</filename> file).
+      </para>
+      <para>
+        Programs which need to use &LIBGDA;'s features need to include headers files, which are:
+      </para>
+      <programlisting>
+#include &lt;libgda/libgda.h&gt;
+#include &lt;sql-parser/gda-sql-parser.h&gt;
+      </programlisting>
+      and to use reports:
+      <programlisting>
+#include &lt;libgda/libgda.h&gt;
+#include &lt;libgda-report/libgda-report.h&gt;
+      </programlisting>
+      and to use virtual connections:
+      <programlisting>
+#include &lt;libgda/libgda.h&gt;
+#include &lt;virtual/libgda-virtual.h&gt;
+      </programlisting>
+    </sect2>
+    <sect2 id="installation-client">
+      <title>Configuration for accessing a database</title>
+      <para>
+	To access a database, it must have a database provider (if &LIBGDA; does not
+	support the type of database to access, make a bug report in 
+	<ulink url="http://gitlab.gnome.org/GNOME/libgda/issues">GDA's issues tracker</ulink>), and that database provider
+	must be compiled an installed: the <command>gda-list-config-6.0</command> or 
+	<command>gda-sql-6.0 -L</command> commands will
+	show a list of the installed and configured database providers.
+      </para>
+      <para>
+	Any connection to a database can be done either using a pre-defined data source, or using a
+	connection string: using a data source (DSN) allows one to <emphasis>name</emphasis> connections
+	and define them once, whereas using connection strings allows programs to be more
+	independent of any &LIBGDA; configuration. Anyway, defining a DSN involves defining the same
+	parameters as for a connection string.
+      </para>
+      <para>
+	A connection string is a semi-colon delimited list of named parameters 
+	(as <![CDATA[<param1_name>=<param1_value>;<param2_name>=<param2_value>...]]>), the parameters
+	being specific to each database provider (the two commands mentioned above also list all the
+	parameters for each provider).
+      </para>
+      <para>
+	DSNs can be configured on a per-user basis or on a system-wide basis. Each user's
+	own DSN definitions are stored in the <filename>$HOME/.local/share/libgda/config</filename> file
+	(which
+	is created the first time &LIBGDA; is used within an application. System wide DSN are defined in the
+	<filename>&lt;prefix&gt;/etc/libgda/config</filename>. Rather than editing that
+	file manually, it is possible to use the <command>gda-control-center-6.0</command> tool
+	(part of &LIBGDA;).
+	Note: if the <filename>$HOME/.libgda/config</filename> already exists from a previous use
+	of &LIBGDA;, then that file is used instead of
+	<filename>$HOME/.local/share/libgda/config</filename>.
+      </para>
+    </sect2>
+
+    <sect2 id="installation-provider">
+      <title>Provider's specific information</title>
+      <para>
+        This section provides information specific to each of the available
+        &LIBGDA; providers.
+      </para>
+      <sect3 id="installation-provider-default">
+	<title>SQLite provider</title>
+	<para>
+	  The SQLite provider is always installed (it is required by &LIBGDA;'s internally)
+          with &LIBGDA;, which means that a default database system is always available. 
+	  Specifically the first time you use
+	  &LIBGDA;, a test database is copied into <filename>$HOME/.local/share/libgda/config</filename>
+	  (or <filename>$HOME/.libgda</filename> if it exists and <filename>$HOME/.local/share/libgda/config</filename>
+	  does not)
+	  named "SalesTest". 
+	</para>
+      </sect3>
+      <sect3 id="installation-provider-jdbc">
+	<title>JDBC based providers</title>
+	<para>Refer to the <link linkend="provider_notes_jdbc">JDBC notes</link> section for more information.
+	</para>
+      </sect3>
+      <sect3 id="installation-provider-all">
+	<title>Connection information for each database provider</title>
+	<para>
+	  Each provider exports a list of the arguments it requires in 
+	  its connection string which is used internally by &LIBGDA; to
+	  establish each connection. To obtain the required information to open a connection
+	  using a provider, use the <link linkend="gda-sql">Gda SQL console tool</link> with the
+	  <userinput>-L &lt;provider name&gt;</userinput> option. For example for PostgreSQL (strings truncated
+	  for better readability):
+	  <programlisting>
+<prompt>$ </prompt>gda-sql -L PostgreSQL
+                   Provider 'PostgreSQL' description
+Attribute      | Value                                                   
+---------------+-------------------------------------------------------------
+Provider       | PostgreSQL                                              
+Description    | Provider for PostgreSQL databases                       
+DSN parameters | DB_NAME: The name of a database to connect to (string),     
+                 SEARCHPATH: Search path among database's schemas ('search_path' variable) (string),
+                 HOST: Host on which the database server is running (for servers running on unix domain sockets, enter the socket's path (usually /tmp), or leave this field empty).
+                 PORT: Database server port (for servers running on unix domain sockets, enter the socket's file name extension (usually 5432), or leave this field empty).
+                 OPTIONS: Extra connection options (string),                 
+                 USE_SSL: Whether or not to use SSL to establish the connection (boolean),
+Authentication | USERNAME (string),                                                         
+                 PASSWORD (string)
+File           | /local/lib/libgda-4.0/providers/libgda-postgres.so
+(5 rows)
+	  </programlisting>
+	</para>
+      </sect3>
+    </sect2>
+  </sect1>
+</chapter>

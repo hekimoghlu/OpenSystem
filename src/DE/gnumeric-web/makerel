@@ -1,0 +1,27 @@
+#! /usr/bin/perl
+
+foreach my $f (@ARGV) { &fixup($f); }
+
+sub fixup {
+    my ($f) = @_;
+
+    return unless $f =~ /\.(html|shtml)$/;
+
+    my $ff = $f;
+    $ff =~ s{//+}{/}g;
+    my $level = ($ff =~ s{/}{.}g);
+    my $top = $level ? join('/', ("..") x $level) : ".";
+    
+
+    open my $src, '<', $f or die "$0: cannot read $f: $!\n";
+    open my $dst, '>', "$f.tmp" or die "$0: cannot write $f.tmp: $!\n";
+
+    while (<$src>) {
+	s{href="/}{href="$top/}g;
+	if (/<img\b/) { s{src="/}{src="$top/}g; }
+	print $dst "$_";
+    }
+    undef $src;
+    undef $dst;
+    rename "$f.tmp", $f;
+}

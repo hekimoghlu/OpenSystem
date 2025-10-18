@@ -1,0 +1,28 @@
+set(extra_deps)
+set(sources
+	e-weather-location-entry.h
+	e-weather-location-entry.c
+	evolution-cal-config-weather.c
+)
+set(extra_defines)
+set(extra_cflags
+	${GEO_CFLAGS}
+	${GWEATHER_CFLAGS}
+)
+set(extra_incdirs
+	${GEO_INCLUDE_DIRS}
+	${GWEATHER_INCLUDE_DIRS}
+)
+set(extra_ldflags
+	${GEO_LDFLAGS}
+	${GWEATHER_LDFLAGS}
+)
+
+add_evolution_module(module-cal-config-weather
+	sources
+	extra_deps
+	extra_defines
+	extra_cflags
+	extra_incdirs
+	extra_ldflags
+)

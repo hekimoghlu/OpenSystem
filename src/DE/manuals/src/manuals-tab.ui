@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="ManualsTab" parent="GtkWidget">
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="vexpand">true</property>
+        <child>
+          <object class="WebKitWebView" id="web_view">
+            <child>
+              <object class="GtkShortcutController">
+                <property name="propagation-phase">capture</property>
+                <child>
+                  <object class="GtkShortcut">
+                    <property name="trigger">slash</property>
+                    <property name="action">action(tab.focus-search)</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <property name="vexpand">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkRevealer" id="search_revealer">
+            <property name="transition-type">slide-up</property>
+            <signal name="notify::child-revealed" handler="notify_search_revealed_cb" swapped="true"/>
+            <child>
+              <object class="GtkShortcutController">
+                <child>
+                  <object class="GtkShortcut">
+                    <property name="trigger">Escape</property>
+                    <property name="action">action(search.hide)</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <property name="child">
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkSeparator"/>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="margin-top">6</property>
+                    <property name="margin-bottom">6</property>
+                    <property name="halign">center</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="ManualsSearchEntry" id="search_entry">
+                        <property name="max-width-chars">30</property>
+                        <signal name="notify::text" handler="search_entry_changed_cb" swapped="true"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">search.move-previous</property>
+                            <property name="icon-name">go-up-symbolic</property>
+                            <style>
+                              <class name="flat"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="action-name">search.move-next</property>
+                            <property name="icon-name">go-down-symbolic</property>
+                            <style>
+                              <class name="flat"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <style>
+                          <class name="circular"/>
+                          <class name="flat"/>
+                          <class name="small-button"/>
+                        </style>
+                        <property name="action-name">search.hide</property>
+                        <property name="icon-name">window-close-symbolic</property>
+                        <property name="valign">center</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

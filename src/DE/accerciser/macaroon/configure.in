@@ -1,0 +1,36 @@
+AC_INIT(Macaroon, 0.0.1, eitan@ascender.com, macaroon)
+AC_CONFIG_AUX_DIR(./)
+AM_INIT_AUTOMAKE
+AM_MAINTAINER_MODE([enable])
+
+dnl == check for python ==
+AM_PATH_PYTHON(3.2)
+
+dnl == requeriments ==
+GTK_REQUIRED=3.24.0
+PYGOBJECT_REQUIRED=2.90.3
+ATSPI_REQUIRED=2.5.2
+
+dnl == check for requeriments ==
+PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= GTK_REQUIRED])
+PKG_CHECK_MODULES([PYGOBJECT], [pygobject-3.0 >= PYGOBJECT_REQUIRED])
+PKG_CHECK_MODULES([ATSPI2], [atspi-2 >= ATSPI_REQUIRED])
+
+dnl == i18n ==
+AM_GNU_GETTEXT_VERSION([0.19.8])
+AM_GNU_GETTEXT([external])
+GETTEXT_PACKAGE=macaroon
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [The gettext package])
+
+dnl == generate makefiles ==
+AC_OUTPUT([
+Makefile
+po/Makefile.in
+po/Makevars
+bin/Makefile
+bin/macaroon
+macaroon/Makefile
+macaroon/record/Makefile
+macaroon/playback/Makefile
+])

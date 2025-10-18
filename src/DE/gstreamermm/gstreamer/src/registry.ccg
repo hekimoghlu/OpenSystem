@@ -1,0 +1,136 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/pluginfeature.h>
+#include <gstreamermm/plugin.h>
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace
+{
+
+extern "C"
+{
+
+static gboolean Registry_Plugin_Filter_gstreamermm_callback(GstPlugin* plugin, void* data)
+{
+  Gst::Plugin::SlotFilter* the_slot = static_cast<Gst::Plugin::SlotFilter*>(data);
+
+  try
+  {
+    bool result = (*the_slot)(Glib::wrap(plugin, true));
+    return result;
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false;
+}
+
+static gboolean Registry_PluginFeature_Filter_gstreamermm_callback(GstPluginFeature* feature, void* data)
+{
+  Gst::PluginFeature::SlotFilter* the_slot = static_cast<Gst::PluginFeature::SlotFilter*>(data);
+
+  try
+  {
+    bool result = (*the_slot)(Glib::wrap(feature, true));
+    return result;
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false;
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+Glib::ListHandle< Glib::RefPtr<Gst::Plugin> >
+Registry::get_plugin_list(const Plugin::SlotFilter& filter, bool first)
+{
+  GList* list = gst_registry_plugin_filter(gobj(),
+    &Registry_Plugin_Filter_gstreamermm_callback, first,
+    const_cast<Plugin::SlotFilter*>(&filter));
+
+  return Glib::ListHandle< Glib::RefPtr<Gst::Plugin> >(list,
+    Glib::OWNERSHIP_DEEP);
+}
+
+Glib::ListHandle< Glib::RefPtr<const Gst::Plugin> >
+Registry::get_plugin_list(const Plugin::SlotFilter& filter, bool first) const
+{
+  GList* list = gst_registry_plugin_filter(const_cast<GstRegistry*>(gobj()),
+    &Registry_Plugin_Filter_gstreamermm_callback, first,
+    const_cast<Plugin::SlotFilter*>(&filter));
+
+  return Glib::ListHandle< Glib::RefPtr<const Gst::Plugin> >(list,
+    Glib::OWNERSHIP_DEEP);
+}
+
+Glib::ListHandle< Glib::RefPtr<Gst::PluginFeature> >
+Registry::get_feature_list(const PluginFeature::SlotFilter& filter, bool first)
+{
+  GList* list = gst_registry_feature_filter(gobj(),
+    &Registry_PluginFeature_Filter_gstreamermm_callback, first,
+    const_cast<PluginFeature::SlotFilter*>(&filter));
+
+  return Glib::ListHandle< Glib::RefPtr<Gst::PluginFeature> >(list,
+    Glib::OWNERSHIP_DEEP);
+}
+
+Glib::ListHandle< Glib::RefPtr<const Gst::PluginFeature> >
+Registry::get_feature_list(const PluginFeature::SlotFilter& filter,
+  bool first) const
+{
+  GList* list = gst_registry_feature_filter(const_cast<GstRegistry*>(gobj()),
+    &Registry_PluginFeature_Filter_gstreamermm_callback, first,
+    const_cast<PluginFeature::SlotFilter*>(&filter));
+
+  return Glib::ListHandle< Glib::RefPtr<const Gst::PluginFeature> >(list,
+    Glib::OWNERSHIP_DEEP);
+}
+
+Glib::RefPtr<Gst::Registry>
+Registry::get()
+{
+  return Glib::wrap(gst_registry_get(), true);
+}
+
+void Registry::add_feature(const Glib::RefPtr<Gst::PluginFeature>& feature)
+{
+  feature->reference();
+  gst_registry_add_feature(gobj(), feature->gobj());
+}
+
+void Registry::add_plugin(const Glib::RefPtr<Gst::Plugin>& plugin)
+{
+  plugin->reference();
+  gst_registry_add_plugin(gobj(), plugin->gobj());
+}
+
+
+} //namespace Gst

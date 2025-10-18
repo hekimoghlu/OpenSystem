@@ -1,0 +1,91 @@
+/* Copyright (C) 2006 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+
+#include <gtk/gtk.h>
+
+namespace Gtk
+{
+// Initialize external constants.
+const Glib::ustring PAPER_NAME_A3 = GTK_PAPER_NAME_A3;
+const Glib::ustring PAPER_NAME_A4 = GTK_PAPER_NAME_A4;
+const Glib::ustring PAPER_NAME_A5 = GTK_PAPER_NAME_A5;
+const Glib::ustring PAPER_NAME_B5 = GTK_PAPER_NAME_B5;
+const Glib::ustring PAPER_NAME_LETTER = GTK_PAPER_NAME_LETTER;
+const Glib::ustring PAPER_NAME_EXECUTIVE = GTK_PAPER_NAME_EXECUTIVE;
+const Glib::ustring PAPER_NAME_LEGAL = GTK_PAPER_NAME_LEGAL;
+
+//PaperSize::PaperSize()
+//:
+//  gobject_(gtk_paper_size_new(gtk_paper_size_get_default()))
+//{}
+
+PaperSize::PaperSize(const Glib::ustring& name)
+:
+  gobject_(gtk_paper_size_new(name.c_str()))
+{}
+
+PaperSize::PaperSize(const Glib::ustring& ppd_name, const Glib::ustring& ppd_display_name, double width, double height)
+:
+  gobject_(gtk_paper_size_new_from_ppd(ppd_name.c_str(),
+                                       ppd_display_name.c_str(),
+                                       width,
+                                       height))
+{}
+
+PaperSize::PaperSize(const Glib::ustring& name, const Glib::ustring& display_name, double width, double height, Unit unit)
+:
+  gobject_(gtk_paper_size_new_custom(name.c_str(),
+                                     display_name.c_str(),
+                                     width,
+                                     height,
+                                     GtkUnit(unit)))
+{}
+
+PaperSize::PaperSize(const Glib::RefPtr<const Glib::KeyFile>& key_file, const Glib::ustring& group_name)
+{
+  GError* gerror = nullptr;
+  gobject_ = gtk_paper_size_new_from_key_file(const_cast<GKeyFile*>(Glib::unwrap(key_file)),
+    Glib::c_str_or_nullptr(group_name), &gerror);
+
+  if (gerror)
+    Glib::Error::throw_exception(gerror);
+}
+
+bool PaperSize::equal(const PaperSize& other) const
+{
+  return (static_cast<bool>(gtk_paper_size_is_equal(const_cast<GtkPaperSize*>(this->gobj()),
+                                                    const_cast<GtkPaperSize*>(other.gobj()))));
+}
+
+PaperSize::operator bool() const
+{
+  return gobj();
+}
+
+void PaperSize::save_to_key_file(const Glib::RefPtr<Glib::KeyFile>& key_file)
+{
+  gtk_paper_size_to_key_file( gobj(), Glib::unwrap(key_file), nullptr);
+}
+
+// static
+void PaperSizeTraits::release_c_type(CType ptr)
+{
+  gtk_paper_size_free(const_cast<CTypeNonConst>(ptr));
+}
+
+} // namespace Gtk

@@ -1,0 +1,147 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/error.h>
+#include <glibmm/exceptionhandler.h>
+#include <giomm/file.h>
+#include <giomm/drive.h>
+#include <gio/gio.h>
+#include <giomm/slot_async.h>
+
+namespace Gio
+{
+
+void
+Volume::mount(const Glib::RefPtr<MountOperation>& mount_operation, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, Mount::MountFlags flags)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_volume_mount(gobj(), static_cast<GMountMountFlags>(flags), Glib::unwrap(mount_operation),
+    Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Volume::mount(const Glib::RefPtr<MountOperation>& mount_operation, const SlotAsyncReady& slot,
+  Mount::MountFlags flags)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_volume_mount(gobj(), static_cast<GMountMountFlags>(flags), Glib::unwrap(mount_operation),
+    nullptr, // cancellable
+    &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Volume::mount(const Glib::RefPtr<MountOperation>& mount_operation, Mount::MountFlags flags)
+{
+  g_volume_mount(gobj(), static_cast<GMountMountFlags>(flags), Glib::unwrap(mount_operation),
+    nullptr, // cancellable
+    nullptr, nullptr);
+}
+
+void
+Volume::mount(Mount::MountFlags flags)
+{
+  g_volume_mount(gobj(), static_cast<GMountMountFlags>(flags), nullptr,
+    nullptr, // cancellable
+    nullptr, nullptr);
+}
+
+void
+Volume::eject(
+  const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable, Mount::UnmountFlags flags)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_volume_eject_with_operation(gobj(), static_cast<GMountUnmountFlags>(flags),
+    nullptr, // mount_operation
+    Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Volume::eject(const SlotAsyncReady& slot, Mount::UnmountFlags flags)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_volume_eject_with_operation(gobj(), static_cast<GMountUnmountFlags>(flags),
+    nullptr, // mount_operation
+    nullptr, // cancellable
+    &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Volume::eject(Mount::UnmountFlags flags)
+{
+  g_volume_eject_with_operation(gobj(), static_cast<GMountUnmountFlags>(flags),
+    nullptr, // mount_operation
+    nullptr, // cancellable
+    nullptr, // callback
+    nullptr); // data
+}
+
+void
+Volume::eject(const Glib::RefPtr<MountOperation>& mount_operation, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable, Mount::UnmountFlags flags)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_volume_eject_with_operation(gobj(), static_cast<GMountUnmountFlags>(flags),
+    Glib::unwrap(mount_operation), Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback,
+    slot_copy);
+}
+
+void
+Volume::eject(const Glib::RefPtr<MountOperation>& mount_operation, const SlotAsyncReady& slot,
+  Mount::UnmountFlags flags)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_volume_eject_with_operation(gobj(), static_cast<GMountUnmountFlags>(flags),
+    Glib::unwrap(mount_operation),
+    nullptr, // cancellable
+    &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Volume::eject(const Glib::RefPtr<MountOperation>& mount_operation, Mount::UnmountFlags flags)
+{
+  g_volume_eject_with_operation(gobj(), static_cast<GMountUnmountFlags>(flags),
+    Glib::unwrap(mount_operation),
+    nullptr, // cancellable
+    nullptr, // callback
+    nullptr); // data
+}
+
+} // namespace Gio

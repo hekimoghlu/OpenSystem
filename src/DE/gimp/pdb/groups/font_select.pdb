@@ -1,0 +1,139 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+
+sub fonts_popup {
+    $blurb = 'Invokes the Gimp font selection dialog.';
+    $help  = 'Opens a dialog letting a user choose a font.';
+
+    &neo_pdb_misc('2003');
+
+    @inargs = (
+      { name => 'font_callback', type => 'string', non_empty => 1,
+        desc => 'The callback PDB proc to call when user chooses a font' },
+      { name => 'popup_title', type => 'string',
+        desc => 'Title of the font selection dialog' },
+      { name => 'initial_font', type => 'font', none_ok => 1,
+        desc => 'The name of the initial font choice.' },
+      { name => 'parent_window', type => 'bytes', none_ok => 1,
+        desc => 'An optional parent window handle for the popup to be set transient to' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *container = gimp_data_factory_get_container (gimp->font_factory);
+
+  if (gimp->no_interface ||
+      ! gimp_pdb_lookup_procedure (gimp->pdb, font_callback) ||
+      ! gimp_data_factory_data_wait (gimp->font_factory)     ||
+      ! gimp_pdb_dialog_new (gimp, context, progress,
+                             gimp_container_get_child_type (container),
+                             parent_window, popup_title, font_callback,
+                             GIMP_OBJECT (initial_font), NULL))
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub fonts_close_popup {
+    $blurb = 'Close the font selection dialog.';
+    $help  = 'Closes an open font selection dialog.';
+
+    &neo_pdb_misc('2003');
+
+    @inargs = (
+      { name => 'font_callback', type => 'string', non_empty => 1,
+        desc => 'The name of the callback registered in the PDB for this dialog' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *container = gimp_data_factory_get_container (gimp->font_factory);
+
+  if (gimp->no_interface ||
+      ! gimp_pdb_lookup_procedure (gimp->pdb, font_callback) ||
+      ! gimp_pdb_dialog_close (gimp,
+                               gimp_container_get_child_type (container),
+                               font_callback))
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub fonts_set_popup {
+    $blurb = 'Sets the current font in a font selection dialog.';
+    $help  = $blurb;
+
+    &neo_pdb_misc('2003');
+
+    @inargs = (
+      { name => 'font_callback', type => 'string', non_empty => 1,
+        desc => 'The name of the callback registered in the PDB for the dialog.' },
+      { name => 'font', type => 'font',
+        desc => 'The font to set as selected' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *container = gimp_data_factory_get_container (gimp->font_factory);
+
+  if (gimp->no_interface ||
+      ! gimp_pdb_lookup_procedure (gimp->pdb, font_callback) ||
+      ! gimp_data_factory_data_wait (gimp->font_factory)     ||
+      ! gimp_pdb_dialog_set (gimp,
+                             gimp_container_get_child_type (container),
+                             font_callback, GIMP_OBJECT (font), NULL))
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+@headers = qw("core/gimp.h"
+              "core/gimpcontainer.h"
+              "core/gimpdatafactory.h");
+
+@procs = qw(fonts_popup
+            fonts_close_popup
+            fonts_set_popup);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Font UI';
+$doc_title = 'gimpfontselect';
+$doc_short_desc = 'Methods of a font chooser dialog.';
+$doc_long_desc = <<'LONG_DESC';
+A font chooser dialog shows installed fonts.
+The dialog is non-modal with its owning dialog,
+which is usually a plugin procedure's dialog.
+When a user selects a font,
+the dialog calls back but the dialog remains open.
+The chosen font is only a choice for the owning widget
+and does not select the font for the context.
+The user can close but not cancel the dialog.
+The owning dialog can close the font chooser dialog
+when the user closes or cancels the owning dialog.
+LONG_DESC
+
+1;

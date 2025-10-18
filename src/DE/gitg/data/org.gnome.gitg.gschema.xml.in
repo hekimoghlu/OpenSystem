@@ -1,0 +1,385 @@
+<schemalist>
+  <enum id="@APPLICATION_ID@.Layout">
+    <value nick="horizontal" value="0"/>
+    <value nick="vertical" value="1"/>
+  </enum>
+
+  <enum id="@APPLICATION_ID@.history.DefaultSelection">
+    <value nick="current-branch" value="0"/>
+    <value nick="all-branches" value="1"/>
+    <value nick="all-commits" value="2"/>
+  </enum>
+
+  <enum id="@APPLICATION_ID@.history.RefSortOrder">
+    <value nick="last-activity" value="0"/>
+    <value nick="name" value="1"/>
+  </enum>
+
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences" path="@SCHEMA_PATH@/preferences/">
+    <child name="main" schema="@APPLICATION_ID@.preferences.main" />
+    <child name="history" schema="@APPLICATION_ID@.preferences.history" />
+    <child name="branch" schema="@APPLICATION_ID@.preferences.branch" />
+    <child name="commit" schema="@APPLICATION_ID@.preferences.commit" />
+    <child name="diff" schema="@APPLICATION_ID@.preferences.diff" />
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.main" path="@SCHEMA_PATH@/preferences/main/">
+    <key name="clone-directory" type="s">
+      <default>""</default>
+      <summary>Default Clone Directory</summary>
+      <description>
+        The default directory in which new repositories should be suggested
+        to be cloned.
+      </description>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.interface" path="@SCHEMA_PATH@/preferences/interface/">
+    <key name="orientation" enum="@APPLICATION_ID@.Layout">
+      <default>'vertical'</default>
+      <summary>Orientation of the main interface (vertical or horizontal)</summary>
+      <description>
+        Setting that sets the orientation of the main interface.
+      </description>
+    </key>
+    <key name="default-activity" type="s">
+      <default>"history"</default>
+      <summary>Default Activity</summary>
+      <description>
+        The activity which gitg activates by default when first launched.
+      </description>
+    </key>
+    <key name="use-default-font" type="b">
+      <default>true</default>
+      <summary>Use Default Font</summary>
+      <description>Whether to use the system’s default fixed width font for widget's text instead of a font specific. If this option is turned off, then the font named in the “Editor Font” option will be used instead of the system font.</description>
+    </key>
+    <key name="monospace-font-name" type="s">
+      <!-- Translators: This is a GSettings default value. Do NOT change or localize the quotation marks! -->
+      <default l10n="messages">'Monospace 12'</default>
+      <summary>Editor Font</summary>
+      <description>A custom font that will be used for the text widgets. This will only take effect if the “Use Default Font” option is turned off.</description>
+    </key>
+    <key name="use-gravatar" type="b">
+      <default>false</default>
+      <summary>Use Gravatar</summary>
+      <description>
+        Enable the use of gravatar to display user avatars.
+      </description>
+    </key>
+    <key name="enable-monitoring" type="b">
+      <default>true</default>
+      <summary>Enable Monitoring</summary>
+      <description>
+        Automatically update when external changes to .git are detected
+      </description>
+    </key>
+    <key name="enable-diff-highlighting" type="b">
+      <default>true</default>
+      <summary>Enable Diff Highlighting</summary>
+      <description>
+         Setting that determines whether to enable syntax highlighting in diff
+         views.
+      </description>
+    </key>
+    <key name="style-scheme" type="s">
+      <default>"classic"</default>
+      <summary>Color scheme to use for syntax highlighting</summary>
+      <description>Used by GtkSourceView to determine colors for syntax highlighting</description>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.history" path="@SCHEMA_PATH@/preferences/history/">
+    <key name="collapse-inactive-lanes" type="i">
+      <default>2</default>
+      <summary>When to Collapse Inactive Lanes</summary>
+      <description>
+        Setting that indicates when an inactive lane should be collapsed.
+        Valid values are 0 — 4, where 0 indicates “early” and 4 indicates “late”.
+      </description>
+    </key>
+    <key name="collapse-inactive-lanes-enabled" type="b">
+      <default>true</default>
+      <description>
+        Setting that indicates whether to collapse history lanes which do not
+        show activity. Enabling this can provide a cleaner history view when
+        there is a lot of parallel development. See collapse-inactive-lanes
+        to control when lanes should be collapsed.
+      </description>
+    </key>
+    <key name="topological-order" type="b">
+      <default>false</default>
+      <summary>Show History in Topological Order</summary>
+      <description>
+        Setting that indicates whether to show the history in topological order.
+      </description>
+    </key>
+    <key name="show-stash" type="b">
+      <default>true</default>
+      <summary>Show Stashed Changes</summary>
+      <description>
+        Setting that indicates whether to show items for the stash in the
+        history.
+      </description>
+    </key>
+    <key name="show-staged" type="b">
+      <default>true</default>
+      <summary>Show Staged Changes</summary>
+      <description>
+         Setting that indicates whether to show a virtual item for the currently
+         staged changes in the history.
+      </description>
+    </key>
+    <key name="show-unstaged" type="b">
+      <default>true</default>
+      <summary>Show Unstaged Changes</summary>
+      <description>
+         Setting that indicates whether to show a virtual item for the currently
+         unstaged changes in the history.
+      </description>
+    </key>
+    <key name="mainline-head" type="b">
+      <default>true</default>
+      <summary>Mainline Head</summary>
+      <description>
+         Setting that indicates whether to always preserve a mainline in the
+         history for the current HEAD.
+      </description>
+    </key>
+    <key name="default-selection" enum="@APPLICATION_ID@.history.DefaultSelection">
+      <default>'current-branch'</default>
+      <summary>Default selection of the history activity</summary>
+      <description>
+        Setting that determines the default selection on startup of the history activity.
+      </description>
+    </key>
+    <key name="reference-sort-order" enum="@APPLICATION_ID@.history.RefSortOrder">
+      <default>'last-activity'</default>
+      <summary>Reference Sort Order</summary>
+      <description>
+        The order by which references in the history sidebar should be sorted.
+      </description>
+    </key>
+    <key name="show-upstream-with-branch" type="b">
+      <default>true</default>
+      <summary>Show Upstream With Branch</summary>
+      <description>
+         Determines whether to also show the upstream (remote) tracking branch when
+         selecting a local branch in the history view.
+      </description>
+    </key>
+    <key name="filter-unknown-refs" type="b">
+      <default>false</default>
+      <summary>Filter unknown refs</summary>
+      <description>
+         Hide any ref different from refs/heads and refs/remotes.
+      </description>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.branch" path="@SCHEMA_PATH@/preferences/branch/">
+    <key name="checkout-created-branch" type="b">
+      <default>true</default>
+      <summary>Switch to the new branch on creation</summary>
+      <description>
+        Setting that controls whether the newly created branch is checked out automatically.
+      </description>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.commit" path="@SCHEMA_PATH@/preferences/commit/">
+    <child name="message" schema="@APPLICATION_ID@.preferences.commit.message" />
+    <child name="diff" schema="@APPLICATION_ID@.preferences.commit.diff" />
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.commit.message" path="@SCHEMA_PATH@/preferences/commit/message/">
+    <key name="show-markup" type="b">
+      <default>true</default>
+    </key>
+    <key name="show-right-margin" type="b">
+      <default>true</default>
+      <summary>Show Right Margin in Commit Message View</summary>
+      <description>
+        Show a right margin indicator in the commit message view.
+        This can be used to easily see where to break the commit message at
+        a particular column.
+      </description>
+    </key>
+    <key name="right-margin-position" type="i">
+      <default>72</default>
+      <summary>Column at Which Right Margin is Shown</summary>
+      <description>
+        The column at which the right margin is shown if the show-right-margin
+        preference is set to TRUE.
+      </description>
+    </key>
+    <key name="show-subject-margin" type="b">
+      <default>true</default>
+      <summary>Show Subject Margin in Commit Message View</summary>
+      <description>
+        Highlight the subject text of the commit message when it passes the
+        margin specified by subject-margin-position.
+      </description>
+    </key>
+    <key name="subject-margin-position" type="i">
+      <default>50</default>
+      <summary>Column at Which Subject Margin is Shown</summary>
+      <description>
+        The column at which the subject margin is shown if the show-subject-margin
+        preference is set to TRUE.
+      </description>
+    </key>
+    <key name="enable-spell-checking" type="b">
+      <default>true</default>
+      <summary>Enable Spell Checking</summary>
+      <description>
+        Setting which determines whether or not spell checking is enabled
+        when writing a commit message.
+      </description>
+    </key>
+    <key name="spell-checking-language" type="s">
+      <default>''</default>
+      <summary>Spell Checking Language</summary>
+      <description>
+        The language to use when spell checking is enabled for writing a
+        commit message.
+      </description>
+    </key>
+    <key name="max-number-commit-messages" type="i">
+      <default>10</default>
+      <summary>Maximum number of previous commit messages</summary>
+      <description>Maximum number of previous commit messages to store for commit message history.</description>
+    </key>
+    <key name="max-number-days-commit-messages" type="i">
+      <default>30</default>
+      <summary>Maximum number of days to store previous commit messages</summary>
+      <description>Maximum number of days to store previous commit messages for commit message history.</description>
+    </key>
+    <key name="datetime-selection" type="s">
+      <default>'predefined'</default>
+      <summary>Type of datetime format selected.</summary>
+      <description>
+        Type of datetime format selected.
+      </description>
+    </key>
+    <key name="predefined-datetime" type="s">
+      <default>'%Y-%m-%dT%R%z'</default>
+      <summary>Preferred datetime format of the user.</summary>
+      <description>
+      The datetime format to be used in commit-diff.
+      </description>
+    </key>
+    <key name="custom-datetime" type="s">
+      <default>''</default>
+      <summary>Custom datetime format.</summary>
+      <description>
+      Custom datetime format.
+      </description>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.diff" path="@SCHEMA_PATH@/preferences/diff/">
+    <key name="patience" type="b">
+      <default>false</default>
+      <summary>Use patience algorithm to show diffs</summary>
+      <description>
+         Setting to use patience algorithm to show diffs of a commit.
+      </description>
+    </key>
+    <key name="ignore-whitespace" type="b">
+      <default>false</default>
+      <summary>Ignore Whitespace Changes</summary>
+      <description>
+         Setting that indicates whether to ignore whitespace changes when showing
+         the diff of a commit.
+      </description>
+    </key>
+    <key name="changes-inline" type="b">
+      <default>false</default>
+      <summary>Show Changes Inline</summary>
+      <description>
+         Setting that indicates whether changes within lines should be shown
+         inline.
+      </description>
+    </key>
+    <key name="wrap" type="b">
+      <default>false</default>
+      <summary>Wrap</summary>
+      <description>
+         Wrap lines.
+      </description>
+    </key>
+    <key name="context-lines" type="i">
+      <default>3</default>
+      <summary>Number of Before/After Context Lines</summary>
+      <description>
+         Setting that determines how many lines of context (before and after)
+         should be shown when showing the diff of a commit.
+      </description>
+    </key>
+    <key name="tab-width" type="i">
+      <default>4</default>
+      <summary>Rendered Width of a Tab Character</summary>
+      <description>
+         Setting that determines how much space a tab character should occupy
+         when showing the diff of a commit.
+      </description>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.preferences.commit.diff" path="@SCHEMA_PATH@/preferences/commit/diff/">
+    <key name="context-lines" type="i">
+      <default>3</default>
+      <summary>Number of Before/After Context Lines</summary>
+      <description>
+         Setting that determines how many lines of context (before and after)
+         should be shown when showing the diff to be staged/unstaged in the
+         commit area.
+      </description>
+    </key>
+    <key name="tab-width" type="i">
+      <default>4</default>
+      <summary>Rendered Width of a Tab Character</summary>
+      <description>
+         Setting that determines how much space a tab character should occupy
+         when showing the diff of a commit.
+      </description>
+    </key>
+  </schema>
+  <schema id="@APPLICATION_ID@.state" path="@SCHEMA_PATH@/state/">
+    <child name="window" schema="@APPLICATION_ID@.state.window"/>
+    <child name="history" schema="@APPLICATION_ID@.state.history"/>
+    <child name="commit" schema="@APPLICATION_ID@.state.commit"/>
+  </schema>
+  <schema id="@APPLICATION_ID@.state.window" path="@SCHEMA_PATH@/state/window/">
+    <key name="state" type="i">
+      <default>0</default>
+    </key>
+    <key name="size" type="(ii)">
+      <default>(650, 500)</default>
+    </key>
+    <key name="hpaned-commit1-position" type="i">
+      <default>200</default>
+    </key>
+    <key name="hpaned-commit2-position" type="i">
+      <default>200</default>
+    </key>
+    <key name="vpaned-commit-position" type="i">
+      <default>200</default>
+    </key>
+    <key name="revision-tree-view-position" type="i">
+      <default>200</default>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.state.history" path="@SCHEMA_PATH@/state/history/">
+    <key name="paned-sidebar-position" type="i">
+      <default>200</default>
+    </key>
+    <key name="paned-panels-position" type="i">
+      <default>450</default>
+    </key>
+  </schema>
+  <schema gettext-domain="@GETTEXT_PACKAGE@" id="@APPLICATION_ID@.state.commit" path="@SCHEMA_PATH@/state/commit/">
+    <key name="paned-sidebar-position" type="i">
+      <default>200</default>
+    </key>
+    <key name="sign-off" type="b">
+      <default>false</default>
+    </key>
+    <key name="sign-commit" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+</schemalist>

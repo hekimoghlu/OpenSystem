@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="SysprofCallgraphView" parent="GtkWidget">
+    <child>
+      <object class="PanelPaned" id="paned">
+        <child>
+          <object class="PanelPaned">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkScrolledWindow" id="functions_scrolled_window">
+                    <property name="vexpand">true</property>
+                    <property name="propagate-natural-width">true</property>
+                    <property name="hscrollbar-policy">never</property>
+                    <property name="width-request">300</property>
+                    <child>
+                      <object class="GtkColumnView" id="functions_column_view">
+                        <child>
+                          <object class="GtkColumnViewColumn" id="functions_name_column">
+                            <property name="title" translatable="yes">Functions</property>
+                            <property name="expand">true</property>
+                            <property name="sorter">
+                              <object class="GtkCustomSorter" id="functions_name_sorter">
+                              </object>
+                            </property>
+                            <property name="factory">
+                              <object class="GtkBuilderListItemFactory">
+                                <property name="bytes"><![CDATA[
+    <?xml version="1.0" encoding="UTF-8"?>
+    <interface>
+      <template class="GtkListItem">
+        <property name="child">
+          <object class="GtkInscription">
+            <property name="text-overflow">clip</property>
+            <property name="nat-chars">15</property>
+            <property name="xalign">.0</property>
+            <binding name="text">
+              <lookup name="name">
+                <lookup name="symbol" type="SysprofCallgraphSymbol">
+                  <lookup name="item">GtkListItem</lookup>
+                </lookup>
+              </lookup>
+            </binding>
+            <binding name="tooltip-text">
+              <lookup name="name">
+                <lookup name="symbol" type="SysprofCallgraphSymbol">
+                  <lookup name="item">GtkListItem</lookup>
+                </lookup>
+              </lookup>
+            </binding>
+          </object>
+        </property>
+      </template>
+    </interface>
+      ]]>
+                                </property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <child>
+                      <object class="GtkSearchEntry" id="filter_search_entry">
+                        <property name="placeholder-text" translatable="yes">Filter Functions</property>
+                        <property name="margin-top">3</property>
+                        <property name="margin-bottom">3</property>
+                        <property name="margin-start">3</property>
+                        <property name="margin-end">3</property>
+                        <property name="hexpand">true</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="callers_scrolled_window">
+                <property name="hscrollbar-policy">never</property>
+                <property name="min-content-height">150</property>
+                <child>
+                  <object class="GtkColumnView" id="callers_column_view">
+                    <style>
+                      <class name="data-table"/>
+                    </style>
+                    <child>
+                      <object class="GtkColumnViewColumn" id="callers_name_column">
+                        <property name="title" translatable="yes">Callers</property>
+                        <property name="expand">true</property>
+                        <property name="factory">
+                          <object class="GtkBuilderListItemFactory">
+                            <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="GtkInscription">
+        <property name="text-overflow">ellipsize-middle</property>
+        <property name="xalign">.0</property>
+        <binding name="text">
+          <lookup name="name">
+            <lookup name="symbol" type="SysprofCallgraphSymbol">
+              <lookup name="item">GtkListItem</lookup>
+            </lookup>
+          </lookup>
+        </binding>
+        <binding name="tooltip-text">
+          <lookup name="name">
+            <lookup name="symbol" type="SysprofCallgraphSymbol">
+              <lookup name="item">GtkListItem</lookup>
+            </lookup>
+          </lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>
+]]></property>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow" id="descendants_scrolled_window">
+            <property name="hexpand">true</property>
+            <property name="propagate-natural-height">true</property>
+            <child>
+              <object class="GtkColumnView" id="descendants_column_view">
+                <style>
+                  <class name="data-table"/>
+                </style>
+                <child>
+                  <object class="GtkColumnViewColumn" id="descendants_column">
+                    <property name="title" translatable="yes">Descendants</property>
+                    <property name="expand">true</property>
+                    <property name="sorter">
+                      <object class="GtkCustomSorter" id="descendants_name_sorter">
+                      </object>
+                    </property>
+                    <property name="factory">
+                      <object class="GtkBuilderListItemFactory">
+                        <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="SysprofTreeExpander" id="expander">
+        <property name="focusable">true</property>
+        <binding name="menu-model">
+          <lookup name="descendant-menu" type="SysprofApplication">
+            <lookup name="application" type="GtkWindow">
+              <lookup name="root">expander</lookup>
+            </lookup>
+          </lookup>
+        </binding>
+        <property name="has-tooltip">true</property>
+        <binding name="tooltip-text">
+          <lookup name="tooltip-text" type="SysprofSymbol">
+            <lookup name="symbol" type="SysprofCallgraphFrame">
+              <lookup name="item">expander</lookup>
+            </lookup>
+          </lookup>
+        </binding>
+        <child>
+          <object class="GtkShortcutController">
+            <property name="propagation-phase">capture</property>
+            <child>
+              <object class="GtkShortcut">
+                <property name="trigger">Right</property>
+                <property name="action">action(listitem.expand)</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcut">
+                <property name="trigger">space</property>
+                <property name="action">action(listitem.expand)</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcut">
+                <property name="trigger">Left</property>
+                <property name="action">action(listitem.collapse)</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <binding name="list-row">
+          <lookup name="item">GtkListItem</lookup>
+        </binding>
+        <property name="child">
+          <object class="GtkBox">
+            <property name="hexpand">true</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="SysprofSymbolLabel">
+                <property name="hexpand">true</property>
+                <binding name="symbol">
+                  <lookup name="symbol" type="SysprofCallgraphFrame">
+                    <lookup name="item">expander</lookup>
+                  </lookup>
+                </binding>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">end</property>
+                <property name="hexpand">false</property>
+                <property name="single-line-mode">true</property>
+                <property name="ellipsize">none</property>
+                <style>
+                  <class name="dim-label"/>
+                </style>
+                <attributes>
+                  <attribute name="scale" value="0.8333"/>
+                </attributes>
+                <binding name="label">
+                  <lookup name="binary-nick" type="SysprofSymbol">
+                    <lookup name="symbol" type="SysprofCallgraphFrame">
+                      <lookup name="item">expander</lookup>
+                    </lookup>
+                  </lookup>
+                </binding>
+              </object>
+            </child>
+            <child>
+              <object class="SysprofCategoryIcon">
+                <property name="width-request">9</property>
+                <property name="height-request">9</property>
+                <property name="valign">center</property>
+                <property name="halign">center</property>
+                <binding name="category">
+                  <lookup name="category" type="SysprofCallgraphFrame">
+                    <lookup name="item">expander</lookup>
+                  </lookup>
+                </binding>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </property>
+  </template>
+</interface>
+]]></property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+  <object class="GtkStringFilter" id="function_filter">
+    <property name="match-mode">substring</property>
+    <property name="expression">
+      <lookup name="name" type="SysprofSymbol">
+        <lookup name="symbol" type="SysprofCallgraphSymbol"/>
+      </lookup>
+    </property>
+    <binding name="search">
+      <lookup name="text">filter_search_entry</lookup>
+    </binding>
+  </object>
+</interface>

@@ -1,0 +1,182 @@
+2014-02-11  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.10
+
+2014-02-07  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): Disallow array formula
+	entry on top of merged cells.  Fixes #723600.
+
+2014-02-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-component.c (destroy_cb), (gnm_soc_user_config):
+	a better fix to previous issue.
+
+2014-01-30  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): Tentatively request small
+	toolbar icons.
+
+	* src/item-cursor.c (item_cursor_draw): Make the ant animation
+	smoother (when not using the fallback).  Avoid using hard light
+	for ant-ing -- that doesn't work for the same reason as alpha not
+	working.  Always use phase=0 for non-ant stipples.
+	(GnmItemCursor): Use the canvas item's visibility flag instead of
+	rolling our own.
+
+2014-01-29  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init): Add style classes for toolbar zones.
+
+	* src/item-cursor.c (cb_item_cursor_animation): Do a run-time
+	check for bad clipping somewhere in gtk+ or theme land.
+
+2014-01-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-component.c (gnm_soc_user_config): release the new
+	component reference to the workbook.
+
+2014-01-27  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_dump_defs): Undo wiki change.
+
+2014-01-21  Morten Welinder  <terra@gnome.org>
+
+	* src/item-cursor.c (cb_item_cursor_animation): Drastically lower
+	the amount of work we do for ant-ing.  Fixes #381011, patch from
+	Jean.
+	(ic_reload_style): Ignore alpha component of ant colours.
+
+2014-01-17  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_load_len),
+	(gnm_go_data_vector_load_values): accept 3D values for vector data.
+	[#722294]
+
+2014-01-16  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_adjust_foreground_attributes): Renamed from
+	cb_darken_foreground_attributes and change to take non-white
+	background into account.
+
+2014-01-12  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (expmx2h): Split out from dnorm.
+	(dhyper): Round the chosen "p" to float to improve accuracy of
+	"q".
+
+2014-01-11  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pow1p): Improve accuracy.
+	(R_D_nonint): Fix rounding problem.
+	(ebd0): New extended version of bd0.
+	(dpois_raw, dbinom_raw): Use ebd0.
+	(dbinom_raw): Handle x==n and x==0 much better.
+
+2014-01-08  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (cb_file_sendto): Simplify using
+	g_mkdtemp_full.
+
+	* src/mathfunc.c (dpois_raw): Detect underflow in direct formula.
+
+	* src/gui-file.h: Namespace improvements.  Also make gui_file_read
+	return the WorkbookView instead of a boolean.
+
+2014-01-01  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-dpq.c (dlnorm): Go crazy with accuracy.
+
+2013-12-31  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-dpq.c (pfuncinverter, discpfuncinverter): Extract from
+	mathfunc.c
+
+2013-12-30  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (dnorm): Improve accuracy for x>5 (normalized).
+	(bd0): Reimplement.
+	(dpois_raw): Avoid going through logs, if possible.
+
+2013-12-25  Morten Welinder  <terra@gnome.org>
+
+	* src/item-grid.c (cb_cursor_come_to_rest): Clear ->tip_timer when
+	we return FALSE so we don't try to remove the source later.
+
+2013-12-22  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnm_widget_measure_string): New function
+	allowing the elimination of all gtk_style_context_get_font calls.
+
+2013-12-19  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-gamma.c (qfactf): Squeeze a few extra bits out of this,
+	especially when |x|<<1.  Ditto for x<-1.
+
+2013-12-17  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-gamma.c (complex_gamma): Turn a complex division into a
+	multiplication.
+
+2013-12-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-gamma.c (complex_igamma): New function.
+
+2013-12-12  Mario Rugiero  <mrugiero@gmail.com>
+
+	* */*.c: Fix some leaks and null dereferences pointed out by
+	cppcheck.
+
+2013-12-12  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (array_row): Avoid overrunning string when multiple
+	missing closing parentheses are detected.  Fixes #720353.
+
+2013-12-11  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_popup_menu): Use the screen from
+	gdk_event_get_screen, not from ->screen.  This might fix #720182.
+
+	* src/*.c: Use accessor function for GdkEvent when convenient.
+
+2013-12-07  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_init): Don't allocate a
+	GtkRecentManager if we are not in gui mode.
+
+	* src/position.c (gnm_cellref_hash): Avoid undefined signed integer
+	behaviour.
+	* src/dependent.c (deprange_hash): Ditto.
+
+2013-12-04  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-gamma.c (gamma_error_factor): Add extra term.
+
+2013-12-07  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-gamma.c (qgammaf): Avoid losing the least significant bit
+	of the argument for [-1.5;-0.5].
+
+	* src/complex.c (complex_fact): Avoid infinite recursion for 0 <
+	Re z < 1/2.  Avoid some overflow.
+
+2013-12-02  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-bessel.c (bessel_y): Use the J series when possible.
+
+2013-12-07  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-bessel.c (bessel_j): Use the taylor series in the
+	parameter range where that makes sense.
+
+	* src/sf-gamma.c (gnm_lbeta3): Improve accuracy.
+	(gnm_beta): Ditto.
+
+2013-11-30  Morten Welinder  <terra@gnome.org>
+
+	* src/sf-gamma.c (pochhammer): Drop give_log arguments.  Extend to
+	negative values.
+
+2013-11-28  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

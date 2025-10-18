@@ -1,0 +1,273 @@
+/* Copyright (C) 2010 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/buildable.h>
+#include <gtkmm/cellareacontext.h>
+#include <gtkmm/celllayout.h>
+#include <glibmm/object.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/object_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+class GTKMM_API Snapshot;
+
+/** An abstract base class for laying out CellRenderers.
+ *
+ * This is an abstract base class for CellLayout widgets
+ * (also referred to as "layouting widgets") to interface with an
+ * arbitrary number of CellRenderers and interact with the user
+ * for a given TreeModel row.
+ *
+ * The cell area handles events, focus navigation, drawing and
+ * size requests and allocations for a given row of data.
+ *
+ * Usually users dont have to interact with the CellArea directly
+ * unless they are implementing a cell layouting widget themselves.
+ *
+ * <h2>Requesting area sizes</h2>
+ *
+ * As outlined in Gtk::Widget's
+ * geometry management description, GTK+ uses a height-for-width
+ * geometry management system to compute the sizes of widgets and user
+ * interfaces. CellArea uses the same semantics to calculate the
+ * size of an area for an arbitrary number of TreeModel rows.
+ *
+ * When requesting the size of a cell area one needs to calculate
+ * the size for a handful of rows, and this will be done differently by
+ * different layouting widgets. For instance a TreeViewColumn
+ * always lines up the areas from top to bottom while an IconView,
+ * on the other hand, might enforce that all areas received the same
+ * width and wrap the areas around, requesting height for more cell
+ * areas when allocated less width.
+ *
+ * It's also important for areas to maintain some cell
+ * alignments with areas rendered for adjacent rows (cells can
+ * appear "columnized" inside an area even when the size of
+ * cells are different in each row). For this reason the CellArea
+ * uses a CellAreaContext object to store the alignments
+ * and sizes along the way (as well as the overall largest minimum
+ * and natural size for all the rows which have been calculated
+ * with the said context).
+ *
+ * The CellAreaContext is an opaque object specific to the
+ * CellArea which created it (see CellArea::create_context()).
+ * The owning cell-layouting widget can create as many contexts as
+ * it wishes to calculate sizes of rows which should receive the
+ * same size in at least one orientation (horizontally or vertically).
+ * However, it's important that the same CellAreaContext which
+ * was used to request the sizes for a given TreeModel row be
+ * used when rendering or processing events for that row.
+ *
+ * <h2>Cell Properties</h2>
+ *
+ * The CellArea introduces cell properties for CellRenderers.
+ * This provides some general interfaces for defining
+ * the relationship cell areas have with their cells. For instance in a
+ * CellAreaBox a cell might “expand” and receive extra space when
+ * the area is allocated more than its full natural request, or a cell
+ * might be configured to “align” with adjacent rows which were requested
+ * and rendered with the same CellAreaContext.
+ *
+ * To set the value of a cell property, use cell_set_property(). To obtain
+ * the value of a cell property, use cell_get_property().
+ *
+ * @newin{3,0}
+ * @deprecated 4.10: List views use widgets for displaying their contents.
+ */
+class GTKMM_API CellArea
+  : public Glib::Object,
+    public Buildable,
+    public CellLayout
+{
+  _CLASS_GOBJECT(CellArea, GtkCellArea, GTK_CELL_AREA, Glib::Object, GObject, , , GTKMM_API)
+  _DERIVES_INITIALLY_UNOWNED()
+  _IMPLEMENTS_INTERFACE(Buildable)
+  _IMPLEMENTS_INTERFACE(CellLayout)
+
+protected:
+  _CTOR_DEFAULT
+public:
+
+  _WRAP_METHOD(void add(CellRenderer& renderer), gtk_cell_area_add)
+  _WRAP_METHOD(void remove(CellRenderer& renderer), gtk_cell_area_remove)
+  _WRAP_METHOD(bool has_renderer(CellRenderer& renderer), gtk_cell_area_has_renderer)
+
+  /** For instance,
+   * bool on_foreach(Gtk::CellRenderer* renderer);
+   *
+   * @param renderer the cell renderer to operate on
+   * @returns true to stop iterating over cells.
+   *
+   * @newin{3,4}
+   */
+  typedef sigc::slot<bool(CellRenderer*)> SlotForeach;
+
+  /** Calls the @a slot for every CellRenderer in the CellArea.
+   *
+   * @param slot The slot to call for every CellRenderer.
+   *
+   * @newin{3,4}
+   */
+  void foreach(const SlotForeach& slot);
+  _IGNORE(gtk_cell_area_foreach)
+
+
+  /** For instance,
+   * bool on_foreach(Gtk::CellRenderer* renderer, const Gdk::Rectangle& cell_area, const Gdk::Rectangle& background_area);
+   *
+   * @param renderer the cell renderer to operate on
+   * @param cell_area the area allocated to the @a renderer inside the rectangle provided to foreach().
+   * @param background_area The background area for the @a renderer inside the background area provided to foreach().
+   * @returns true to stop iterating over cells.
+   *
+   * @newin{3,4}
+   */
+  typedef sigc::slot<bool(CellRenderer*, const Gdk::Rectangle&, const Gdk::Rectangle&)> SlotForeachAlloc;
+
+  /** Calls the @a slot for every CellRenderer in the CellArea
+   * with the allocated rectangle inside the @a cell_area rectangle.
+   *
+   * @param context The CellAreaContext for this row of data.
+   * @param widget The widget that the CellArea is rendering to.
+   * @param cell_area The widget-relative coordinates and size for the CellArea.
+   * @param background_area The widget-relative coordinates of the background area.
+   *
+   * @param slot The slot to call for every CellRenderer.
+   *
+   * @newin{3,4}
+   */
+  void foreach(const Glib::RefPtr<CellAreaContext>& context, Widget* widget, const Gdk::Rectangle& cell_area, const Gdk::Rectangle& background_area, const SlotForeachAlloc& slot);
+  _IGNORE(gtk_cell_area_foreach_alloc)
+
+  _WRAP_METHOD(int event(const Glib::RefPtr<CellAreaContext>& context, Widget& widget,
+    const Glib::RefPtr<const Gdk::Event>& gdk_event, const Gdk::Rectangle& cell_area,
+    GtkCellRendererState flags), gtk_cell_area_event)
+
+  _WRAP_METHOD(void snapshot(const Glib::RefPtr<CellAreaContext>& context, Widget& widget,
+     const Glib::RefPtr<Gtk::Snapshot>& snapshot, const Gdk::Rectangle& background_area, const Gdk::Rectangle& cell_area,
+     CellRendererState flags,  bool paint_focus), gtk_cell_area_snapshot)
+
+  _WRAP_METHOD(void get_cell_allocation(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, CellRenderer& renderer,  const Gdk::Rectangle& cell_area, Gdk::Rectangle& allocation), gtk_cell_area_get_cell_allocation)
+
+  _WRAP_METHOD(CellRenderer* get_cell_at_position(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, const Gdk::Rectangle& cell_area, int x, int y, Gdk::Rectangle& alloc_area), gtk_cell_area_get_cell_at_position)
+  _WRAP_METHOD(const CellRenderer* get_cell_at_position(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, const Gdk::Rectangle& cell_area, int x, int y, Gdk::Rectangle& alloc_area) const, gtk_cell_area_get_cell_at_position, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<CellAreaContext> create_context() const, gtk_cell_area_create_context)
+
+  _WRAP_METHOD(Glib::RefPtr<CellAreaContext> copy_context(const Glib::RefPtr<const CellAreaContext>& context), gtk_cell_area_copy_context)
+
+  _WRAP_METHOD(SizeRequestMode get_request_mode() const, gtk_cell_area_get_request_mode)
+  _WRAP_METHOD(void get_preferred_width(const Glib::RefPtr<CellAreaContext>& context,  Widget& widget,  int& minimum_width, int& natural_width), gtk_cell_area_get_preferred_width)
+  _WRAP_METHOD(void get_preferred_height_for_width (const Glib::RefPtr<CellAreaContext>& context,  Widget& widget,  int width,  int& minimum_height, int& natural_height), gtk_cell_area_get_preferred_height_for_width)
+  _WRAP_METHOD(void get_preferred_height( const Glib::RefPtr<CellAreaContext>& context, Widget& widget,  int& minimum_height, int& natural_height), gtk_cell_area_get_preferred_height)
+  _WRAP_METHOD(void get_preferred_width_for_height(const Glib::RefPtr<CellAreaContext>& context, Widget& widget,  int height,  int& minimum_width, int& natural_width), gtk_cell_area_get_preferred_width_for_height)
+  _WRAP_METHOD(Glib::ustring get_current_path_string () const, gtk_cell_area_get_current_path_string)
+
+
+  _WRAP_METHOD(void apply_attributes(const Glib::RefPtr<TreeModel>& tree_model, const TreeModel::iterator& iter,  bool is_expander, bool is_expanded), gtk_cell_area_apply_attributes)
+  _WRAP_METHOD(void attribute_connect(CellRenderer& renderer, const Glib::ustring& attribute, int column), gtk_cell_area_attribute_connect)
+  _WRAP_METHOD(void attribute_disconnect(CellRenderer& renderer, const Glib::ustring& attribute), gtk_cell_area_attribute_disconnect)
+
+  _WRAP_METHOD(int attribute_get_column(CellRenderer& renderer,const Glib::ustring& attribute) const, gtk_cell_area_attribute_get_column)
+
+  //Ignore the C convenience functions.
+  _IGNORE(gtk_cell_area_cell_set, gtk_cell_area_cell_get, gtk_cell_area_cell_set_valist, gtk_cell_area_cell_get_valist)
+  _IGNORE(gtk_cell_area_add_with_properties)dnl// deprecated
+
+  _WRAP_METHOD(void cell_set_property(CellRenderer& renderer, const Glib::ustring& property_name, const Glib::ValueBase& value), gtk_cell_area_cell_set_property)
+  _WRAP_METHOD(void cell_get_property(CellRenderer& renderer, const Glib::ustring& property_name, Glib::ValueBase& value), gtk_cell_area_cell_get_property)
+
+  _WRAP_METHOD(bool is_activatable() const, gtk_cell_area_is_activatable)
+  _WRAP_METHOD(bool activate(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, const Gdk::Rectangle& cell_area, CellRendererState flags, bool edit_only), gtk_cell_area_activate)
+  _WRAP_METHOD(bool focus(DirectionType direction), gtk_cell_area_focus)
+  _WRAP_METHOD(void set_focus_cell(CellRenderer& renderer), gtk_cell_area_set_focus_cell)
+
+  _WRAP_METHOD(CellRenderer* get_focus_cell(), gtk_cell_area_get_focus_cell)
+  _WRAP_METHOD(const CellRenderer* get_focus_cell() const, gtk_cell_area_get_focus_cell, constversion)
+
+  _WRAP_METHOD(void add_focus_sibling(CellRenderer& renderer, CellRenderer& sibling), gtk_cell_area_add_focus_sibling)
+  _WRAP_METHOD(void remove_focus_sibling( CellRenderer& renderer, CellRenderer& sibling), gtk_cell_area_remove_focus_sibling)
+  _WRAP_METHOD(bool is_focus_sibling(CellRenderer& renderer,  CellRenderer& sibling), gtk_cell_area_is_focus_sibling)
+
+
+#m4 _CONVERSION(`const GList*',`std::vector<CellRenderer*>',`Glib::ListHandler<CellRenderer*>::list_to_vector(const_cast<GList*>($3), Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<CellRenderer*> get_focus_siblings(CellRenderer& renderer), gtk_cell_area_get_focus_siblings)
+
+#m4 _CONVERSION(`const GList*',`std::vector<const CellRenderer*>',`Glib::ListHandler<const CellRenderer*>::list_to_vector(const_cast<GList*>($3), Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<const CellRenderer*> get_focus_siblings(const CellRenderer& renderer) const, gtk_cell_area_get_focus_siblings)
+
+  _WRAP_METHOD(CellRenderer* get_focus_from_sibling(CellRenderer& renderer), gtk_cell_area_get_focus_from_sibling)
+  _WRAP_METHOD(const CellRenderer* get_focus_from_sibling(CellRenderer& renderer) const, gtk_cell_area_get_focus_from_sibling, constversion)
+
+  _WRAP_METHOD(CellRenderer* get_edited_cell(), gtk_cell_area_get_edited_cell)
+  _WRAP_METHOD(const CellRenderer* get_edited_cell() const, gtk_cell_area_get_edited_cell, constversion)
+
+  _WRAP_METHOD(CellEditable* get_edit_widget(), gtk_cell_area_get_edit_widget)
+  _WRAP_METHOD(const CellEditable* get_edit_widget() const, gtk_cell_area_get_edit_widget, constversion)
+
+  _WRAP_METHOD(bool activate_cell(Widget& widget, CellRenderer& renderer,
+    const Glib::RefPtr<const Gdk::Event>& gdk_event, const Gdk::Rectangle& cell_area,
+    CellRendererState flags), gtk_cell_area_activate_cell)
+  _WRAP_METHOD(void stop_editing(bool canceled), gtk_cell_area_stop_editing)
+
+  _WRAP_METHOD(void inner_cell_area(Widget& widget, const Gdk::Rectangle& cell_area, Gdk::Rectangle& inner_area), gtk_cell_area_inner_cell_area)
+
+  _WRAP_METHOD(void request_renderer(CellRenderer& renderer, Orientation orientation, Widget& widget, int for_size, int& minimum_size, int& natural_size), gtk_cell_area_request_renderer)
+
+protected:
+  #m4 _CONVERSION(`GtkCellAreaContext*',`const Glib::RefPtr<CellAreaContext>&',`Glib::wrap($3, true)')
+#m4 _CONVERSION(`GtkTreeModel*',`const Glib::RefPtr<TreeModel>&',`Glib::wrap($3, true)')
+#m4 _CONVERSION(`GtkTreeIter*',`const TreeModel::iterator&',`Gtk::TreeModel::iterator(p0, $3)')
+  _WRAP_SIGNAL(void apply_attributes(const Glib::RefPtr<TreeModel>& tree_model, const TreeModel::iterator& iter, bool is_expander, bool is_expanded), "apply-attributes")
+
+  // The add-editable, remove-editable and focus-changed signals can't have default handlers because the wrapped C signals have no default handlers.
+#m4 _CONVERSION(`GdkRectangle*',`const Gdk::Rectangle&',`Glib::wrap($3)')
+  _WRAP_SIGNAL(void add_editable(CellRenderer* renderer, CellEditable* editable, const Gdk::Rectangle& cell_area, const Glib::ustring& path), "add-editable", no_default_handler)
+
+  _WRAP_SIGNAL(void remove_editable(CellRenderer* renderer, CellEditable* editable), "remove-editable", no_default_handler)
+  _WRAP_SIGNAL(void focus_changed(CellRenderer* renderer, const Glib::ustring& path), "focus-changed", no_default_handler)
+
+#m4 _CONVERSION(`GtkSnapshot*',`const Glib::RefPtr<Gtk::Snapshot>&',`Glib::wrap_gtk_snapshot($3, true)')
+#m4 _CONVERSION(`const GdkRectangle*',`const Gdk::Rectangle&',`Glib::wrap($3)')
+  _WRAP_VFUNC(void snapshot(const Glib::RefPtr<CellAreaContext>& context, Widget& widget,
+     const Glib::RefPtr<Gtk::Snapshot>& snapshot, const Gdk::Rectangle& background_area, const Gdk::Rectangle& cell_area,
+     CellRendererState flags,  bool paint_focus), snapshot)
+
+//TODO: Wrap these vfuncs, mentioned in the GtkCellAreaContext overview documentation?
+//  GtkCellAreaContext *(* create_context)                 (GtkCellArea             *area);
+//  GtkCellAreaContext *(* copy_context)                   (GtkCellArea             *area,
+
+  _WRAP_VFUNC(SizeRequestMode get_request_mode() const, get_request_mode)
+  _WRAP_VFUNC(void get_preferred_width(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, int& minimum_width, int& natural_width), get_preferred_width, custom_vfunc_callback)
+  _WRAP_VFUNC(void get_preferred_height_for_width(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, int width, int& minimum_height, int& natural_height), get_preferred_height_for_width, custom_vfunc_callback)
+  _WRAP_VFUNC(void get_preferred_height(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, int& minimum_height, int& natural_height), get_preferred_height, custom_vfunc_callback)
+  _WRAP_VFUNC(void get_preferred_width_for_height(const Glib::RefPtr<CellAreaContext>& context, Widget& widget, int height, int& minimum_width, int& natural_width), get_preferred_width_for_height, custom_vfunc_callback)
+
+  _WRAP_PROPERTY("focus-cell", CellRenderer*)
+  _WRAP_PROPERTY("edited-cell", CellRenderer*)
+  _WRAP_PROPERTY("edit-widget", CellEditable*)
+};
+
+} // namespace Gtk

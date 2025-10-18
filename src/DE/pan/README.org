@@ -1,0 +1,333 @@
+* Content                                                               :TOC:
+- [[#pan---a-gnome-newsreader][Pan - A GNOME Newsreader]]
+  - [[#the-sales-pitch][The sales pitch]]
+  - [[#using-pan][Using Pan]]
+  - [[#release-notes][Release Notes]]
+  - [[#requirements][Requirements]]
+- [[#installation][Installation]]
+  - [[#cleanup-autotools-remnants][Cleanup autotools remnants]]
+  - [[#standard-build][Standard build]]
+  - [[#installation-1][Installation]]
+  - [[#build-options][Build options]]
+  - [[#debug-build][Debug build]]
+  - [[#running-pan][Running pan]]
+  - [[#cc-language-server-support][CC++ language server support]]
+- [[#tls-support][TLS support]]
+- [[#upgrading][Upgrading]]
+- [[#how-to-report-bugs][How to report bugs]]
+- [[#help-wanted][Help Wanted]]
+- [[#contact][Contact]]
+  - [[#mailing-lists][Mailing lists]]
+  - [[#newsgroups][Newsgroups]]
+- [[#links][Links]]
+
+* Pan - A GNOME Newsreader
+
+This is Pan, a powerful and user-friendly Usenet newsreader for GTK.
+The latest information and versions of Pan can always be found at
+[[https://gitlab.gnome.org/GNOME/pan][Pan website]].
+
+** The sales pitch
+
+Pan is good for Reading News.
+
+- Pan is the only Unix newsreader to score 100% on the Good
+  Net-Keeping Seal of Approval newsreader evaluations.
+- Pan has keyboard bindings for mouse-free newsreading.
+- Basic newsreader features, such as reading and writing news,
+  threading articles, and replying via email, are supported.
+- Articles can be sorted by author, date, subject, or the number of
+  unread children in the thread.
+- Multiple connections are supported, so articles can be read while
+  binaries are downloading.
+- Articles can be filtered by regular expression matching, read/unread
+  state, binary/text, etc.
+- Works well as an offline reader.
+- Articles can be queued until you want to go online, and can be
+  re-edited at any point before they're posted.
+- A flexible rules system allows you to delete, hide, download, or
+  notify you of, etc. articles that match a subject, or are posted by
+  a particular user, and so on.
+- The same system can be used to define automatic actions on behalf of
+  the user: auto-download, auto-cache, auto-delete etc.
+- Groups can be filtered by regular expression matching
+  subscribed/new/all, etc.
+
+Pan is good at Binaries.
+
+- Attached images can be shown inline.
+- Pan can download and thread articles as quickly as bandwidth allows.
+- uuencode, MIME, and yEnc attachments are all supported.
+- A task manager lets you reorder, cancel, and resubmit download tasks.
+- Multiple connections are supported, so many binaries can
+  be downloaded simultaneously.
+- Multipart articles are automatically grouped together.
+- Non-binary, incomplete multipart, and saved messages can be filtered
+  out of the article list.
+- Files can be attached to a Usenet article and are
+  automatically encrypted with yEnc, threaded and referenced by Pan.
+- Articles can be encrypted or signed with a public or private PGP key
+  for enhanced privacy and security.
+- Connections can be encrypted with the TLS protocol.
+
+** Using Pan
+
+See [[file:docs/manual.org][Pan user manual]]
+
+** Release Notes
+
+- You are advised to back up your $PAN_HOME directory (by default,
+  =$HOME/.pan2=) before upgrading Pan.
+- If you have previously been using a localhost server with stunnel and
+  you now want to connect directly to a news server using the actual
+  server address, do not create a new configuration entry for the
+  server. Pan treats a new entry as a new server and does not preserve
+  existing data on your subscribed groups, even though you are
+  connecting to the very same server as before. Always edit the existing
+  server configuration to preserve your subscriptions.
+- To use password storage provided by GNOME Keyring or libsecret, build
+  Pan with support for that feature, and then enable it in Edit ->
+  Preferences -> Miscellaneous -> 'Save passwords in password storage'.
+
+** Requirements
+
+Pan requires these libraries:
+
+- [[http://developer.gnome.org/glib/][GLib]] 2.17.6 or higher
+  (optionally GLib 2.26.0 or higher to support multiple Pan instances)
+- [[http://www.gtk.org/][GTK]] 3.16.0 or higher
+- [[http://spruce.sourceforge.net/gmime/][GMime]] 3.0.0 or higher (optionally with PGP cryptography support)
+
+The following libraries add extra features but are optional:
+
+- [[https://gitlab.gnome.org/GNOME/gspell][GSpell 1.x]] for spellchecker support
+- [[http://www.galago-project.org/news/index.php][libnotify]] 0.4.1 or higher for notifications
+- [[https://developer.gnome.org/libsecret/][libsecret]] 0.16 or higher and [[https://developer.gnome.org/gcr/][gcr]] 3.20 or higher for password storage
+- [[http://www.freedesktop.org/wiki/Software/dbus][D-Bus]] to support running multiple Pan instances
+- [[http://www.gnu.org/software/gnutls/][GnuTLS]] 3.3.6 or higher for encrypted connections (TLS 1.x)
+- [[http://itstool.org/][ITS Tool]] for built-in user manual
+  
+The following libraries are experimental and not suitable for any use
+other than testing. Use at your own risk:
+
+- [[https://webkitgtk.org/][WebKitGTK]] 1.8.1 or higher for embedded HTML
+
+*** Debian, Ubuntu, Mint
+
+On Debian and derivatives, required dependencies can added with:
+
+#+BEGIN_SRC shell :results verbatim
+  sudo apt-get build-dep pan
+#+END_SRC
+
+*** Fedora
+
+On Fedora, dependencies can be installed with:
+
+#+BEGIN_SRC shell :results verbatim
+  sudo dnf install gcc gcc-c++ ninja-build libassuan-devel \
+       cmake gtk3-devel glib-devel gmime30-devel gspell-devel gnutls-devel
+#+END_SRC
+
+Note that I work on Debian and I did not test this instructions on
+Fedora. Please get back to me if something is missing, or preferably,
+create a pull request.
+
+* Installation
+
+** Cleanup autotools remnants
+
+Some people has issues when using cmake to build Pan after using
+autotools. Unfortunately, autotools leaves a lot of files that may
+break build with cmake, so here are the instructions to clean all
+autotools remnants.
+
+This procedure is to be run once if you used to build pan with
+autotools in your repository.
+
+First, check the list the files to be deleted:
+#+BEGIN_SRC shell :results verbatim 
+git clean -dxn
+#+END_SRC
+
+Then, delete all extra files:
+#+BEGIN_SRC shell :results verbatim 
+git clean -dxf
+#+END_SRC
+
+Alternatively, you can clone Pan in another directory.
+
+** Standard build
+
+Run the following command to setup Pan build with the default options:
+
+#+BEGIN_SRC shell :results verbatim
+  mkdir -p std-build
+  cmake -B std-build
+#+END_SRC
+
+To setup options, you can run:
+#+BEGIN_SRC shell :results verbatim
+  cmake-gui -B std-build
+#+END_SRC
+
+Then build pan:
+#+BEGIN_SRC shell :results verbatim
+ cmake --build std-build -j 8
+#+END_SRC
+
+Optionally, run tests (even if they are few of them):
+#+BEGIN_SRC shell :results verbatim
+ ctest --test-dir std-build
+#+END_SRC
+
+** Installation
+
+To install pan:
+#+BEGIN_SRC shell :results verbatim
+  cmake --install std-build
+#+END_SRC
+
+Uninstall pan (see [[https://stackoverflow.com/questions/41471620/cmake-support-make-uninstall#44649542][Stack Overflow link]] for details):
+#+BEGIN_SRC shell :results verbatim
+ xargs rm < std-build/install_manifest.txt
+#+END_SRC
+
+** Build options
+
+Pan can be built with several options:
+
+| option        | usage                                     | default |
+|---------------+-------------------------------------------+---------|
+| ENABLE_MANUAL | built in user manual                      | off     |
+| WANT_DBUS     | enable D-Bus support                      | off     |
+| WANT_GKR      | enable GNOME Keyring or libsecret support | off     |
+| WANT_GMIME    | enable GMime cryptography support         | off     |
+| WANT_GNUTLS   | enable GnuTLS support                     | on      |
+| WANT_GTKSPELL | enable GtkSpell support                   | on      |
+| WANT_NOTIFY   | enable libnotify support                  | off     |
+
+These options can be listed with the following command:
+
+#+BEGIN_SRC shell :results verbatim :eval no
+  cmake -B std-build -LH
+#+END_SRC
+
+** Debug build
+
+You can also create a debug build:
+
+#+BEGIN_SRC shell :results verbatim
+  mkdir -p debug-build
+  cmake -DCMAKE_BUILD_TYPE=Debug -B debug-build
+  cmake --build debug-build -j 8
+#+END_SRC
+
+** Running pan
+
+After compilation, you **must** run pan from the repository root:
+
+#+BEGIN_SRC shell :results verbatim
+./debug-build/pan/gui/pan
+#+END_SRC
+
+If pan was installed with a package, you can run pan from anywhere.
+
+Why ? Pan searches for icon in 2 locations:
+- =./pan/icons= which is useful when hacking pan
+- =$PAN_SYSTEM_ICON_PATH= (which is =/usr/share/pan/icons= on
+  Linux). This directory should be provided by pan package.
+
+When icons are not found, pan shows this kind of messages:
+#+begin_example
+Unable to load icon_article_read.png icon. Use --debug flag for more details
+#+end_example
+
+** CC++ language server support
+
+To get language server support (e.g. [[https://github.com/MaskRay/ccls][ccls]]), run:
+#+BEGIN_SRC shell :results verbatim
+  mkdir -p debug-build
+  cmake -H. -B debug-build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES
+  ln -s debug-build/compile_commands.json .
+#+END_SRC
+
+#+RESULTS:
+: -- platform: Linux-6.6.13-amd64
+: -- Configuring done (0.2s)
+: -- Generating done (0.1s)
+: -- Build files have been written to: /home/domi/private/debian-dev/pan-stuff/pan-upstream/debug-build
+
+* TLS support
+
+When =WANT_GNUTLS= is set, pan will search for trusted certificates in
+the [[file:pan/data/cert-store.cc][following directories]]:
+- =/etc/ssl/certs=
+- =/usr/local/share/certs=
+- =/etc/pki/tls/certs=
+- =/etc/openssl/certs=
+- =/var/ssl/certs=
+
+Please log a bug if some directories are missing for your environment.
+
+You can also set =SSL_CERT_DIR= or =SSL_DIR= environment variables to
+add more directories containing trusted certificates.
+
+* Upgrading
+
+Upgrading typically requires that you do the exact same procedure as when
+installing Pan.
+
+* How to report bugs
+
+The first question to answer is where does this bug comes from ?
+Depending on how you installed Pan, a bug can come from Pan or
+Pan packaging.
+
+To find out, you can:
+1. Try to reproduce the bug with Pan compiled from source
+2. Reach out to the maintainer of your Pan package
+3. Ask on  [[http://lists.nongnu.org/mailman/listinfo/pan-users][pan-users]] mailing list
+
+Once you're pretty sure you've found a bug coming from Pan, you should:
+1. check if this bug already exists [[https://gitlab.gnome.org/GNOME/pan/-/issues][Pan issue page]]
+2. If yes, add a comment there
+3. If no, create a new issue.
+
+* Help Wanted
+
+Several areas are in need of work:
+
+- Pan still contains a lot of GTK2 code which triggers a lot of
+  warnings. I'd welcome patches there.
+- The [[https://gitlab.gnome.org/GNOME/pan/-/wikis/home][Wiki page]] on Gitlab is empty. Help is welcome there.
+
+* Contact
+
+** Mailing lists
+
+To get in touch with Pan contributors and community members, subscribe
+to one of the Pan mailing lists.
+
+- [[http://lists.nongnu.org/mailman/listinfo/pan-announce][pan-announce]] :: This is a low-traffic list for announcements of new
+  Pan releases.
+- [[http://lists.nongnu.org/mailman/listinfo/pan-users][pan-users]] :: This is a high-traffic list for feature requests, user
+  questions, bug reports, and most everything else.
+- [[http://lists.nongnu.org/mailman/listinfo/pan-devel][pan-devel]] :: A developers' forum to discuss hacking on Pan's source
+  code. New developers are welcome.
+
+And a big thank-you goes to Savannah for hosting these lists.
+
+** Newsgroups
+
+Pan mailing lists can also be accessed through the Gmane email to news gateway:
+
+- gmane.comp.gnome.apps.pan.announce
+- gmane.comp.gnome.apps.pan.user
+- gmane.comp.gnome.apps.pan.devel
+
+* Links
+
+- [[http://www.gtk.org/][GTK]]
+- [[http://www.gnome.org/][GNOME]]
+- [[http://www.gnu.org/][GNU]]

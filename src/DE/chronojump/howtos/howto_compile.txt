@@ -1,0 +1,92 @@
+-------------------------------------------------------------------
+LINUX
+-------------------------------------------------------------------
+
+https://chronojump.org/software/#Linux
+
+-------------------------------------------------------------------
+MACOSX
+-------------------------------------------------------------------
+
+If you need to create a virtual machine with MacOS it is recommended to use:
+https://github.com/myspaghetti/macos-virtualbox
+It is inportant not to interact with the virtual machine and only press enter when promnpted by the script
+If something fails the script can be resumed at the desired point. See documentation
+
+#install this mono version:
+https://download.mono-project.com/archive/6.10.0/macos-10-universal/MonoFramework-MDK-6.10.0.105.macos10.xamarin.universal.pkg
+
+#install brew:
+https://brew.sh
+
+#install these brew packages:
+brew install autoconf intltool automake gettext libtool glib pkg-config
+#(gettext maybe is not needed)
+
+#avoid ssl certificate problems on git:
+git config --global http.sslverify "false"
+
+#clone
+git clone https://gitlab.gnome.org/GNOME/chronojump.git
+
+#pull & compile
+git pull
+cd package/macos
+make
+
+if date is not ok in the virtual system, do not reboot. Change date on Date & Time window.
+
+gtk3:
+brew install gtk+3
+nuget install GdkSharp -Version 3.0.0 (but installs GLibSharp 3.22.24.10)
+nuget list | grep -i glib  #does not show it, but exists on: /Users/chronojump/.nuget/packages/glibsharp
+
+-------------------------------------------------------------------
+WINDOWS
+-------------------------------------------------------------------
+
+- to compile:
+(from remmina)
+if there's any problem with the keyboard, just go outside of Linux GUI using CTRL+ALT+F1 and return)
+	if it doesn´t work then close mingw console and open again
+
+On the Windows machine desktop, execute "msys - Acceso directo".
+
+In the shell execute:
+chronojump-shell
+cd chronojump
+git pull
+sh autogen.sh --prefix ~/chronojump-build/dist/windows_x86
+
+temporarily we have a problem of too much parameters sent to mcs (this is a cygwin problem),
+also mcs is "yes" on Makefiles after the autogen
+so fix it:
+
+
+1) on src/Makefile and src/Mini/Makefile , change:
+MCS = yes
+to
+MCS = C:/MinGW/msys/1.0/home/chronojump/chronojump-build/dist/windows_x86/bin/dmcs
+
+2) fixes on src/Makefile RESOURCES (670-1064),
+rename (on Notepad++ select rows and CTRL+h) glade/ to g/
+rename (on Notepad++ select rows and CTRL+h) images/ to i/
+rename (on Notepad++ select rows and CTRL+h) ../i/mini/ to ../i/m/
+3) on main dir create folders g and i
+4) copy all glade stuff into g
+5) copy all images stuff into i
+6) on i, rename mini folder to m
+
+make
+make install
+
+Just do 'make install' if compiled before
+
+- to build the package to be installed:
+
+copy all PDFs:
+cp manual/*.pdf win32/deps/share/doc/chronojump/.
+
+cd win32
+make installer
+

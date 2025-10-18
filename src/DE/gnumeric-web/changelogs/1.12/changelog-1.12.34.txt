@@ -1,0 +1,72 @@
+2017-03-20  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.34
+
+2017-03-17  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sheet_style_init_size): Don't hand-create a
+	bogus GnmColor here.  The fake object prevents GnmColor equality
+	from working which in turn prevents GnmBorder equality from
+	working.
+
+	* src/style-color.c (gnm_color_make): Rename from
+	gnm_color_new_uninterned and handle caching here.
+	(gnm_color_new_auto): New function.
+
+	* src/ssdiff.c (main): Exit 2 on error, 1 of diffs, 0 if no diff.
+	(compare_corresponding_cells): Fall back to string comparison.
+	References like Sheet1!A1 should match even if they, obviously,
+	refer to sheets in different workbooks.
+
+	* src/style-conditions.c (gnm_style_conditions_equal): Add new
+	relax_sheet argument.
+
+	* src/validation.c (gnm_validation_equal): New function.
+
+	* src/mstyle.c (gnm_style_find_differences): New function.
+
+	* src/ssdiff.c (xml_style_changed): Use
+	gnm_style_find_differences.
+
+	* src/ssdiff.c (cb_diff_sheets_styles_2): Use relaxed
+	gnm_style_find_differences, not gnm_style_equal.
+
+	* src/hlink.c (gnm_hlink_equal): New function.
+
+2017-03-13  Morten Welinder  <terra@gnome.org>
+
+	* src/hlink.c (gnm_hlink_cur_wb_set_target): Improve parsing of
+	inter-sheet local name references.
+
+2017-03-10  Morten Welinder  <terra@gnome.org>
+
+	* src/hlink.c (gnm_hlink_get_name_target)
+	(gnm_hlink_get_range_target): New functions.
+	(gnm_hlink_cur_wb_activate): Use gnm_hlink_get_range_target.
+
+2017-03-07  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (parser_simple_name): Extract from
+	parser_simple_val_or_name.  Extend to handle explicit sheet.
+	("sheetref STRING"): Ise parser_simple_name.
+
+2017-03-06  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (expr_name_add): Plug leak.
+
+2017-03-05  Morten Welinder  <terra@gnome.org>
+
+	* src/hlink.c (GnmHLinkCurWB): Store location as dependent.
+	(gnm_hlink_cur_wb_activate): Move string parsing from here...
+	(gnm_hlink_cur_wb_set_target): ...to here.  Check name first as
+	value_new_cellrange_str will resolve a name.
+
+	* src/mstyle.c (gnm_style_linked_sheet_changed): Handle changed
+	sheet for hlinks too.
+
+	* src/hlink.c (gnm_hlink_new, gnm_hlink_dup, gnm_hlink_get_sheet)
+	(gnm_hlink_set_sheet): New functions.
+
+2017-01-30  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

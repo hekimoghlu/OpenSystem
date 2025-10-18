@@ -1,0 +1,186 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <giomm/listmodel.h>
+#include <gtkmm/widget.h>
+#include <gtkmm/label.h>
+#include <gtkmm/notebookpage.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+#m4 _CONVERSION(guint,PositionType,`$2($3)')
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+
+/** Container which shows one of its children at a time, in tabbed windows.
+ *
+ * The Gtk::Notebook widget is a layout container whose children are pages that
+ * can be switched between using tab labels along one edge.
+ *
+ * A Notebook widget looks like this:
+ * @image html notebook1.png
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ */
+class GTKMM_API Notebook : public Widget
+{
+  _CLASS_GTKOBJECT(Notebook, GtkNotebook, GTK_NOTEBOOK, Gtk::Widget, GtkWidget, , , GTKMM_API)
+
+public:
+
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(int prepend_page(Widget& child, Widget& tab_label), gtk_notebook_prepend_page)
+  int prepend_page(Widget& child);
+
+  int prepend_page(Widget& child, const Glib::ustring& tab_label, bool use_mnemonic = false);
+  _WRAP_METHOD(int prepend_page(Widget& child, Widget& tab_label, Widget& menu_label), gtk_notebook_prepend_page_menu)
+  //Ignore the possible-0 menu_label version of this method. It would have the same signature as another method.
+
+  int prepend_page(Widget& child, const Glib::ustring& tab_label, const Glib::ustring& menu_label, bool use_mnemonic);
+
+  _WRAP_METHOD(int append_page(Widget& child, Widget& tab_label), gtk_notebook_append_page)
+  int append_page(Widget& child);
+  int append_page(Widget& child, const Glib::ustring& tab_label, bool use_mnemonic = false);
+
+  _WRAP_METHOD(int append_page(Widget& child, Widget& tab_label, Widget& menu_label), gtk_notebook_append_page_menu)
+  //Ignore the possible-0 menu_label version of this method. It would have the same signature as another method.
+
+  int append_page(Widget& child, const Glib::ustring& tab_label, const Glib::ustring& menu_label, bool use_mnemonic = false);
+
+  _WRAP_METHOD(int insert_page(Widget& child, Widget& tab_label, int position), gtk_notebook_insert_page)
+  int insert_page(Widget& child, int position);
+
+  int insert_page(Widget& child, const Glib::ustring& tab_label, int position, bool use_mnemonic = false);
+  _WRAP_METHOD(int insert_page(Widget& child, Widget& tab_label, Widget& menu_label, int position), gtk_notebook_insert_page_menu)
+  //Ignore the possible-0 menu_label version of this method. It would have the same signature as another method.
+
+  int insert_page(Widget& child, const Glib::ustring& tab_label, const Glib::ustring& menu_label, int position, bool use_mnemonic = false);
+
+  _WRAP_METHOD(void remove_page(int page_number = 0), gtk_notebook_remove_page)
+  void remove_page(Widget& child);
+
+  _WRAP_METHOD(void set_group_name(const Glib::ustring& group_name), gtk_notebook_set_group_name)
+  _WRAP_METHOD(Glib::ustring get_group_name() const, gtk_notebook_get_group_name)
+
+  _WRAP_METHOD(int get_current_page() const, gtk_notebook_get_current_page)
+  _WRAP_METHOD(Widget* get_nth_page(int page_number), gtk_notebook_get_nth_page)
+  _WRAP_METHOD(const Widget* get_nth_page(int page_number) const, gtk_notebook_get_nth_page, constversion)
+  _WRAP_METHOD(int get_n_pages() const, gtk_notebook_get_n_pages)
+  /*Widget* get_current_page();*/ /*inconsistency with set_current_page*/
+  _WRAP_METHOD(int page_num(const Widget& child) const, gtk_notebook_page_num)
+
+  _WRAP_METHOD(void set_current_page(int page_number), gtk_notebook_set_current_page)
+  _WRAP_METHOD(void next_page(), gtk_notebook_next_page)
+  _WRAP_METHOD(void prev_page(), gtk_notebook_prev_page)
+
+  _WRAP_METHOD(void set_show_border(bool show_border = true), gtk_notebook_set_show_border)
+
+  _WRAP_METHOD(bool get_show_border() const, gtk_notebook_get_show_border)
+  _WRAP_METHOD(void set_show_tabs(bool show_tabs = true), gtk_notebook_set_show_tabs)
+  _WRAP_METHOD(bool get_show_tabs() const, gtk_notebook_get_show_tabs)
+
+
+  _WRAP_METHOD(void set_tab_pos(PositionType pos), gtk_notebook_set_tab_pos)
+  _WRAP_METHOD(PositionType get_tab_pos() const, gtk_notebook_get_tab_pos)
+
+  _WRAP_METHOD(void set_scrollable(bool scrollable = true), gtk_notebook_set_scrollable)
+  _WRAP_METHOD(bool get_scrollable() const, gtk_notebook_get_scrollable)
+
+  _WRAP_METHOD(void popup_enable(), gtk_notebook_popup_enable)
+
+  _WRAP_METHOD(void popup_disable(), gtk_notebook_popup_disable)
+
+  _WRAP_METHOD(Widget* get_tab_label(Widget& child), gtk_notebook_get_tab_label)
+  _WRAP_METHOD(const Widget* get_tab_label(Widget& child) const, gtk_notebook_get_tab_label, constversion)
+  _WRAP_METHOD(void set_tab_label(Widget& child, Widget& tab_label), gtk_notebook_set_tab_label)
+  _WRAP_METHOD(void set_tab_label_text(Widget& child, const Glib::ustring& tab_text), gtk_notebook_set_tab_label_text)
+  _WRAP_METHOD(Glib::ustring get_tab_label_text(Widget& child) const, gtk_notebook_get_tab_label_text)
+  _WRAP_METHOD(Widget* get_menu_label(Widget& child), gtk_notebook_get_menu_label)
+  _WRAP_METHOD(const Widget* get_menu_label(Widget& child) const, gtk_notebook_get_menu_label, constversion)
+  _WRAP_METHOD(void set_menu_label(Widget& child, Widget& menu_label), gtk_notebook_set_menu_label)
+  _WRAP_METHOD(void set_menu_label_text(Widget& child, const Glib::ustring& menu_text), gtk_notebook_set_menu_label_text)
+  _WRAP_METHOD(Glib::ustring get_menu_label_text(Widget& child) const, gtk_notebook_get_menu_label_text)
+
+  _WRAP_METHOD(void reorder_child(Widget& child, int position), gtk_notebook_reorder_child)
+
+  _WRAP_METHOD(bool get_tab_reorderable(Widget& child) const, gtk_notebook_get_tab_reorderable)
+  _WRAP_METHOD(void set_tab_reorderable(Widget& child, bool reorderable = true), gtk_notebook_set_tab_reorderable)
+  _WRAP_METHOD(bool get_tab_detachable(Widget& child) const, gtk_notebook_get_tab_detachable)
+  _WRAP_METHOD(void set_tab_detachable(Widget& child, bool detachable = true), gtk_notebook_set_tab_detachable)
+  _WRAP_METHOD(void detach_tab(Widget& child), gtk_notebook_detach_tab)
+
+  _WRAP_METHOD(Widget* get_action_widget(PackType pack_type = PackType::START), gtk_notebook_get_action_widget)
+  _WRAP_METHOD(void set_action_widget(Widget* widget, PackType pack_type = PackType::START), gtk_notebook_set_action_widget)
+
+  _WRAP_METHOD(Glib::RefPtr<NotebookPage> get_page(Widget& child), gtk_notebook_get_page, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const NotebookPage> get_page(const Widget& child) const, gtk_notebook_get_page, refreturn)
+
+  /** Returns a Gio::ListModel that contains the pages of the notebook.
+   *
+   * It can be used to keep an up-to-date view. The model also
+   * implements Gtk::SelectionModel and can be used to track
+   * and modify the visible page.
+   *
+   * To use Gtk::SelectionModel API, do something like
+   * @code
+   * auto pages = notebook->get_pages();
+   * auto selection_model = std::dynamic_pointer_cast<Gtk::SelectionModel>(pages);
+   * if (selection_model)
+   *   selection_model->do_something();
+   * @endcode
+   *
+   * @return A Gio::ListModel for the notebook's children. The caller becomes
+   * the owner of the returned instance. When the caller's reference is dropped,
+   * the instance is deleted.
+   */
+  Glib::RefPtr<Gio::ListModel> get_pages();
+  /// See the non-const version.
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_pages() const, gtk_notebook_get_pages, constversion)
+
+  // no_default_handler because GtkNotebookClass is private.
+  _WRAP_SIGNAL(void switch_page(Widget* page, guint page_number), "switch_page", no_default_handler)
+  _WRAP_SIGNAL(void page_reordered(Widget* page, guint page_num), "page_reordered", no_default_handler)
+  _WRAP_SIGNAL(void page_removed(Widget* page, guint page_num), "page_removed", no_default_handler)
+  _WRAP_SIGNAL(void page_added(Widget* page, guint page_num), "page_added", no_default_handler)
+
+  //Key-binding signals:
+  _IGNORE_SIGNAL("move_focus_out")
+  _IGNORE_SIGNAL("select_page")
+  _IGNORE_SIGNAL("focus_tab")
+  _IGNORE_SIGNAL("change_current_page")
+  _IGNORE_SIGNAL("reorder_tab")
+
+  //This doesn't seem generally useful:
+  _IGNORE_SIGNAL("create-window")
+
+  _WRAP_PROPERTY("tab-pos", PositionType)
+  _WRAP_PROPERTY("show-tabs", bool)
+  _WRAP_PROPERTY("show-border", bool)
+  _WRAP_PROPERTY("scrollable", bool)
+  _WRAP_PROPERTY("page", int)
+  _WRAP_PROPERTY("group-name", Glib::ustring)
+  _WRAP_PROPERTY("enable-popup", bool)
+  _WRAP_PROPERTY("pages", Glib::RefPtr<Gio::ListModel>)
+};
+
+} // namespace Gtk

@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <menu id="main_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Find remote keys…</attribute>
+        <attribute name="action">pgp.remote-find</attribute>
+        <attribute name="hidden-when">action-missing</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Sync and publish keys…</attribute>
+        <attribute name="action">pgp.remote-sync</attribute>
+        <attribute name="hidden-when">action-missing</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Preferences</attribute>
+        <attribute name="action">app.preferences</attribute>
+        <attribute name="hidden-when">action-disabled</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Help</attribute>
+        <attribute name="action">app.help</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+        <attribute name="action">win.show-help-overlay</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">_About Passwords and Keys</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <menu id="items_menu">
+    <section>
+      <attribute name="label" translatable="yes">Filter items:</attribute>
+      <item>
+        <attribute name="label" translatable="yes">Show p_ersonal</attribute>
+        <attribute name="action">win.filter-items</attribute>
+        <attribute name="target">personal</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Show _trusted</attribute>
+        <attribute name="action">win.filter-items</attribute>
+        <attribute name="target">trusted</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Show an_y</attribute>
+        <attribute name="action">win.filter-items</attribute>
+        <attribute name="target">any</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <object class="GtkPopover" id="new_item_menu_popover">
+    <property name="halign">start</property>
+    <style>
+      <class name="menu"/>
+    </style>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <style>
+          <class name="new-item-list"/>
+        </style>
+        <child>
+          <object class="GtkButton" id="ssh_generate_key_button">
+            <property name="visible" bind-source="ssh_generate_key_button" bind-property="sensitive" />
+            <property name="action-name">ssh.generate-key</property>
+            <accessibility>
+              <relation name="labelled-by">ssh_generate_key_button_label</relation>
+            </accessibility>
+            <signal name="clicked" handler="on_new_item_menu_item_clicked"/>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="ssh_generate_key_button_label">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Secure Shell key</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Used to access other computers</property>
+                    <style>
+                      <class name="dim-label"/>
+                      <class name="caption"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="pgp_generate_key_button">
+            <property name="visible" bind-source="pgp_generate_key_button" bind-property="sensitive" />
+            <property name="action-name">pgp.pgp-generate-key</property>
+            <accessibility>
+              <relation name="labelled-by">pgp_generate_key_button_label</relation>
+            </accessibility>
+            <signal name="clicked" handler="on_new_item_menu_item_clicked"/>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="pgp_generate_key_button_label">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">GPG key</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Used to encrypt emails and files</property>
+                    <style>
+                      <class name="dim-label"/>
+                      <class name="caption"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="gkr_generate_keyring_button">
+            <property name="visible" bind-source="gkr_generate_keyring_button" bind-property="sensitive" />
+            <property name="action-name">gkr.keyring-new</property>
+            <accessibility>
+              <relation name="labelled-by">gkr_generate_keyring_button_label</relation>
+            </accessibility>
+            <signal name="clicked" handler="on_new_item_menu_item_clicked"/>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="gkr_generate_keyring_button_label">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Password keyring</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Used to store application and network passwords</property>
+                    <style>
+                      <class name="dim-label"/>
+                      <class name="caption"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="gkr_generate_item_button">
+            <property name="visible" bind-source="gkr_generate_item_button" bind-property="sensitive" />
+            <property name="action-name">gkr.keyring-item-new</property>
+            <accessibility>
+              <relation name="labelled-by">gkr_generate_item_button_label</relation>
+            </accessibility>
+            <signal name="clicked" handler="on_new_item_menu_item_clicked"/>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="gkr_generate_item_button_label">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Password</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Safely store a password or secret</property>
+                    <style>
+                      <class name="dim-label"/>
+                      <class name="caption"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="pkcs11_generate_key_button">
+            <property name="visible" bind-source="pkcs11_generate_key_button" bind-property="sensitive" />
+            <property name="action-name">pkcs11.pkcs11-generate-key</property>
+            <accessibility>
+              <relation name="labelled-by">pkcs11_generate_key_button_label</relation>
+            </accessibility>
+            <signal name="clicked" handler="on_new_item_menu_item_clicked"/>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="pkcs11_generate_key_button_label">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Private key</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Used to request a certificate</property>
+                    <style>
+                      <class name="dim-label"/>
+                      <class name="caption"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="import_from_file_button">
+            <property name="visible" bind-source="import_from_file_button" bind-property="sensitive" />
+            <property name="action-name">win.import-file</property>
+            <accessibility>
+              <relation name="labelled-by">import_from_file_button_label</relation>
+            </accessibility>
+            <child>
+              <object class="GtkLabel" id="import_from_file_button_label">
+                <property name="halign">start</property>
+                <property name="vexpand">True</property>
+                <property name="label" translatable="yes">Import from file…</property>
+              </object>
+            </child>
+            <style>
+              <class name="flat"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+
+  <template class="SeahorseKeyManager" parent="SeahorseCatalog">
+    <property name="default-width">600</property>
+    <property name="default-height">476</property>
+    <property name="width-request">320</property>
+    <property name="height-request">240</property>
+
+    <!-- Event controllers -->
+    <child>
+      <object class="GtkEventControllerKey">
+        <signal name="key-pressed" handler="on_key_pressed"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkDropTarget" id="drop_target">
+        <property name="actions">copy</property>
+        <!-- We can't use this here since Vala can't handle the "drop" name conflict -->
+        <!-- <signal name="drop" handler="on_drop"/> -->
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwToastOverlay" id="toast_overlay">
+        <child>
+          <object class="AdwNavigationSplitView" id="content_box">
+            <property name="sidebar">
+              <object class="AdwNavigationPage" id="sidebar_pane_page">
+                <property name="title" translatable="yes">Passwords and Keys</property>
+                <property name="name">sidebar-pane</property>
+                <property name="child">
+                  <object class="AdwToolbarView">
+                    <child type="top">
+                      <object class="AdwHeaderBar" id="left_header">
+                        <child type="start">
+                          <object class="GtkMenuButton" id="new_item_button">
+                            <property name="halign">start</property>
+                            <property name="tooltip-text" translatable="yes">Add a new key or item</property>
+                            <property name="popover">new_item_menu_popover</property>
+                            <property name="icon-name">list-add-symbolic</property>
+                          </object>
+                        </child>
+
+                        <child type="end">
+                          <object class="GtkMenuButton" id="main_menu_button">
+                            <property name="menu-model">main_menu</property>
+                            <property name="primary">True</property>
+                            <property name="tooltip-text" translatable="yes">Main Menu</property>
+                            <property name="icon-name">open-menu-symbolic</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkScrolledWindow" id="sidebar_area">
+                        <property name="hscrollbar-policy">never</property>
+                        <property name="vexpand">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
+
+            <property name="content">
+              <object class="AdwNavigationPage" id="item_list_pane_page">
+                <property name="name">item-list-pane</property>
+                <property name="title" translatable="yes">Passwords and Keys</property>
+                <property name="child">
+                  <object class="AdwToolbarView">
+                    <child type="top">
+                      <object class="AdwHeaderBar" id="right_header">
+                        <child type="end">
+                          <object class="GtkMenuButton" id="items_menu_button">
+                            <property name="menu-model">items_menu</property>
+                            <property name="icon-name">view-more-symbolic</property>
+                          </object>
+                        </child>
+                        <child type="end">
+                          <object class="GtkToggleButton" id="show_search_button">
+                            <property name="tooltip-text" translatable="yes">Search for a key or password</property>
+                            <property name="icon-name">edit-find-symbolic</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="top">
+                      <object class="GtkSearchBar" id="search_bar">
+                        <property name="key-capture-widget">SeahorseKeyManager</property>
+                        <property name="search-mode-enabled" bind-source="show_search_button" bind-property="active" bind-flags="bidirectional|sync-create" />
+                        <child>
+                          <object class="GtkSearchEntry" id="filter_entry">
+                            <property name="width_chars">30</property>
+                            <property name="placeholder_text" translatable="yes">Filter</property>
+                            <signal name="search-changed" handler="on_filter_changed" />
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkStack" id="content_stack">
+                        <property name="hhomogeneous">True</property>
+                        <property name="vhomogeneous">True</property>
+                        <child>
+                          <object class="GtkScrolledWindow" id="item_listbox_page">
+                            <property name="hscrollbar-policy">never</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object class="AdwClamp">
+                                <property name="tightening-threshold">400</property>
+                                <property name="maximum-size">800</property>
+                                <property name="margin-top">12</property>
+                                <property name="margin-bottom">12</property>
+                                <child>
+                                  <object class="GtkListBox" id="item_listbox">
+                                    <property name="hexpand">True</property>
+                                    <property name="valign">start</property>
+                                    <property name="margin-start">12</property>
+                                    <property name="margin-end">12</property>
+                                    <property name="activate-on-single-click">False</property>
+                                    <property name="selection-mode">multiple</property>
+                                    <signal name="row-activated" handler="on_item_listbox_row_activated"/>
+                                    <signal name="selected-rows-changed" handler="on_item_listbox_selected_rows_changed"/>
+                                    <style>
+                                      <class name="boxed-list"/>
+                                    </style>
+                                    <child>
+                                      <object class="GtkGestureClick">
+                                        <property name="button">3</property>
+                                        <signal name="pressed" handler="on_item_listbox_right_click"/>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="GtkGestureLongPress">
+                                        <signal name="pressed" handler="on_item_listbox_long_pressed"/>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwStatusPage" id="empty_state_page">
+                            <property name="icon-name">org.gnome.Seahorse-symbolic</property>
+                            <property name="title" translatable="yes">This collection seems to be empty</property>
+                            <child>
+                              <object class="GtkButton">
+                                <property name="halign">center</property>
+                                <property name="action-name">win.new-item</property>
+                                <property name="label" translatable="yes">Add new items</property>
+                                <style>
+                                  <class name="suggested-action"/>
+                                  <class name="pill"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwStatusPage" id="locked_keyring_page">
+                            <property name="icon-name">org.gnome.Seahorse-symbolic</property>
+                            <property name="title" translatable="yes">Keyring is locked</property>
+                            <child>
+                              <object class="GtkButton" id="locked_keyring_unlock_button">
+                                <property name="halign">center</property>
+                                <property name="label" translatable="yes">Unlock</property>
+                                <signal name="clicked" handler="on_locked_keyring_unlock_button_clicked"/>
+                                <style>
+                                  <class name="suggested-action"/>
+                                  <class name="pill"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwBreakpoint">
+        <condition>max-width: 700sp</condition>
+        <setter object="content_box" property="collapsed">True</setter>
+      </object>
+    </child>
+  </template>
+</interface>

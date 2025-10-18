@@ -1,0 +1,580 @@
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am (EXTRA_DIST) : include main-component.c
+
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump
+
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.4
+
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am : tweak to make automake happy
+
+2002-05-27  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : up the gnome-print req.
+
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.h : Add PERR_SINGLE_RANGE.
+
+2002-05-29  Jon Kåre Hellan  <hellan@acm.org>
+
+	* configure.in (try_python): Fix typo
+
+2002-05-22  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (clipboard_paste_region) : remove
+	  PASTE_EXPR_RELOCATE.  It was added so that sorting cells with
+	  relative references would change, but it was not well considered and
+	  causes breakage.
+
+2002-05-21  Morten Welinder  <terra@diku.dk>
+
+	* src/func-builtin.c (func_builtin_init, shutdown_cat): Use plain
+	function_get_category.
+
+	* src/func.c (function_get_category): Don't use NULL as translated
+	name -- translate!
+	(function_add_placeholder): Use plain function_get_category.
+
+2002-05-21  Morten Welinder  <terra@diku.dk>
+
+	* src/func.c (function_def_get_arg_name): Fix char/string type
+	mismatch.  Bad Andreas!
+	(functions_shutdown): Remove stubs for unknown functions.
+	(function_add_placeholder): Keep track of unknown functions.
+
+	* configure.in: Refuse to compile with gcc 2.96.
+
+2002-05-20  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-dialogs.schemas : add 2 printer schemas
+	* src/gnumeric-gconf-priv.h : add printer keys
+	* src/gnumeric-gconf.c : add printer get/set methods
+	* src/gnumeric-gconf.h : ditto
+	* src/print.c (print_job_info_set_one_time_defaults) : add 2 settings
+	(print_job_info_save_one_time_defaults) : ditto
+
+2002-05-19  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_print_setup_redo) : dirty all sheets if
+	  parent.sheet == NULL
+
+2002-05-16  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-component.c (wbcc_set_sensitive): New
+	(wbcc_menu_state_sensitivity): Remove
+	(workbook_control_component_ctor_class): Register
+	wbcc_set_sensitive and remove wbcc_menu_state_sensitivity.
+
+2002-05-16  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_open) : Use wb_control_set_sensitive.
+
+	* src/workbook-control-priv.h :
+	  remove menu.set_sensitivity
+	  add set_sensitive
+	* src/workbook-control.[ch] : ditto.
+
+	* src/workbook-control-gui.c (cb_thaw_ui_toolbar) : call
+	  wbcg_menu_state_sensitivity directly.
+	(wbcg_edit_set_sensitive) : ditto.
+	(wbcg_set_sensitive) : new.
+	(workbook_control_gui_ctor_class) : register wbcg_set_sensitive and
+	  remove wbcg_menu_state_sensitivity.
+
+2002-05-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+	* src/print-info.c (print_info_set_margin_right) : remove some
+	  debugging code
+
+2002-05-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* configure.in : bump lignomeprintui req to 0.115.0
+	* src/print-info.c (print_info_new) : margins are now in print_config
+	(print_info_save) : ditto
+	(print_info_dup) : ditto
+	(print_info_get_margins) : new
+	(print_info_set_margin_header) : new
+	(print_info_set_margin_footer) : new
+	(print_info_set_margin_left) : new
+	(print_info_set_margin_right) : new
+	(print_info_set_margins) : new
+	* src/print-info.h (print_info_get_margins) : new
+	(print_info_set_margin_header) : new
+	(print_info_set_margin_footer) : new
+	(print_info_set_margin_left) : new
+	(print_info_set_margin_right) : new
+	(print_info_set_margins) : new
+	* src/print.c (print_hf_element) : margins are now in print_config
+	(print_headers) : ditto
+	(print_footers) : ditto
+	(print_page) : ditto
+	(print_job_info_get) : ditto
+	* src/xml-io.c (xml_node_set_print_margins) : new
+	(xml_node_get_print_margin) : new
+	(xml_write_print_info) : margins are now in print_config
+	(xml_print_info_fix_margins) : ditto
+	(xml_read_print_margins) : ditto
+
+2002-05-15  Morten Welinder  <terra@diku.dk>
+
+	* src/main-application.c (warn_about_ancient_gnumerics): Don't
+	complain unless the file name has a slash in it.
+
+2002-05-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/main-component.c (control_activated_cb): Don't call
+	bonobo_ui_component_rm. We got a warning from bonobo when the
+	containing shell was deleted.
+
+2002-05-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/GNOME_Gnumeric_Component.xml: Add File/Print setup,
+	File/Print, File/Print preview.
+
+	* src/workbook-control-component.c (cb_file_print_setup)
+	(cb_file_print, cb_file_print_preview): New functions. Invoke
+	File/Print setup, File/Print, File/Print preview.
+	(verbs): Add File/Print setup, File/Print, File/Print preview.
+
+	* src/main-component.c (gnumeric_component_factory): Initialize
+	plugins. Yet another bpb.
+
+2002-05-14  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (GNUMERIC_LOCALE_DIR): Deduce.
+	* src/libgnumeric.c (init_init): Use GNUMERIC_LOCALE_DIR.
+
+2002-05-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (read_from_stream): Brown paper bag.
+
+2002-05-14  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (init_for_inflate): Use size of buffer, not size
+	of pointer to buffer.
+
+2002-05-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/cmd-edit.[ch] (cmd_paste): Remove 'time' parameter.
+
+	* src/cmd-edit.c (cmd_paste): Call wb_control_paste_from_selection
+	without 'time' parameter.
+	(cmd_paste_to_selection): Call cmd_paste without 'time' parameter.
+
+	* src/item-cursor.c (item_cursor_do_action): Remove 'time'
+	parameter. Call cmd_paste without 'time' argument.
+	(context_menu_hander, item_cursor_do_drop): Call
+	item_cursor_do_action without 'time' argument.
+
+	* src/gui-clipboard.[ch]: Switched to GtkClipboard API.
+	(x_request_clipboard): Remove 'time' parameter.
+	(x_clipboard_bind_workbook): Remove.
+	(x_claim_clipboard): New function. Claims ownership of primary and
+	clipboard.
+
+	* src/gui-clipboard.c
+	(x_clipboard_to_cell_region): Renamed from
+	x_selection_to_cell_region.
+	(x_clipboard_received): Renamed from
+	x_selection_received. 'widget' parameter replaced with
+	'clipboard', and 'time' parameter dropped. Call
+	gtk_clipboard_request_contents instead of gtk_selection_convert.
+	(x_clipboard_get_cb): Renamed from x_selection_handler. 'widget'
+	parameter replaced with 'clipboard', and 'time' parameter dropped.
+	Don't trust 'info' parameter. Gtk bug?
+	(x_clipboard_clear_cb): New function. Replaces x_selection_clear,
+	but even simpler.
+	(x_request_clipboard): Call gtk_clipboard_request_contents instead
+	of gtk_selection_convert.
+
+	* src/workbook-control.[ch], src/workbook-control-priv.h: Remove
+	'time' parameter from paste_from_selection method.
+
+	* src/workbook-control-component.c (wbcc_claim_selection): Remove.
+	(workbook_control_component_ctor_class): Inherit claim_selection
+	from superclass.
+
+	* src/workbook-control-gui.c (wbcg_paste_from_selection): Remove
+	'time' parameter and call x_request_clipboard without 'time'
+	parameter.
+	(wbcg_claim_selection): Replace old implementation with call to
+	new function x_claim_clipboard.
+	(workbook_control_gui_init): Remove call to
+	x_clipboard_bind_workbook.
+
+2002-05-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/plugin.c (gnumeric_extra_plugin_dirs) : don't memorize the
+	  answer
+	(plugin_db_rescan) : new
+	* src/plugin.h (plugin_db_rescan) : new
+
+2002-05-12  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c (workbook_close_if_user_permits) : add
+	  arguments and add discard-all and save-all buttons when exiting.
+	(cb_file_quit) : handle discard-all and save-all
+
+2002-05-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-component.c (wbcc_set_transient_for):
+	Enable bonobo_control_set_transient_for. It's fixed in libbonoboui
+	now.
+
+2002-05-11  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnumeric-gconf.c (gnm_gconf_rm_notification_autocorrect) :
+	  renamed to gnm_gconf_rm_notification
+	(nm_gconf_add_notification_plugin_directories) : new
+	* src/gnumeric-gconf.h : ditto
+	* src/gui-util.c (fsel_dir_handle_ok) : new
+	(gnumeric_dialog_dir_selection) : new
+	* src/gui-util.h (gnumeric_dialog_dir_selection) : new
+
+2002-05-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (cb_file_preferences): Add wbcg
+	argument to dialog_preferences.
+	(cb_format_preferences): Ditto.
+
+2002-05-10  Morten Welinder  <terra@diku.dk>
+
+	* src/value.c (value_new_string_nocopy): New function.
+	(value_new_string): Simplify.
+
+2002-05-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (workbook_setup_sheets): Really
+	revert kluge.
+
+2002-05-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/gnumeric-canvas.c: oops. Committed this file by mistake, and
+	have to revert.
+
+2002-05-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c (workbook_setup_sheets): Remove
+	resize kluge. It broke things on Solaris.
+
+2002-05-09  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add 3 printer schemax
+	* src/gnumeric-gconf-priv.h : add printer keys
+	* src/gnumeric-gconf.c : add printer get/set methods
+	* src/gnumeric-gconf.h : ditto
+	* src/print.c (print_job_info_set_one_time_defaults) : new
+	(print_job_info_save_one_time_defaults) : new
+	(print_job_info_get) : call print_job_info_set_one_time_defaults
+	(sheet_print) : call print_job_info_save_one_time_defaults
+
+2002-05-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-util.c (gnumeric_dialog_run): Silence warnings.
+
+2002-05-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-gui.c, src/workbook-control-gui-priv.h
+	(wbcg_scroll_wheel_support_cb): Rename from
+	cb_scroll_wheel_support and export protected.
+
+	* src/workbook-control-component.c: Add more missing includes:
+	commands.h, selection.h, sheet-control-gui.h, workbook-edit.h.
+	(wbcc_validation_msg): Return a dummy 0 to satisfy prototype.
+	(workbook_control_component_init): Remve unused drag_types
+	variable. Add signal handler for mouse wheel scrolling.
+
+2002-05-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-component.c: Include "dialogs.h" to get
+	prototype for dialog_search.
+
+	* src/bonobo-io.c (cleanup_stream): Return status.
+
+2002-05-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control.[ch], src/workbook-control-priv.h
+	(wb_control_edit_set_sensitive): New virtual, replacing
+	workbook_edit_set_sensitive in workbook-edit. Made parameter names
+	descriptive because it's now used far away from where it is
+	defined.
+
+	* src/workbook-control-component.c (wbcc_edit_set_sensitive): Null
+	implementation of new virtual.
+	(workbook_control_component_init): Construct, but don't show, the
+	edit area, to avoid warnings when range selecting.
+	(workbook_control_component_ctor_class): Register
+	edit_set_sensitive implementation.
+
+	* src/workbook-control-gui.[ch] (wbcg_toolbar_timer_clear): Moved
+	from workbook-edit, renamed and exported.
+
+	* src/workbook-control-gui.h (cb_thaw_ui_toolbar): Moved from
+	workbook-edit.
+	(wbcg_edit_set_sensitive): Implementation of new virtual
+	wb_control_edit_set_sensitive, moved from workbook-edit and
+	renamed from workbook_edit_set_sensitive.
+	(workbook_control_gui_ctor_class): Register edit_set_sensitive
+	implementation.
+
+	* src/workbook-edit.c (toolbar_timer_clear, cb_thaw_ui_toolbar,
+	workbook_edit_set_sensitive): Move to workbook-control-gui.
+	(wbcg_edit_finish, (wbcg_edit_start, wbcg_edit_attach_guru,
+	wbcg_edit_detach_guru):
+	s/workbook_edit_set_sensitive/wb_control_edit_set_sensitive/
+
+2002-05-08  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-edit.c : include gnumeric-gconf.h
+	* src/workbook-edit.h : declare wbcg_edit_attach_guru_with_unfocused_rs
+
+2002-05-08  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add unfocused-rs schema
+	* src/gnumeric-gconf-priv.h : add unfocused-rs key and fix
+	  print-setup-all-sheets key
+	* src/gnumeric-gconf.c : add unfocused-rs get/set methods
+	* src/gnumeric-gconf.h : ditto
+	* src/workbook-edit.c (wbcg_edit_attach_guru_main) : new
+	(wbcg_edit_attach_guru) : split off wbcg_edit_attach_guru_main
+	(wbcg_edit_attach_guru_with_unfocused_rs) : new
+
+2002-05-06  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (deserialize_wb_from_xml_stream)
+	(gnumeric_bonobo_read_from_stream): Display message on error.
+
+	* src/workbook-control-component.c
+	(workbook_control_component_ctor_class): Inherit io context
+	methods from wbcg.
+	(wbcc_error_system, wbcc_error_read, wbcc_error_read)
+	(wbcc_error_read, wbcc_error_save, wbcc_error_invalid)
+	(wbcc_error_error_info): Remove.
+
+	* src/gui-util.c (gnumeric_dialog_run): Use wbcg_set_transient
+	instead of gtk_window_set_transient_for.
+
+2002-05-06  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (print_job_info_get) : duplicate print_info
+	(print_job_info_destroy) : destroy print_info
+	(sheet_print) : use range info from print dialog
+
+2002-05-06  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add print-setup-all-sheets schema
+	* src/gnumeric-gconf-priv.h : add print-setup-all-sheets key
+	* src/gnumeric-gconf.c : add print-setup-all-sheets get/set methods
+	* src/gnumeric-gconf.h : ditto
+	* src/commands.c (cmd_print_set_up) : allow sheet == NULL (ie. all sheets)
+	(cmd_print_set_up_redo) : handle sheet == NULL
+	(cmd_print_set_up_undo) : handle sheet == NULL
+
+2002-05-05  Jon K Hellan  <hellan@acm.org>
+
+	* GNOME_Gnumeric.server.in.in: Add Bonobo Zoomable interface.
+
+	* src/main-component.c (control_activated_cb): Don't set
+	wbcc->bcontrol here.
+	(zoom_level_from_index, zoomable_set_zoom_level_cb,
+	zoomable_zoom_in_cb, zoomable_zoom_out_cb,
+	zoomable_zoom_to_fit_cb, zoomable_zoom_to_default_cb): New
+	functions to support zoomable interface.
+	(add_interfaces): Add zoomable interface.
+	(gnumeric_component_factory): Call wbcc_set_bcontrol.
+
+	* src/workbook-control-component.[ch]
+	wbcc_get_zoom_factor): New function. Return zoom factor of current
+	sheet.
+	(wbcc_set_zoom_factor): New function. Set zoom factor for current
+	sheet.
+	(wbcc_sheet_focus): Report zoom level.
+	(wbcc_set_bcontrol): New function. Setter for private 'bcontrol'
+	attribute.
+	(wbcc_set_zoomable): New function. Setter for private 'zoomable'
+	attribute.
+	(workbook_control_component_activate): Remove 'control' from
+	signature. Use wbcc->bcontrol instead.
+
+	* src/workbook-control-component.c (wbcc_zoom_feedback): Implement
+	method.
+
+	* src/workbook-control-component-priv.h (struct
+	_WorkbookControlComponent): Add 'zoomable' attribute.
+
+2002-05-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add zoom-factor schema
+	* src/gnumeric-gconf-priv.h : add zoom-factor key
+	* src/gnumeric-gconf.c : add zoom-factor get/set methods
+	* src/gnumeric-gconf.h : ditto
+	* configure.in : update libgnomeprint/libgnomeprintui req.
+	* src/sheet.c (sheet_new) : use zoom factor from preferences
+
+2002-05-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c : add cmd_print_set_up and friends
+	* src/commands.h : add cmd_print_set_up
+	* src/print-info.c (save_margin) : constify second argument
+	(save_range) : ditto
+	(print_info_margin_copy) : constify first argument and fix
+	  silly typo
+	(print_info_dup) : fix leak
+
+2002-05-05  Jon K Hellan  <hellan@acm.org>
+
+	* src/Makefile.am: Fix typo in GNOME_Gnumeric_Component.xml
+
+2002-05-05  Pablo Saratxaga  <pablo@mandrakesoft.com>
+
+	* configure.in: Added Vietnamese (vi) to ALL_LINGUAS
+
+2002-05-05  Jon K Hellan  <hellan@acm.org>
+
+	* src/GNOME_Gnumeric_Component.xml: Add UI for the viewer component.
+
+	* src/Makefile.am: Add UI file for the viewer component.
+
+	* src/gui-util.c (gnumeric_keyed_dialog): Use
+	wbcg_set_transient instead of gnumeric_set_transient.
+
+	* src/main-component.c (control_activated_cb): New signal handler
+	to handle component activation/deactivation.
+	(gnumeric_component_factory): Register activation/deactivation
+	signal handler
+
+	* src/workbook-control-component.[ch]
+	(workbook_control_component_activate): New function. Merge in our
+	UI.
+
+	* src/workbook-control-component-priv.h
+	(struct	_WorkbookControlComponent): Add bcontrol member for the
+	BonoboControl.
+
+	* src/workbook-control-component.c (wbcc_set_transient_for): New
+	function. Set a dialog transient for the bonobo shell which
+	contains us.
+	(bcontrol_get_wbcg): New function. Get the WorkbookControl from
+	the BonoboControl. This is implemented by means of object data on
+	the BonoboControl.
+	(cb_file_summary): New function. Pop up the Properties dialog.
+	(cb_edit_copy): New function. Copy the selection.
+	(cb_edit_search): New function. Pop up the search dialog.
+	(cb_help_about): New function. Pop up the "About Gnumeric" dialog.
+	(verbs): Add them.
+	(workbook_control_component_init): Zero the bcontrol field.
+	(workbook_control_component_ctor_class): Override the wbcg
+	set_transient method.
+
+	* src/workbook-control-gui.[ch] (wbcg_set_transient): New virtual
+	method to set a dialog transient for the toplevel.
+
+	* src/workbook-control-gui-priv.h (WorkbookControlGUIClass): Add
+	set_transient virtual method.
+
+	* src/workbook-control-gui.c (WBCG_CLASS, WBCG_VIRTUAL_FULL,
+	WBGC_VIRTUAL): Define macros, analogous to macros in
+	workbook-control.c.
+	(wbcg_set_transient_for): New function. set_transient
+	implementation for wbcg.
+	(workbook_setup_sheets): Resize notebook from an idle handler to
+	work around a display problem in the component. Explain why we had
+	to do this.
+	(workbook_control_gui_ctor_class): Add set_transient virtual method.
+
+2002-05-04  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_colrow_get_default) : new.
+	* src/commands.c (cmd_ins_del_colrow_redo) : Use it.
+
+2002-05-04  Jukka-Pekka Iivonen  <jiivonen@cs144028.pp.htv.fi>
+
+	* configure.in : Removed src/functions/Makefile.
+
+2002-05-03  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/func-builtin.c : mark argument names for translation and adjust
+	  them for use by the formula guru.
+	* src/func.c (function_def_get_arg_name) : translate argument name
+
+2002-05-03  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-control-gui.c (cb_select_auto_expr): Filter out
+	expressions that don't parse.  (Probably because some plugin
+	wasn't loaded.)
+
+2002-05-03  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-general.schemas : add max-initial-clauses schema
+	* src/gnumeric-gconf-priv.h : add max-initial-clauses key
+	* src/gnumeric-gconf.c : add max-initial-clauses get/set methods
+	* src/gnumeric-gconf.h : ditto
+
+2002-05-03  Morten Welinder  <terra@diku.dk>
+
+	* src/rangefunc.c (range_count): New function.
+	* src/func-util.h: Remove.
+
+2002-05-02  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print-info.c (print_info_free) : add print-config
+	(print_info_new) : ditto
+	(print_info_save) : ditto
+	(print_info_dup) : ditto
+	* src/print-info.h : add print-config to PrintInformation
+	* src/print.c (print_job_info_get) : use
+	  gnome_print_master_get_page_size_from_config
+	(sheet_print) : use print_config included in PrintInformation
+	* src/xml-io.c (xml_write_print_info) : use print_config included
+	  in PrintInformation
+	(xml_read_print_info) : ditto
+
+2002-05-02  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : shift has noting
+	  to do with this any more.
+
+2002-05-02  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=79925
+	* src/sheet-control-gui.c (scg_colrow_select) : flag failures to
+	  initiate a selection
+	* src/item-bar.c (item_bar_event) : only grab if the selection is
+	  successful.
+
+2002-05-02  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/print.c (sheet_print) : pass updated print-config to print-dialog
+
+2002-05-01  Christophe Merlet  <christophe@merlet.net>
+
+	* schemas/gnumeri-dialogs.schemas : Replaced // with /.
+	* src/Makefile.am : Added main-application.c to $EXTRA_DIST.
+
+2002-04-30  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (cb_range_contained_collect) : begin support for
+	  GnmRenderedRegion by adding support for non relocatable dependents.
+	(cb_single_contained_collect) : ditto.
+
+2002-04-29  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (gnumeric_pane_header_init) : set a
+	  non-contraining scrollregion here in case something scrolls before we
+	  are realized and a real region is assigned.
+
+	* src/sheet-object.c (sheet_object_clone_sheet) : range == NULL is legal
+
+	* src/sheet.c (sheet_clone_colrow_info_item) : Use colrow_copy.
+	  While we're here use sheet_colrow_fetch too.
+	(sheet_dup) : rename from sheet_duplicate to be consistent.
+
+2002-04-29  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump

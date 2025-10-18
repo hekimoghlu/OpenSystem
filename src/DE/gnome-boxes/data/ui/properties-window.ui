@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.9 -->
+
+  <!-- Widget hierarchy:
+
+     Boxes.PropertiesWindow : Gtk.Window
+        |
+        |-> notification_overlay = new Gtk.Overlay ();
+        |    |
+        |    |-> notificationbar = Boxes.Notificationbar ();
+        |    |
+        |    |-> view = Gtk.Stack ();
+        |         |
+        |         |-> properties = new Boxes.Properties ();
+        |         |
+        |         |-> troubleshoot_log = new Boxes.TroubleshootLog ();
+        |         |
+        |         |-> file_chooser = new Gtk.FileChooserNative ();
+        |
+        |-> topbar = new Boxes.PropertiesToolbar (); // as titlebar
+  -->
+
+  <template class="BoxesPropertiesWindow" parent="GtkWindow">
+    <property name="can_focus">False</property>
+    <property name="resizable">True</property>
+    <property name="modal">True</property>
+    <property name="type-hint">dialog</property>
+    <property name="width-request">724</property>
+    <property name="height-request">468</property>
+    <signal name="key-press-event" after="yes" handler="on_key_pressed"/>
+    <signal name="delete-event" handler="on_delete_event"/>
+
+    <child>
+      <object class="GtkOverlay" id="notification_overlay">
+        <property name="visible">True</property>
+
+        <child type="overlay">
+          <object class="BoxesNotificationbar" id="notificationbar">
+            <property name="visible">True</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkStack" id="view">
+            <property name="visible">True</property>
+            <property name="transition-type">slide-left-right</property>
+            <property name="transition-duration">400</property>
+            <style>
+              <class name="content-bg"/>
+            </style>
+
+            <child>
+              <object class="BoxesProperties" id="properties">
+                <property name="visible">True</property>
+              </object>
+
+              <packing>
+                <property name="name">main</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="BoxesTroubleshootLog" id="troubleshoot_log">
+                <property name="visible">True</property>
+              </object>
+
+              <packing>
+                <property name="name">troubleshoot_log</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+              </object>
+
+              <packing>
+                <property name="name">file_chooser</property>
+              </packing>
+            </child>
+
+          </object>
+        </child>
+
+      </object>
+    </child>
+
+    <child type="titlebar">
+      <object class="BoxesPropertiesToolbar" id="topbar">
+        <property name="visible">True</property>
+      </object>
+    </child>
+  </template>
+
+  <object class="GtkFileFilter" id="supported_files_filter">
+    <mime-types>
+      <mime-type>application/x-cd-image</mime-type>
+      <mime-type>application/x-raw-disk-image</mime-type>
+    </mime-types>
+  </object>
+</interface>

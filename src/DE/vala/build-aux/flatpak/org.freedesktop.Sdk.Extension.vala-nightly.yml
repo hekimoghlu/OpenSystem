@@ -1,0 +1,105 @@
+id: "org.freedesktop.Sdk.Extension.vala-nightly"
+branch: "24.08"
+runtime: "org.freedesktop.Sdk"
+build-extension: true
+sdk: "org.freedesktop.Sdk"
+runtime-version: "24.08"
+sdk-extensions: ["org.freedesktop.Sdk.Extension.vala"]
+separate-locales: false
+appstream-compose: false
+build-options:
+  prefix: "/usr/lib/sdk/vala-nightly"
+  prepend-pkg-config-path: "/usr/lib/sdk/vala-nightly/lib/pkgconfig/:/usr/lib/sdk/vala/lib/pkgconfig/"
+  prepend-path: "/usr/lib/sdk/vala-nightly/bin/:/usr/lib/sdk/vala/bin/"
+cleanup:
+  - "/share/info"
+  - "/share/man"
+  - "/share/doc"
+  - "/share/gir-1.0"
+  - "/lib/girepository-1.0"
+  - "/include"
+  - "*.la"
+  - "/share/vala/Makefile.vapigen"
+  - "/lib/libgvpr.so*"
+  - "/share/graphviz/gvpr"
+modules:
+  - name: valac
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/gnome/vala.git
+        branch: main
+        disable-shallow-clone: true
+    run-tests: false
+    modules:
+      - name: graphviz
+        buildsystem: autotools
+        sources:
+          - type: archive
+            url: "https://gitlab.com/graphviz/graphviz/-/archive/10.0.1/graphviz-10.0.1.tar.gz"
+            sha256: "28f452ef1cb12288c8758a62f8c3fcfefdb91b251f7aae61d0d703f851bde931"
+            x-checker-data:
+              type: anitya
+              project-id: 1249
+              stable-only: true
+              url-template: "https://gitlab.com/graphviz/graphviz/-/archive/$version/graphviz-$version.tar.gz"
+        cleanup: ["/include", "*.pc", "/share/graphviz/doc", "/bin", "/lib/pkgconfig"]
+  - name: vls
+    buildsystem: meson
+    sources:
+      - type: git
+        url: "https://github.com/vala-lang/vala-language-server.git"
+        branch: "master"
+    build-options:
+      env:
+        {
+          XDG_DATA_DIRS: "/usr/lib/sdk/vala/share/:/usr/lib/sdk/vala-nightly/share/",
+        }
+    modules:
+      - name: jsonrpc
+        buildsystem: meson
+        sources:
+          - type: git
+            url: "https://gitlab.gnome.org/GNOME/jsonrpc-glib.git"
+            branch: "main"
+        cleanup: ["/lib/pkgconfig"]
+      - name: gee
+        buildsystem: autotools
+        sources:
+          - type: archive
+            url: "https://download.gnome.org/sources/libgee/0.20/libgee-0.20.8.tar.xz"
+            sha256: "189815ac143d89867193b0c52b7dc31f3aa108a15f04d6b5dca2b6adfad0b0ee"
+            x-checker-data:
+              type: gnome
+              name: libgee
+              stable-only: true
+        cleanup: ["/lib/pkgconfig"]
+      - name: uncrustify
+        buildsystem: cmake-ninja
+        config-opts:
+          - "-DCMAKE_BUILD_TYPE=Release"
+        builddir: true
+        sources:
+          - type: archive
+            url: "https://github.com/uncrustify/uncrustify/archive/uncrustify-0.78.1.tar.gz"
+            sha256: "ecaf4c0adca14c36dfffa30bc28e69865115ecd602c90eb16a8cddccb41caad2"
+        cleanup: ["/lib/pkgconfig"]
+  - name: scripts
+    buildsystem: simple
+    sources:
+      - type: script
+        commands:
+          - export PATH=/usr/lib/sdk/vala-nightly/bin/:$PATH
+          - export LD_LIBRARY_PATH=/usr/lib/sdk/vala-nightly/lib/:$LD_LIBRARY_PATH
+        dest-filename: "enable.sh"
+    build-commands:
+      - cp enable.sh /usr/lib/sdk/vala-nightly/
+  - name: appdata
+    buildsystem: simple
+    sources:
+      - type: file
+        path: "org.freedesktop.Sdk.Extension.vala-nightly.appdata.xml"
+    build-commands:
+      - mkdir -p ${FLATPAK_DEST}/share/metainfo
+      - cp ${FLATPAK_ID}.appdata.xml ${FLATPAK_DEST}/share/metainfo
+      - appstreamcli compose --components=${FLATPAK_ID} --prefix=/ --origin=${FLATPAK_ID} --result-root=${FLATPAK_DEST} --data-dir=${FLATPAK_DEST}/share/app-info/xmls ${FLATPAK_DEST}

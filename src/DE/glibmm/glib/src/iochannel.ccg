@@ -1,0 +1,307 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/exceptionhandler.h>
+#include <glibmm/iochannel.h>
+#include <glibmm/utility.h>
+#include <glibmm/main.h>
+
+namespace
+{
+
+// Glib::IOChannel reference counting issues:
+//
+// Normally, you'd expect that the C++ object stays around as long as the
+// C instance does.  Also Glib::wrap() usually returns always the same C++
+// wrapper object for a single C instance.
+//
+// Unfortunately it isn't possible to implement these features if we didn't
+// create the underlying GIOChannel.  That is, when wrapping existing
+// GIOChannel instances such as returned by e.g. g_io_channel_unix_new() or
+// g_io_channel_new_file().  Neither is there a way to hook up a wrapper
+// object in an existing GIOChannel, nor exists any destroy notification.
+//
+// So that means: If the IOChannel backend is unknown (normal case), then the
+// wrapper instance holds always exactly one reference to the GIOChannel.
+// The wrapper object itself is then managed via our own refcounting
+// mechanism.  To do that a utility class ForeignIOChannel is introduced to
+// override reference() and unreference().
+
+class ForeignIOChannel : public Glib::IOChannel
+{
+public:
+  ForeignIOChannel(GIOChannel* gobject, bool take_copy)
+  : Glib::IOChannel(gobject, take_copy), ref_count_(0)
+  {
+  }
+
+  void reference() const override;
+  void unreference() const override;
+
+private:
+  mutable int ref_count_;
+};
+
+void
+ForeignIOChannel::reference() const
+{
+  ++ref_count_;
+}
+
+void
+ForeignIOChannel::unreference() const
+{
+  if (!(--ref_count_))
+    delete this;
+}
+
+} // anonymous namespace
+
+namespace Glib
+{
+
+/**** GLib::IOChannel ******************************************************/
+
+IOChannel::IOChannel(IOChannel&& other) noexcept : sigc::trackable(std::move(other)),
+                                                   gobject_(std::move(other.gobject_))
+{
+  other.gobject_ = nullptr;
+}
+
+IOChannel&
+IOChannel::operator=(IOChannel&& other) noexcept
+{
+  sigc::trackable::operator=(std::move(other));
+
+  release_gobject();
+
+  gobject_ = std::move(other.gobject_);
+  other.gobject_ = nullptr;
+
+  return *this;
+}
+
+/* Construct an IOChannel wrapper for an already created GIOChannel.
+ * See the comment at the top of this file for an explanation of the
+ * problems with this approach.
+ */
+IOChannel::IOChannel(GIOChannel* gobject, bool take_copy) : gobject_(gobject)
+{
+  g_assert(gobject != nullptr);
+
+  if (take_copy)
+    g_io_channel_ref(gobject_);
+}
+
+void
+IOChannel::release_gobject()
+{
+  if (gobject_)
+  {
+    const auto tmp_gobject = gobject_;
+    gobject_ = nullptr;
+
+    g_io_channel_unref(tmp_gobject);
+  }
+}
+
+IOChannel::~IOChannel()
+{
+  release_gobject();
+}
+
+Glib::RefPtr<IOChannel>
+IOChannel::create_from_file(const std::string& filename, const std::string& mode)
+{
+  GError* gerror = nullptr;
+  const auto channel = g_io_channel_new_file(filename.c_str(), mode.c_str(), &gerror);
+
+  if (gerror)
+  {
+    Glib::Error::throw_exception(gerror);
+  }
+
+  return Glib::wrap(channel, false);
+}
+
+Glib::RefPtr<IOChannel>
+IOChannel::create_from_fd(int fd)
+{
+  return Glib::wrap(g_io_channel_unix_new(fd), false);
+}
+
+#ifdef G_OS_WIN32
+
+Glib::RefPtr<IOChannel>
+IOChannel::create_from_win32_fd(int fd)
+{
+  return Glib::wrap(g_io_channel_win32_new_fd(fd), false);
+}
+
+Glib::RefPtr<IOChannel>
+IOChannel::create_from_win32_socket(int socket)
+{
+  return Glib::wrap(g_io_channel_win32_new_socket(socket), false);
+}
+
+#endif /* G_OS_WIN32 */
+
+IOStatus
+IOChannel::write(const Glib::ustring& str)
+{
+  gsize bytes_written = 0;
+  return write(str.data(), str.bytes(), bytes_written);
+}
+
+IOStatus
+IOChannel::read_line(Glib::ustring& line)
+{
+  GError* gerror = nullptr;
+  gsize bytes = 0;
+  char* pch_buf = nullptr;
+
+  const auto status = g_io_channel_read_line(gobj(), &pch_buf, &bytes, nullptr, &gerror);
+  auto buf = make_unique_ptr_gfree(pch_buf);
+  if (gerror)
+  {
+    Glib::Error::throw_exception(gerror);
+  }
+
+  if (buf.get())
+    line.assign(buf.get(), buf.get() + bytes);
+  else
+    line.erase();
+
+  return (IOStatus)status;
+}
+
+IOStatus
+IOChannel::read_to_end(Glib::ustring& str)
+{
+  GError* gerror = nullptr;
+  gsize bytes = 0;
+  char* pch_buf = nullptr;
+
+  const auto status = g_io_channel_read_to_end(gobj(), &pch_buf, &bytes, &gerror);
+  auto buf = make_unique_ptr_gfree(pch_buf);
+  if (gerror)
+  {
+    Glib::Error::throw_exception(gerror);
+  }
+
+  if (buf.get())
+    str.assign(buf.get(), buf.get() + bytes);
+  else
+    str.erase();
+
+  return (IOStatus)status;
+}
+
+IOStatus
+IOChannel::read(Glib::ustring& str, gsize count)
+{
+  auto buf = make_unique_ptr_gfree(g_new(char, count));
+  GError* gerror = nullptr;
+  gsize bytes = 0;
+
+  const auto status = g_io_channel_read_chars(gobj(), buf.get(), count, &bytes, &gerror);
+
+  if (gerror)
+  {
+    Glib::Error::throw_exception(gerror);
+  }
+
+  if (buf.get())
+    str.assign(buf.get(), buf.get() + bytes);
+  else
+    str.erase();
+
+  return (IOStatus)status;
+}
+
+IOStatus
+IOChannel::set_encoding(const std::string& encoding)
+{
+  GError* gerror = nullptr;
+
+  const auto status = g_io_channel_set_encoding(gobj(), Glib::c_str_or_nullptr(encoding), &gerror);
+
+  if (gerror)
+  {
+    Glib::Error::throw_exception(gerror);
+  }
+
+  return (IOStatus)status;
+}
+
+std::string
+IOChannel::get_encoding() const
+{
+  const char* const encoding = g_io_channel_get_encoding(gobject_);
+  return convert_const_gchar_ptr_to_stdstring(encoding);
+}
+
+void
+IOChannel::set_line_term(const std::string& term)
+{
+  if (term.empty())
+    g_io_channel_set_line_term(gobj(), nullptr, 0);
+  else
+    g_io_channel_set_line_term(gobj(), term.data(), term.size());
+}
+
+std::string
+IOChannel::get_line_term() const
+{
+  int len = 0;
+  const char* const term = g_io_channel_get_line_term(gobject_, &len);
+
+  return (term) ? std::string(term, len) : std::string();
+}
+
+Glib::RefPtr<IOSource>
+IOChannel::create_watch(IOCondition condition)
+{
+  return IOSource::create(gobj(), condition);
+}
+
+void
+IOChannel::reference() const
+{
+  g_io_channel_ref(gobject_);
+}
+
+void
+IOChannel::unreference() const
+{
+  g_io_channel_unref(gobject_);
+}
+
+Glib::RefPtr<IOChannel>
+wrap(GIOChannel* gobject, bool take_copy)
+{
+  IOChannel* cpp_object = nullptr;
+
+  if (gobject)
+  {
+    cpp_object = new ForeignIOChannel(gobject, take_copy);
+    cpp_object->reference(); // the refcount is initially 0
+  }
+
+  return Glib::make_refptr_for_instance<IOChannel>(cpp_object);
+}
+
+} // namespace Glib

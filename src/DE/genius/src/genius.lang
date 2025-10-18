@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="genius" _name="Genius" version="2.0" _section="Script">
+
+<metadata>
+  <property name="mimetypes">text/x-genius</property>
+  <property name="globs">*.gel</property>
+</metadata>
+
+<styles>
+  <style id="escaped-character" name="Escaped Character" map-to="def:special-char"/>
+  <style id="comment" name="Line Comment" map-to="def:comment"/>
+  <style id="keyword" name="Keyword" map-to="def:keyword"/>
+  <style id="command" name="Command" map-to="def:function"/>
+  <style id="string" name="String" map-to="def:string"/>
+</styles>
+
+<definitions>
+  <context id="genius">
+    <include>
+      <context id="string" end-at-line-end="true" style-ref="string">
+        <start>"</start>
+        <end>"</end>
+        <include>
+          <context id="escape" style-ref="escaped-character">
+            <match>\\</match>
+          </context>
+        </include>
+      </context>
+
+      <context id="comment" style-ref="comment">
+        <start>#</start>
+        <end>$</end>
+      </context>
+
+      <context ref="def:decimal"/>
+      <context ref="def:float"/>
+
+      <context id="command" style-ref="command">
+        <prefix>^</prefix>
+	<keyword>load</keyword>
+	<keyword>plugin</keyword>
+	<keyword>cd</keyword>
+	<keyword>ls</keyword>
+	<keyword>pwd</keyword>
+	<keyword>help</keyword>
+      </context>
+
+      <context id="keyword" style-ref="keyword">
+	<keyword>not</keyword>
+	<keyword>and</keyword>
+	<keyword>xor</keyword>
+	<keyword>or</keyword>
+	<keyword>while</keyword>
+	<keyword>until</keyword>
+	<keyword>for</keyword>
+	<keyword>sum</keyword>
+	<keyword>prod</keyword>
+	<keyword>do</keyword>
+	<keyword>to</keyword>
+	<keyword>by</keyword>
+	<keyword>in</keyword>
+	<keyword>if</keyword>
+	<keyword>then</keyword>
+	<keyword>else</keyword>
+	<keyword>function</keyword>
+	<keyword>parameter</keyword>
+	<keyword>call</keyword>
+	<keyword>return</keyword>
+	<keyword>bailout</keyword>
+	<keyword>exception</keyword>
+	<keyword>continue</keyword>
+	<keyword>break</keyword>
+	<keyword>mod</keyword>
+	<keyword>null</keyword>
+      </context>
+    </include>
+  </context>
+</definitions>
+</language>

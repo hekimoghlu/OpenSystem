@@ -1,0 +1,58 @@
+%define alphatag #ALPHATAG#
+
+Name:           gnome-power-manager
+Version:        #VERSION#
+Release:        1.#BUILD#%{?alphatag}%{?dist}
+Summary:        GNOME power management service
+
+License:        GPLv2+ and GFDL
+URL:            https://projects.gnome.org/gnome-power-manager/
+Source0:        https://download.gnome.org/sources/gnome-power-manager/3.32/%{name}-%{version}.tar.xz
+
+BuildRequires:  gcc
+BuildRequires:  gettext
+BuildRequires:  meson
+BuildRequires:  pkgconfig(glib-2.0)
+BuildRequires:  pkgconfig(gobject-2.0)
+BuildRequires:  pkgconfig(gio-2.0)
+BuildRequires:  pkgconfig(gtk+-3.0)
+BuildRequires:  pkgconfig(gdk-3.0)
+BuildRequires:  pkgconfig(cairo)
+BuildRequires:  pkgconfig(upower-glib)
+BuildRequires:  docbook-utils
+BuildRequires:  desktop-file-utils
+BuildRequires:  libappstream-glib
+
+%description
+GNOME Power Manager uses the information and facilities provided by UPower
+displaying icons and handling user callbacks in an interactive GNOME session.
+
+%prep
+%autosetup
+
+%build
+%meson
+%meson_build
+
+%install
+%meson_install
+%find_lang %{name} --with-gnome
+
+%check
+desktop-file-validate %{buildroot}%{_datadir}/applications/org.gnome.PowerStats.desktop
+appstream-util --nonet validate-relax %{buildroot}%{_datadir}/metainfo/org.gnome.PowerStats.metainfo.xml
+
+%files -f %{name}.lang
+%license COPYING
+%doc AUTHORS README.md
+%{_bindir}/gnome-power-statistics
+%{_datadir}/applications/org.gnome.PowerStats.desktop
+%{_datadir}/glib-2.0/schemas/org.gnome.power-manager.gschema.xml
+%{_datadir}/icons/hicolor/*/apps/org.gnome.PowerStats*.*
+%{_datadir}/metainfo/org.gnome.PowerStats.metainfo.xml
+%{_mandir}/man1/gnome-power-statistics.1*
+
+%changelog
+* #LONGDATE# Richard Hughes <richard@hughsie.com> #VERSION#-0.#BUILD##ALPHATAG#
+- Update from git
+

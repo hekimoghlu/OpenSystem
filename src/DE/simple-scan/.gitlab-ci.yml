@@ -1,0 +1,55 @@
+build:snap:
+  image: ubuntudesktop/gnome-3-38-2004
+  before_script:
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt-get install -q -y --no-install-recommends ca-certificates
+  script: snapcraft
+  artifacts:
+    paths: ['./*.snap']
+    expire_in: 3 days
+  # TODO: Fix GTK4 snap package build
+  allow_failure: true
+
+build-ubuntu:
+  image: ubuntu:rolling
+  before_script:
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt-get install -q -y --no-install-recommends meson valac gcc gettext itstool libfribidi-dev libgirepository1.0-dev libgtk-4-dev libadwaita-1-dev libgusb-dev libcolord-dev libpackagekit-glib2-dev libwebp-dev libsane-dev git ca-certificates
+  script:
+    - meson _build
+    - ninja -C _build install
+
+build-fedora:
+  image: fedora:latest
+  before_script:
+    - dnf install -y meson vala gettext itstool fribidi-devel gtk4-devel libadwaita-devel gobject-introspection-devel libgusb-devel colord-devel PackageKit-glib-devel libwebp-devel sane-backends-devel git
+  script:
+    - meson _build
+    - ninja -C _build install
+
+build-arch:
+  image: archlinux:base
+  before_script:
+    - pacman -Syu --noconfirm meson vala gettext itstool fribidi gtk4 libadwaita gobject-introspection libgusb colord libwebp sane git
+  script:
+    - meson _build
+    - ninja -C _build install
+  allow_failure: true
+
+include:
+  - project: "GNOME/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+  - project: "GNOME/citemplates"
+    file: "templates/default-rules.yml"
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+
+flatpak:
+  variables:
+    MANIFEST_PATH: "build-aux/flatpak/org.gnome.SimpleScan.json"
+    FLATPAK_MODULE: "simple-scan"
+    APP_ID: "org.gnome.SimpleScan"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    BUNDLE: "simple-scan.flatpak"
+  extends: '.flatpak'

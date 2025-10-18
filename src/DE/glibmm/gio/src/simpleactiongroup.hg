@@ -1,0 +1,56 @@
+/* Copyright (C) 2011 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <giomm/actionmap.h>
+#include <giomm/actiongroup.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+class GIOMM_API Action;
+
+/** SimpleActionGroup - A simple ActionGroup implementation.
+ * SimpleActionGroup is a hash table filled with Action objects, implementing
+ * the ActionGroup interface.
+ *
+ * @newin{2,32}
+ */
+class GIOMM_API SimpleActionGroup : public Glib::Object,
+                                    public ActionGroup,
+                                    public ActionMap
+{
+  _CLASS_GOBJECT(SimpleActionGroup, GSimpleActionGroup, G_SIMPLE_ACTION_GROUP, Glib::Object, GObject, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(ActionGroup)
+  _IMPLEMENTS_INTERFACE(ActionMap)
+
+protected:
+  _CTOR_DEFAULT()
+
+public:
+  _WRAP_METHOD_DOCS_ONLY(g_simple_action_group_new)
+  _WRAP_CREATE()
+
+  _IGNORE(g_simple_action_group_lookup, g_simple_action_group_insert, g_simple_action_group_remove)
+
+  _IGNORE(g_simple_action_group_add_entries) // deprecated
+};
+
+} // namespace Gio

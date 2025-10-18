@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+
+###########################################################################
+#    OCRFeeder - The complete OCR suite
+#    Copyright (C) 2009 Joaquim Rocha
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+###########################################################################
+
+import sys
+import os
+local_src = os.path.dirname(os.path.abspath(__file__)) + '/../src'
+if os.path.exists(local_src):
+    sys.path = [local_src] + sys.path
+installed_src = os.path.join('@prefix@', 'lib', 'python@PYTHON_VERSION@',
+                             'site-packages')
+if os.path.exists(installed_src):
+    sys.path.insert(1, installed_src)
+
+from PIL import Image
+from ocrfeeder.util.constants import OCRFEEDER_STUDIO_VERSION
+from ocrfeeder.util.graphics import getImageResolution, convertMultiImagesInList
+from ocrfeeder.util.configuration import ConfigurationManager
+from ocrfeeder.feeder.ocrEngines import OcrEnginesManager
+from ocrfeeder.studio.dataHolder import PageData
+from ocrfeeder.feeder.layoutAnalysis import LayoutAnalysis
+from ocrfeeder.feeder.documentGeneration import DocumentGeneratorManager
+from optparse import OptionParser
+
+document_generator_manager = DocumentGeneratorManager()
+formats = document_generator_manager.getFormats()
+
+configuration_manager = ConfigurationManager()
+ocr_engines_manager = OcrEnginesManager(configuration_manager)
+ocr_engines_manager.makeEnginesFromFolder(configuration_manager.user_engines_folder)
+ocr_engines = ocr_engines_manager.ocr_engines
+
+ocr_engines_help_text = 'the OCR engine to be used.'
+if not ocr_engines:
+    ocr_engines_help_text += ' No engines configured!'
+else:
+    ocr_engines_help_text +=  ' Options are: %s' % \
+                              ', '.join([engine[0].name for engine in ocr_engines[:-1]])
+    if len(ocr_engines) > 1:
+        ocr_engines_help_text += ' or %s' % ocr_engines[-1][0].name
+
+parser = OptionParser(usage = 'Usage: %prog -i IMAGE1 [-i IMAGE2, ...] -o FILE',
+                      version = '%prog ' + OCRFEEDER_STUDIO_VERSION)
+parser.add_option('-i', '--image', dest = 'images',
+                  action = 'append', type = 'string', metavar = 'IMAGE1 [--image=IMAGE2, ...]',
+                  help = 'images to be recognized', default = [])
+format_help_text = ', '.join(formats) + ' or SPDF (for a searchable PDF)'
+parser.add_option('-f', '--format', dest = 'format',
+                  action = 'store', type = 'choice', default = 'ODT',
+                  help = 'format of the generated document', metavar = format_help_text,
+                  choices = formats + ['SPDF'])
+parser.add_option('-o', '--output', dest = 'output',
+                  action = 'store', type = 'string',
+                  help = 'the document to be generated')
+parser.add_option('-e', '--engine', dest = 'engine',
+                  action = 'store', type = 'string',
+                  help = ocr_engines_help_text)
+parser.add_option('-l', '--language', dest = 'language',
+                  action = 'store', type = 'string',
+                  help = 'the language according to the ISO-639-1. For example "pt" for Portuguese or "en" for English')
+parser.add_option('--window-size', dest = 'window_size', default = 'auto',
+                  action = 'store', type = 'string', metavar= 'auto or an integer value',
+                  help = 'the segmentation algorithm window size')
+options, args = parser.parse_args()
+
+if len(options.images) < 1:
+    parser.error('Please specify the images to be recognized.')
+    parser.print_help()
+    exit(0)
+if options.output is None:
+    parser.error('Please specify the output file.')
+    parser.print_help()
+    exit(0)
+
+images = options.images
+window_size = options.window_size
+if window_size == 'auto':
+    window_size = None
+else:
+    try:
+        window_size = int(window_size)
+    except ValueError:
+        parser.error('Please use either "auto" or an integer value '
+                     'for the window size.')
+        exit(0)
+export_format = options.format
+file_name = options.output
+if not file_name:
+    parser.error('Please choose the output name.')
+
+if not len(ocr_engines):
+    parser.error('No OCR engines configured.')
+    exit(0)
+
+engine_name = options.engine
+if engine_name:
+    engine_name = engine_name.lower()
+    for engine in ocr_engines:
+        if engine[0].name.lower() == engine_name:
+            ocr_engine = engine[0]
+            break
+else:
+    ocr_engine = ocr_engines[0][0]
+
+if options.language:
+    ocr_engine.setLanguage(options.language)
+
+pages = []
+
+image_list = convertMultiImagesInList(images,
+                                  configuration_manager.TEMPORARY_FOLDER)
+
+for image in image_list:
+    if not os.path.isfile(image):
+        parser.error('The image "%s" is not a file or does not exist.' %\
+                     image)
+        exit(0)
+    page_data = PageData(image)
+    data_boxes = []
+    image_obj = Image.open(image)
+    layout_analysis = LayoutAnalysis(ocr_engine,
+                                     window_size)
+    resolution = getImageResolution(image_obj)[1]
+    page_data.data_boxes = layout_analysis.recognize(image,
+                                                     resolution)
+    pages.append(page_data)
+
+isPDF = 'PDF' in export_format
+if isPDF or 'SPDF' in export_format:
+    generator_class = document_generator_manager.get('PDF')
+    document_generator = generator_class(file_name, isPDF)
+else:
+    generator_class = document_generator_manager.get(export_format)
+    document_generator = generator_class(file_name)
+
+for page in pages:
+    document_generator.addPage(page)
+
+document_generator.save()
+
+configuration_manager.removeTemporaryFolder()

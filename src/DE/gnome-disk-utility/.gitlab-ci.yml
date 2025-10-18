@@ -1,0 +1,34 @@
+include: 'https://gitlab.gnome.org/GNOME/citemplates/raw/master/flatpak/flatpak_ci_initiative.yml'
+
+stages:
+  - build
+  - test
+
+variables:
+  DEPENDENCIES: glib-devel libdvdread-devel gtk4-devel libadwaita-devel
+                libnotify-devel libsecret-devel libpwquality-devel
+                libudisks2-devel xz-devel systemd-devel meson gcc
+                glibc-devel libhandy1-devel gettext git gobject-introspection-devel
+                vala desktop-file-utils gtk4-devel libadwaita-devel rust cargo
+  OPTIONS: -Dman=false
+
+flatpak:
+  image: quay.io/gnome_infrastructure/gnome-runtime-images:gnome-master
+  variables:
+    BUNDLE: "org.gnome.DiskUtility.flatpak"
+    MANIFEST_PATH: "flatpak/org.gnome.DiskUtility.json"
+    FLATPAK_MODULE: "gnome-disk-utility"
+    APP_ID: "org.gnome.DiskUtility"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+  extends: .flatpak
+
+
+build:
+  image: fedora:rawhide
+  stage: build
+  before_script:
+    - dnf update -y --nogpgcheck && dnf install -y --nogpgcheck $DEPENDENCIES
+  script:
+    - meson . _build $OPTIONS
+    - ninja -C _build
+    - ninja -C _build install

@@ -1,0 +1,707 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/iterator.h>
+#include <gstreamermm/pad.h>
+
+_PINCLUDE(gstreamermm/private/miniobject_p.h)
+#include <iostream>
+
+namespace Gst
+{
+
+namespace Enums
+{
+
+Glib::ustring get_name(QueryType t)
+{
+  return gst_query_type_get_name(static_cast<GstQueryType>(t));
+}
+
+Gst::QueryTypeFlags get_flags(QueryType type)
+{
+  return static_cast<Gst::QueryTypeFlags>(gst_query_type_get_flags(static_cast<GstQueryType>(type)));
+}
+
+Glib::QueryQuark get_quark(QueryType t)
+{
+  return Glib::QueryQuark(gst_query_type_to_quark(static_cast<GstQueryType>(t)));
+}
+
+} //namespace Enums
+
+Glib::RefPtr<Query> Query::create_writable()
+{
+  return Glib::RefPtr<Query>::cast_static(MiniObject::create_writable());
+}
+
+Glib::RefPtr<Gst::QueryApplication>
+  QueryApplication::create(QueryType type, const Gst::Structure& structure)
+{
+  // Create copy because query takes ownership of structure:
+  GstStructure* copy_struct = gst_structure_copy(structure.gobj());
+  GstQuery* query = gst_query_new_custom(GstQueryType(type),
+    copy_struct); 
+  return Glib::wrap_query_derived<Gst::QueryApplication>(query);
+}
+
+Glib::RefPtr<Gst::QueryConvert>
+  QueryConvert::create(Format src_format, gint64 value, Format dest_format)
+{
+  GstQuery* query = gst_query_new_convert(GstFormat(src_format), value,
+    GstFormat(dest_format));
+  return Glib::wrap_query_derived<Gst::QueryConvert>(query);
+}
+
+void QueryConvert::set(Format src_format, gint64 src_value, Format dest_format, gint64 dest_value)
+{
+  gst_query_set_convert(gobj(), GstFormat(src_format), src_value, GstFormat(dest_format), dest_value);
+}
+
+void QueryConvert::parse(Format& src_format, gint64& src_value, Format& dest_format, gint64& dest_value) const
+{
+  gst_query_parse_convert(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&src_format), &src_value,
+    reinterpret_cast<GstFormat*>(&dest_format), &dest_value);
+}
+
+void QueryConvert::parse(Format& dest_format, gint64& dest_value) const
+{
+  gst_query_parse_convert(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    reinterpret_cast<GstFormat*>(&dest_format), &dest_value);
+}
+
+Format QueryConvert::parse_src_format() const
+{
+  Format src_format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_convert(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&src_format), nullptr, nullptr, nullptr);
+  return src_format;
+}
+
+gint64 QueryConvert::parse_src_value() const
+{
+  gint64 src_value = 0;
+  gst_query_parse_convert(const_cast<GstQuery*>(gobj()), nullptr, &src_value,
+    nullptr, nullptr);
+  return src_value;
+}
+
+Format QueryConvert::parse_dest_format() const
+{
+  Format dest_format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_convert(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    reinterpret_cast<GstFormat*>(&dest_format), nullptr);
+  return dest_format;
+}
+
+gint64 QueryConvert::parse_dest_value() const
+{
+  gint64 dest_value = 0;
+  gst_query_parse_convert(const_cast<GstQuery*>(gobj()), nullptr, nullptr, nullptr,
+    &dest_value);
+  return dest_value;
+}
+
+Glib::RefPtr<Gst::QueryPosition> QueryPosition::create(Format format)
+{
+  GstQuery* query = gst_query_new_position(GstFormat(format));
+  return Glib::wrap_query_derived<Gst::QueryPosition>(query);
+}
+
+void QueryPosition::set(Format format, gint64 position)
+{
+  gst_query_set_position(gobj(), GstFormat(format), position);
+}
+
+void QueryPosition::parse(Format& format, gint64& position) const
+{
+  gst_query_parse_position(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), &position);
+}
+
+gint64 QueryPosition::parse() const
+{
+  gint64 position = 0;
+  gst_query_parse_position(const_cast<GstQuery*>(gobj()), nullptr, &position);
+  return position;
+}
+
+Format QueryPosition::parse_format() const
+{
+  Format format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_position(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), nullptr);
+  return format;
+}
+
+Glib::RefPtr<Gst::QueryDuration> QueryDuration::create(Format format)
+{
+  GstQuery* query = gst_query_new_duration(GstFormat(format));
+  return Glib::wrap_query_derived<Gst::QueryDuration>(query);
+}
+
+void QueryDuration::set(Format format, gint64 duration)
+{
+  gst_query_set_duration(gobj(), GstFormat(format), duration);
+}
+
+void QueryDuration::parse(Format& format, gint64& duration) const
+{
+  gst_query_parse_duration(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), &duration);
+}
+
+gint64 QueryDuration::parse() const
+{
+  gint64 duration = 0;
+  gst_query_parse_duration(const_cast<GstQuery*>(gobj()), nullptr, &duration);
+  return duration;
+}
+
+Format QueryDuration::parse_format() const
+{
+  Format format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_duration(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), 0);
+  return format;
+}
+
+Glib::RefPtr<Gst::QueryLatency> QueryLatency::create()
+{
+  GstQuery* query = gst_query_new_latency();
+  return Glib::wrap_query_derived<Gst::QueryLatency>(query);
+}
+
+void QueryLatency::set(bool live, ClockTime min_latency, ClockTime max_latency)
+{
+  gst_query_set_latency(gobj(), live, GstClockTime(min_latency), GstClockTime(max_latency));
+}
+
+void QueryLatency::parse(bool& live, ClockTime& min_latency, ClockTime& max_latency) const
+{
+  gboolean glive = FALSE;
+  gst_query_parse_latency(const_cast<GstQuery*>(gobj()), &glive,
+    reinterpret_cast<ClockTime*>(&min_latency),
+    reinterpret_cast<ClockTime*>(&max_latency));
+  live = glive;
+}
+
+bool QueryLatency::parse_live() const
+{
+  gboolean glive = FALSE;
+  gst_query_parse_latency(const_cast<GstQuery*>(gobj()), &glive, nullptr, nullptr);
+  return glive;
+}
+
+ClockTime QueryLatency::parse_min() const
+{
+  ClockTime min = 0;
+  gst_query_parse_latency(const_cast<GstQuery*>(gobj()), nullptr,
+    reinterpret_cast<ClockTime*>(&min), nullptr);
+  return min;
+}
+
+ClockTime QueryLatency::parse_max() const
+{
+  ClockTime max = 0;
+  gst_query_parse_latency(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    reinterpret_cast<ClockTime*>(&max));
+  return max;
+}
+
+Glib::RefPtr<Gst::QuerySeeking> QuerySeeking::create(Format format)
+{
+  GstQuery* query = gst_query_new_seeking(GstFormat(format));
+  return Glib::wrap_query_derived<Gst::QuerySeeking>(query);
+}
+
+void QuerySeeking::set(Format format, bool seekable, gint64 segment_start, gint64 segment_end)
+{
+  gst_query_set_seeking(gobj(), GstFormat(format), seekable, segment_start, segment_end);
+}
+
+void QuerySeeking::parse(Format& format, bool& seekable, gint64& segment_start, gint64& segment_end) const
+{
+  gboolean gseekable = FALSE;
+  gst_query_parse_seeking(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), &gseekable, &segment_start,
+    &segment_end);
+  seekable = gseekable;
+}
+
+Format QuerySeeking::parse_format() const
+{
+  Format format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_seeking(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), nullptr, nullptr, nullptr);
+  return format;
+}
+
+bool QuerySeeking::parse_seekable() const
+{
+  gboolean gseekable = FALSE;
+  gst_query_parse_seeking(const_cast<GstQuery*>(gobj()), nullptr,
+    &gseekable, nullptr, nullptr);
+  return gseekable;
+}
+
+gint64 QuerySeeking::parse_start() const
+{
+  gint64 start = 0;
+  gst_query_parse_seeking(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    &start, nullptr);
+  return start;
+}
+
+gint64 QuerySeeking::parse_end() const
+{
+  gint64 end = 0;
+  gst_query_parse_seeking(const_cast<GstQuery*>(gobj()), nullptr, nullptr, nullptr,
+    &end);
+  return end;
+}
+
+Glib::RefPtr<Gst::QueryFormats> QueryFormats::create()
+{
+  GstQuery* query = gst_query_new_formats();
+  return Glib::wrap_query_derived<Gst::QueryFormats>(query);
+}
+
+void QueryFormats::set(const Glib::ArrayHandle<Format>& formats)
+{
+  gst_query_set_formatsv(gobj(), formats.size(),
+    reinterpret_cast<GstFormat*>(const_cast<Gst::Format*>(formats.data())));
+}
+
+void QueryFormats::set(int n_formats, const Glib::ArrayHandle<Format>& formats)
+{
+  gst_query_set_formatsv(gobj(), n_formats,
+    reinterpret_cast<GstFormat*>(const_cast<Gst::Format*>(formats.data())));
+}
+
+guint QueryFormats::parse_length() const
+{
+  guint n_formats = 0;
+  gst_query_parse_n_formats(const_cast<GstQuery*>(gobj()), &n_formats);
+  return n_formats;
+}
+
+Format QueryFormats::parse(guint nth) const
+{
+  Format format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_nth_format(const_cast<GstQuery*>(gobj()), nth,
+    reinterpret_cast<GstFormat*>(&format));
+  return format;
+}
+
+Glib::RefPtr<Gst::QuerySegment> QuerySegment::create(Format format)
+{
+  GstQuery* query = gst_query_new_segment(GstFormat(format));
+  return Glib::wrap_query_derived<Gst::QuerySegment>(query);
+}
+
+void QuerySegment::set(double rate, Format format, gint64 start_value, gint64 stop_value)
+{
+  gst_query_set_segment(gobj(), rate, static_cast<GstFormat>(format),
+    start_value, stop_value);
+}
+
+void QuerySegment::parse(double& rate, Format& format, gint64& start_value, gint64& stop_value) const
+{
+  gst_query_parse_segment(const_cast<GstQuery*>(gobj()), &rate,
+    reinterpret_cast<GstFormat*>(&format), &start_value, &stop_value);
+}
+
+double QuerySegment::parse_rate() const
+{
+  double rate = 0;
+  gst_query_parse_segment(const_cast<GstQuery*>(gobj()), &rate, nullptr,
+    nullptr, nullptr);
+  return rate;
+}
+
+Format QuerySegment::parse_format() const
+{
+  Format format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_segment(const_cast<GstQuery*>(gobj()), nullptr,
+    reinterpret_cast<GstFormat*>(&format), nullptr, nullptr);
+  return format;
+}
+
+gint64 QuerySegment::parse_start() const
+{
+  gint64 start = 0;
+  gst_query_parse_segment(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    &start, nullptr);
+  return start;
+}
+
+gint64 QuerySegment::parse_stop() const
+{
+  gint64 stop = 0;
+  gst_query_parse_segment(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    nullptr, &stop);
+  return stop;
+}
+
+Glib::RefPtr<Gst::QueryBuffering> QueryBuffering::create(Format format)
+{
+  GstQuery* query = gst_query_new_buffering(GstFormat(format));
+  return Glib::wrap_query_derived<Gst::QueryBuffering>(query);
+}
+
+void QueryBuffering::set(bool busy, int percent)
+{
+  gst_query_set_buffering_percent(gobj(), busy, percent);
+}
+
+void QueryBuffering::parse(bool& busy, int& percent) const
+{
+  gboolean gbusy = FALSE;
+  gst_query_parse_buffering_percent(const_cast<GstQuery*>(gobj()), &gbusy,
+    &percent);
+  busy = gbusy;
+}
+
+bool QueryBuffering::parse_busy() const
+{
+  gboolean gbusy = FALSE;
+  gst_query_parse_buffering_percent(const_cast<GstQuery*>(gobj()), &gbusy,
+    0);
+  return gbusy;
+}
+
+int QueryBuffering::parse_percent() const
+{
+  int percent = 0;
+  gst_query_parse_buffering_percent(const_cast<GstQuery*>(gobj()), nullptr,
+    &percent);
+  return percent;
+}
+
+void QueryBuffering::set(BufferingMode mode, int avg_in, int avg_out, gint64 buffering_left)
+{
+  gst_query_set_buffering_stats(gobj(), static_cast<GstBufferingMode>(mode),
+    avg_in, avg_out, buffering_left);
+}
+
+void QueryBuffering::parse(BufferingMode& mode, int& avg_in, int& avg_out, gint64 buffering_left) const
+{
+  gst_query_parse_buffering_stats(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstBufferingMode*>(&mode), &avg_in, &avg_out,
+    &buffering_left);
+}
+
+BufferingMode QueryBuffering::parse_mode() const
+{
+  BufferingMode mode = Gst::BUFFERING_STREAM;
+  gst_query_parse_buffering_stats(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstBufferingMode*>(&mode), nullptr, nullptr, nullptr);
+  return mode;
+}
+
+int QueryBuffering::parse_input_rate() const
+{
+  int avg_in = 0;
+  gst_query_parse_buffering_stats(const_cast<GstQuery*>(gobj()), nullptr,
+    &avg_in, nullptr, nullptr);
+  return avg_in;
+}
+
+int QueryBuffering::parse_output_rate() const
+{
+  int avg_out = 0;
+  gst_query_parse_buffering_stats(const_cast<GstQuery*>(gobj()), nullptr, nullptr,
+    &avg_out, nullptr);
+  return avg_out;
+}
+
+gint64 QueryBuffering::parse_time_left() const
+{
+  gint64 buffering_left = Gst::BUFFERING_STREAM;
+  gst_query_parse_buffering_stats(const_cast<GstQuery*>(gobj()), nullptr,
+    nullptr, nullptr, &buffering_left);
+  return buffering_left;
+}
+
+void QueryBuffering::set(Format format, gint64 start, gint64 stop, gint64 estimated_total)
+{
+  gst_query_set_buffering_range(gobj(), static_cast<GstFormat>(format),
+    start, stop, estimated_total);
+}
+
+void QueryBuffering::parse(Format& format, gint64& start, gint64& stop, gint64& estimated_total) const
+{
+  gst_query_parse_buffering_range(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), &start, &stop, &estimated_total);
+}
+
+Format QueryBuffering::parse_format() const
+{
+  Format format = Gst::FORMAT_UNDEFINED;
+  gst_query_parse_buffering_range(const_cast<GstQuery*>(gobj()),
+    reinterpret_cast<GstFormat*>(&format), nullptr, nullptr, nullptr);
+  return format;
+}
+
+gint64 QueryBuffering::parse_start() const
+{
+  gint64 start = 0;
+  gst_query_parse_buffering_range(const_cast<GstQuery*>(gobj()), nullptr,
+    &start, nullptr, nullptr);
+  return start;
+}
+
+gint64 QueryBuffering::parse_stop() const
+{
+  gint64 stop = 0;
+  gst_query_parse_buffering_range(const_cast<GstQuery*>(gobj()), nullptr,
+    nullptr, &stop, nullptr);
+  return stop;
+}
+
+gint64 QueryBuffering::parse_total_time() const
+{
+  gint64 estimated_total = 0;
+  gst_query_parse_buffering_range(const_cast<GstQuery*>(gobj()), nullptr,
+    nullptr, nullptr, &estimated_total);
+  return estimated_total;
+}
+
+Glib::RefPtr<Gst::QueryCaps> QueryCaps::create(const Glib::RefPtr<Gst::Caps>& filter)
+{
+  GstQuery* query = gst_query_new_caps(filter->gobj());
+  return Glib::wrap_query_derived<Gst::QueryCaps>(query);
+}
+
+Glib::RefPtr<Gst::Caps> QueryCaps::parse() const
+{
+  GstCaps* caps;
+  gst_query_parse_caps(const_cast<GstQuery*>(gobj()), &caps);
+  return Glib::wrap(caps, true);
+}
+
+Glib::RefPtr<Gst::Caps> QueryCaps::parse_caps_result() const
+{
+  GstCaps* caps;
+  gst_query_parse_caps_result(const_cast<GstQuery*>(gobj()), &caps);
+  return Glib::wrap(caps, false);
+}
+
+void QueryCaps::set_caps_result(const Glib::RefPtr<Gst::Caps>& caps)
+{
+  gst_query_set_caps_result(gobj(), caps->gobj());
+}
+
+Glib::RefPtr<QueryScheduling> QueryScheduling::create()
+{
+  GstQuery* query = gst_query_new_scheduling();
+  return Glib::wrap_query_derived<QueryScheduling>(query);
+}
+
+void QueryScheduling::parse(SchedulingFlags& flags, gint& minsize, gint& maxsize, gint& align) const
+{
+  GstSchedulingFlags gst_flags;
+  gst_query_parse_scheduling(const_cast<GstQuery*>(gobj()), &gst_flags, &minsize, &maxsize, &align);
+  flags = SchedulingFlags(gst_flags);
+}
+
+void QueryScheduling::set(SchedulingFlags flags, gint minsize, gint maxsize, gint align)
+{
+  gst_query_set_scheduling(gobj(), GstSchedulingFlags(flags), minsize, maxsize, align);
+}
+
+void QueryScheduling::add_scheduling_mode(PadMode mode)
+{
+  gst_query_add_scheduling_mode(gobj(), GstPadMode(mode));
+}
+
+guint QueryScheduling::get_n_scheduling_modes() const
+{
+  return gst_query_get_n_scheduling_modes(const_cast<GstQuery*>(gobj()));
+}
+
+PadMode QueryScheduling::parse_nth_scheduling_mode(guint index) const
+{
+  return PadMode(gst_query_parse_nth_scheduling_mode(const_cast<GstQuery*>(gobj()), index));
+}
+
+bool QueryScheduling::has_scheduling_mode(PadMode mode) const
+{
+  return PadMode(gst_query_has_scheduling_mode(const_cast<GstQuery*>(gobj()), GstPadMode(mode)));
+}
+
+bool QueryScheduling::has_scheduling_mode_with_flags(PadMode mode, SchedulingFlags flags) const
+{
+  return PadMode(gst_query_has_scheduling_mode_with_flags(const_cast<GstQuery*>(gobj()), GstPadMode(mode), GstSchedulingFlags(flags)));
+}
+
+Glib::RefPtr<QueryAllocation> QueryAllocation::create(const Glib::RefPtr<Gst::Caps>& caps, bool need_pool)
+{
+  GstQuery* query = gst_query_new_allocation(caps->gobj(), need_pool);
+  return Glib::wrap_query_derived<QueryAllocation>(query);
+}
+
+void QueryAllocation::parse(Glib::RefPtr<Caps>& caps, bool& need_pool) const
+{
+  GstCaps* n_caps;
+  gboolean gst_need_pool;
+  gst_query_parse_allocation(const_cast<GstQuery*>(gobj()), &n_caps, &gst_need_pool);
+  caps = Glib::wrap(n_caps, false);
+  need_pool = gst_need_pool;
+}
+
+guint QueryAllocation::get_n_allocation_pools() const
+{
+  return gst_query_get_n_allocation_pools(const_cast<GstQuery*>(gobj()));
+}
+
+void QueryAllocation::remove_nth_allocation_pool(guint index)
+{
+  gst_query_remove_nth_allocation_pool(gobj(), index);
+}
+
+void QueryAllocation::add_allocation_param(const Glib::RefPtr<Allocator>& allocator, const AllocationParams& params)
+{
+  gst_query_add_allocation_param(gobj(), allocator->gobj(), params.gobj());
+}
+
+guint QueryAllocation::get_n_allocation_params() const
+{
+  return gst_query_get_n_allocation_params(const_cast<GstQuery*>(gobj()));
+}
+
+void QueryAllocation::parse_nth_allocation_param(guint index, Glib::RefPtr<Allocator>& allocator, AllocationParams& params) const
+{
+  GstAllocator* n_allocator;
+  gst_query_parse_nth_allocation_param(const_cast<GstQuery*>(gobj()), index, &n_allocator, params.gobj());
+  allocator = Glib::wrap(n_allocator, false);
+}
+
+void QueryAllocation::set_nth_allocation_param(guint index, const Glib::RefPtr<Allocator>& allocator, const AllocationParams& params)
+{
+  gst_query_set_nth_allocation_param(gobj(), index, allocator->gobj(), params.gobj());
+}
+
+void QueryAllocation::remove_nth_allocation_param(guint index)
+{
+  gst_query_remove_nth_allocation_param(gobj(), index);
+}
+
+void QueryAllocation::add_allocation_meta(GType api, const Structure& params)
+{
+  gst_query_add_allocation_meta(gobj(), api, params.gobj());
+}
+
+guint QueryAllocation::get_n_allocation_metas() const
+{
+  return gst_query_get_n_allocation_metas(const_cast<GstQuery*>(gobj()));
+}
+
+GType QueryAllocation::parse_nth_allocation_meta(guint index, Structure& params) const
+{
+  GstStructure *gst_params;
+  GType ret = gst_query_parse_nth_allocation_meta(const_cast<GstQuery*>(gobj()), index, (const GstStructure**)&gst_params);
+  params = Glib::wrap(gst_params, true);
+  return ret;
+}
+
+void QueryAllocation::remove_nth_allocation_meta(guint index)
+{
+  gst_query_remove_nth_allocation_meta(gobj(), index);
+}
+
+bool QueryAllocation::find_allocation_meta(GType api, guint& index) const
+{
+  return gst_query_find_allocation_meta(const_cast<GstQuery*>(gobj()), api, &index);
+}
+
+Glib::RefPtr<QueryUri> QueryUri::create()
+{
+  GstQuery* query = gst_query_new_uri();
+  return Glib::wrap_query_derived<QueryUri>(query);
+}
+
+Glib::ustring QueryUri::parse() const
+{
+  gchar* gst_uri;
+  Glib::ustring uri;
+  gst_query_parse_uri(const_cast<GstQuery*>(gobj()), &gst_uri);
+  if (gst_uri != nullptr)
+  {
+    uri = gst_uri;
+    g_free(gst_uri);
+  }
+
+  return uri;
+}
+
+void QueryUri::set(const Glib::ustring& uri)
+{
+  gst_query_set_uri(gobj(), uri.c_str());
+}
+
+void QueryUri::set_uri_redirection(const Glib::ustring& uri)
+{
+  gst_query_set_uri_redirection(gobj(), uri.c_str());
+}
+
+Glib::ustring QueryUri::parse_uri_redirection() const
+{
+  gchar* c_uri;
+  Glib::ustring uri;
+  gst_query_parse_uri_redirection(const_cast<GstQuery*>(gobj()), &c_uri);
+
+  if (c_uri != nullptr)
+  {
+    uri = c_uri;
+    g_free(c_uri);
+  }
+
+  return uri;
+}
+
+Glib::RefPtr<QueryAcceptCaps> QueryAcceptCaps::create(const Glib::RefPtr<Gst::Caps>& caps)
+{
+  GstQuery* query = gst_query_new_accept_caps(caps->gobj());
+  return Glib::wrap_query_derived<QueryAcceptCaps>(query);
+}
+
+
+Glib::RefPtr<Gst::Caps> QueryAcceptCaps::parse_accept_caps() const
+{
+  GstCaps *c_caps;
+  gst_query_parse_accept_caps(const_cast<GstQuery*>(gobj()), &c_caps);
+  return Glib::wrap(c_caps, false);
+}
+
+bool QueryAcceptCaps::parse_accept_caps_result() const
+{
+  gboolean c_result;
+  gst_query_parse_accept_caps_result(const_cast<GstQuery*>(gobj()), &c_result);
+  return bool(c_result);
+}
+
+void QueryAcceptCaps::set_accept_caps_result(bool result)
+{
+  gst_query_set_accept_caps_result(gobj(), result);
+}
+} //namesapce Gst

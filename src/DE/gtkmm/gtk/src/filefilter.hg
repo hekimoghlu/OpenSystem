@@ -1,0 +1,73 @@
+/* Copyright (C) 2003 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/filter.h>
+#include <gtkmm/buildable.h>
+#include <string>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/filter_p.h)
+
+namespace Gtk
+{
+
+/** A filter for selecting a file subset.
+ *
+ * A Gtk::FileFilter can be used to restrict the files being shown in a Gtk::FileChooser.
+ * Files can be filtered based on their name (with add_pattern()),
+ * on their MIME type (with add_mime_type()), or by a custom filter
+ * function (with add_custom()).
+ *
+ * Filtering by MIME types handles aliasing and subclassing of MIME types;
+ * e.g. a filter for <tt>text/plain</tt> also matches a file with MIME type
+ * <tt>application/rtf</tt>, since <tt>application/rtf</tt> is a subclass of
+ * <tt>text/plain</tt>. Note that Gtk::FileFilter allows wildcards for the
+ * subtype of a MIME type, so you can e.g. filter for <tt>image/ *</tt>.
+ *
+ * Filters are used by adding them to a Gtk::FileChooser. See Gtk::FileChooser::add_filter().
+ *
+ * @ingroup ListView
+ */
+class GTKMM_API FileFilter : public Gtk::Filter, public Buildable
+{
+  _CLASS_GOBJECT(FileFilter, GtkFileFilter, GTK_FILE_FILTER, Gtk::Filter, GtkFilter, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Buildable)
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(void set_name(const Glib::ustring& name), gtk_file_filter_set_name)
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_file_filter_get_name)
+
+  _WRAP_METHOD(void add_mime_type(const Glib::ustring& mime_type), gtk_file_filter_add_mime_type)
+  //TODO: When we can change ABI/API: const std::string& pattern.
+  _WRAP_METHOD(void add_pattern(const Glib::ustring& pattern), gtk_file_filter_add_pattern)
+  _WRAP_METHOD(void add_suffix(const std::string& suffix), gtk_file_filter_add_suffix)
+  _WRAP_METHOD(void add_pixbuf_formats(), gtk_file_filter_add_pixbuf_formats,
+    deprecated "4.20: Use add_image_formats() instead.")
+  //TODO: When the .defs files have been updated, uncomment add_image_formats().
+  //_WRAP_METHOD(void add_image_formats(), gtk_file_filter_add_image_formats)
+
+  // This is meant for implementors of FileChooser, so we don’t wrap it.
+  _IGNORE(gtk_file_filter_get_attributes)
+
+  _WRAP_PROPERTY("name", Glib::ustring)
+  _IGNORE_PROPERTY("patterns", "mime-types", "suffixes") dnl// write-only, construct-only
+};
+
+} // namespace Gtk

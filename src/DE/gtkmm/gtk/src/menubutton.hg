@@ -1,0 +1,154 @@
+/* Copyright (C) 2012 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/popover.h>
+#include <giomm/menumodel.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** A widget that shows a menu when clicked on.
+ *
+ * This menu can be provided either as a Gtk::Menu, a Gtk::Popover or an
+ * abstract Gio::MenuModel.
+ *
+ * The %Gtk::MenuButton widget can show either an icon (set with set_icon_name())
+ * or a label (set with set_label()). If neither is explicitly set,
+ * a Gtk::Image is automatically created, using an arrow image oriented according
+ * to set_direction() or the generic “open-menu-symbolic” icon if the direction
+ * is not set.
+ *
+ * @ingroup Widgets
+ * @newin{3,6}
+ */
+class GTKMM_API MenuButton : public Widget
+{
+  _CLASS_GTKOBJECT(MenuButton, GtkMenuButton, GTK_MENU_BUTTON, Gtk::Widget, GtkWidget, , , GTKMM_API)
+public:
+
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(void set_popover(Popover& popover), gtk_menu_button_set_popover)
+
+  /** Disables the button.
+   */
+  void unset_popover();
+
+  _WRAP_METHOD(Popover* get_popover(), gtk_menu_button_get_popover)
+  _WRAP_METHOD(const Popover* get_popover() const, gtk_menu_button_get_popover, constversion)
+
+  _WRAP_METHOD(void set_direction(ArrowType direction), gtk_menu_button_set_direction)
+  _WRAP_METHOD(ArrowType get_direction() const, gtk_menu_button_get_direction)
+
+  _WRAP_METHOD(void set_menu_model(const Glib::RefPtr<const Gio::MenuModel>& menu_model), gtk_menu_button_set_menu_model)
+
+  /** Disables the button.
+   */
+  void unset_menu_model();
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::MenuModel> get_menu_model(), gtk_menu_button_get_menu_model, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::MenuModel> get_menu_model() const, gtk_menu_button_get_menu_model, refreturn, constversion)
+
+  _WRAP_METHOD(void set_icon_name(const Glib::ustring& icon_name), gtk_menu_button_set_icon_name)
+  _WRAP_METHOD(Glib::ustring get_icon_name() const, gtk_menu_button_get_icon_name)
+
+  _WRAP_METHOD(void set_always_show_arrow(bool always_show_arrow = true), gtk_menu_button_set_always_show_arrow)
+  _WRAP_METHOD(bool get_always_show_arrow() const, gtk_menu_button_get_always_show_arrow)
+
+  _WRAP_METHOD(void set_label(const Glib::ustring& label), gtk_menu_button_set_label)
+  _WRAP_METHOD(Glib::ustring get_label() const, gtk_menu_button_get_label)
+
+  _WRAP_METHOD(void set_use_underline(bool use_underline = true), gtk_menu_button_set_use_underline)
+  _WRAP_METHOD(bool get_use_underline() const, gtk_menu_button_get_use_underline)
+
+  _WRAP_METHOD(void set_has_frame(bool has_frame = true), gtk_menu_button_set_has_frame)
+  _WRAP_METHOD(bool get_has_frame() const, gtk_menu_button_get_has_frame)
+
+  _WRAP_METHOD(void popup(), gtk_menu_button_popup)
+  _WRAP_METHOD(void popdown(), gtk_menu_button_popdown)
+
+  /** Slot to create a popup for the %MenuButton on demand.
+   *
+   * This slot is called when the popoup of the %MenuButton is shown, but none has
+   * been provided via set_popup(), set_popover() or set_menu_model().
+   */
+  using SlotCreatePopup = sigc::slot<void()>;
+
+  /** Sets @a slot to be called when a popup is about to be shown.
+   *
+   *  @a slot should use one of
+   *
+   * - set_popup()
+   * - set_popover()
+   * - set_menu_model()
+   *
+   * to set a popup for the %MenuButton.
+   * The %MenuButton will always be sensitive.
+   *
+   * Using this method will NOT reset the menu widget attached to the %MenuButton.
+   * Instead, this can be done manually in @a slot.
+   *
+   * @param slot Slot to call when a popup is about to be shown, but none
+   *             has been provided via other means.
+   * @newin{3,96}
+   */
+  void set_create_popup_func(const SlotCreatePopup& slot);
+  _IGNORE(gtk_menu_button_set_create_popup_func)
+
+  /** Undoes the effect of a previous call to set_create_popup_func().
+   */
+  void unset_create_popup_func();
+
+  _WRAP_METHOD(void set_primary(bool primary = true), gtk_menu_button_set_primary)
+  _WRAP_METHOD(bool get_primary() const, gtk_menu_button_get_primary)
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_menu_button_set_child)
+
+  /** Removes the child widget.
+   * @newin{4,6}
+   */
+  void unset_child();
+
+  _WRAP_METHOD(Widget* get_child(), gtk_menu_button_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_menu_button_get_child, constversion)
+
+  _WRAP_METHOD(void set_active(bool active = true), gtk_menu_button_set_active)
+  _WRAP_METHOD(bool get_active() const, gtk_menu_button_get_active)
+
+  _WRAP_METHOD(void set_can_chrink(bool can_shrink = true), gtk_menu_button_set_can_shrink)
+  _WRAP_METHOD(bool get_can_shrink() const, gtk_menu_button_get_can_shrink)
+
+  _WRAP_PROPERTY("menu-model", Glib::RefPtr<Gio::MenuModel>)
+  _WRAP_PROPERTY("direction", ArrowType)
+  _WRAP_PROPERTY("popover", Popover*)
+  _WRAP_PROPERTY("icon-name", Glib::ustring)
+  _WRAP_PROPERTY("always-show-arrow", bool)
+  _WRAP_PROPERTY("label", Glib::ustring)
+  _WRAP_PROPERTY("use-underline", bool)
+  _WRAP_PROPERTY("has-frame", bool)
+  _WRAP_PROPERTY("primary", bool)
+  _WRAP_PROPERTY("child", Widget*)
+  _WRAP_PROPERTY("active", bool)
+  _WRAP_PROPERTY("can-shrink", bool)
+
+  // no_default_handler because GtkMenuButtonClass is private.
+  _WRAP_SIGNAL(void activate(), "activate", no_default_handler, newin "4,18")
+};
+
+} /* namespace Gtk */

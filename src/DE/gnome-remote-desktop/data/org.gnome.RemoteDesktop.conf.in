@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE busconfig PUBLIC
+ "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+
+  <policy user="@GRD_USERNAME@">
+    <!-- Only @GRD_USERNAME@ user can own the service -->
+    <allow own="org.gnome.RemoteDesktop"/>
+    <allow own="org.gnome.RemoteDesktop.Configuration"/>
+
+    <!-- Allow @GRD_USERNAME@ to talk to GDM -->
+    <allow send_destination="org.gnome.DisplayManager"
+           send_interface="org.gnome.DisplayManager.RemoteDisplayFactory"/>
+  </policy>
+
+  <!-- Anyone can send messages to the interfaces of the service -->
+  <policy context="default">
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.gnome.RemoteDesktop.Rdp.Dispatcher"/>
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.gnome.RemoteDesktop.Rdp.Handover"/>
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.gnome.RemoteDesktop.Rdp.Server"/>
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.gnome.RemoteDesktop.Vnc.Server"/>
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.freedesktop.DBus.Properties"/>
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.freedesktop.DBus.Introspectable"/>
+    <allow send_destination="org.gnome.RemoteDesktop"
+           send_interface="org.freedesktop.DBus.ObjectManager"/>
+  </policy>
+
+  <policy context="default">
+    <allow send_destination="org.gnome.RemoteDesktop.Configuration"
+           send_interface="org.gnome.RemoteDesktop.Configuration.Rdp.Server"/>
+    <allow send_destination="org.gnome.RemoteDesktop.Configuration"
+           send_interface="org.freedesktop.DBus.Properties"/>
+    <allow send_destination="org.gnome.RemoteDesktop.Configuration"
+           send_interface="org.freedesktop.DBus.Introspectable"/>
+  </policy>
+
+</busconfig>

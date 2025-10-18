@@ -1,0 +1,74 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/basesink.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** A helper structure for the Gst::VideoSink class representing a rectangular
+ * area.
+ */
+struct VideoRectangle
+{
+  /// The X coordinate of the rectangle's top-left point.
+  int x;
+
+  /// The Y coordinate of rectangle's top-left point.
+  int y;
+
+  /// The width of the rectangle.
+  int w;
+
+  /// The height of the rectangle.
+  int h;
+};
+
+/** A base class for video sinks.
+ * Gst::VideoSink provides useful functions and a base class for video sinks.
+ *
+ * Gst::VideoSink will configure the default base sink to drop frames that
+ * arrive later than 20ms as this is considered the default threshold for
+ * observing out-of-sync frames. 
+ *
+ * @ingroup GstBaseClasses
+ */
+class VideoSink : public Gst::BaseSink
+{
+  _CLASS_GOBJECT(VideoSink, GstVideoSink, GST_VIDEO_SINK, Gst::BaseSink, GstBaseSink)
+
+public:
+  /** Get height of Gst::VideoSink.
+   */
+  _MEMBER_GET(height, height, int, gint)
+
+  /** Get width of Gst::VideoSink.
+   */
+  _MEMBER_GET(width, width, int, gint)
+
+#m4 _CONVERSION(`const Gst::VideoRectangle&', `GstVideoRectangle', `reinterpret_cast<const $2&>($3)')
+#m4 _CONVERSION(`Gst::VideoRectangle&', `GstVideoRectangle*', `reinterpret_cast<GstVideoRectangle*>(&$3)')
+  _WRAP_METHOD(static void center_rect(const Gst::VideoRectangle& src, const Gst::VideoRectangle& dst, Gst::VideoRectangle& result, bool scaling = false), gst_video_sink_center_rect)
+
+  _WRAP_PROPERTY("show-preroll-frame", bool)
+};
+
+} // namespace Gst

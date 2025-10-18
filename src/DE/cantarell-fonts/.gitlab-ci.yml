@@ -1,0 +1,23 @@
+default:
+  image: 'registry.fedoraproject.org/fedora:latest'
+  artifacts:
+    paths:
+      - build/meson-dist
+      - prebuilt/*.otf
+    expire_in: 7 days
+  before_script:
+    - dnf install -y git-core libappstream-glib-devel gettext python3.11 python3.11-devel virtualenv gcc
+    - virtualenv --python python3.11 venv
+    - . venv/bin/activate
+
+build-variable:
+  script:
+    - pip install nox
+    - nox -s build_variable
+    - nox -s dist
+
+build-statics:
+  script:
+    - pip install nox
+    - nox -s build_static
+    - nox -s dist

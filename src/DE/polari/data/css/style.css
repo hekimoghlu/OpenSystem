@@ -1,0 +1,174 @@
+/*
+ * SPDX-FileCopyrightText: 2013 Florian Müllner <fmuellner@gnome.org>
+ * SPDX-FileCopyrightText: 2013 Jakub Steiner <jimmac@gmail.com>
+ * SPDX-FileCopyrightText: 2015 Bastian Ilsø <bastianilso@gnome.org>
+ * SPDX-FileCopyrightText: 2016 Lapo Calamandrei <calamandrei@gmail.com>
+ * SPDX-FileCopyrightText: 2016 Danny Mølgaard <moelgaard.dmp@gmail.com>
+ * SPDX-FileCopyrightText: 2019 daronion <stefanosdimos.98@gmail.com>
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+@define-color polari_dark_bg_color shade(@window_bg_color, 0.95);
+
+@define-color active_nick_color @accent_bg_color;
+@define-color active_nick_hover_color lighter(@active_nick_color);
+
+@define-color inactive_nick_color alpha(@view_fg_color, 0.55);
+@define-color inactive_nick_hover_color lighter(@inactive_nick_color);
+
+.info { margin-bottom: 1px; }
+
+.polari-active-nick { color: @active_nick_color; }
+.polari-active-nick:hover { color: @active_nick_hover_color; }
+
+.polari-inactive-nick { color: @inactive_nick_color; }
+.polari-inactive-nick:hover { color: @inactive_nick_hover_color; }
+
+.polari-user-list row.expanded {
+    background-color: @content_view_bg;
+}
+
+.polari-user-list row frame {
+    box-shadow: inset 0 2px 4px alpha(@polari_dark_bg_color, 0.8);
+    transition: all 250ms ease-out;
+    border-width: 0;
+}
+
+.polari-paste-confirmation {
+    padding: 6px;
+}
+.polari-paste-confirmation:dir(ltr) {
+    padding-right: 0;
+}
+.polari-paste-confirmation:dir(rtl) {
+    padding-left: 0;
+}
+
+.polari-nick-button {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.polari-nick-entry {
+    color: alpha(@window_fg_color, 0.6);
+}
+
+.polari-room-list .room-list-header {
+    font-size: smaller;
+    padding: 8px 7px 0;
+    min-height: 24px;
+}
+
+.polari-room-list .room-list-header label:dir(ltr),
+.polari-room-list .room-list-header stack:dir(rtl) {
+    padding-left: 8px;
+}
+
+.polari-room-list .room-list-header stack:dir(ltr),
+.polari-room-list .room-list-header label:dir(rtl) {
+    padding-right: 8px;
+}
+
+.polari-room-list .room-list-header separator {
+    background-color: alpha(@borders, 0.55);
+}
+
+.polari-room-list row {
+    padding-left: 8px;
+}
+
+.polari-room-list row:not(.room-list-header):not(.inactive):not(.muted) {
+    font-weight: bold;
+}
+
+.polari-room-list row.inactive,
+.polari-room-list row.inactive:backdrop {
+    color: mix(@window_fg_color, @view_bg_color, 0.3);
+}
+
+.polari-room-list row:backdrop {
+    color: @window_fg_color;
+}
+
+.polari-room-list row .pending-messages-count {
+    color: @accent_fg_color;
+    background-color: mix(@accent_bg_color, @accent_fg_color, 0.3);
+    font-size: smaller;
+    border-radius: 4px;
+    padding: 0px 4px;
+}
+
+.polari-room-list row .pending-messages-count:backdrop {
+    color: @accent_fg_color;
+    background-color: mix(@accent_bg_color, @accent_fg_color, 0.1);
+}
+
+treeview.polari-server-room-list {
+    padding: 6px 12px;
+}
+
+.url-preview { padding: 8px; }
+.url-preview { margin: 12px; }
+.url-preview:dir(ltr) { margin-left: 0; }
+.url-preview:dir(rtl) { margin-right: 0; }
+.url-preview image { min-width: 120px; min-height: 90px; }
+.url-preview label { font-size: small; }
+
+.emoji-picker entry { margin: 6px; }
+
+.emoji-picker .view { background-color: @window_bg_color; }
+
+.emoji-picker undershoot { border: 0 solid @borders; }
+.emoji-picker undershoot:backdrop { border: 0 solid @unfocused_borders; }
+
+.emoji-picker undershoot.bottom { border-bottom-width: 1px; }
+.emoji-picker undershoot.top { border-top-width: 1px; }
+
+.emoji widget { border-radius: 6px; }
+.emoji label { padding: 6px; }
+
+.polari-setup-page {
+    padding: 0 0 48px 0;
+}
+
+.polari-error-information {
+    background-color: @polari_dark_bg_color;
+}
+.polari-error-information GtkLabel {
+    color: @window_fg_color;
+    font-size: smaller;
+}
+
+.polari-listbox-filterbar {
+    border: solid @borders;
+    border-width: 0 0 1px;
+}
+
+/* "opt-out" of insensitive view styling */
+.polari-entry-area:disabled { background-color: @view_bg_color; }
+
+/* tweak labels in the user popover */
+.polari-user-popover-nick { font-weight: bold; }
+.polari-user-popover-status { font-size: smaller; }
+
+.polari-room-loading {
+    opacity: 0.3;
+}
+
+/* Differentiate test instance from "normal" ones */
+window.test-instance .content-pane headerbar {
+    background-image: cross-fade(25% -gtk-icontheme('system-run-symbolic'));
+    background-repeat: no-repeat;
+    background-position: 1em center;
+    background-size: 4em;
+}
+
+/* Differentiate snapshot builds from regular ones */
+window.snapshot headerbar { background: none; }
+window.snapshot .titlebar {
+    background: linear-gradient(to left, #a5b1bd 0%, #a5b1bd 8%, @window_bg_color 25%);
+    box-shadow: inset 0 1px #f1f3f5;
+    border-color: #909fae;
+    color: alpha(@window_fg_color, 0.4);
+}

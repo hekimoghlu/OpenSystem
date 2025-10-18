@@ -1,0 +1,229 @@
+{
+    "app-id": "org.gnome.Connections.Devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "gnome-connections",
+    "finish-args": [
+        "--share=network",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=pulseaudio",
+        "--socket=wayland"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name" : "gtk-vnc",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dpulseaudio=enabled",
+                "--libdir=/app/lib"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://download.gnome.org/sources/gtk-vnc/1.3/gtk-vnc-1.3.1.tar.xz",
+                    "sha256" : "512763ac4e0559d0158b6682ca5dd1a3bd633f082f5e4349d7158e6b5f80f1ce"
+                }
+            ]
+        },
+        {
+            "name" : "spice-gtk",
+            "buildsystem" : "meson",
+            "build-options" : {
+                "env" : {
+                    "PYTHONPATH" : "/app"
+                }
+            },
+            "config-opts" : [
+                "-Dvapi=enabled",
+                "-Dwebdav=enabled",
+                "-Dpolkit=disabled",
+                "-Dusbredir=disabled",
+                "-Dgtk_doc=disabled"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://www.spice-space.org/download/gtk/spice-gtk-0.42.tar.xz",
+                    "sha256" : "9380117f1811ad1faa1812cb6602479b6290d4a0d8cc442d44427f7f6c0e7a58"
+                }
+            ],
+            "modules" : [
+                {
+                    "name": "python-six",
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "pip3 install --target=/app six-1.10.0-py2.py3-none-any.whl"
+                    ],
+                    "sources": [
+                        {
+                           "type": "file",
+                           "url": "https://pypi.python.org/packages/c8/0a/b6723e1bc4c516cb687841499455a8505b44607ab535be01091c0f24f079/six-1.10.0-py2.py3-none-any.whl#md5=3ab558cf5d4f7a72611d59a81a315dc8",
+                           "sha256": "0ff78c403d9bccf5a425a6d31a12aa6b47f1c21ca4dc2573a7e2f32a97335eb1"
+                        }
+                    ]
+                },
+                {
+                    "name" : "spice-protocol",
+                    "buildsystem" : "meson",
+                    "sources" : [
+                        {
+                            "type" : "archive",
+                            "url" : "https://www.spice-space.org/download/releases/spice-protocol-0.14.3.tar.xz",
+                            "sha256" : "f986e5bc2a1598532c4897f889afb0df9257ac21c160c083703ae7c8de99487a"
+                        }
+                    ]
+                },
+                {
+                    "name" : "phodav",
+                    "buildsystem" : "meson",
+                    "config-opts" : [
+                        "-Dsystemdsystemunitdir=/app/lib/systemd/system",
+                        "-Dudevrulesdir=usr/lib/udev/rules.d"
+                    ],
+                    "sources" : [
+                        {
+                            "type" : "archive",
+                            "url" : "https://download.gnome.org/sources/phodav/3.0/phodav-3.0.tar.xz",
+                            "sha256" : "392ec2d06d50300dcff1ef269a2a985304e29bce3520002fca29f2edc1d138d1"
+                        }
+                    ]
+                },
+                {
+                    "name" : "python-pyparsing",
+                    "buildsystem" : "simple",
+                    "build-commands" : [
+                        "pip3 install --prefix=/app pyparsing-2.4.6-py2.py3-none-any.whl"
+                    ],
+                    "sources" : [
+                        {
+                            "type" : "file",
+                            "url" : "https://files.pythonhosted.org/packages/5d/bc/1e58593167fade7b544bfe9502a26dc860940a79ab306e651e7f13be68c2/pyparsing-2.4.6-py2.py3-none-any.whl",
+                            "sha256" : "c342dccb5250c08d45fd6f8b4a559613ca603b57498511740e65cd11a2e7dcec"
+                        }
+                    ]
+                },
+                {
+                    "name" : "libcacard",
+                    "sources" : [
+                        {
+                            "type" : "archive",
+                            "url" : "https://www.spice-space.org/download/libcacard/libcacard-2.8.1.tar.xz",
+                            "sha256" : "fbbf4de8cb7db5bdff5ecb672ff0dbe6939fb9f344b900d51ba6295329a332e7"
+                        }
+                    ]
+                },
+                {
+                    "name" : "spice",
+                    "buildsystem" : "autotools",
+                    "config-opts" : [
+                        "--disable-lz4",
+                        "--disable-manual",
+                        "--disable-test"
+                    ],
+                    "sources" : [
+                        {
+                            "type" : "archive",
+                            "url" : "https://www.spice-space.org/download/releases/spice-0.15.1.tar.bz2",
+                            "sha256" : "ada9af67ab321916bd7eb59e3d619a4a7796c08a28c732edfc7f02fc80b1a37a"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "libfuse",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dexamples=false",
+                "-Dutils=false",
+                "--libdir=/app/lib"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/libfuse/libfuse.git",
+                    "tag": "fuse-3.16.1",
+                    "commit": "1f0dfae4084577997291bb0e1b94aeff89a5e70f"
+                }
+            ]
+        },
+        {
+            "name" : "libusb",
+            "config-opts" : [
+                "--disable-udev"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/libusb/libusb/releases/download/v1.0.23/libusb-1.0.23.tar.bz2",
+                    "sha256" : "db11c06e958a82dac52cf3c65cb4dd2c3f339c8a988665110e0d24d19312ad8d"
+                }
+            ]
+        },
+        {
+            "name" : "freerdp",
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DWITH_OPENH264=OFF",
+                "-DCMAKE_INSTALL_PREFIX=/app",
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DWITH_WAYLAND:BOOL=ON",
+                "-DCHANNEL_TSMF:BOOL=ON",
+                "-DWITH_FFMPEG:BOOL=OFF",
+                "-DWITH_MANPAGES:BOOL=OFF",
+                "-DWITH_CLIENT_SDL=OFF",
+                "-DWITH_SERVER:BOOL=OFF"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://pub.freerdp.com/releases/freerdp-3.16.0.tar.xz",
+                    "sha256" : "93624312792b18227a0cdab67ace5634edb8bb92e4a9a793cef3b3c142b385cd"
+                }
+            ]
+        },
+        {
+            "name" : "gtk-frdp",
+            "config-opts" : [
+                "--libdir=/app/lib"
+            ],
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/gnome/gtk-frdp.git"
+                }
+            ]
+        },
+        {
+            "name": "connections",
+            "builddir": true,
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-connections.git"
+                }
+            ]
+        }
+    ]
+}

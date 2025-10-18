@@ -1,0 +1,64 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/orientable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+class GTKMM_API Adjustment;
+
+/** A %Scrollbar.
+ *
+ * The %Scrollbar widget is a horizontal or vertical scrollbar,
+ * depending on the value of the orientation property.
+ *
+ * The position of the thumb in a scrollbar is controlled by the scroll
+ * adjustments. See Gtk::Adjustment for the fields in an adjustment - for
+ * Gtk::Scrollbar, the "value" field represents the position of the scrollbar,
+ * which must be between the "lower" field and "upper - page_size." The
+ * "page_size" field represents the size of the visible scrollable area. The
+ * "step_increment" and "page_increment" fields are used when the user asks
+ * to step down (using the small stepper arrows) or page down (using for
+ * example the PageDown key).
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Scrollbar : public Widget, public Orientable
+{
+  _CLASS_GTKOBJECT(Scrollbar, GtkScrollbar, GTK_SCROLLBAR,Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Orientable)
+
+public:
+  _CTOR_DEFAULT()
+
+  //Note that we try to use the same default parameter value as the default property value.
+  explicit Scrollbar(const Glib::RefPtr<Adjustment>& adjustment, Orientation orientation = Orientation::HORIZONTAL);
+  _IGNORE(gtk_scrollbar_new)
+
+  _WRAP_METHOD(void set_adjustment(const Glib::RefPtr<Adjustment>& adjustment), gtk_scrollbar_set_adjustment)
+  void unset_adjustment();
+
+  _WRAP_METHOD(Glib::RefPtr<Adjustment> get_adjustment(), gtk_scrollbar_get_adjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_adjustment() const, gtk_scrollbar_get_adjustment, refreturn, constversion)
+
+  _WRAP_PROPERTY("adjustment", Glib::RefPtr<Adjustment>)
+};
+
+} //namespace Gtk

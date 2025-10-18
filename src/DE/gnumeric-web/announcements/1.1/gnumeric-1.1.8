@@ -1,0 +1,82 @@
+Gnumeric 1.1.8 aka 'Its Pango-rrrrrrific!' is now available.
+
+    Ah the joys of open source.  Just as a I was hunkering down preparing to
+    finish the conversion to pango _WHAM_ a patch lands in bugzilla.  Gnumeric
+    is now fully pangoized, GdkFont usage is no more.  There may be some
+    performance tuning later, but the first pass through the display engine is
+    done.  Please send us some samples of xls that contain non latin-1
+    characters.  I'd also like to hear performance comparisons with per pango
+    versions.  Things look ok on fast machines, but I have not tested things on
+    the trusty P100.
+
+    Although the xls files produced by the conversion to libgsf were readable by
+    MS Excel Gnumeric-1.0.x and libole2 were not thrilled with them.  So libgsf
+    and the excel exporter have had more polish and things are fully functional
+    again.  No data will be lost, Gnumeric-1.1.x and MS Excel can read the files.
+
+    Jukka Pekka has been extending the solver even further and Jon Kåre and
+    Morten have been examining libgsf to ensure its ready for large files (just
+    in case zip ever support more than 5 gig of data).
+
+    Also a special thanks to Ariya Hidayat from kword (and to Abiword for
+    noticing).   His work on mapping WordPerfect characters -> unicode improved
+    the plan perfect importer nicely.
+
+    NOTE : We have disabled building 1.1 using gcc-2.96.  There are a few known
+       areas where the compiler shipped with RH/Mandrake was causing numeric
+       inaccuracies in Gnumeric.  If you don't mind that feel free to manually
+       remove the prohibition.
+
+    NOTE : Although this is a development release it should be quite stable.
+      There are is still feature regressions from 1.0 (porting graphs to gtk2)
+      but other than that this release should be usable.  Please play with it.
+
+dorami@bu.iij4u.or.jp:
+	* Begin to use Pango in cells.
+
+Jody:
+	* Add XL import for polygon colours.
+	* More pango work.
+	* Fix icon assignment.
+	* Support pasting utf8
+	* Rewrite plan perfect import, significantly more useful now.
+	  Includes some format transfer and uses the word-perfect
+	  charset map from kword (thanks to Ariya Hidayat)
+	* Cull out a pile of special iconv code in favor of glib
+	* Fix documentation installation to match libgnome's expectations
+	* locale -> utf8 conversion for lotus wk1 importer
+	* support for BITAND and BITOR in lotus wk1 importer
+	* Tweak XL export so that MS Excel does not produce a warning when
+	  reading our sheets.
+	* Partially fix printing images
+
+Jon Kåre:
+	* Port to new libgsf big file api
+
+Jukka:
+	* Solver improvements:
+	  - Imported the GLPK (GNU linear programming kit) version 3.2.
+	    It provides a revised simplex algorithm for solving large
+	    scale problems, written by Andrew Makhorin.  It performs 
+	    much better than lp-solve if the model is large, see
+	    a benchmark in ftp://plato.la.asu.edu/pub/lpsimp.txt.
+	  - Added the algorithm selection into the dialog.
+	  - Other dialog improvements.
+	* Speed optimizations for the MPS plugin.
+
+Morten:
+	* Add poor man's utf8 regexp routines.
+
+Christian Meyer:
+	* Renamed "Print Setup" to "Page Setup" in the file menu and the
+	  gnumeric documents.
+
+Zbigniew:
+	* Work on the plugins.
+	* Plugins can now register menu and toolbar items (bonobo only for now)
+	* Another step towards a gtk only build.
+
+* Availability
+
+	http://ftp.gnome.org/pub/GNOME/sources/gnumeric/1.1
+

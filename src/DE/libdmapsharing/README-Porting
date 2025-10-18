@@ -1,0 +1,118 @@
+Version 4.0 of the libdmapsharing API is incompatible with previous
+versions. The primary reason for the changes is to better support
+GObject introspection and thus languages such as Python. The following
+are the key differences between the new and old APIs. Refer also to the
+libdmapsharing API documentation and the programs distributed along with
+the libdmapsharing source in the "tests" directory.
+
+(1)  All symbols now exist in the DMAP/Dmap/dmap namespace.
+
+	(a) For example, DMAPDb is now DmapDb.
+
+	(b) DMAP_DB remains DMAP_DB.
+
+	(c) dmap_db... remains dmap_db...
+
+	(d) DAAPRecord is now DmapAvRecord.
+
+	(e) daap_share_new is now dmap_av_share_new.
+
+	(f) DAAP_TYPE_RECORD is now DMAP_TYPE_AV_RECORD.
+
+	(g) DPAPRecord is now DmapImageRecord.
+
+	(h) dpap_share_new is now dmap_image_share_new.
+
+	(i) DPAP_TYPE_RECORD is now DMAP_TYPE_IMAGE_RECORD.
+
+	(j) DACPPlayer is now DmapControlPlayer.
+
+	(k) dacp_share_new is now dmap_control_share_new.
+
+	(l) DACP_TYPE_RECORD is now DMAP_TYPE_CONTROL_RECORD.
+
+(2)  A program which shares a DMAP service must explicitly call
+dmap_share_serve() and dmap_share_publish().
+
+(3)  The interface names exported by libdmapsharing now end in "Interface"
+instead of "Iface".
+
+(4)  The new API renames the following symbols as indicated:
+
+	(a) DMAP_TYPE_DMAP_MDNS_BROWSER_TRANSPORT_PROTOCOL became
+	DMAP_TYPE_DMAP_MDNS_SERVICE_TRANSPORT_PROTOCOL.
+
+	(b) DMAPMdnsBrowserTransportProtocol became DmapMdnsServiceTransportProtocol.
+
+	(c) DMAPMdnsBrowserServiceType became DmapMdnsServiceType.
+
+	(d) DMAPMdnsBrowserService became DmapMdnsService.
+
+	(e) DMAPConnectionCallback became DmapConnectionFunc.
+
+	(f) DMAP_MDNS_BROWSER_TRANSPORT_PROTOCOL* became
+	DMAP_MDNS_SERVICE_TRANSPORT_PROTOCOL*.
+
+	(g) DMAP_MDNS_BROWSER_SERVICE_TYPE_* became DMAP_MDNS_SERVICE_TYPE_*.
+
+	(h) dmap_connection_connect became dmap_connection_start.
+
+	(i) The dmap_hash functions became dmap_md5 functions.
+
+	(j) DACP_PLAY_STOPPED and so on became, for example, DMAP_CONTROL_PLAY_STOPPED.
+
+	(k) DACPRepeatState became DmapControlRepeatState.
+
+	(l) DACPPlayState became DmapControlPlayState.
+
+	(m) DMAP_GET_SONGS became DMAP_GET_MEDIA
+
+	(n) dmap_connection_disconnect became dmap_connection_stop
+
+(5)  The new API replaces the use of GHFunc with DmapIdRecordFunc and
+DmapIdContainerRecordFunc.
+
+(6)  Setting an object property using g_object_set causes the object to
+duplicate the passed value.  Thus the caller maintains control of the
+original value.
+
+(7)  Getting an object property using g_object_get returns a duplicate
+of the value. Thus the caller should free or unref the obtained value.
+
+(8)  The "hash" property in the DAAPRecord interface and the "hash"
+and "thumbnail" properties in the DPAPRecord interface are now boxed
+types.  The true type of each of these properties is a GArray. Thus
+implementations of these interfaces should now:
+
+	(a) use x = g_value_get_boxed(value) in their setter,
+
+	(b) use g_value_set_boxed(value, x) in their getter, and
+
+	(c) use GArray instead of GByteArray.
+
+(9)  The "base-uri" property in the DmapConnection class is now a boxed
+type. The real type is SoupURI.
+
+(10) The "db" and "container-db" properties in DmapShare are now handled
+as object types instead of pointer types.
+
+(11) The properties contained in a DmapMdnsService must now be accessed
+using g_object_get.
+
+(12) The following methods now take a GError ** as their last argument:
+
+	(a) dmap_record_factory_create().
+
+	(b) dmap_db_add(), dmap_db_add_with_id(), and dmap_db_add_path().
+
+	(c) dmap_share_serve().
+
+	(d) dmap_share_publish().
+
+	(e) dmap_container_record_add_entry().
+
+	(f) dmap_container_record_add_entry().
+
+	(g) dmap_control_share_start_lookup().
+
+	(h) dmap_control_share_stop_lookup().

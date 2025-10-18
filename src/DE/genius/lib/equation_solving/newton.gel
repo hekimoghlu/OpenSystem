@@ -1,0 +1,39 @@
+# Newton's method and related
+
+SetHelp("NewtonsMethod","equation_solving","Attempt to find a zero of a function f with derivative df using Newton's method, returning after two successive values are within epsilon or after maxn tries (then returns null)")
+function NewtonsMethod(f,df,guess,epsilon,maxn) = (
+	guess := float(guess);
+	for n=1 to maxn do (
+		dfg := df(guess);
+		if dfg == 0.0 then (
+			error ("NewtonsMethod: division by zero");
+			bailout
+		);
+		guessn := guess - f(guess)/dfg;
+		if |guessn-guess| <= epsilon then
+			return guessn;
+		guess := guessn
+	);
+	null
+)
+
+SetHelp("HalleysMethod","equation_solving","Attempt to find a zero of a function f with derivative df and second derivative ddf using Halley's method, returning after two successive values are within epsilon or after maxn tries (then returns null)")
+function HalleysMethod(f,df,ddf,guess,epsilon,maxn) = (
+	guess := float(guess);
+	for n=1 to maxn do (
+		fg = f(guess);
+		dfg = df(guess);
+		denom := 2*dfg^2 - fg*ddf(guess);
+		if denom == 0.0 then (
+			error ("HalleysMethod: division by zero");
+			bailout
+		);
+		guessn := guess - (2*fg*dfg)/denom;
+		if |guessn-guess| <= epsilon then
+			return guessn;
+		guess := guessn
+	);
+	null
+)
+
+

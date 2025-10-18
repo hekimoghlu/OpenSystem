@@ -1,0 +1,316 @@
+# The elementary functions are:
+# polynomial operations, nth roots,
+# exp, log, and everything you can get from these
+# In particular, it contains the trig functions and the hyperbolic functions
+
+
+# These are most relevant here.
+SetHelp("rad2deg","functions","Convert radians to degrees");
+function rad2deg(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,rad2deg)
+	else if(not IsValue(x)) then
+		(error("rad2deg: argument not a value");bailout);
+	(x*180)/pi
+);
+
+SetHelp("deg2rad", "functions", "Convert degrees to radians");
+function deg2rad(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,deg2rad)
+	else if(not IsValue(x)) then
+		(error("deg2rad: argument not a value");bailout);
+	(x*pi)/180
+);
+
+#FIXME: these may not deal well with zero values. (should treat 0 correctly now)
+#FIXME: these should be further double checked
+
+SetHelp("asin","trigonometry","The arcsin (inverse sin) function");
+function asin(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,asin)
+	else if(not IsValue(x)) then
+		(error("asin: argument not a value");bailout);
+
+	if x==1 then
+		pi/2
+	else if x==-1 then
+		-pi/2
+	else if IsReal(x) and -1 < x < 1 then
+		atan(x/sqrt(1-x^2))
+	else
+		(-1i)*ln(1i*x+sqrt(abs(1-x^2))*exp((1i/2)*Arg(1-x^2)))
+);
+arcsin = asin
+SetHelpAlias ("asin", "arcsin");
+
+SetHelp("asinh","trigonometry","The arcsinh (inverse sinh) function");
+function asinh(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,asinh)
+	else if(not IsValue(x)) then
+		(error("asinh: argument not a value");bailout);
+	if IsReal(x) then
+		ln(x+sqrt((x^2)+1))
+	else
+		ln(x+sqrt(abs(1+x^2))*exp((1i/2)*Arg(1+x^2)))
+);
+arcsinh = asinh
+SetHelpAlias ("asinh", "arcsinh");
+
+SetHelp("acos","trigonometry","The arccos (inverse cos) function");
+function acos(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,acos)
+	else if(not IsValue(x)) then
+		(error("acos: argument not a value");bailout);
+
+	if x==1 then
+		0
+	else if x==-1 then
+		pi
+	else if x==0 then
+		pi/2
+	else if IsReal(x) and -1 < x < 1 then
+		atan(sqrt(1-x^2)/x)+(if x>0 then 0 else pi)
+	else
+		(-1i)*ln(x+1i*sqrt(abs(1-x^2))*exp((1i/2)*Arg(1-x^2)))
+);
+arccos = acos
+SetHelpAlias ("acos", "arccos");
+
+SetHelp("acosh","trigonometry","The arccosh (inverse cosh) function");
+function acosh(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,acosh)
+	else if(not IsValue(x)) then
+		(error("acosh: argument not a value");bailout);
+	if IsReal(x) and -1 <= x <= 1 then
+		ln(x+sqrt((x^2)-1))
+	else
+		ln(x+sqrt(abs(x^2-1))*exp((1i/2)*Arg(x^2-1)))
+);
+arccosh = acosh
+SetHelpAlias ("acosh", "arccosh");
+
+SetHelp("cot","trigonometry","The cotangent function");
+function cot(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,cot)
+	else if(not IsValue(x)) then
+		(error("cot: argument not a value");bailout);
+	1/tan(x)
+);
+
+SetHelp("coth","trigonometry","The hyperbolic cotangent function");
+function coth(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,coth)
+	else if(not IsValue(x)) then
+		(error("coth: argument not a value");bailout);
+	1/tanh(x)
+);
+
+SetHelp("acot","trigonometry","The arccot (inverse cot) function");
+function acot(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,acot)
+	else if(not IsValue(x)) then
+		(error("acot: argument not a value");bailout);
+
+	#atan(1/x)
+	if IsReal(x) then
+		Re(ln((x+1i)/(x-1i))/2i)
+	else
+		ln((x+1i)/(x-1i))/2i
+);
+arccot = acot
+SetHelpAlias ("acot", "arccot");
+
+SetHelp("acoth","trigonometry","The arccoth (inverse coth) function");
+function acoth(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,acoth)
+	else if(not IsValue(x)) then
+		(error("acoth: argument not a value");bailout);
+	#atanh(1/x)
+	ln((x+1)/(x-1))/2
+);
+arccoth = acoth
+SetHelpAlias ("acoth", "arccoth");
+
+SetHelp("tanh","trigonometry","The hyperbolic tangent function");
+function tanh(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,tanh)
+	else if(not IsValue(x)) then
+		(error("tanh: argument not a value");bailout);
+	sinh(x)/cosh(x)
+);
+
+SetHelp("atanh","trigonometry","The arctanh (inverse tanh) function");
+function atanh(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,atanh)
+	else if(not IsValue(x)) then
+		(error("atanh: argument not a value");bailout);
+	ln((1+x)/(1-x))/2
+);
+arctanh = atanh
+SetHelpAlias ("atanh", "arctanh");
+
+SetHelp("csc","trigonometry","The cosecant function");
+function csc(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,csc)
+	else if(not IsValue(x)) then
+		(error("csc: argument not a value");bailout);
+	1/sin(x)
+);
+
+SetHelp("csch","trigonometry","The hyperbolic cosecant function");
+function csch(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,csch)
+	else if(not IsValue(x)) then
+		(error("csch: argument not a value");bailout);
+	1/sinh(x)
+);
+
+SetHelp("acsc","trigonometry","The inverse cosecant function");
+function acsc(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,acsc)
+	else if(not IsValue(x)) then
+		(error("acsch: argument not a value");bailout);
+	asin(1/x)
+);
+arccsc = acsc
+SetHelpAlias ("acsc", "arccsc");
+
+SetHelp("acsch","trigonometry","The inverse hyperbolic cosecant function");
+function acsch(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,acsch)
+	else if(not IsValue(x)) then
+		(error("acsc: argument not a value");bailout);
+	asinh(1/x)
+);
+arccsch = acsch
+SetHelpAlias ("acsch", "arccsch");
+
+SetHelp("sec","trigonometry","The secant function");
+function sec(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,sec)
+	else if(not IsValue(x)) then
+		(error("sec: argument not a value");bailout);
+	1/cos(x)
+);
+
+SetHelp("sech","trigonometry","The hyperbolic secant function");
+function sech(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,sech)
+	else if(not IsValue(x)) then
+		(error("sech: argument not a value");bailout);
+	1/cosh(x)
+);
+
+SetHelp("asec","trigonometry","The inverse secant function");
+function asec(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,asec)
+	else if(not IsValue(x)) then
+		(error("asec: argument not a value");bailout);
+	acos(1/x)
+);
+arcsec = asec
+SetHelpAlias ("asec", "arcsec");
+
+SetHelp("asech","trigonometry","The inverse hyperbolic secant function");
+function asech(x) = (
+	if(IsMatrix(x)) then
+		return ApplyOverMatrix(x,asech)
+	else if(not IsValue(x)) then
+		(error("asech: argument not a value");bailout);
+	acosh(1/x)
+);
+arcsech = asech
+SetHelpAlias ("asech", "arcsech");
+
+SetHelp("log","numeric","Logarithm of any base (calls DiscreteLog if in modulo mode), if base is not given, e is used");
+function log(x,b...) = (
+	m = GetCurrentModulo ();
+	if not IsNull (m) then (
+		if IsNull (b) or elements(b) > 1 then
+			(error("log (discrete): wrong number of arguments");bailout);
+		return DiscreteLog (x, b@(1), m)
+	);
+
+	if IsNull (b) then
+		return ln(x)
+	else if elements(b) > 1 then
+		(error("log: too many arguments");bailout);
+	base = b@(1);
+
+	if IsMatrix(x) or IsMatrix(base) then
+		return ApplyOverMatrix2(x,base,log)
+	else if(not IsValue(x) or not IsValue(base)) then
+		(error("log: arguments not values");bailout);
+	ln(x)/ln(base)
+);
+
+# This is still used for complex values in the hacky computation in funclib.c
+# although for real values we use MPFR
+parameter ErrorFunctionTolerance = 10.0^(-10);
+SetHelp ("ErrorFunctionTolerance", "parameters", "Tolerance of the ErrorFunction (used for complex values only)")
+
+# This is actually done for complex values inside funclib.c
+# This should as some point be replaced by a proper version of erf
+#SetHelp("ErrorFunction","functions","The error function, 2/sqrt(pi) * int_0^x e^(-t^2) dt")
+#function ErrorFunction (x) = (
+#	if IsMatrix (x) then
+#		return ApplyOverMatrix (x, ErrorFunction)
+#	else if not IsValue (x) then
+#		(error("ErrorFunction: argument not a value");bailout);
+#	twosqrtpi = 2/sqrt(pi);
+#	a = 1;
+#	s = 0;
+#	n = 0;
+#	f = 1;
+#	xx = x;
+#	xsq = x^2;
+#	do (
+#		t = xx * a * twosqrtpi;
+#		s = s + t;
+#		increment n;
+#		f = f * n;
+#		a = ((-1)^n) / (((2*n)+1) * f);
+#		xx = xx * xsq
+#	) while (|t| > ErrorFunctionTolerance);
+#	s
+#);
+#erf = ErrorFunction
+#SetHelpAlias ("ErrorFunction", "erf");
+
+#FIXME: Should probably be in a separate source file
+SetHelp("NewtonsMethodPoly","polynomial","Attempt to find a root of a polynomial using Newton's method, returning after two successive values are within epsilon or after maxn tries (then returns null)")
+function NewtonsMethodPoly(poly,guess,epsilon,maxn) = (
+	pf := PolyToFunction (poly);
+	pdf := PolyToFunction (PolyDerivative (poly));
+	guess := float(guess);
+	for n=1 to maxn do (
+		pdfg := pdf(guess);
+		if pdfg == 0.0 then (
+			error ("NewtonsMethodPoly: division by zero");
+			bailout
+		);
+		guessn := guess - pf(guess)/pdfg;
+		if |guessn-guess| <= epsilon then
+			return guessn;
+		guess := guessn
+	);
+	null
+)

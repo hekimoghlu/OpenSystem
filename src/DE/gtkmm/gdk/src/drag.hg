@@ -1,0 +1,111 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gdkmm/enums.h>
+#include <glibmm/object.h>
+#include <gdk/gdk.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gdk
+{
+class GDKMM_API ContentFormats;
+class GDKMM_API ContentProvider;
+class GDKMM_API Device;
+class GDKMM_API Display;
+class GDKMM_API Surface;
+
+_WRAP_ENUM(DragCancelReason, GdkDragCancelReason, decl_prefix GDKMM_API)
+
+/** A %Gdk::Drag object represents the source of an ongoing DND operation.
+ *
+ * A %Gdk::Drag is created when a drag is started, and stays alive for the
+ * duration of the DND operation. After a drag has been started with
+ * Gdk::Surface::drag_begin_from_point(), the caller gets informed about the
+ * status of the ongoing drag operation with signals on the %Gdk::Drag object.
+ *
+ * GTK provides a higher level abstraction based on top of these functions,
+ * and so they are not normally needed in GTK applications.
+ */
+class GDKMM_API Drag : public Glib::Object
+{
+  _CLASS_GOBJECT(Drag, GdkDrag, GDK_DRAG, Glib::Object, GObject, , , GDKMM_API)
+
+public:
+  // The Gtk::DnD namespace contains functions that logically are Gdk::Drag methods.
+  // However, they can't be members of Gdk::Drag, because they depend on code in
+  // the gtk part of gtk+. Such a dependency is not allowed in a Gdk class.
+
+  _WRAP_METHOD(Glib::RefPtr<Display> get_display(), gdk_drag_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Display> get_display() const, gdk_drag_get_display, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Device> get_device(), gdk_drag_get_device, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Device> get_device() const, gdk_drag_get_device, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<ContentFormats> get_formats(), gdk_drag_get_formats, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const ContentFormats> get_formats() const, gdk_drag_get_formats, refreturn, constversion)
+
+  _WRAP_METHOD(DragAction get_actions() const, gdk_drag_get_actions)
+  _WRAP_METHOD(DragAction get_selected_action() const, gdk_drag_get_selected_action)
+  _WRAP_METHOD(static bool action_is_unique(DragAction action), gdk_drag_action_is_unique)
+
+  _WRAP_METHOD(void drag_drop_done(bool success), gdk_drag_drop_done)
+
+  /** Returns the surface on which the drag icon should be rendered
+   * during the drag operation. Note that the surface may not be
+   * available until the drag operation has begun. GDK will move
+   * the surface in accordance with the ongoing drag operation.
+   * The surface will be destroyed when the drag operation is over.
+   *
+   * The returned surface is usually a subclass of Gdk::Surface that implements
+   * the Gdk::DragSurface interface. To use drag surface API, do something like
+   * @code
+   * auto surface = drag->get_drag_surface();
+   * auto drag_surface = std::dynamic_pointer_cast<Gdk::DragSurfaceImpl>(surface);
+   * if (drag_surface)
+   *   drag_surface->do_something();
+   * @endcode
+   * 
+   * @return The drag surface, or an empty RefPtr.
+   */
+  _WRAP_METHOD(Glib::RefPtr<Surface> get_drag_surface(), gdk_drag_get_drag_surface, refreturn)
+  /// See the non-const version.
+  _WRAP_METHOD(Glib::RefPtr<const Surface> get_drag_surface() const, gdk_drag_get_drag_surface, refreturn, constversion)
+
+  _WRAP_METHOD(void set_hotspot(int hot_x, int hot_y), gdk_drag_set_hotspot)
+
+  _WRAP_METHOD(Glib::RefPtr<ContentProvider> get_content(), gdk_drag_get_content, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const ContentProvider> get_content() const, gdk_drag_get_content, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Surface> get_surface(), gdk_drag_get_surface, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Surface> get_surface() const, gdk_drag_get_surface, refreturn, constversion)
+
+  _WRAP_PROPERTY("content", Glib::RefPtr<ContentProvider>)
+  _WRAP_PROPERTY("device", Glib::RefPtr<Device>)
+  _WRAP_PROPERTY("display", Glib::RefPtr<Display>)
+  _WRAP_PROPERTY("formats", Glib::RefPtr<ContentFormats>)
+  _WRAP_PROPERTY("selected-action", DragAction)
+  _WRAP_PROPERTY("actions", DragAction)
+  _WRAP_PROPERTY("surface", Glib::RefPtr<Surface>)
+
+  // no_default_handler because GdkDragClass is private.
+  _WRAP_SIGNAL(void cancel(DragCancelReason reason), "cancel", no_default_handler)
+  _WRAP_SIGNAL(void drop_performed(), "drop-performed", no_default_handler)
+  _WRAP_SIGNAL(void dnd_finished(), "dnd-finished", no_default_handler)
+};
+
+} // namespace Gdk

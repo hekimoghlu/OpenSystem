@@ -1,0 +1,358 @@
+2005-08-15  Morten Welinder <terra@gnome.org>
+
+	* Release 1.5.3
+
+2005-08-15  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/workbook-control-gui.c: (cb_graph_dim_editor_update): unref the
+	scg. Fixes #313463
+
+2005-08-12  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (cb_dep_hash_destroy): Fix crashes related to
+	changing a dependency container while we are looping over it.
+	Fixed #312794.
+
+	* src/sheet.c (sheet_finalize): Free ->sheet_views at the end
+	because sheet_scrollbar_config as called via object removal can
+	access it.
+
+2005-08-12  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_destroy_contents): Move sheet object
+	destruction here.
+	(sheet_finalize): From here. 
+
+2005-08-12  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-widget.c
+	(sheet_widget_radio_button_set_property): Fix warning.
+
+2005-08-12  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/dialogs/dialog-about.c: (dialog_about): do not remove the
+	grid which does not exist anymore.
+
+2005-08-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: needs libgsf-1.12.2
+	* src/command-context-stderr.c: updated to new GSF_CLASS_FULL signature.
+	* src/gnm-plugin.c: ditto.
+	* src/gnm-so-filled.c: ditto.
+	* src/gnm-so-line.c: ditto.
+	* src/io-context-gtk.c: ditto.
+	* src/sheet-filter.c: ditto.
+	* src/sheet-object-cell-comment.c: ditto.
+	* src/sheet-object-graph.c: ditto.
+	* src/sheet-object-image.c: ditto.
+	* src/sheet-object-widget.c: ditto.
+	* src/widgets/gnumeric-expr-entry.c: ditto.
+	* src/workbook-control-gui.c: ditto.
+	* plugins/corba/corba-workbook.c: ditto.
+	* plugins/python-loader/python-loader.c: updated to new
+	GSF_DNAMIC_CLASS_FULL signature.
+
+2005-08-11  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-so-polygon.c : split out of filled and re-enable It's not
+	  optimal, and the persistence is broken, but it does display.
+
+2005-08-09  Morten Welinder  <terra@gnome.org>
+
+	* src/rendered-value.c (rendered_value_recontext): Fix the hack to
+	make printing look like screen.  [#312912]
+
+	* src/workbook-view.c (wbv_save_to_uri): Close the file before
+	checking for errors.  Part of fix for #312930.
+
+2005-08-09  Rodrigo Moya <rodrigo@gnome-db.org>
+
+	* configure.in: require libgda/libgnomedb CVS HEAD.
+
+2005-08-08  Morten Welinder  <terra@gnome.org>
+
+	* src/ssindex.c: Fix typo.  [#312823]
+
+2005-08-08  Sunil Mohan Adapa  <sunil@atc.tcs.co.in>
+
+	* configure.in: Added "te" to ALL_LINGUAS.
+
+2005-08-08  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* *: Updated FSF's address.
+
+2005-08-07  Jody Goldberg <jody@gnome.org>
+
+	* src/main-application.c : Add --no-warnings
+	* src/io-context-gtk.c (icg_error_error_info) : use it.
+
+2005-08-07  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_dispose) : do not free the uri until the
+	  end to make debugging simpler.
+	(workbook_sheet_hide_controls) : hide just controls not views.
+	(cb_sheet_visibility_change) : restore just controls.
+
+	* src/style-color.c (style_color_new_gdk) : new.
+	* src/sheet-view.c (sv_get_control) : new.
+	* src/sheet.c (sheet_destroy) : move the object deletion from here.
+	(sheet_destroy_contents) : to here.
+
+2005-08-04  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/Makefile.am (GNUMERIC_BASE): Add gnm-style-impl.h.
+	* src/file-autoft.c: Add a missing include.
+
+	* src/style-conditions.c (gnm_style_conditions_eval): Fix another
+	  warning.
+
+	* src/ssindex.c: Fix two option descriptions.
+
+2005-08-03  Jody Goldberg <jody@gnome.org>
+
+	* src/style-conditions.c (gnm_style_conditions_eval) : suppress a
+	  warning and some debug spew.
+
+2005-08-03  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/test-pango.c: Fix warnings.
+
+2005-08-01  Jody Goldberg <jody@gnome.org>
+
+	* src/consolidate.c (retrieve_row_tree) : Ignore elements that have no
+	  data. [#308431]
+
+	* src/workbook-edit.c (cb_entry_delete_text) : queue an update of the
+	  edit items.  This is a kludge.  We should move to a centralized
+	  dropdown rather than screwing with the selection. [#308303]
+	(wbcg_edit_start) : don't autocomplete while editing in the editline.
+
+	* src/sheet-object-image.c (sheet_object_image_new_view) : create the
+	  image hidden.  The bound_set. will fix it later. [#308301]
+
+2005-07-29  Jody Goldberg <jody@gnome.org>
+
+	* src/graph.c (gnm_go_data_scalar_as_str) : New. be smarter about
+	  constant strings.  There's no need to quote them when they are the
+	  entire expression. #152317
+
+2005-07-27  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (find_rows_that_match): Band-aid for 311567.
+
+2005-07-26  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* src/style.c (style_font_new_simple): use 
+	pango_font_description_copy() so that we store the exact
+	font description we pass to pango. Partially Fix #161027.
+
+2005-07-25  Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+
+	* src/sheet-object-graph.c (sheet_object_graph_default_size): logical
+	size of graph is a property of GogGraph now.
+
+2005-07-23  Jody Goldberg <jody@gnome.org>
+
+	Fix snap to grid for RTL mode.
+	* src/sheet-control-gui.c (snap_pos_to_grid) : handle RTL and scaling
+	  here.
+	(snap_to_grid) : merge into.
+	(apply_move) : here.
+
+	Fix object motion in RTL mode.
+	* src/gnumeric-canvas.c (gnm_canvas_window_to_coord) : new.
+	* src/gnumeric-pane.c (cb_pane_drag_data_received) : use it here.
+	(cb_gnm_pane_drag_motion) : and here.
+
+2005-07-23  Ivan, Wong Yat Cheung  <email@ivanwong.info>
+
+	* src/gnumeric-gconf.c (go_conf_set_str_list, go_conf_get_str_list):
+	They didn't worked. Fix #308302.
+
+2005-07-20  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_ref, gnm_style_unref): Add extra
+	precondition.
+
+	* src/commands.c (cmd_format_repeat): Handle NULL style.  Fixes
+	#310924.
+
+2005-07-18  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/libgnumeric.c: Remove double #include's.
+
+2005-07-15  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.c : Add Andreas to the list of Authors.
+	(print_info_new) : Init the simple margins to -1 to signify unset.
+	  Init the new flags.
+	(print_info_margin_copy) : delete.
+	(print_info_dup) : tidy up and handle the new flags.
+	(print_info_get_margins) : if a margin is negative (unset) return 0.
+	(print_info_set_n_copies) : delete.
+	(print_info_get_n_copies) : delete.
+	(print_info_set_orientation) : delete.
+	(print_info_get_orientation) : delete.
+	(print_info_make_config) : only set the margin in the print_config if
+	  it is set.  Rework the orientation enum into a pair of bools to be
+	  more XL compat.
+	(print_info_load_config) : ditto.
+
+	* src/gnumeric-gconf.c : s/right-then-down/across-then-down/ for RTL.
+	(gnm_gconf_set_print_order_across_then_down) : renamed from
+	  gnm_gconf_set_print_order_right_then_down.
+
+	* gnumeric.xsd : margins are optional now.
+
+2005-07-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/main-application.c (gnumeric_arg_parse): Call
+	gnome_authentication_manager_init. 
+
+2005-07-14  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in (set_more_warnings): Add -Wno-pointer-sign, which
+	silences the "pointer targets differ in signedness" warnings from
+	gcc as of version 4.0. Should probaby be turned on again at some
+	point.
+
+2005-07-11  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (list_them): Cleanup.
+
+	* src/workbook-view.c (wb_view_new_from_uri, wbv_save_to_uri): Use
+	g_printerr, not g_print.
+	* src/workbook-control-gui.c (cb_workbook_debug_info): Ditto.
+	* src/workbook.c (workbook_dispose): ditto.
+
+2005-07-05  Stepan Kasal  <kasal@ucw.cz>
+
+	* .cvsignore: Replace "autom4te*.cache" by "autom4te.cache"
+
+2005-07-04  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in, README: Bumped the goffice requirement to get
+	GOG_MS_DIM_START, GOG_MS_DIM_END, GOG_MS_DIM_LOW, GOG_MS_DIM_HIGH.
+
+2005-07-01  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_claim_clipboard): Plug leak.
+
+2005-07-01  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c: inlude locale.h,
+	(sheet_object_graph_write_object): fix a pointer compatibility warning.
+
+2005-07-01  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnumeric-pane.c: (gnm_pane_drag_begin): add support to copy/paste and
+	dnd charts to other apps.
+	* src/gnumeric.h: ditto.
+	* src/gui-clipboard.c: (graph_write), (x_clipboard_get_cb),
+	(x_claim_clipboard): ditto
+	* src/sheet-control-gui.c: ditto.
+	* src/sheet-object-graph.c: ditto.
+	(sheet_object_graph_get_object_target_list),
+	(sheet_object_graph_write_object), (sog_exportable_init):
+	* src/sheet-object-impl.h: ditto.
+	* src/sheet-object.c: (sheet_object_exportable_get_type),
+	(sheet_object_exportable_get_target_list),
+	(sheet_object_write_object): ditto.
+	* src/sheet-object.h: ditto.
+
+2005-06-30  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_sheet_rename_check,
+	workbook_sheet_change_protection,
+	workbook_sheet_change_visibility, workbook_sheet_recolor,
+	workbook_sheet_reorder_by_idx): Remove.  No longer used.
+
+	* src/commands.c (command_redo_sheet_delete,
+	cmd_reorganize_sheets_delete_get_this_sheet_info,
+	cmd_reorganize_sheets_delete_shift_list,
+	cmd_reorganize_sheets_delete_get_all_sheets_info,
+	cmd_reorganize_sheets_delete_recreate_sheet,
+	cmd_reorganize_sheets_delete_free, cmd_reorganize_sheets_undo,
+	cmd_reorganize_sheets_redo, cb_slist_gdk_color_free,
+	cmd_reorganize_sheets_finalize, cmd_reorganize_sheets_fix_list,
+	cmd_reorganize_sheets):  Remove.  No longer used.
+
+2005-06-28  Jody Goldberg <jody@gnome.org>
+
+	* src/style-conditions.c (gnm_style_conditions_overlay) : when
+	  applying a conditional overlay with a background colour to a base
+	  without a pattern pretend the pattern is solid.
+
+2005-06-27  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c: No ellipsis to Full Screen.
+
+2005-06-25  Jody Goldberg <jody@gnome.org>
+
+	* src/mstyle.c (gnm_style_dup) : no need to dup unassigned elements.
+
+	* src/gnm-style-impl.h, src/style-conditions.c, src/style-conditions.h:
+	  New files.
+
+2005-06-25  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_hlink) : new.
+	(xml_sax_input_msg) : new.
+
+2005-06-22  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (random_01): Use the Mersenne Twister as
+	fallback.
+	* configure.in: Stop checking for functions we no longer use.
+
+2005-06-22  Emmanuel Pacaud <emmanuel.pacaud@univ-poitiers.fr>
+
+	* src/gnumeric-pane.c (cb_gnm_pane_drag_motion): set snap_to_grid if
+	SHIFT is pressed, state given by widget parent window.
+	* src/sheet-control-gui.c (scg_drag_receive_same_scg): ditto.
+	(scg_objects_nudge): fix typo.
+	
+2005-06-22  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am : enable pango-test
+
+2005-06-22  Jody Goldberg <jody@gnome.org>
+
+	* * : s/MStyle/GnmStyle/
+	      s/mstyle_/gnm_style_/
+	      s/StyleHAlignFlags/GnmHAlign/
+	      s/StyleVAlignFlags/GnmVAlign/
+
+2005-06-20  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_rename_sheet): Prevent renames to "".
+
+2005-06-14  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=163414
+	* src/item-bar.c (item_bar_event) : "If it hurts when you do that,
+	  don't do that".  Position the tooltip above the cursor for row
+	  headers too :-)
+
+2005-06-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_gconf_get_toolbar_visible,
+	gnm_gconf_set_toolbar_visible): New functions.
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): Set toolbar visibility.
+	(cb_handlebox_visible): Make changes to visibility permanent.
+	(wbc_gtk_init): Don't set everything visible.
+
+2005-06-13  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_eval) : when evaluating an array pass the
+	  cols/rows into the EvalPos.
+
+	* src/position.c (eval_pos_init) : init new cols/rows member
+	(eval_pos_init_dep) : ditto.
+	(eval_pos_init_cell) : ditto.
+	(eval_pos_init_sheet) : ditto.
+
+2005-06-13  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

@@ -1,0 +1,829 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<chapter id="howto">
+  <title>HOWTO for common tasks</title>
+  <para>
+    This section is a list of small HOWTOs to get started quickly for some specific tasks, without the
+    need to read all the documentation: quickly get to the code and read the corresponding documentation
+    for further details.
+  </para>
+
+  <sect1>
+    <title>Open a connection</title>
+    <para>
+      Opening a connection to a database creates a <link linkend="GdaConnection">GdaConnection</link>
+      object which is required to execute commands. The connections' parameters (which are specific to each
+      type of database) can be either specified when opening the connection, or be used to define a
+      data source (<link linkend="connections">DSN</link>) and the DSN name is then specified to open the connection.
+    </para>
+    <para>
+      For example, opening a connection to a PostgreSQL database named "mydb" one could use the following code:
+      <programlisting>
+GdaConnection *connection;
+connection = gda_connection_open_from_string ("PostgreSQL", "DB_NAME=mydb", 
+                                              "USERNAME=martin;PASSWORD=luther",
+                                              GDA_CONNECTION_OPTIONS_READ_ONLY, NULL);
+if (!connection)
+    g_print ("CONNECTION FAILED\n");
+else {
+    /* use the opened connection */
+
+    /* close the connection (assuming it's not used by another object) */
+    g_object_unref (connection);
+}
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="defining_dsn">
+    <title>Define a data source (DSN)</title>
+    <para>
+      The <link linkend="libgda-6.0-Configuration">Configuration section</link> details how to manage data sources
+      definitions. To define a data source, one needs to create and fill a 
+      <link linkend="GdaDsnInfo">GdaDsnInfo</link> structure, and use the
+      <link linkend="gda-config-define-dsn">gda_config_define_dsn()</link> function.
+    </para>
+    <para>
+      For example the following code defines a data source:
+      <programlisting>
+GError *error = NULL;
+GdaDsnInfo dsn_info = {
+    "My DSN",
+    "MySQL",
+    "Sample MySQL data source",
+    "HOST=myserver;DB_NAME=testdb"
+    NULL,
+    FALSE
+};
+if (!gda_config_define_dsn (&amp;dsn_info, &amp;error)) {
+    /* an error occurred, the details are in error */
+    g_error_free (error);
+}
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="howto-sqlbuilder">
+    <title>Build statements without using a parser</title>
+    <para>
+      Statements can be created using a <link linkend="GdaSqlParser">GdaSqlParser</link> object to parse
+      SQL strings, but an easier way is to use a <link linkend="GdaSqlBuilder">GdaSqlBuilder</link> object
+      and the associated APIs to construct the statement. This section gives examples to create
+      various statements. Please note that only the DML statements (SELECT, INSERT, UPDATE or DELETE statements
+      can be built using a <link linkend="GdaSqlBuilder">GdaSqlBuilder</link> object, other types of
+      statements can only be built using a parser).
+    </para>
+    <para>
+      Each of the examples in this section show the statement construction part, the usage part is not shown for
+      clarity reasons (replaced with <![CDATA[[...]]]>). Typically one would use the
+      <link linkend="gda-sql-builder-get-statement">gda_sql_builder_get_statement()</link> method to
+      actually obtain a <link linkend="GdaStatement">GdaStatement</link> object and execute it.
+    </para>
+    <sect2>
+      <title>INSERT INTO customers (e, f, g) VALUES (##p1::string, 15, 'joe')</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_INSERT);
+gda_sql_builder_set_table (b, "customers");
+gda_sql_builder_add_field_value_id (b,
+                                    gda_sql_builder_add_id (b, "e"),
+                                    gda_sql_builder_add_param (b, "p1", G_TYPE_STRING, FALSE));
+gda_sql_builder_add_field_value (b, "f", G_TYPE_INT, 15);
+gda_sql_builder_add_field_value (b, "g", G_TYPE_STRING, "joe")
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>SELECT people.firstname AS person, people.lastname, "date" AS birthdate, age FROM people</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_select_add_field (b, "firstname", "people", "person");
+gda_sql_builder_select_add_field (b, "lastname", "people", NULL);
+gda_sql_builder_select_add_field (b, "date", NULL, "birthdate");
+gda_sql_builder_select_add_field (b, "age", NULL, NULL);
+gda_sql_builder_select_add_target_id (b,
+				      gda_sql_builder_add_id (b, "people"),
+				      NULL);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>SELECT c."date", name AS person FROM "select" AS c INNER JOIN orders USING (id)</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+GdaSqlBuilderId id_table = gda_sql_builder_add_id (b, "select"); /* SELECT is an SQL reserved keyword */
+GdaSqlBuilderId id_target1 = gda_sql_builder_select_add_target_id (b, id_table, "c");
+GdaSqlBuilderId id_target2 = gda_sql_builder_select_add_target_id (b,
+                                                                   gda_sql_builder_add_id (b, "orders"),
+				                                   NULL);
+GdaSqlBuilderId id_join = gda_sql_builder_select_join_targets (b, id_target1, id_target2, GDA_SQL_SELECT_JOIN_INNER, 0);
+
+/* DATE is an SQL reserved keyword */
+gda_sql_builder_add_field_value_id (b,
+                                    gda_sql_builder_add_id (b, "c.date"), 0);
+gda_sql_builder_add_field_value_id (b,
+			            gda_sql_builder_add_id (b, "name"),
+		  	            gda_sql_builder_add_id (b, "person"));
+
+gda_sql_builder_join_add_field (b, id_join, "id");
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>UPDATE products set ref='A0E''FESP' WHERE id = 14</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_INSERT);
+gda_sql_builder_set_table (b, "products");
+gda_sql_builder_add_field_value (b, "ref", G_TYPE_STRING, "A0E'FESP");
+GdaSqlBuilderId id_field = gda_sql_builder_add_id (b, "id");
+GdaSqlBuilderId id_value = gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 14);
+GdaSqlBuilderId id_cond = gda_sql_builder_add_cond (b, GDA_SQL_OPERATOR_TYPE_EQ, id_field, id_value, 0);
+gda_sql_builder_set_where (b, id_cond);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>DELETE FROM items WHERE id = ##theid::int</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_DELETE);
+gda_sql_builder_set_table (b, "items");
+GdaSqlBuilderId id_field = gda_sql_builder_add_id (b, "id");
+GdaSqlBuilderId id_param = gda_sql_builder_add_param (b, "theid", G_TYPE_INT, FALSE);
+GdaSqlBuilderId id_cond = gda_sql_builder_add_cond (b, GDA_SQL_OPERATOR_TYPE_EQ, id_field, id_param, 0);
+gda_sql_builder_set_where (b, id_cond);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>SELECT myfunc (a, 5, 'Joe') FROM mytable</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_select_add_target_id (b,
+				   gda_sql_builder_add_id (b, "mytable"),
+				   NULL);
+GdaSqlBuilderId id_function = gda_sql_builder_add_function (b, "myfunc",
+			            gda_sql_builder_add_id (b, "a"),
+			            gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 5),
+			            gda_sql_builder_add_expr (b, NULL, G_TYPE_STRING, "Joe"),
+			            0);
+gda_sql_builder_add_field_value_id (b, id_function, 0);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>SELECT name FROM master WHERE id IN (SELECT id FROM subdata)</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+GdaSqlStatement *sub;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "id"), 0);
+gda_sql_builder_select_add_target_id (b,
+				      gda_sql_builder_add_id (b, "subdata"),
+				      NULL);
+sub = gda_sql_builder_get_sql_statement (b, FALSE);
+g_object_unref (b);
+
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "name"), 0);
+gda_sql_builder_select_add_target_id (b,
+				      gda_sql_builder_add_id (b, "master"),
+				      NULL);
+GdaSqlBuilderId id_field = gda_sql_builder_add_id (b, "id");
+GdaSqlBuilderId id_subselect = gda_sql_builder_add_sub_select (b, sub, TRUE);
+GdaSqlBuilderId id_cond = gda_sql_builder_add_cond (b, GDA_SQL_OPERATOR_TYPE_IN, id_field, id_subselect, 0);
+gda_sql_builder_set_where (b, id_cond);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>INSERT INTO customers (e, f, g) SELECT id, name, location FROM subdate</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+GdaSqlStatement *sub;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "id"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "name"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "location"), 0);
+gda_sql_builder_select_add_target_id (b,
+				      gda_sql_builder_add_id (b, "subdate"),
+				      NULL);
+sub = gda_sql_builder_get_sql_statement (b, FALSE);
+g_object_unref (b);
+
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_INSERT);
+gda_sql_builder_set_table (b, "customers");
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "e"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "f"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "g"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_sub_select (b, sub, TRUE), 0);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>SELECT id, name FROM subdata1 UNION SELECT ident, lastname FROM subdata2</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+GdaSqlStatement *sub1, *sub2;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "id"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "name"), 0);
+gda_sql_builder_select_add_target_id (b,
+				      gda_sql_builder_add_id (b, "subdata1"),
+				      NULL);
+sub1 = gda_sql_builder_get_sql_statement (b, FALSE);
+g_object_unref (b);
+
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "ident"), 0);
+gda_sql_builder_add_field_value_id (b, gda_sql_builder_add_id (b, "lastname"), 0);
+gda_sql_builder_select_add_target_id (b,
+				      gda_sql_builder_add_id (b, "subdata2"),
+				      NULL);
+sub2 = gda_sql_builder_get_sql_statement (b, FALSE);
+g_object_unref (b);
+
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_COMPOUND);
+gda_sql_builder_compound_add_sub_select (b, sub1, TRUE);
+gda_sql_builder_compound_add_sub_select (b, sub2, TRUE);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+    <sect2>
+      <title>SELECT CASE tag WHEN 'Alpha' THEN 1 WHEN 'Bravo' THEN 2 WHEN 'Charlie' THEN 3 ELSE 0 END FROM data</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+GdaSqlBuilderId id_case = gda_sql_builder_add_case (b,
+			                            gda_sql_builder_add_id (b, "tag"),
+			                            0,
+			                            gda_sql_builder_add_expr (b, NULL, G_TYPE_STRING, "Alpha"),
+			                            gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 1),
+			                            gda_sql_builder_add_expr (b, NULL, G_TYPE_STRING, "Bravo"),
+			                            gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 2),
+			                            gda_sql_builder_add_expr (b, NULL, G_TYPE_STRING, "Charlie"),
+			                            gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 3),
+			                            0);
+gda_sql_builder_add_field_value_id (b, id_case, 0);
+gda_sql_builder_select_add_target_id (b,
+				   gda_sql_builder_add_id (b, "data"),
+				   NULL);
+[...]	
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+
+    <sect2>
+      <title>SELECT product_id, name, sum (4 * 5 * price * 1.200000) FROM invoice_lines</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+gda_sql_builder_select_add_field (b, "product_id", NULL, NULL);
+gda_sql_builder_select_add_field (b, "name", NULL, NULL);
+
+GdaSqlBuilderId op_ids[4], id_function;
+op_ids[0] = gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 4);
+op_ids[1] = gda_sql_builder_add_expr (b, NULL, G_TYPE_INT, 5);
+op_ids[2] = gda_sql_builder_add_id (b, "price");
+op_ids[3] = gda_sql_builder_add_expr (b, NULL, G_TYPE_FLOAT, 1.2);
+id_function = gda_sql_builder_add_function (b, "sum",
+                                   gda_sql_builder_add_cond_v (b, GDA_SQL_OPERATOR_TYPE_STAR, op_ids, 4),
+                                   0);
+gda_sql_builder_add_field_value_id (b, id_function, 0);
+gda_sql_builder_select_add_target_id (b,
+                                      gda_sql_builder_add_id (b, "invoice_lines"),
+				      NULL);
+[...]
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+
+    <sect2>
+      <title>SELECT id, name, adress, cntry_id, countries.name FROM customers INNER JOIN countries ON (countries.id = cntry_id)</title>
+      <para>
+	<programlisting>
+GdaSqlBuilder *b;
+b = gda_sql_builder_new (GDA_SQL_STATEMENT_SELECT);
+GdaSqlBuilderId t1, t2;
+GdaSqlBuilderId id1, id2;
+GdaSqlBuilderId jid;
+t1 = gda_sql_builder_select_add_target_id (b,
+                                           gda_sql_builder_add_id (b, "customers"),
+                                           NULL);
+t2 = gda_sql_builder_select_add_target_id (b,
+                                           gda_sql_builder_add_id (b, "countries"),
+                                           NULL);
+gda_sql_builder_select_add_field (b, "id", NULL, NULL);
+gda_sql_builder_select_add_field (b, "name", NULL, NULL);
+gda_sql_builder_select_add_field (b, "adress", NULL, NULL);
+id1 = gda_sql_builder_select_add_field (b, "cntry_id", NULL, NULL);
+gda_sql_builder_select_add_field (b, "name", "countries", NULL);
+id2 = gda_sql_builder_add_field_id (b, "id", "countries");
+jid = gda_sql_builder_add_cond (b, GDA_SQL_OPERATOR_TYPE_EQ, id2, id1, 0);
+gda_sql_builder_select_join_targets (b, t1, t2, GDA_SQL_SELECT_JOIN_INNER, jid);
+[...]
+g_object_unref (b);	  
+	</programlisting>
+    </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="howto-exec-select">
+    <title>Execute a SELECT command</title>
+    <para>
+      Any SQL command in &LIBGDA; must be converted to a <link linkend="GdaStatement">GdaStatement</link> object
+      which is then executed; if the statement defines some variable (place holders), then variables binding
+      (assigning values to variables) is done at execution time. Each database provider (database 
+      <emphasis>driver</emphasis> or <emphasis>adapter</emphasis>) can implement its own parser to 
+      be able to parse its specific SQL dialect. Except for binding variables, and for reusability, the
+      <link linkend="GdaStatement">GdaStatement</link> object guarantees that it contains only one SQL statement
+      (it's not possible for it to contain several ones separated by a semicolon).
+    </para>
+    <para>
+      Parsing an SQL statement into a <link linkend="GdaStatement">GdaStatement</link> object is the job of an
+      <link linkend="SqlParser">SqlParser</link>.
+    </para>
+    <para>
+      However when one only wants to run a simple SQL statement, &LIBGDA; provides the
+      <link linkend="gda-connection-statement-execute-select-command">gda_connection_statement_execute_select_command()</link> function which does
+      everything in one step. The following codes illustrates parsing and executing a SELECT statement:
+    </para>
+    <para>
+      <programlisting>
+GdaSqlParser *parser;
+GdaStatement *stmt;
+GError *error = NULL;
+
+parser = gda_connection_create_parser (cnc);
+if (!parser) {
+    /* the database provider used by cnc does not implement its own parser,
+     * let's use a generic one */
+    parser = gda_sql_parser_new ();
+stmt = gda_sql_parser_parse_string (parser, "SELECT * FROM customers", NULL, &amp;error);
+g_object_unref (parser);
+if (!stmt) {
+    /* there was an error while parsing */
+}
+else {
+    GdaDataModel *model;
+    model = gda_connection_statement_execute_select (cnc, stmt, NULL, &amp;error);
+    if (model) {
+        /* dump to results to STDOUT */
+        gda_data_model_dump (model, stdout);
+        g_object_unref (model);
+    }
+    else {
+        /* there was an error while executing the statement */
+    }
+}
+g_object_unref (stmt);
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="howto-modify-select">
+    <title>Modify the result of a SELECT command</title>
+    <para>
+      The <link linkend="GdaDataSelect">GdaDataSelect</link> data model (which is the data model returned
+      after the successful execution of a SELECT statement) is by default read-only, but can be made writable
+      after giving it information about:
+      <itemizedlist>
+	<listitem><para>how to identify a single row in the modified table
+	    (the columns composing the primary key)</para></listitem>
+	<listitem><para>which statements to execute when the data model's values are modified or some rows
+	    are inserted or removed</para></listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      The following example illustrates this using a table created as (SQLite syntax):
+      <![CDATA[CREATE TABLE customers (id integer NOT NULL PRIMARY KEY AUTOINCREMENT, name string NOT NULL, last_update timestamp NOT NULL, country string);]]>, where we select all the rows where the "country" column is "SP" and we modify
+      only one row:
+      <programlisting>
+GError *error = NULL;
+GdaDataModel *model;
+GdaStatement *stmt, *mod_stmt;
+GdaSet *params;
+GValue *value;
+
+/* create GdaDataSelect */
+stmt = stmt_from_string ("SELECT * FROM customers WHERE country = ##country::string");
+if (!gda_statement_get_parameters (stmt, &amp;params, &amp;error)) {
+   /* treat error */
+}
+if (! gda_set_set_holder_value (params, &amp;error, "country", "SP")) {
+   /* treat error */
+}
+model = gda_connection_statement_execute_select (cnc, stmt, params, &amp;error);
+g_object_unref (params);
+
+/* specify an UPDATE query */
+mod_stmt = stmt_from_string ("UPDATE customers SET name = ##+1::string, last_update = ##+2::timestamp WHERE id = ##-0::gint");
+if (!gda_data_select_set_modification_statement (GDA_DATA_SELECT (model), mod_stmt, &amp;error)) {
+   /* treat error */
+}
+
+/* Now modify the data model */
+g_value_set_string ((value = gda_value_new (G_TYPE_STRING)), "Jack");
+if (! check_set_value_at (model, 1, 0, value, cnc, stmt, NULL)) {
+   /* treat error */
+}
+gda_value_free (value);
+      </programlisting>
+    </para>
+    <para>
+      Note that in the code sample above, it would not have been possible to add or remove a row as no
+      INSERT or DELETE statement have been specified.
+    </para>
+    <para>
+      Now, if the meta data associated to the connection is up to date (after having called
+      <link linkend="gda-connection-update-meta-store">gda_connection_update_meta_store()</link>), then the code
+      above can be simplified as (and as a side benefit, it would also be possible to add or remove rows):
+      <programlisting>
+GError *error = NULL;
+GdaDataModel *model;
+GdaStatement *stmt;
+GdaSet *params;
+GValue *value;
+
+/* create GdaDataSelect */
+stmt = stmt_from_string ("SELECT * FROM customers WHERE country = ##country::string");
+if (!gda_statement_get_parameters (stmt, &amp;params, &amp;error)) {
+   /* treat error */
+}
+if (! gda_set_set_holder_value (params, &amp;error, "country", "SP")) {
+   /* treat error */
+}
+model = gda_connection_statement_execute_select (cnc, stmt, params, &amp;error);
+g_object_unref (params);
+
+/* specify that the data model can be writable */
+if (! gda_data_select_compute_modification_statements (GDA_DATA_SELECT (model), &amp;error)) {
+   /* treat error */
+}
+
+/* Now modify the data model */
+g_value_set_string ((value = gda_value_new (G_TYPE_STRING)), "Jack");
+if (! check_set_value_at (model, 1, 0, value, cnc, stmt, NULL)) {
+   /* treat error */
+}
+gda_value_free (value);
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="howto-exec-non-select">
+    <title>Execute an INSERT, UPDATE or DELETE command</title>
+    <para>
+      INSERT, UPDATE or DELETE are treated in the same way as the SELECT command (see the 
+      <link linkend="howto-exec-select">HOWTO</link> about executing
+      a SELECT command), except that the function to execute the command is different because the returned value
+      is not a data model but a success/failure value.
+    </para>
+    <para>
+      The following codes illustrates parsing and executing an UPDATE statement:
+      <programlisting>
+GdaSqlParser *parser;
+GdaStatement *stmt;
+GError *error = NULL;
+
+parser = gda_connection_create_parser (cnc);
+if (!parser) {
+    /* the database provider used by cnc does not implement its own parser,
+     * let's use a generic one */
+    parser = gda_sql_parser_new ();
+stmt = gda_sql_parser_parse_string (parser, "UPDATE customers set name='Joe' WHERE id=123", NULL, &amp;error);
+g_object_unref (parser);
+if (!stmt) {
+    /* there was an error while parsing */
+}
+else {
+    gint res;
+    res = gda_connection_statement_execute_non_select (cnc, stmt, NULL, NULL, &amp;error);
+    if (res == -1) {
+        /* there was an error while executing the statement */
+    }
+    else if (res >= 0) 
+        g_print ("Command Ok, %d row(s) impacted\n", res);
+    else
+        g_print ("Command Ok, number of rows impacted is not reported\n");
+}
+g_object_unref (stmt);
+      </programlisting>
+    </para>
+    <para>
+      Note that the example above includes in the SQL statement the values of the data to use in the UPDATE
+      (namely 'Joe' and '123'). Even though it's simple, a better practice is to use variables, as it
+      prevents SQL injection and avoids formatting problems. For more intormation, see the 
+      <link linkend="GdaSqlParser.description">GdaSqlParser</link> object's documentation; or the section
+      about <link linkend="libgda-40-Convenience-functions">convenience functions</link>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Get the last inserted row</title>
+    <para>
+      &LIBGDA; allows one to get the last inserted row right after an INSERT statement has been
+      executed. &LIBGDA; returns a new <link linkend="GdaSet">GdaSet</link> object (which the caller
+      must unref when not needed anymore) which contains named values, one for each column of the
+      table in which data has been inserted. To get that object, pass a place holder to the
+      <parameter>last_insert_row</parameter> of
+      <link linkend="gda-connection-statement-execute-non-select">gda_connection_statement_execute_non_select()</link>
+    </para>
+    <para>
+      The following code example show how to use the returned <link linkend="GdaSet">GdaSet</link> object:
+      <programlisting>
+GdaSet *last_row;
+GdaStatement *stmt;
+stmt = gda_sql_parser_parse_string (parser, "INSERT INTO mytable (name) VALUES ('joe')", NULL, NULL);
+if (gda_connection_statement_execute_non_select (connection, stmt, NULL, &amp;last_row, &amp;error) == -1) {
+    g_warning ("Can't execute INSERT: %s\n",
+              error &amp;&amp; error->message ? error->message : "???");
+    if (error)
+        g_error_free (error);
+}
+else {
+    if (!last_row)
+        g_print ("Last row not reported\n");
+    else {
+        GSList *list;
+        for (list = last_row->holders; list; list = list->next) {
+            GdaHolder *h = GDA_HOLDER (list->data);
+            gchar *str;
+            str = gda_value_stringify (gda_holder_get_value (h));
+            g_print ("\t%s => %s\n", gda_holder_get_id (h), str);
+            g_free (str);
+        }
+    g_object_unref (last_row);
+}
+g_object_unref (stmt);
+      </programlisting>
+      Which gives the following output (considering that in the example the "mytable" table has two columns: an Id
+      and a Name columns):
+      <programlisting>
+        +0 => 1
+        +1 => joe
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Execute a DDL command</title>
+    <para>
+      DDL commands (commands to modify the database schema such as create tables and views, change
+      users' access rights, etc) are treated in the same way as non select commands (refer to 
+      the <link linkend="howto-exec-select">HOWTO</link> about executing non SELECT commands). However
+      &LIBGDA; offers a better and more portable way of executing such commands: using a
+      <link linkend="GdaServerOperation">GdaServerOperation</link> object.
+    </para>
+    <para>
+      Executing a DDL command involves the following steps:
+      <orderedlist>
+	<listitem><para>Request a new <link linkend="GdaServerOperation">GdaServerOperation</link> object from
+	    the database provider for a specific operation using the 
+	    <link linkend="gda-server-provider-create-operation">gda_server_provider_create_operation()</link> function.
+	</para></listitem>
+	<listitem><para>Specify the <link linkend="GdaServerOperation">GdaServerOperation</link> object's 
+	    behaviour by setting some pre-defined parameters; for example when creating a table, the parameters
+	    to be set include the tables name, the names of the columns, the constraints, etc. The list
+	    of parameters to set is listed by the <link linkend="libgda-list-server-op">gda-list-server-op</link>
+	    program.
+	</para></listitem>
+	<listitem><para>Ask the server provider to execute the operation based on the 
+	    <link linkend="GdaServerOperation">GdaServerOperation</link> object
+	</para></listitem>
+      </orderedlist>
+    </para>
+    <para>
+      The following code in part illustrates how to create a view:
+      <programlisting>
+GdaServerOperation *op;
+
+op = gda_connection_create_operation (cnc, GDA_SERVER_OPERATION_CREATE_VIEW, NULL, &amp;error);
+if (!op)
+    /* there was an error while creating the GdaServerOperation object */
+else {
+    /* define the view to create */
+    if (!gda_server_operation_set_value_at (op, "myview", &amp;error, 
+                                            "/VIEW_DEF_P/VIEW_NAME") ||
+        !gda_server_operation_set_value_at (op, "SELECT * FROM customers", &amp;error, 
+                                            "/VIEW_DEF_P/VIEW_DEF"))
+        /* there was an error */
+    else {
+        if (! gda_connection_perform_operation (cnc, op, &amp;error))
+            g_print ("Error\n");
+        else
+            g_print ("View created\n");
+    }
+    g_object_unref (op);
+}
+      </programlisting>
+    </para>
+    <para>
+      Please also note that &LIBGDA; provides some convenience functions to wrap this process, see the
+      <link linkend="libgda-40-Convenience-functions">Convenience functions</link> section for more
+      information.
+    </para>
+  </sect1>
+
+  <sect1 id="howto-meta1">
+    <title>Get information about a table's columns</title>
+    <para>
+      &LIBGDA; supports reporting meta data about a database (for which there is an opened connection). The
+      meta data are stored in a database (usually an in-memory database) which structure is close to the 
+      information schema SQL standard (ISO/IEC 9075), and adapted (form information, this database is managed by a
+      <link linkend="GdaMetaStore">GdaMetaStore</link> object). As databases don't notify the changes made to
+      their objects, it is necessary to update (or synchronize) the meta data if the database's schema has been
+      changed, or if the meta data has not yet been extracted: call
+      <link linkend="gda-connection-update-meta-store">gda_connection_update_meta_store()</link> for this purpose.
+    </para>
+    <para>
+      One then needs to find the data requested among the (rather large) quantity of meta data available, there are
+      two possibilities:
+      <itemizedlist>
+	<listitem><para>Knowing the information schema's structure (tables and views) used, 
+	    run some SELECT commands on the 
+	    <link linkend="GdaMetaStore">GdaMetaStore</link> object's internal connection: this solution is the most
+	    powerful but requires some knowledge of the information schema's structure, and the data
+	    is not easy to use.</para></listitem>
+	<listitem><para>Use a <link linkend="GdaMetaStruct">GdaMetaStruct</link> object which 
+	    <emphasis>exports</emphasis> the meta data as a dynamic tree of pre-defined data structures, 
+	    easy to use.</para></listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      The following code shows how to list all the colums of the "customers" table of a connection (the connection
+      is assumed to already be opened):
+      <programlisting>
+GdaMetaStruct *mstruct;
+GdaMetaDbObject *dbo;
+GValue *table_name;
+if (!gda_connection_update_meta_store (cnc, NULL, &amp;error)) {
+    /* there was an error */
+    return;
+}
+mstruct = gda_meta_struct_new (store, GDA_META_STRUCT_FEATURE_NONE);
+table_name = gda_value_new (G_TYPE_STRING);
+g_value_set_string (value, "customers");
+dbo = gda_meta_struct_complement (mstruct, GDA_META_DB_TABLE,
+                                  NULL, NULL, 
+                                  table_name, &amp;error);
+gda_value_free (table_name);
+if (dbo) {
+    /* the "customers" table has been found, its details are in dbo */
+    GdaMetaTable *table = GDA_META_TABLE (dbo);
+    GSList *list;
+    for (list = table->columns: list; list = list->next) 
+        g_print ("Column: %s\n", ((GdaMetaTableColumn*) list->data)->column_name);
+}
+else
+    g_print ("Table not found\n");
+g_object_unref (mstruct);
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1 id="howto-meta2">
+    <title>Update the meta data about a table</title>
+    <para>
+      For a general overview of the mete data problem, see the
+      <link inkend="howto-meta1">Get information about a table's columns</link> section. Updating the meta data
+      can be done by calling 
+      <link linkend="gda-connection-update-meta-store">gda_connection_update_meta_store()</link> with a %NULL
+      "context" argument, but this
+      call updates the whole meta data which will always do the job, but sometimes one knows that only a
+      part of the meta data need to be updated. Here is an example of how to use a specific
+      <link linkend="GdaMetaContext">GdaMetaContext</link> argument.
+    </para>
+    <para>
+      Specifically the following code
+      updates the meta data regarding the "customers" table:
+      <programlisting><![CDATA[
+GdaConnection *connection=...
+GError *error = NULL;
+GValue *table;
+GdaMetaContext *mcontext = gda_meta_context_new ();
+/* This is a table in the dababase schema for Meta Store to update */
+gda_meta_context_set_table ("_tables");
+/* Next setup a value to be used as the column in the last table to be used as a condition in the update
+   in this case we will use the column 'table_name' and update for 'customers'*/
+table = gda_value_new (G_TYPE_STRING);
+g_value_set_string (table, "customers");
+gda_meta_context_set_column ("table_name", table);
+gboolean result;
+result = gda_connection_update_meta_store (connection, mcontext, &error);
+gda_value_free (table);
+gda_meta_context_free (mcontext);
+if (!result) {
+    /* handle the error */
+    g_error_free (error);
+}]]>
+      </programlisting>
+    </para>
+    <para>
+      Internally <link linkend="gda-sql-identifier-quote">gda_meta_context_set_column()</link> calls 
+      <link linkend="gda-sql-identifier-quote">gda_sql_identifier_quote()</link> which ensure that the contents of 
+      <code>mcontext.column_values</code> values is conform to the convention used by the 
+      <link linkend="GdaMetaStore">GdaMetaStore</link> to represent SQL identifiers when the
+      values represent an SQL identifier (which is the case in the example above). For more information,
+      see the <link linkend="information_schema:sql_identifiers">meta data section about SQL identifiers</link>.
+      Even though not strictly necessary, it used all the time.
+      For example if the table name for which a meta data update is requested had been <emphasis>"Customers"</emphasis>
+      (note the upper case C at the beginning and the double quotes) because this is how the database know it, then
+      not using <link linkend="gda-sql-identifier-quote">gda_sql_identifier_quote()</link> may not have done as
+      expected.
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Validate a DML statement</title>
+    <para>
+      &LIBGDA; supports validating DML (SELECT, INSERT, UPDATE and DELETE) statements: making sure every
+      database object referenced in the statement actually exists in the database being accessed through
+      a connection.
+      The validation process involves the meta data associated to a connection, son one must make that
+      meta data is up to date with the database being accessed, using 
+      <link linkend="gda-connection-update-meta-store">gda_connection_update_meta_store()</link> (also see the
+      <link linkend="howto-meta1">Get information about a table's columns</link> section).
+    </para>
+    <para>
+      The following code shows how to validate a statement (assuming the statement already exists):
+      <programlisting>
+if (!gda_statement_check_validity (stmt, cnc, &amp;error))
+    g_print ("Invalid statement: %s\n",
+             error &amp;&amp; error->message ? error->message : "No detail");
+else
+    g_print ("Statement is valid\n");
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Control value's assignment to various objects</title>
+    <para>
+      &LIBGDA; has builtin support to allow the programmer to control what values are acceptable 
+      for some objects which hold values (namely the <link linkend="GdaHolder">GdaHolder</link>,
+      <link linkend="GdaSet">GdaSet</link> and <link linkend="GdaDataProxy">GdaDataProxy</link> objects).
+      For more information about this topic, see the <link linkend="data-validation">custom data validation</link>
+      section.
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Add your own data to a GdaMetaStore</title>
+    <para>
+      Adding your own data in the <link linkend="GdaMetaStore">GdaMetaStore</link> associated to a connection
+      is a possibility to avoid for example to have another file to store your program-specific data (which 
+      you obviously don't want to store in a connection).
+    </para>
+    <para>
+      Doing so is as easy as getting a pointer to the internal connection used by the 
+      <link linkend="GdaMetaStore">GdaMetaStore</link> associated the connection, and then use
+      that connection directly as any other connection object.
+    </para>
+    <para>
+      However &LIBGDA; has some specific API to make this easier, described in the
+      <link linkend="GdaMetaStoreCustomData">section about adding custom data</link> to
+      a GdaMetaStore.
+    </para>
+  </sect1>
+
+</chapter>
+

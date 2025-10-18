@@ -1,0 +1,142 @@
+/* language.h
+ *
+ * Copyright (C) 2004-2005 Jae Jang
+ * Copyright (C) 2005-2006 Rob Page
+ * Copyright (C) 2006 Dodji Seketeli
+ * Copyright (C) 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <vector>
+
+#include <glibmm/object.h>
+
+#include <gtksourceviewmm/stylescheme.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/object_p.h)
+
+
+namespace Gsv
+{
+
+class LanguageManager ;
+
+_CC_INCLUDE(gtksourceview/gtksource.h)
+
+/** Object representing a syntax highlighted language.
+ *
+ * Language encapsulates syntax and highlighting styles for a particular
+ * language. Use LanguageManager to obtain a Language instance, and
+ * Buffer::set_language() to apply it to a Buffer.
+ */
+class Language : public Glib::Object
+{
+  _CLASS_GOBJECT(Language, GtkSourceLanguage, GTK_SOURCE_LANGUAGE, Glib::Object, GObject)
+
+public:
+
+  /** Returns the ID of a language.
+   *
+   * The ID is not locale-dependent.
+   *
+   * @return The ID of a language.
+   */
+  _WRAP_METHOD(Glib::ustring get_id() const, gtk_source_language_get_id)
+
+  /** Returns the localized name of the language.
+   *
+   * @return The name of a language.
+   */
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_source_language_get_name)
+
+  /** Returns the localized section of the language.
+   *
+   * Each language belong to a section (ex. HTML belogs to the Markup section).
+   *
+   * @return The section of a language.
+   */
+  _WRAP_METHOD(Glib::ustring get_section() const, gtk_source_language_get_section)
+
+  /** Returns whether the language should be hidden from the user.
+   *
+   * @return @c true if the language should be hidden, @c false otherwise.
+   */
+  _WRAP_METHOD(bool get_hidden() const, gtk_source_language_get_hidden)
+
+#m4 _CONVERSION(`gchar**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+
+  /** Returns the mime types associated to this language.
+   *
+   * This is just a utility wrapper around get_metadata() to retrieve the
+   * "mimetypes" metadata property and split it into an array.
+   *
+   * @return An array containing the mime types.
+   */
+  _WRAP_METHOD(std::vector<Glib::ustring> get_mime_types() const, gtk_source_language_get_mime_types)
+
+  /** Returns the globs associated to this language.
+   *
+   * This is just a utility wrapper around get_metadata() to retrieve the
+   * "globs" metadata property and split it into an array.
+   *
+   * @return An array containing the globs.
+   */
+  _WRAP_METHOD(std::vector<Glib::ustring> get_globs() const, gtk_source_language_get_globs)
+
+  /** Returns the ids of the styles defined by this language.
+   *
+   * @return An array containing ids of the styles defined by this language.
+   */
+  _WRAP_METHOD(std::vector<Glib::ustring> get_style_ids() const, gtk_source_language_get_style_ids)
+
+  /** Returns the name of the style with ID @a style_id defined by this
+   *  language.
+   *
+   * @param style_id A style ID.
+   *
+   * @return The name of the style with ID @a style_id defined by this language
+   * or empty string if the style has no name or there is no style with ID
+   * @a style_id defined by this language.
+   */
+  _WRAP_METHOD(Glib::ustring get_style_name(const Glib::ustring& style_id) const, gtk_source_language_get_style_name)
+
+  /** Returns the ID of the style to use if the specified @a style_id is not present in the current style scheme.
+   *
+   * @param style_id a style ID.
+   *
+   * @return the ID of the style to use if the specified @a style_id is not present in the current style scheme or NULL
+   *         if the style has no fallback defined. The returned string is owned by the language and must not be modified.
+   * @newin {3,4}
+   */
+  _WRAP_METHOD(Glib::ustring get_style_fallback(const Glib::ustring& style_id) const, gtk_source_language_get_style_fallback)
+
+  /** Returns metadata of a language.
+   *
+   * @param name Metadata property name.
+   *
+   * @return Value of property @a name stored in the metadata of language or
+   * empty string if language doesn't contain that metadata property.
+   */
+  _WRAP_METHOD(Glib::ustring get_metadata(const Glib::ustring& name) const, gtk_source_language_get_metadata)
+
+  _WRAP_PROPERTY("id", std::string)
+  _WRAP_PROPERTY("name", std::string)
+  _WRAP_PROPERTY("section", std::string)
+  _WRAP_PROPERTY("hidden", bool)
+};
+
+} /* namespace Gsv */

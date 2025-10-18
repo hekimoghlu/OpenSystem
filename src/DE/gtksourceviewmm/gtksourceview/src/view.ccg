@@ -1,0 +1,71 @@
+/* view.cc
+ *
+ * Copyright (C) 2004-2005 Jae Jang
+ * Copyright (C) 2005-2006 Rob Page
+ * Copyright (C) 2006 Dodji Seketeli
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+#include <gtksourceview/gtksource.h>
+
+#include <gtksourceviewmm/view.h>
+#include <gtksourceviewmm/markattributes.h>
+
+namespace Gsv
+{
+
+View::View() :
+    _CONSTRUCT
+{
+    GtkSourceBuffer *buffer = gtk_source_buffer_new (0) ;
+    gtk_text_view_set_buffer (GTK_TEXT_VIEW (gobject_), GTK_TEXT_BUFFER (buffer));
+    g_object_unref(buffer);
+}
+
+View::View(const Glib::RefPtr<Buffer> &a_buffer) :
+    _CONSTRUCT
+{
+    if (a_buffer) {
+        set_buffer (a_buffer) ;
+    } else {
+        GtkSourceBuffer *buffer = gtk_source_buffer_new (0) ;
+        gtk_text_view_set_buffer (GTK_TEXT_VIEW (gobject_), GTK_TEXT_BUFFER (buffer)) ;
+        g_object_unref(buffer);
+    }
+}
+
+Glib::RefPtr<const Buffer>
+View::get_source_buffer () const
+{
+    auto buffer = get_buffer();
+    return std::dynamic_pointer_cast<const Buffer>(buffer);
+}
+
+Glib::RefPtr<Buffer>
+View::get_source_buffer ()
+{
+    auto buffer = get_buffer();
+    return std::dynamic_pointer_cast<Buffer>(buffer);
+}
+
+void
+View::set_source_buffer (const Glib::RefPtr<Buffer> &source_buffer)
+{
+    set_buffer (source_buffer) ;
+}
+
+}//end namespace Gsv
+

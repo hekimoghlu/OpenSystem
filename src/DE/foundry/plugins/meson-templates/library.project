@@ -1,0 +1,626 @@
+[Template]
+Name=library
+Description=Create an shared library using the Meson build system
+Tags=Meson;
+
+[Input name]
+Type=text
+Title=Project Name
+Subtitle=The name for your project which should not contain spaces
+Validate=^[-\\w0-9]+$
+
+[Input Namespace]
+Type=text
+Title=Namespace
+Subtitle=The namespace for the library such as "Mylib"
+Validate=^[\\w]+$
+
+[Input license]
+Type=license
+Title=License
+Default=LGPL-2.1-or-later
+
+[Input git]
+Type=switch
+Title=Version Control
+Default=true
+
+
+```
+require GLib
+
+ns = Namespace.mangle()
+NS = ns.upper()
+Ns = ns.title()
+
+dirname = name
+
+def startswith(str, prefix)
+  GLib.str_has_prefix(str, prefix)
+end
+
+def substring(str, start, offset)
+  GLib.utf8_substring(str, i64(start), i64(offset))
+end
+
+if startswith(name, "lib") then name = substring(name, 3, -1)
+
+name_ = GLib.strjoinv("_", GLib.strsplit(name.lower(), "-", i32(0)))
+```
+
+
+```{{dirname}}/meson.options
+option('docs',
+       type: 'boolean', value: false,
+       description: 'Build reference manual (requires gi-doc and gobject-introspection)')
+option('stack-protector',
+       type: 'boolean', value: true,
+       description: 'Enable stack-protector')
+option('vapi',
+       type: 'boolean', value: true,
+       description: 'Generate vapi data (requires vapigen)')
+option('introspection',
+       type: 'feature', value: 'enabled',
+       description: 'Generate gir data (requires gobject-introspection)')
+option('tests',
+       type: 'boolean', value: true,
+       description: 'Build and enable tests')
+```
+
+
+```{{dirname}}/meson.build
+project('{{dirname}}', 'c',
+          version: '1.0.alpha',
+    meson_version: '>= 1.1.0',
+  default_options: ['warning_level=2', 'werror=false'],
+{{if license.id}}
+          license: '{{license.id}}',
+{{end}}
+)
+
+api_version = '1'
+
+cc = meson.get_compiler('c')
+gnome = import('gnome')
+pkg = import('pkgconfig')
+
+config_h = configuration_data()
+config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
+
+prefix = get_option('prefix')
+datadir = join_paths(prefix, get_option('datadir'))
+libdir = join_paths(prefix, get_option('libdir'))
+girdir = join_paths(datadir, 'gir-1.0')
+vapidir = join_paths(datadir, 'vala', 'vapi')
+typelibdir = join_paths(libdir, 'girepository-1.0')
+
+glib_req_version = '2.82'
+glib_req = '>= @0@'.format(glib_req_version)
+glib_dep = dependency('gio-2.0', version: glib_req)
+
+project_c_args = []
+test_c_args = [
+  '-Watomic-alignment',
+  '-Wcast-align',
+  '-Wdeclaration-after-statement',
+  '-Werror=address',
+  '-Werror=array-bounds',
+  '-Werror=empty-body',
+  '-Werror=implicit',
+  '-Werror=implicit-function-declaration',
+  '-Werror=incompatible-pointer-types',
+  '-Werror=init-self',
+  '-Werror=int-conversion',
+  '-Werror=int-to-pointer-cast',
+  '-Werror=main',
+  '-Werror=misleading-indentation',
+  '-Werror=missing-braces',
+  '-Werror=missing-include-dirs',
+  '-Werror=nonnull',
+  '-Werror=overflow',
+  '-Werror=parenthesis',
+  '-Werror=pointer-arith',
+  '-Werror=pointer-to-int-cast',
+  '-Werror=redundant-decls',
+  '-Werror=return-type',
+  '-Werror=sequence-point',
+  '-Werror=shadow',
+  '-Werror=strict-prototypes',
+  '-Werror=trigraphs',
+  '-Werror=undef',
+  '-Werror=write-strings',
+  '-Wformat-nonliteral',
+  '-Wignored-qualifiers',
+  '-Wimplicit-function-declaration',
+  '-Wlogical-op',
+  '-Wmissing-declarations',
+  '-Wmissing-format-attribute',
+  '-Wmissing-include-dirs',
+  '-Wmissing-noreturn',
+  '-Wnested-externs',
+  '-Wno-cast-function-type',
+  '-Wno-dangling-pointer',
+  '-Wno-missing-field-initializers',
+  '-Wno-sign-compare',
+  '-Wno-unused-parameter',
+  '-Wold-style-definition',
+  '-Wpointer-arith',
+  '-Wredundant-decls',
+  '-Wstrict-prototypes',
+  '-Wswitch-default',
+  '-Wswitch-enum',
+  '-Wtrampolines',
+  '-Wundef',
+  '-Wuninitialized',
+  '-Wunused',
+  '-fstrict-flex-arrays=3',
+  '-fno-strict-aliasing',
+  ['-Werror=format-security', '-Werror=format=2'],
+  '-FImsvc_recommended_pragmas.h',
+]
+if get_option('buildtype') != 'plain' and get_option('stack-protector')
+  if host_machine.system() != 'windows'
+    test_c_args += '-fstack-protector-strong'
+  endif
+endif
+foreach arg: test_c_args
+  if cc.has_multi_arguments(arg)
+    project_c_args += arg
+  endif
+endforeach
+add_project_arguments(project_c_args, language: 'c')
+
+# Detect and set symbol visibility
+if get_option('default_library') != 'static'
+  if host_machine.system() == 'windows'
+    config_h.set('DLL_EXPORT', true)
+    if cc.get_id() == 'msvc'
+      config_h.set('_{{NS}}_EXTERN', '__declspec(dllexport) extern')
+    elif cc.has_argument('-fvisibility=hidden')
+      config_h.set('_{{NS}}_EXTERN', '__attribute__((visibility("default"))) __declspec(dllexport) extern')
+    endif
+  elif cc.has_argument('-fvisibility=hidden')
+    config_h.set('_{{NS}}_EXTERN', '__attribute__((visibility("default"))) extern')
+  endif
+endif
+
+release_args = []
+global_link_args = []
+test_link_args = [
+  '-Wl,-z,relro',
+  '-Wl,-z,now',
+  '-Wl,-z,noexecstack',
+]
+if not get_option('buildtype').startswith('debug')
+  release_args += ['-DG_DISABLE_ASSERT', '-DG_DISABLE_CAST_CHECKS']
+  test_link_args += [
+    '-Wl,-Bsymbolic',
+    '-fno-plt',
+  ]
+endif
+foreach link_arg: test_link_args
+  if cc.has_link_argument(link_arg)
+    global_link_args += link_arg
+  endif
+endforeach
+add_project_link_arguments(global_link_args, language: 'c')
+
+glib_major_version = glib_req_version.split('.')[0].to_int()
+glib_minor_version = glib_req_version.split('.')[1].to_int()
+if glib_minor_version % 2 == 1
+  glib_minor_version = glib_minor_version + 1
+endif
+deprecated_c_args = [
+  '-DG_DISABLE_DEPRECATED',
+  '-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_@0@_@1@'.format(glib_major_version, glib_minor_version),
+]
+
+add_project_arguments('-I' + meson.project_build_root(), language: 'c')
+
+subdir('lib')
+subdir('testsuite')
+if get_option('docs')
+  subdir('doc')
+endif
+
+configure_file(output: 'config.h', configuration: config_h)
+```
+
+```{{dirname}}/lib/meson.build
+lib{{name_}}_sources = [
+]
+
+lib{{name_}}_headers = [
+  '{{ns}}-version-macros.h',
+  '{{name}}.h',
+]
+
+lib{{name_}}_deps = [
+  glib_dep,
+]
+
+lib{{name_}}_c_args = [
+  deprecated_c_args,
+  release_args,
+  '-DG_LOG_DOMAIN="{{Ns}}"',
+  '-D{{NS}}_COMPILATION',
+]
+
+version_split = meson.project_version().split('.')
+micro_version = version_split[2]
+if version_split[2][0] in ['a', 'b', 'r']
+  micro_version = '0'
+endif
+version_conf = configuration_data()
+version_conf.set('VERSION', meson.project_version())
+version_conf.set('MAJOR_VERSION', version_split[0])
+version_conf.set('MINOR_VERSION', version_split[1])
+version_conf.set('MICRO_VERSION', micro_version)
+
+configure_file(
+          input: '{{ns}}-version.h.in',
+         output: '{{ns}}-version.h',
+  configuration: version_conf,
+        install: true,
+    install_dir: join_paths(get_option('includedir'), '{{dirname}}-@0@'.format(api_version))
+)
+
+lib{{name_}} = library('{{name}}-@0@'.format(api_version), lib{{name_}}_sources,
+           dependencies: lib{{name_}}_deps,
+                 c_args: lib{{name_}}_c_args,
+                install: true,
+  gnu_symbol_visibility: 'hidden',
+                version: '@0@.0.0'.format(api_version),
+        darwin_versions: '@0@.0'.format(api_version),
+)
+
+if get_option('default_library') == 'static'
+  if get_option('introspection').enabled()
+    error('introspection requires building a shared library!')
+  endif
+endif
+
+lib{{name_}}_dep_sources = []
+
+install_headers(lib{{name_}}_headers, subdir: '{{dirname}}-@0@'.format(api_version))
+
+pkg.generate(
+  description: 'Future-based programming for GLib-based applications and libraries',
+    libraries: lib{{name_}},
+         name: '{{dirname}}',
+     filebase: '{{dirname}}-' + api_version,
+      subdirs: '{{dirname}}-@0@'.format(api_version),
+     requires: ['gio-2.0'],
+)
+
+if get_option('introspection').enabled()
+  lib{{name_}}_gir = gnome.generate_gir(lib{{name_}},
+                sources: [lib{{name_}}_sources, lib{{name_}}_headers],
+              nsversion: api_version,
+              namespace: '{{Ns}}',
+        export_packages: '{{dirname}}-@0@'.format(api_version),
+          symbol_prefix: '{{ns}}',
+      identifier_prefix: '{{Ns}}',
+        install_dir_gir: girdir,
+    install_dir_typelib: typelibdir,
+               includes: ['Gio-2.0'],
+                install: true,
+                 header: '{{name}}.h',
+             extra_args: ['-D{{NS}}_COMPILATION'],
+  )
+
+  lib{{name_}}_dep_sources += [lib{{name_}}_gir]
+
+  if get_option('vapi')
+    {{name_}}_vapi = gnome.generate_vapi('lib{{name}}-@0@'.format(api_version),
+            sources: lib{{name_}}_gir.get(0),
+            install: true,
+        install_dir: join_paths(datadir, 'vala', 'vapi'),
+           packages: ['gio-2.0'],
+    )
+  endif
+endif
+
+lib{{name_}}_dep = declare_dependency(
+            link_with: lib{{name_}},
+  include_directories: include_directories('.'),
+         dependencies: lib{{name_}}_deps,
+              sources: [lib{{name_}}_dep_sources],
+)
+
+meson.override_dependency('{{name}}-' + api_version, lib{{name_}}_dep)
+```
+
+```{{dirname}}/testsuite/meson.build
+lib_test_env = [
+  'G_TEST_SRCDIR=@0@'.format(meson.current_source_dir()),
+  'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
+  'GSETTINGS_BACKEND=memory',
+  'GSETTINGS_SCHEMA_DIR=@0@/data/settings'.format(meson.project_build_root()),
+  'G_DEBUG=gc-friendly',
+  'MALLOC_CHECK_=2',
+]
+
+lib_testsuite_c_args = [
+  '-DG_ENABLE_DEBUG',
+  '-UG_DISABLE_ASSERT',
+  '-UG_DISABLE_CAST_CHECKS',
+]
+
+lib_testsuite = {
+  'test-{{name}}': {},
+}
+
+lib_testsuite_deps = [
+  lib{{name_}}_dep,
+]
+
+foreach test, params: lib_testsuite
+  test_exe = executable(test, ['@0@.c'.format(test)],
+                 c_args: lib_testsuite_c_args,
+           dependencies: lib_testsuite_deps,
+    include_directories: [include_directories('..'), include_directories('.')],
+  )
+  if not params.get('skip', false)
+    test(test, test_exe, env: lib_test_env)
+  endif
+endforeach
+```
+
+```{{dirname}}/lib/{{name}}.h
+{{include "license.h"}}
+
+#pragma once
+
+#include <gio/gio.h>
+
+#define {{NS}}_INSIDE
+# include "{{ns}}-version.h"
+# include "{{ns}}-version-macros.h"
+#undef {{NS}}_INSIDE
+```
+
+```{{dirname}}/lib/{{ns}}-version.h.in
+{{include "license.h"}}
+
+#pragma once
+
+#define {{NS}}_MAJOR_VERSION (@MAJOR_VERSION@)
+#define {{NS}}_MINOR_VERSION (@MINOR_VERSION@)
+#define {{NS}}_MICRO_VERSION (@MICRO_VERSION@)
+#define {{NS}}_VERSION (@VERSION@)
+#define {{NS}}_VERSION_S "@VERSION@"
+#define {{NS}}_ENCODE_VERSION(major,minor,micro) \
+  ((major) << 24 | (minor) << 16 | (micro) << 8)
+#define {{NS}}_VERSION_HEX \
+  ({{NS}}_ENCODE_VERSION ({{NS}}_MAJOR_VERSION, {{NS}}_MINOR_VERSION, {{NS}}_MICRO_VERSION))
+#define {{NS}}_CHECK_VERSION(major,minor,micro)   \
+  ({{NS}}_MAJOR_VERSION > (major) || \
+   ({{NS}}_MAJOR_VERSION == (major) && {{NS}}_MINOR_VERSION > (minor)) || \
+   ({{NS}}_MAJOR_VERSION == (major) && {{NS}}_MINOR_VERSION == (minor) && \
+    {{NS}}_MICRO_VERSION >= (micro)))
+```
+
+```{{dirname}}/lib/{{ns}}-version-macros.h
+{{include "license.h"}}
+
+#pragma once
+
+#include <glib.h>
+
+#include "{{ns}}-version.h"
+
+#ifndef _{{NS}}_EXTERN
+# define _{{NS}}_EXTERN extern
+#endif
+
+#define {{NS}}_VERSION_CUR_STABLE (G_ENCODE_VERSION ({{NS}}_MAJOR_VERSION, 0))
+
+#ifdef {{NS}}_DISABLE_DEPRECATION_WARNINGS
+# define {{NS}}_DEPRECATED _{{NS}}_EXTERN
+# define {{NS}}_DEPRECATED_FOR(f) _{{NS}}_EXTERN
+# define {{NS}}_UNAVAILABLE(maj,min) _{{NS}}_EXTERN
+#else
+# define {{NS}}_DEPRECATED G_DEPRECATED _{{NS}}_EXTERN
+# define {{NS}}_DEPRECATED_FOR(f) G_DEPRECATED_FOR (f) _{{NS}}_EXTERN
+# define {{NS}}_UNAVAILABLE(maj,min) G_UNAVAILABLE (maj, min) _{{NS}}_EXTERN
+#endif
+
+#define {{NS}}_VERSION_1_0 (G_ENCODE_VERSION (1, 0))
+
+#if {{NS}}_MAJOR_VERSION == {{NS}}_VERSION_1_0
+# define {{NS}}_VERSION_PREV_STABLE ({{NS}}_VERSION_1_0)
+#else
+# define {{NS}}_VERSION_PREV_STABLE (G_ENCODE_VERSION ({{NS}}_MAJOR_VERSION - 1, 0))
+#endif
+
+#ifndef {{NS}}_VERSION_MIN_REQUIRED
+# define {{NS}}_VERSION_MIN_REQUIRED ({{NS}}_VERSION_CUR_STABLE)
+#endif
+
+#ifndef {{NS}}_VERSION_MAX_ALLOWED
+# if {{NS}}_VERSION_MIN_REQUIRED > {{NS}}_VERSION_PREV_STABLE
+#  define {{NS}}_VERSION_MAX_ALLOWED ({{NS}}_VERSION_MIN_REQUIRED)
+# else
+#  define {{NS}}_VERSION_MAX_ALLOWED ({{NS}}_VERSION_CUR_STABLE)
+# endif
+#endif
+
+#define {{NS}}_AVAILABLE_IN_ALL _{{NS}}_EXTERN
+
+#if {{NS}}_VERSION_MIN_REQUIRED >= {{NS}}_VERSION_1_0
+# define {{NS}}_DEPRECATED_IN_1_0 {{NS}}_DEPRECATED
+# define {{NS}}_DEPRECATED_IN_1_0_FOR(f) {{NS}}_DEPRECATED_FOR(f)
+#else
+# define {{NS}}_DEPRECATED_IN_1_0 _{{NS}}_EXTERN
+# define {{NS}}_DEPRECATED_IN_1_0_FOR(f) _{{NS}}_EXTERN
+#endif
+#if {{NS}}_VERSION_MAX_ALLOWED < {{NS}}_VERSION_1_0
+# define {{NS}}_AVAILABLE_IN_1_0 {{NS}}_UNAVAILABLE(1, 0)
+#else
+# define {{NS}}_AVAILABLE_IN_1_0 _{{NS}}_EXTERN
+#endif
+```
+
+```{{dirname}}/testsuite/test-{{name}}.c
+{{include "license.c"}}
+
+#include "config.h"
+
+#include <{{name}}.h>
+
+static void
+test_basic (void)
+{
+}
+
+int
+main (int   argc,
+      char *argv[])
+{
+  g_test_init (&argc, &argv, NULL);
+  g_test_add_func ("/{{name}}/basic", test_basic);
+  return g_test_run ();
+}
+```
+
+```{{dirname}}/doc/{{dirname}}.toml.in
+[library]
+version = "@version@"
+browse_url = ""
+repository_url = ""
+website_url = ""
+docs_url = ""
+authors = "{{author}}"
+license = "{{license.id}}"
+description = "A library for ..."
+dependencies = ["Gio-2.0"]
+devhelp = true
+search_index = true
+
+[dependencies."GObject-2.0"]
+name = "GObject"
+description = "The base type system library"
+docs_url = "https://docs.gtk.org/gobject/"
+
+[dependencies."GLib-2.0"]
+name = "GLib"
+description = "The base type system library"
+docs_url = "https://docs.gtk.org/glib/"
+
+[dependencies."Gio-2.0"]
+name = "GIO"
+description = "GObject Interfaces and Objects, Networking, IPC, and I/O"
+docs_url = "https://docs.gtk.org/gio/"
+
+[theme]
+name = "basic"
+show_index_summary = true
+show_class_hierarchy = true
+
+[source-location]
+base_url = ""
+
+[extra]
+# The same order will be used when generating the index
+content_files = [
+  "overview.md",
+]
+
+urlmap_file = "urlmap.js"
+```
+
+```{{dirname}}/doc/urlmap.js
+// A map between namespaces and base URLs for their online documentation
+baseURLs = [
+    [ 'GLib', 'https://docs.gtk.org/glib/' ],
+    [ 'GObject', 'https://docs.gtk.org/gobject/' ],
+    [ 'Gio', 'https://docs.gtk.org/gio/' ],
+]
+```
+
+```{{dirname}}/doc/overview.md
+Title: Overview
+
+# Overview
+
+{{name}} is a library that provides ...
+```
+
+```{{dirname}}/doc/meson.build
+if not get_option('introspection').allowed()
+  error('API reference requires introspection.')
+endif
+
+toml_conf = configuration_data()
+toml_conf.set('version', meson.project_version())
+
+gidocgen = find_program('gi-docgen')
+
+gidocgen_common_args = [
+  '--quiet',
+  '--no-namespace-dir',
+]
+
+if get_option('werror')
+  gidocgen_common_args += ['--fatal-warnings']
+endif
+
+docs_dir = get_option('datadir') / 'doc'
+
+source_toml = configure_file(
+  input: '{{dirname}}.toml.in',
+  output: '{{dirname}}.toml',
+  configuration: toml_conf,
+  install: true,
+  install_dir: docs_dir / '{{dirname}}-@0@'.format(api_version),
+)
+
+custom_target('{{dirname}}-doc',
+  input: [ source_toml, lib{{name_}}_gir[0] ],
+  output: '{{dirname}}-@0@'.format(api_version),
+  command: [
+    gidocgen,
+    'generate',
+    gidocgen_common_args,
+    '--config=@INPUT0@',
+    '--output-dir=@OUTPUT@',
+    '--content-dir=@0@'.format(meson.current_source_dir()),
+    '@INPUT1@',
+  ],
+  build_by_default: true,
+  install: true,
+  install_dir: docs_dir,
+)
+```
+
+```{{dirname}}/README.md
+# {{name}}
+
+A shared library to ...
+```
+
+```{{dirname}}/LICENSE
+{{license.text}}
+```
+
+```{{dirname}}/.foundry/.gitignore
+tmp/
+user/
+cache/
+```
+
+```{{dirname}}/.foundry/project/settings.keyfile
+[project]
+build-system='meson'
+default-license='{{license.id}}'
+```
+
+if git
+{{dirname}}/.git/objects/
+{{dirname}}/.git/refs/heads/
+
+```{{dirname}}/.git/HEAD
+ref: refs/heads/main
+```
+end

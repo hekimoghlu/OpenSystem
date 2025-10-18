@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+   Copyright © 2011 Intel Corporation
+   Dual-licensed under LGPLv2.1 and Apache v2 licences
+   For more details see the C source code files in this directory.
+-->
+
+<node>
+<!--
+  <interface name="org.meego.Eas">
+-->
+  <interface name="org.meego.activesyncd.EasCommon">
+
+  <!-- TODO: This is just an example exposed API use as a test - -->
+    <method name="start_sync">
+      <arg type="i" name="new_value" direction="in"/>
+    </method>
+
+    <!-- Obtain the ActiveSync protocol version used for a given
+	 account.  -->
+    <method name="get_protocol_version">
+      <arg type="s" name="account_id" direction="in"/>
+      <arg type="s" name="version" direction="out"/>
+    </method>
+
+	<!-- 2-way sync with filtertype option -->
+    <method name="sync_folder_items">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="s" name="account_uid" direction="in"/>
+      <arg type="u" name="item_type" direction="in"/>
+      <arg type="s" name="sync_key_in" direction="in"/>
+      <arg type="s" name="folder_id" direction="in"/>
+      <arg type="u" name="filter_type" direction="in"/>      
+      <arg type="as" name="add_items" direction="in"/>
+      <arg type="as" name="delete_items" direction="in"/>
+      <arg type="as" name="change_items" direction="in"/>
+	  <arg type="u" name="request_id" direction="in"/><!-- request is passed back with progress signal-->
+	  
+      <arg type="s" name="ret_sync_key" direction="out"/>
+      <arg type="b" name="ret_more_available" direction="out"/> 
+      <arg type="as" name="ret_added_items" direction="out"/>
+      <arg type="as" name="ret_deleted_items" direction="out"/>
+      <arg type="as" name="ret_changed_items" direction="out"/>
+      <arg type="as" name="ret_add_items_response" direction="out"/>
+      <arg type="as" name="ret_delete_items_response" direction="out"/>
+      <arg type="as" name="ret_change_items_response" direction="out"/>      
+    </method>
+
+    <method name="get_folders">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="s" name="account_uid" direction="in"/>
+      <arg type="b" name="update" direction="in"/>
+      <arg type="as" name="ret_folder_array" direction="out"/>
+    </method>
+    
+    <!-- cancel request -->
+    <method name="cancel_request">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/><!-- -->
+      <arg type="s" name="account_uid" direction="in"/>
+      <arg type="u" name="request_id" direction="in"/>
+    </method>  
+
+    <method name="get_provision_list">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="s" name="account_uid" direction="in"/>
+      <arg type="s" name="tid" direction="out"/>
+      <arg type="s" name="tid_status" direction="out"/>
+      <arg type="s" name="provision_list" direction="out"/>
+    </method>
+
+    <method name="accept_provision_list">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="s" name="account_uid" direction="in"/>
+      <arg type="s" name="tid" direction="in"/>
+      <arg type="s" name="tid_status" direction="in"/>
+    </method>
+    
+    <method name="autodiscover">
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="s" name="email" direction="in"/>
+      <arg type="s" name="username" direction="in"/>
+      <arg type="s" name="url" direction="out"/>
+    </method>
+
+  <!-- TODO: Insert your common exposed APIs here -->
+
+	<!-- signals -->
+	<signal name="mail_operation_progress">
+		<arg type="u" name="request_id" direction ="out"/>
+		<arg type="u" name="percent" direction ="out"/>
+	</signal>
+	    
+  </interface>
+</node>
+

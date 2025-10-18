@@ -1,0 +1,472 @@
+2010-07-30  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.8
+
+2010-07-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_autofilter_set_condition): new
+	* src/commands.h (cmd_autofilter_set_condition): new
+	* src/sheet-filter.c (gnm_filter_condition_dup): publish
+	(gnm_filter_condition_free): publish
+	* src/sheet-filter.h (gnm_filter_condition_dup): new
+	(gnm_filter_condition_free): new
+	* src/undo.c (GNM_UNDO_FILTER_SET_CONDITION): new object
+	* src/undo.h (GNM_UNDO_FILTER_SET_CONDITION): new object
+
+2010-07-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (cb_accept_input_array): new
+	(cb_accept_input_selected_cells): new
+	(cb_accept_input_selected_merged): new
+	(cb_accept_input_menu_sensitive_selected_cells): new
+	(cb_accept_input_menu_sensitive_selected_merged): new
+	(cb_accept_input_menu): new
+	(edit_area_button_menu): new
+	(wbc_gtk_create_edit_area): use edit_area_button_menu for ok_button
+
+2010-07-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_reorganize_sheets_delete_cmp_f): rename
+	  to cmd_tabulate_cmp_f and change caller (which is cmd_tabulate_undo)
+
+2010-07-28  Morten Welinder  <terra@gnome.org>
+
+	* src/preview-grid-impl.h (_PreviewGrid): Get rid of unused GdkGC
+	fields.
+
+2010-07-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): size the autoexpr
+	label to contain about 25 typical characters and ellipsize it on
+	the left
+	* src/workbook-view.c (wb_view_auto_expr_recalc): format the
+	autoexpression to an appropriate length
+
+2010-07-28  Morten Welinder  <terra@gnome.org>
+
+	* src/style-border.h (struct _GnmBorder): Eliminate unused
+	gc_screen and gc.
+
+2010-07-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_get_pango_attrs): use
+	  gnm_translate_underline_to_pango
+	(gnm_style_generate_attrs_full): use gnm_translate_underline_to_pango
+	(gnm_style_set_from_pango_attribute): use
+	  gnm_translate_underline_from_pango
+	* src/style.c (gnm_translate_underline_to_pango): new
+	(gnm_translate_underline_from_pango): new
+	* src/style.h (gnm_translate_underline_to_pango): new
+	(gnm_translate_underline_from_pango): new
+	* src/wbc-gtk-actions.c (FontSingleLowUnderline): new actions
+	(FontDoubleLowUnderline): new actions
+	(cb_font_underline_low): new
+	(cb_font_double_underline_low): new
+	* src/wbc-gtk-impl.h (_WBCGtk): add toggle action fields
+	* src/wbc-gtk.c (wbc_gtk_style_feedback_real): handle
+	  UNDERLINE_*_LOW
+	(wbc_gtk_init): add Font*LowUnderline
+
+2010-07-28  Morten Welinder  <terra@gnome.org>
+
+	* src/item-grid.c (item_grid_init): Kill all GdkGCs which aren't
+	used anyway.
+
+2010-07-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/dead-kittens.h (gtk_dialog_get_content_area): new
+
+2010-07-25  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: new item search-results
+	* schemas/gnumeric-general.schemas.in: fix typo
+	* src/gnumeric-gconf.c (gnm_conf_*et_searchreplace_search_results*): new
+	* src/gnumeric-gconf.h (gnm_conf_*et_searchreplace_search_results*): new
+
+2010-07-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add "clear filtered" menu items
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/commands.c (cmd_selection_clear_row_handler): new
+	(cmd_selection_clear): adjust selection if only considering filtered rows
+	* src/ranges.c (range_fragment_free): delete
+	* src/ranges.h (range_fragment_free): change into a define using
+	  go_slist_custom
+	* src/sheet.h (SheetClearFlags): add CLEAR_FILTERED_ONLY
+	* src/wbc-gtk-actions.c (cb_edit_clear_*_filtered): new
+	(EditClear*Filtered): new actions
+
+2010-07-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/clipboard.c (cb_clipboard_copy_range_undo): paste everything back
+	* src/commands.c (cmd_clear_*): delete
+	(cmd_selection_clear): rewrite using GOUndo
+	* src/sheet.c (sheet_clear_region_undo): new
+	(sheet_clear_region_cb): new
+	* src/sheet.h (sheet_clear_region_undo): new
+
+2010-07-23  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (gnm_func_sanity_check1): Make sure argument names,
+	as documented, are unique.
+
+2010-07-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-general.schemas.in: add tooltip preferences
+	* src/gnumeric-gconf.h
+	(gnm_conf_*et_core_gui_editing_function_argument_tooltips*): new
+	* src/gnumeric-gconf.c
+	(gnm_conf_*et_core_gui_editing_function_name_tooltips*): new
+
+2010-07-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.h (GNM_FUNC_RECALC_ONLOAD): not used
+
+2010-07-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.c (gnm_func_get_description): new
+	* src/func.h (gnm_func_get_description): new
+	* src/symbol.c (symbol_names_cb): new
+	(symbol_names): rewrite to work in gtk 2.12 and to provide more info
+
+2010-07-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c (cb_help_function): use
+	  dialog_function_select_help instead of dialog_function_select
+
+2010-07-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_finish): check whether showed_dialog
+	  is NULL before using it
+
+2010-07-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: checks for g_date_set_time_t and g_slice_alloc have
+	  been superceded by the glib 2.12 requirement; check for
+	  g_hash_table_get_keys
+	* src/dependent.c: remove HAVE_G_SLICE_ALLOC throughout
+	* src/func.c (gnm_func_lookup_prefix): new
+	* src/func.h (gnm_func_lookup_prefix): new
+	* src/rendered-value.c: remove HAVE_G_SLICE_ALLOC throughout
+	* src/symbol.c (symbol_names): new
+	* src/symbol.h (symbol_names): new
+	* src/value.c: remove HAVE_G_SLICE_ALLOC throughout
+
+2010-07-18  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (attrs_at_byte): Fix signedness problem.
+	(cb_entry_cursor_pos): Ditto.
+
+2010-07-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_selection_format_toggle_font_style): new
+	* src/commands.c (cmd_selection_format_toggle_font_style): new
+	(cmd_selection_format_toggle_font_style_cb): new
+	(cmd_selection_format_toggle_font_style_filter): new
+	* src/sheet.c (sheet_apply_style_cb): call sheet_flag_style_update_range
+	* src/wbc-gtk-actions.c (toggle_font_attr): use
+	  cmd_selection_format_toggle_font_style
+
+2010-07-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/clipboard.c (clipboard_paste_region): allow single merge to single
+	  merge pasting
+	* src/commands.c (CmdPasteCopy): add field
+	(cmd_paste_copy): allow single merge to single merge pasting
+
+2010-07-16  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): handle merging and
+	  unmerging
+	(scg_context_menu): add merge and unmerge menuitems.
+
+2010-07-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-grid.c (draw_function_marker): new
+	(item_grid_draw_region): call draw_function_marker when appropriate
+	(item_grid_draw_merged_range): ditto
+	* src/workbook-view.c (wb_view_set_attribute): handle new attribute
+	(wb_view_set_property): ditto
+	(workbook_view_class_init): ditto
+	(workbook_view_new): ditto
+	(wb_view_get_property): ditto
+	* src/workbook-view.h (_WorkbookView): new field
+
+2010-07-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-general.schemas.in
+	(/schemas/apps/gnumeric/core/file/save/extension-check-disabled): new
+	* src/gnumeric-gconf.h: include above key
+	* src/gnumeric-gconf.c: ditto
+	* src/gui-file.c (extension_check_disabled): new
+	(gui_file_save_as): obey the extension-check-disabled preference
+
+2010-07-13  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.h (gnm_expr_lex_all): new
+	(GnmLexerItem): new type
+	* src/parser.y (setup_state): new (code from gnm_expr_parse_str)
+	(gnm_expr_lex_all): new
+	(gnm_expr_parse_str): use setup_state
+
+2010-07-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/cellspan.c (cell_calc_span): fixed crash introduced earlier. [#624274]
+
+2010-07-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_load_len): fixed a regression. [#624263]
+
+2010-07-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/cell-draw.c (cell_calc_layout): fixed alignment in cells with rtl
+	text and rtl sheets. [see #623241]
+	* src/cellspan.c (cell_calc_span): ditto.
+	* src/item-edit.c (get_top_left): ditto.
+	* src/item-grid.c (item_grid_draw_region): ditto.
+	* src/rendered-value.c (gnm_rendered_value_new): ditto.
+
+2010-07-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add submenu to Insert menu
+	* src/GNOME_Gnumeric-gtk.xml.in: add submenu to Insert menu
+	* src/HILDON_Gnumeric-gtk.xml.in: add submenu to Insert menu
+	* src/wbc-gtk-actions.c (cb_insert_sort_*cending): new actions
+	(permanent_actions): add MenuInsertFormulaWrap, InsertSortDecreasing
+	  and InsertSortIncreasing
+	* src/wbc-gtk.c (wbcg_menu_state_update): handle the above new actions
+	* src/workbook-cmd-format.c (workbook_cmd_wrap_sort): new
+	(cb_get_cell_content): new
+	* src/workbook-cmd-format.h (workbook_cmd_wrap_sort): new
+
+2010-07-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-edit.c (item_edit_draw), (item_edit_button_pressed),
+	(item_edit_motion), (item_edit_update_bounds): fix ItemEdit
+	alignment for RTL text. [see #623241]
+
+2010-07-10  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_load_len): don't crash with an
+	empty GSList.
+
+2010-07-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_graph_dim_editor_update): Use the right enum
+	type for parse flags.
+
+2010-07-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): add autofit actions
+	(scg_context_menu): add autofit items
+	* src/wbc-gtk-actions.c: add some icons to actions
+
+2010-07-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add menu items to Format->Cells
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/colrow.c (colrow_set_sizes): add arguments to restrict the
+	  range of autofitting.
+	* src/colrow.h (colrow_set_sizes): add arguments
+	* src/commands.c (cmd_autofit_selection): new
+	(cmd_resize_colrow): adjust call of colrow_set_sizes
+	* src/commands.h (cmd_autofit_selection): new
+	* src/stf-parse.c (stf_parse_sheet): adjust call of colrow_set_sizes
+	* src/undo.c (gnm_undo_colrow_set_sizes_new): ditto
+	(gnm_undo_colrow_set_sizes_undo): adjust call of colrow_set_sizes
+	* src/undo.h (_GNMUndoColrowSetSizesClass): add from/to specifiers
+	(gnm_undo_colrow_set_sizes_new): ditto
+	* src/wbc-gtk-actions.c (cb_format_cells_auto_fit_height): new
+	(cb_format_cells_auto_fit_width): new
+	(FormatCellsFitHeight): new action
+	(FormatCellsFitWidth): new action
+	* src/workbook-cmd-format.c (workbook_cmd_autofit_selection): new
+	* src/workbook-cmd-format.h (workbook_cmd_autofit_selection): new
+
+2010-07-08  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (cb_format_as_currency): Use
+	go_format_details_new and _free.
+
+2010-07-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: add merge and unmerge menu items
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* component/Gnumeric-embed.xml.in: ditto
+	* src/wbc-gtk-actions.c (permanent_actions): add cellformat sub menu
+	(actions): modify menu text
+
+2010-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c (cb_edit_clear_all): include CLEAR_COMMENTS
+	  flag
+
+2010-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: add and move hyperlink and
+	  comment items
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* component/Gnumeric-embed.xml.in: ditto
+	* src/sheet-view.c (sv_update): also check the comment and hyperlink
+	  items
+	* src/wbc-gtk-actions.c (cb_edit_delete_links): new
+	(permanent_actions): new Modify submenu of the Edit menu
+	(actions): add and move hyperlink and comment actions
+	* src/wbc-gtk.c (wbcg_menu_state_update): handle hyperlink and comment
+	  items
+	* src/workbook-control.h: new MS_* flags
+
+2010-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.c (copy_hash_table_to_ptr_array): also exclude py_* functions
+
+2010-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): enable column and row
+	  width/hide/unhide on cell selections
+
+2010-07-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): fix capitalization
+
+2010-07-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): make the items context
+	  sensitive.
+
+2010-07-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): use the number of links
+	  in the undo string.
+	(scg_context_menu): show the correct hyperlink menu items.
+
+2010-07-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.h (GnumericPopupMenuElement): add field
+	* src/gui-util.c (gnumeric_create_popup_menu): handle new field
+	* src/sheet-control-gui.c (context_menu_handler): handle removal
+	  and cretion of comments
+	(scg_context_menu): add new items for comment addition and removal
+
+2010-07-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-edit.c (get_top_left), (item_edit_draw),
+	(item_edit_button_pressed), (item_edit_motion),
+	(item_edit_realize), (item_edit_unrealize): fix strong/weak cursor
+	display. [#623241]
+
+2010-07-05  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_autofilter_add_remove): handle extension of
+	  an existing autofilter.
+	* src/sheet-filter.h (gnm_sheet_filter_can_be_extended): new
+	* src/sheet-filter.c (gnm_sheet_filter_can_be_extended): new
+	* src/sheet-view.h (sv_selection_extends_filter): new
+	* src/sheet-view.c (sv_selection_extends_filter): new
+	(sv_selection_intersects_filter_rows): add qualifier
+	* src/wbc-gtk.c (wbcg_menu_state_update): check whether auto filter
+	  can be extended
+
+2010-07-05  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (CMD_AUTOFILTER_ADD_REMOVE): delete
+	(cmd_autofilter_add_remove_*): delete
+	(cmd_autofilter_add_remove): rewrite using cmd_generic (prep for
+	  enhancement request #607086)
+
+2010-07-05  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-filter.h (gnm_sheet_filter_intersect_rows): new
+	* src/sheet-filter.c (gnm_sheet_filter_intersect_rows): new
+	* src/sheet-view.h (sv_selection_intersects_filter_rows): new
+	* src/sheet-view.c (sv_selection_intersects_filter_rows): new
+	* src/wbc-gtk.c (wbcg_menu_state_update): check for prohibited
+	  autofilter positions
+
+2010-07-05  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (scg_drag_receive_same_process): one need to
+	  first duplicate the sheet before committing that change
+
+2010-07-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_objects_move): simplify
+	* src/sheet-control-gui.h (scg_objects_drag_commit): add arguments
+	* src/sheet-control-gui.c (scg_objects_drag_commit): add arguments
+	  to return GOUndo items and change all callers
+	(scg_objects_drag_commit_get_undo_text): new (code from
+	  scg_objects_drag_commit)
+	(scg_drag_receive_same_process): combine the undos before committing
+
+2010-07-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_objects_move): move most code into
+	  sheet_object_move_undo and sheet_object_move_do
+	* src/sheet-object.h (sheet_object_move_undo): new
+	(sheet_object_move_do): new
+	* src/sheet-object.c (sheet_object_move_undo): new
+	(sheet_object_move_do): new
+
+2010-07-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (scg_objects_drag_commit): simplify slightly
+	(scg_drag_receive_same_process): pass the correct argument to
+	  scg_objects_drag_commit
+	* src/sheet-object.c (sheet_object_set_sheet): don't complain if the object
+	  is already set to this sheet.
+	* src/commands.c (CMD_OBJECTS_MOVE): delete
+	(cmd_objects_move_*): delete
+	(cmd_objects_move): rewrite using GOUndo
+
+2010-07-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (scg_objects_drag_commit): don't be cheesy, ie.
+	  use ngettext.
+
+2010-07-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: fix typo
+
+2010-07-01  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (check_argument_refs): New function.
+	(gnm_func_sanity_check1): Check argument references.
+
+2010-06-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-format.h: add define
+	* src/cell-draw.c (cell_calc_layout): replicate the pango attributes
+	  with the text
+
+2010-06-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-format.c (format_value_common): use go_string_replace
+	* src/func.c (gnm_func_convert_markup_to_pango): ditto
+
+2010-06-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell-draw.c (cell_calc_layout): HALIGN_FILL overrides wrap_text
+
+2010-06-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-format.c (format_value_common): in one-paragraph mode
+	  replace newlines with visible glyphs.
+
+2010-06-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/stf-export.c (try_auto_float): new
+	(stf_export_cell): call try_auto_float
+
+2010-06-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: new preferences for
+	  search and replace dialog
+	* src/gnumeric-gconf.c: add the items generated from the above
+	  changes
+	* src/gnumeric-gconf.h: ditto
+
+2010-06-28  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

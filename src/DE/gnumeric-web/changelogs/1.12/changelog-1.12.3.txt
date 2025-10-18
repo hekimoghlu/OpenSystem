@@ -1,0 +1,202 @@
+2013-06-25  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.3
+
+2013-06-24  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_solver_start): Ensure we have a
+	sheet.  Fixes #703006.
+
+2013-06-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-clipboard.c (x_clipboard_get_cb): take care of the case
+	without sheet
+
+2013-06-22  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/mstyle.c (gnm_style_set_pattern): don't accept GNM_SHEET_PATTERNS as
+	a valid pattern. [#702833]
+	* src/pattern.c (gnumeric_background_set): ditto.
+
+2013-06-21  Morten Welinder  <terra@gnome.org>
+
+	* src/item-grid.c (item_grid_draw_region): Plug leak.
+
+	* src/item-bar.c (ib_reload_style): Plug leak.
+
+2013-06-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (show_gui): protect against excessively large
+	preferred widow sizes
+
+2013-06-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-graph.c (dim_start): Don't crash on NULL desc.
+
+	* src/workbook.c (workbook_sheet_delete): Debug.
+	(workbook_dispose): Also clear style here.  Styles can have
+	dependents now.  Fixes #702218.
+
+2013-06-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-view.c (sv_sheet_r1c1_changed): check for NULL selection
+
+2013-06-12  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-merge.c (gnm_sheet_merge_add): Ensure range is sane.
+	Fixes #702101.
+
+2013-06-04  Morten Welinder  <terra@gnome.org>
+
+	* src/ssdiff.c (xml_style_changed): Teach this a bit about links.
+
+2013-06-01  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (scg_comment_display_filter_cb): new
+	(scg_comment_display): adjust background and fontcolor if necessary
+
+2013-06-01  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-grid.c (cb_cursor_come_to_rest):
+	gnumeric_position_tooltip needs the tooltip size, so load the text
+	before calling it.
+
+2013-05-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-grid.c (item_grid_button_released): do not trigger hyper link
+	with button 2
+
+2013-05-27  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pnorm2): Drop log_p argument.  We don't need it
+	and we aren't very good at it.
+
+2013-05-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add accelerator
+	* src/GNOME_Gnumeric-gtk.xml.in: add accelerator
+	* src/wbc-gtk-actions.c (cb_edit_goto_cell_indicator): new
+	(EditGotoCellIndicator): new
+	* src/wbc-gtk.c (cb_post_activate): do not interfere with EditGotoCellIndicator
+	(wbcg_focus_current_cell_indicator): new
+	* src/wbc-gtk.h (wbcg_focus_current_cell_indicator): new
+
+2013-05-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: ctrl-a will be handled in gnm-pane.c
+	* src/GNOME_Gnumeric-gtk.xml.in: ctrl-a will be handled in gnm-pane.c
+	* src/wbc-gtk-actions.c: ctrl-a will be handled in gnm-pane.c
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet): recognize and handle ctrl-a
+
+2013-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-grid.c (item_grid_button_pressed): make buttons 1 and 2
+	behave the same as far as cell selection is concerned. This fixes
+	bug #700792
+	(item_grid_button_released): ditto
+
+2013-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.c (sheet_get_extent): add argument to indicate whether
+	to include hidden cells
+	(cb_sheet_get_extent): handle hidden cells setting
+	(sheet_get_printarea): do not include hidden cells
+	* src/sheet.h (sheet_get_extent): add argument and change all
+	callers
+
+2013-05-26  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (ptukey_wprob): Use as many intervals as needed.
+	Termiate when contributions vanish.
+
+2013-05-24  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (R_ptukey): Accelerate handling of right tail of
+	the outer integral.
+	(pfuncinverter): Handle lack of dfunc (poorly).
+
+2013-05-23  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (ptukey_otsum): Split integration of a single
+	interval out from out from R_ptukey.
+	(R_ptukey): Split the interval nearest 0 into a sequence of
+	intervals over which the integrand looks a lot more like a
+	polynomial.  This fixes accuracy problems for low degrees of
+	freedom.
+
+	* src/sheet-style.c (internal_style_list): Fix critical.
+
+2013-05-22  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (R_ptukey): Even more C, even less Fortran.
+
+2013-05-21  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (R_ptukey): More C, less Fortran.
+
+2013-05-19  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (ptukey_wprob): Sanitize handling of integration
+	boundaries.
+	(pnorm2): Get rid of mu and sigma arguments.  Improve accuracy.
+
+2013-05-18  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (pnorm2): New function.
+	(R_ptukey): New function imported from R with local improvements.
+
+2013-05-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_create_widget_cb): by default observe
+	manual page breaks
+
+2013-05-14  Morten Welinder  <terra@gnome.org>
+
+	* src/rangefunc.c (gnm_range_multinomial): Add range check.
+	(gnm_range_geometric_mean): Handle two FIXMEs.
+
+2013-05-13  Morten Welinder  <terra@gnome.org>
+
+	* src/*.c: Mark gobject property strings as P_(...).
+
+2013-05-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_merge_data_redo): unref merge_contents
+
+2013-05-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_merge_data_redo): use gnm_cell_set_value
+	rather than gnm_cell_assign_value
+
+2013-05-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-utils.c (gnm_sheet_guess_data_range): also check
+	first column
+
+2013-05-05  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (style_dep_eval): New function.  Re-clear the
+	rendered value here.  Fixes #699647.
+
+2013-05-03  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (create_undo_redo): Add Ctrl-Shift-z as alternate
+	accelerator for redo.  Fixes #699579.
+	(wbc_gtk_create_notebook_area): Mark the button notebook as non
+	focusable.
+
+	* src/sheet.c (sheet_range_set_text_cb): Add redraw.
+
+2013-05-01  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c: Add gsf includes to make things work with
+	libgsf 1.14.24.  Redhat #957851.
+
+2013-04-29  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (cb_write_cell): Ignore completely empty
+	cells.
+
+2013-04-26  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

@@ -1,0 +1,425 @@
+{
+    "app-id" : "org.gnome.DiskUtility",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.rust-stable",
+        "org.freedesktop.Sdk.Extension.llvm20"
+    ],
+    "command" : "gnome-disks",
+    "tags" : [
+        "devel"
+    ],
+    "desktop-file-name-prefix" : "(Development) ",
+    "finish-args" : [
+        "--device=dri",
+        "--env=DCONF_USER_CONFIG_DIR=.config/dconf",
+        "--filesystem=host",
+        "--own-name=org.gnome.Disks.NotificationMonitor",
+        "--share=ipc",
+        "--socket=session-bus",
+        "--socket=system-bus",
+        "--socket=wayland",
+        "--socket=fallback-x11",
+        "--talk-name=org.freedesktop.Notifications",
+        "--env=G_ENABLE_DIAGNOSTIC=1"
+    ],
+    "build-options" : {
+        "append-path": "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm20/bin",
+        "cflags" : "-O2 -g -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED",
+        "cxxflags" : "-O2 -g",
+        "env" : {
+            "V" : "1"
+        },
+        "build-args": [
+            "--share=network"
+        ]
+    },
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/aclocal",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "dvdread",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://download.videolan.org/pub/videolan/libdvdread/6.0.1/libdvdread-6.0.1.tar.bz2",
+                    "sha256" : "28ce4f0063883ca4d37dfd40a2f6685503d679bca7d88d58e04ee8112382d5bd"
+                }
+            ]
+        },
+        {
+            "name" : "pwquality",
+            "buildsystem" : "autotools",
+            "config-opts" : [
+                "--disable-python-bindings"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/libpwquality/libpwquality.git"
+                }
+            ]
+        },
+        {
+            "name" : "gudev",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libgudev.git"
+                }
+            ]
+        },
+        {
+            "name" : "kmod",
+            "buildsystem" : "autotools",
+            "config-opts" : [
+                "--disable-manpages"
+            ],
+            "sources" : [
+            	{
+                    "type" : "archive",
+                    "url" : "https://mirrors.edge.kernel.org/pub/linux/utils/kernel/kmod/kmod-25.tar.xz",
+                    "sha256" : "7165e6496656159dcb909a91ed708a0fe273a4b128b4b1dc997ccb5189eef1cd"
+            	}
+            ]
+        },
+        {
+            "name" : "libaio",
+            "buildsystem" : "simple",
+            "no-autogen" : true,
+            "build-commands" : [
+                "make prefix=/app install"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://pagure.io/libaio/archive/libaio-0.3.111/libaio-libaio-0.3.111.tar.gz",
+                    "sha256": "e6bc17cba66e59085e670fea238ad095766b412561f90b354eb4012d851730ba"
+                }
+            ]
+        },
+        {
+            "name" : "lvm2",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/lvmteam/lvm2/archive/v2_03_05.tar.gz",
+                    "sha256": "6a1f6f76a099c41e2639147eba3f97cbc0760fa01d315f91852e03142884e0c8"
+                }
+            ],
+            "post-install": [
+                "chmod 755 /app/lib/libdevmapper.so.1.02",
+                "chmod 755 /app/sbin/dmsetup",
+                "chmod 755 /app/sbin/lvm"
+            ]
+        },
+        {
+            "name" : "parted",
+            "cleanup" : [
+                "/bin",
+                "/share"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://alpha.gnu.org/gnu/parted/parted-3.2.153.tar.xz",
+                    "sha256" : "a1445d837ac4bc809ff9146ab3ac112ecc1b5639d23b7ea7b668d45aca058a2a"
+                }
+            ]
+        },
+        {
+            "name" : "mpfr",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://www.mpfr.org/mpfr-4.0.2/mpfr-4.0.2.tar.xz",
+                    "sha256": "1d3be708604eae0e42d578ba93b390c2a145f17743a744d8f3f8c2ad5855a38a"
+                }
+            ]
+        },
+        {
+            "name" : "bytesize",
+            "config-opts" : [
+                "--with-gtk-doc=no"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/storaged-project/libbytesize/releases/download/2.1/libbytesize-2.1.tar.gz",
+                    "sha256": "acc7d40237573adb958039bd9254155a41e57c363fce492f9e8768b42e4bffae"
+                }
+            ]
+        },
+        {
+            "name" : "json-c",
+            "buildsystem" : "cmake",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://s3.amazonaws.com/json-c_releases/releases/json-c-0.15.tar.gz",
+                    "sha256" : "b8d80a1ddb718b3ba7492916237bbf86609e9709fb007e7f7d4322f02341a4c6"
+                }
+            ]
+        },
+        {
+            "name" : "popt",
+            "buildsystem" : "cmake",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/rpm-software-management/popt.git"
+                }
+            ]
+        },
+        {
+            "name" : "cryptsetup",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://mirrors.edge.kernel.org/pub/linux/utils/cryptsetup/v2.3/cryptsetup-2.3.4.tar.gz",
+                    "sha256" : "8bc16c0b1c987867f13f0f2114fc4182d92bc866d1f84bb725c2cb9bcc55bf93"
+                }
+            ]
+        },
+        {
+            "name" : "keyutils",
+            "buildsystem" : "simple",
+            "build-commands": [
+                "make",
+                "make LIBDIR=/app/lib BINDIR=/app/bin SBINDIR=/app/sbin INCLUDEDIR=/app/include MANDIR=/app/share/man SHAREDIR=/app/share/keyutils install"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://src.fedoraproject.org/repo/pkgs/keyutils/keyutils-1.6.1.tar.bz2/sha512/ea6e20b2594234c7f51581eef2b8fd19c109fa9eacaaef8dfbb4f237bd1d6fdf071ec23b4ff334cb22a46461d09d17cf499987fd1f00e66f27506888876961e1/keyutils-1.6.1.tar.bz2",
+                    "sha256" : "c8b15722ae51d95b9ad76cc6d49a4c2cc19b0c60f72f61fb9bf43eea7cbd64ce"
+                }
+            ]
+        },
+        {
+            "name" : "yaml",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/yaml/libyaml/releases/download/0.2.5/yaml-0.2.5.tar.gz",
+                    "sha256" : "c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4"
+                }
+            ]
+        },
+        {
+            "name" : "libnvme",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/linux-nvme/libnvme.git"
+                }
+            ]
+        },
+        {
+            "name" : "pam",
+            "config-opts" : [
+                "--includedir=/app/include/security",
+                "--disable-doc"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/linux-pam/linux-pam/releases/download/v1.4.0/Linux-PAM-1.4.0.tar.xz",
+                    "sha256" : "cd6d928c51e64139be3bdb38692c68183a509b83d4f2c221024ccd4bcddfd034"
+                }
+            ]
+        },
+        {
+            "name" : "libcap-ng",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://sources.buildroot.net/libcap-ng/libcap-ng-0.8.3.tar.gz",
+                    "sha256" : "bed6f6848e22bb2f83b5f764b2aef0ed393054e803a8e3a8711cb2a39e6b492d"
+                }
+            ]
+        },
+        {
+            "name" : "fdisk",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dauto_features=disabled",
+                "-Dbuild-libfdisk=enabled",
+                "-Dbuild-fdisks=enabled",
+                "-Dbuild-libuuid=enabled",
+                "-Dbuild-libblkid=enabled",
+                "-Duse-tty-group=false",
+                "-Dlibutil=enabled"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/util-linux/util-linux.git"
+                }
+            ]
+        },
+        {
+            "name" : "atasmart",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "http://0pointer.de/public/libatasmart-0.19.tar.xz",
+                    "sha256" : "61f0ea345f63d28ab2ff0dc352c22271661b66bf09642db3a4049ac9dbdb0f8d"
+                }
+            ]
+        },
+        {
+            "name" : "blockdev",
+            "config-opts" : [
+                "--disable-tests",
+                "--with-btrfs=no",
+                "--with-dm=no",
+                "--with-dmraid=no",
+                "--with-gtk-doc=no",
+                "--with-kbd=no",
+                "--with-lvm=no",
+                "--with-lvm_dbus=no",
+                "--with-mpath=no",
+                "--with-nvdimm=no",
+                "--with-escrow=no",
+                "--with-tools=no"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/storaged-project/libblockdev.git"
+                }
+            ]
+        },
+        {
+            "name" : "intltool",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256" : "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ]
+
+        },
+        {
+            "name" : "polkit",
+            "config-opts" : [
+            	"--disable-polkitd",
+                "--enable-libelogind=no",
+                "--enable-libsystemd-login=no",
+                "--disable-introspection",
+                "--disable-man-pages",
+                "--disable-test",
+                "--with-systemdsystemunitdir=no"
+            ],
+            "rm-configure" : true,
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://www.freedesktop.org/software/polkit/releases/polkit-0.116.tar.gz",
+                    "sha256" : "88170c9e711e8db305a12fdb8234fac5706c61969b94e084d0f117d8ec5d34b1"
+                },
+                {
+                    "type" : "patch",
+                    "path" : "polkit-build-Add-option-to-build-without-polkitd.patch"
+                },
+                {
+                    "type" : "file",
+                    "path" : "polkit-autogen",
+                    "dest-filename" : "autogen.sh"
+                }
+            ]
+        },
+        {
+            "name" : "libcanberra",
+            "buildsystem" : "autotools",
+            "config-opts" : [
+                "--enable-gtk3",
+                "--disable-gtk",
+                "--disable-oss",
+                "--with-systemdsystemunitdir=no"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "http://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz",
+                    "sha256" : "c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72"
+                }
+            ]
+        },
+        {
+            "name" : "udisks2",
+            "buildsystem" : "autotools",
+            "config-opts" : [
+                "--enable-available-modules=no",
+                "--enable-bcache=no",
+                "--enable-btrfs=no",
+                "--enable-introspection=no",
+                "--enable-lvm2=no",
+                "--enable-modules=no",
+                "--enable-vdo=no",
+                "--enable-zram=no",
+                "--with-systemdsystemunitdir=no",
+                "--with-tmpfilesdir=no"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/storaged-project/udisks.git"
+                }
+            ]
+        },
+        {
+            "name" : "libnotify",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dtests=false",
+                "-Dintrospection=disabled",
+                "-Dman=false",
+                "-Dgtk_doc=false",
+                "-Ddocbook_docs=disabled"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libnotify.git"
+                }
+            ]
+        },
+        {
+            "name" : "gnome-disk-utility",
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "config-opts" : [
+                "-Dman=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-disk-utility.git",
+                    "branch" : "main"
+                }
+            ]
+        }
+    ]
+}

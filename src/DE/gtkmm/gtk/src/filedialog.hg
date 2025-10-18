@@ -1,0 +1,218 @@
+/* Copyright (C) 2022 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+#include <glibmm/object.h>
+#include <giomm/asyncresult.h>
+#include <giomm/cancellable.h>
+#include <giomm/listmodel.h>
+#include <giomm/file.h>
+#include <gtkmm/filefilter.h>
+#include <gtk/gtk.h>
+#include <tuple>
+
+namespace Gtk
+{
+class Window;
+
+/** A %Gtk::FileDialog object collects the arguments that
+ * are needed to present a file chooser dialog to the
+ * user, such as a title for the dialog and whether it
+ * should be modal.
+ *
+ * The dialog is shown with open(), save(), etc. These APIs follow the
+ * GIO async pattern, and the result can be obtained by calling
+ * the corresponding finish function, for example open_finish().
+ *
+ * @ingroup Dialogs
+ * @newin{4,10}
+ */
+class GTKMM_API FileDialog : public Glib::Object
+{
+   _CLASS_GOBJECT(FileDialog, GtkFileDialog, GTK_FILE_DIALOG, Glib::Object, GObject, , , GTKMM_API)
+  _DO_NOT_DERIVE_GTYPE dnl// GtkFileDialog is a final type
+  _STRUCT_NOT_HIDDEN
+
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(Glib::ustring get_title() const, gtk_file_dialog_get_title)
+  _WRAP_METHOD(void set_title(const Glib::ustring& title), gtk_file_dialog_set_title)
+  _WRAP_METHOD(bool get_modal() const, gtk_file_dialog_get_modal)
+  _WRAP_METHOD(void set_modal(bool modal = true), gtk_file_dialog_set_modal)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> get_filters(), gtk_file_dialog_get_filters, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_filters() const, gtk_file_dialog_get_filters, refreturn, constversion)
+  _WRAP_METHOD(void set_filters(const Glib::RefPtr<Gio::ListModel>& filters), gtk_file_dialog_set_filters)
+
+  _WRAP_METHOD(Glib::RefPtr<FileFilter> get_default_filter(), gtk_file_dialog_get_default_filter, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const FileFilter> get_default_filter() const, gtk_file_dialog_get_default_filter, refreturn, constversion)
+  _WRAP_METHOD(void set_default_filter(const Glib::RefPtr<FileFilter>& filter), gtk_file_dialog_set_default_filter)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> get_initial_folder(), gtk_file_dialog_get_initial_folder, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::File> get_initial_folder() const, gtk_file_dialog_get_initial_folder, refreturn, constversion)
+  _WRAP_METHOD(void set_initial_folder(const Glib::RefPtr<Gio::File>& folder), gtk_file_dialog_set_initial_folder)
+
+  _WRAP_METHOD(std::string get_initial_name() const, gtk_file_dialog_get_initial_name)
+  _WRAP_METHOD(void set_initial_name(const std::string& name), gtk_file_dialog_set_initial_name)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> get_initial_file(), gtk_file_dialog_get_initial_file, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::File> get_initial_file() const, gtk_file_dialog_get_initial_file, refreturn, constversion)
+  _WRAP_METHOD(void set_initial_file(const Glib::RefPtr<Gio::File>& file), gtk_file_dialog_set_initial_file)
+
+  _WRAP_METHOD(Glib::ustring get_accept_label() const, gtk_file_dialog_get_accept_label)
+  _WRAP_METHOD(void set_accept_label(const Glib::ustring& accept_label), gtk_file_dialog_set_accept_label)
+
+  _WRAP_METHOD(void open(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_open, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> open_finish(const Glib::RefPtr<Gio::AsyncResult>& result),
+    gtk_file_dialog_open_finish, errthrow "Gtk::DialogError")
+
+  _WRAP_METHOD(void select_folder(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_select_folder, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> select_folder_finish(const Glib::RefPtr<Gio::AsyncResult>& result),
+    gtk_file_dialog_select_folder_finish, errthrow "Gtk::DialogError")
+
+  _WRAP_METHOD(void save(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_save, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> save_finish(const Glib::RefPtr<Gio::AsyncResult>& result),
+    gtk_file_dialog_save_finish, errthrow "Gtk::DialogError")
+
+#m4 _CONVERSION(`GListModel*',`std::vector<Glib::RefPtr<Gio::File>>',`listmodel_to_vector<Gio::File>($3)')
+  _WRAP_METHOD(void open_multiple(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_open_multiple, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+
+  /** Finishes the open_multiple() call and
+   * returns the resulting files in a std::vector.
+   *
+   * @newin{4,10}
+   *
+   * @param result A `Gio::AsyncResult`.
+   * @return The files that were selected, as a vector of `Gio::File`s.
+   *         Otherwise, an exception is thrown.
+   *
+   * @throws Gtk::DialogError
+   */
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Gio::File>> open_multiple_finish(const Glib::RefPtr<Gio::AsyncResult>& result),
+    gtk_file_dialog_open_multiple_finish, errthrow "Gtk::DialogError")
+
+  _WRAP_METHOD(void select_multiple_folders(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_select_multiple_folders, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+
+  /** Finishes the select_multiple_folders()
+   * call and returns the resulting files in a std::vector.
+   *
+   * @newin{4,10}
+   *
+   * @param result A Gio::AsyncResult.
+   * @return The files that were selected, as a vector of `Gio::File`s.
+   *         Otherwise, an exception is thrown.
+   *
+   * @throws Gtk::DialogError
+   */
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Gio::File>> select_multiple_folders_finish(
+    const Glib::RefPtr<Gio::AsyncResult>& result),
+    gtk_file_dialog_select_multiple_folders_finish, errthrow "Gtk::DialogError")
+
+  _WRAP_METHOD(void open_text_file(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_open_text_file, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+
+  /** Finishes the open_text_file() call and returns the resulting file and text encoding.
+   *
+   * If the user has explicitly selected a text encoding to use
+   * for the file, then @a encoding will be set to a codeset name that
+   * is suitable for passing to iconv_open(). Otherwise, it will be an empty string.
+   *
+   * @newin{4,18}
+   *
+   * @param result A `Gio::AsyncResult`.
+   * @return {file, encoding} The file that was selected and the text encoding to use.
+   * @throws Gtk::DialogError
+   */
+  std::tuple<Glib::RefPtr<Gio::File>, Glib::ustring>
+  open_text_file_finish(const Glib::RefPtr<Gio::AsyncResult>& result);
+  _IGNORE(gtk_file_dialog_open_text_file_finish)
+
+  _WRAP_METHOD(void open_multiple_text_files(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_open_multiple_text_files, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+
+  /** Finishes the open_multiple_text_files() call.
+   *
+   * If the user has explicitly selected a text encoding to use
+   * for the file, then @a encoding will be set to a codeset name that
+   * is suitable for passing to iconv_open(). Otherwise, it will be an empty string.
+   *
+   * @newin{4,18}
+   *
+   * @param result A `Gio::AsyncResult`.
+   * @return {files, encoding} The files that were selected, as a vector of `Gio::File`s,
+   *         and the text encoding to use.
+   * @throws Gtk::DialogError
+   */
+  std::tuple<std::vector<Glib::RefPtr<Gio::File>>, Glib::ustring>
+  open_multiple_text_files_finish(const Glib::RefPtr<Gio::AsyncResult>& result);
+  _IGNORE(gtk_file_dialog_open_multiple_text_files_finish)
+
+  _WRAP_METHOD(void save_text_file(Window& parent{?}, const Gio::SlotAsyncReady& slot{callback},
+    const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gtk_file_dialog_save_text_file, slot_name slot, slot_callback Gdk::gdkmm_SignalProxy_async_callback)
+
+  /** Finishes the save_text_file() call
+   * and returns the resulting file, text encoding and line endings.
+   *
+   * If the user has explicitly selected a text encoding to use
+   * for the file, then @a encoding will be set to a codeset name that
+   * is suitable for passing to iconv_open(). Otherwise, it will be an empty string.
+   *
+   * The @a line_ending will be set to one of "\\n", "\\r\\n", "\\r" or "",
+   * where the latter means to preserve existing line endings.
+   *
+   * @newin{4,18}
+   *
+   * @param result A `Gio::AsyncResult`.
+   * @return {file, encoding, line_ending} The file that was selected,
+   *         the text encoding to use, and the line endings to use.
+   * @throws Gtk::DialogError
+   */
+  std::tuple<Glib::RefPtr<Gio::File>, Glib::ustring, Glib::ustring>
+  save_text_file_finish(const Glib::RefPtr<Gio::AsyncResult>& result);
+  _IGNORE(gtk_file_dialog_save_text_file_finish)
+
+  _WRAP_PROPERTY("title", Glib::ustring)
+  _WRAP_PROPERTY("modal", bool)
+  _WRAP_PROPERTY("filters", Glib::RefPtr<Gio::ListModel>)
+  _WRAP_PROPERTY("default-filter", Glib::RefPtr<FileFilter>)
+  _WRAP_PROPERTY("initial-file", Glib::RefPtr<Gio::File>)
+  _WRAP_PROPERTY("initial-folder", Glib::RefPtr<Gio::File>)
+  _WRAP_PROPERTY("initial-name", std::string)
+  _WRAP_PROPERTY("accept-label", Glib::ustring)
+};
+
+} // namespace Gtk

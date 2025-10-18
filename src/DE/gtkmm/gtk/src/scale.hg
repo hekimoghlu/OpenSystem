@@ -1,0 +1,133 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/range.h>
+_DEFS(gtkmm,gtk)
+
+_PINCLUDE(gtkmm/private/range_p.h)
+
+namespace Gtk
+{
+
+/** A slider widget for selecting a value from a range.
+ *
+ * A Gtk::Scale is a slider control used to select a numeric value. To use it,
+ * you'll probably want to investigate the methods on its base class,
+ * Gtk::Range, in addition to the methods for Gtk::Scale itself. To set the
+ * value of a scale, you would normally use set_value(). To detect
+ * changes to the value, you would normally use signal_value_changed().
+ *
+ * Note that using the same upper and lower bounds for the Scale (through
+ * the Range methods) will hide the slider itself. This is useful for
+ * applications that want to show an undeterminate value on the scale, without
+ * changing the layout of the application (such as movie or music players).
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Scale : public Range
+{
+  _CLASS_GTKOBJECT(Scale,GtkScale,GTK_SCALE,Gtk::Range,GtkRange, , , GTKMM_API)
+public:
+
+  _CTOR_DEFAULT()
+
+  /**
+   * @newin{3,2}
+   */
+  explicit Scale(Orientation orientation);
+
+  //Note that we try to use the same default parameter value as the default property value.
+  explicit Scale(const Glib::RefPtr<Adjustment>& adjustment, Orientation orientation = Orientation::HORIZONTAL);
+  _IGNORE(gtk_scale_new)
+
+  /** Set the number of decimal digits.
+   *
+   * This also causes the adjustment to be rounded off so the retrieved value
+   * matches the value the user sees. Setting digits to 1 gives for example
+   * 1.0, 2 gives 1.00, etc.
+   */
+  _WRAP_METHOD(void set_digits(int digits), gtk_scale_set_digits)
+
+  /** Get the number of decimal digits.
+   */
+  _WRAP_METHOD(int get_digits() const, gtk_scale_get_digits)
+
+  /** Set whether the current value is displayed as a string next to the slider.
+   */
+  _WRAP_METHOD(void set_draw_value(bool draw_value = true), gtk_scale_set_draw_value)
+
+  /** Get whether the current value is displayed as a string next to the slider.
+   */
+  _WRAP_METHOD(bool get_draw_value() const, gtk_scale_get_draw_value)
+
+  /** Set the position in which the value is displayed.
+   */
+  _WRAP_METHOD(void set_value_pos(PositionType pos), gtk_scale_set_value_pos)
+
+  /** Get the position in which the value is displayed.
+   */
+  _WRAP_METHOD(PositionType get_value_pos() const, gtk_scale_get_value_pos)
+
+  _WRAP_METHOD(void set_has_origin(bool has_origin = true), gtk_scale_set_has_origin)
+  _WRAP_METHOD(bool get_has_origin() const, gtk_scale_get_has_origin)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::Layout> get_layout(), gtk_scale_get_layout, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::Layout> get_layout() const, gtk_scale_get_layout, refreturn, constversion)
+  _WRAP_METHOD(void get_layout_offsets(int& x, int& y) const, gtk_scale_get_layout_offsets)
+
+  _WRAP_METHOD(void add_mark(double value, PositionType position, const Glib::ustring& markup), gtk_scale_add_mark)
+  _WRAP_METHOD(void clear_marks(), gtk_scale_clear_marks)
+
+  /** Slot that formats the value.
+   *
+   * For instance:
+   * @code
+   * Glib::ustring on_format_value(double value);
+   * @endcode
+   *
+   * If set_format_value() is not used, the value will be displayed on
+   * its own, rounded according to the value of property_digits().
+   *
+   * @param value The numeric value to format.
+   * @return A string describing a textual representation of the given numerical value.
+   */
+  using SlotFormatValue = sigc::slot<Glib::ustring(double)>;
+
+  /** Changes how the scale value is displayed.
+   *
+   * The given slot will return a string representing the value.
+   * That string will then be used to display the scale's value.
+   *
+   * If this method is not called, or if unset_format_value_func() is called
+   * afterwards, the value will be displayed on its own, rounded according
+   * to the value of property_digits().
+   *
+   * @param slot Slot that formats the value.
+   */
+  void set_format_value_func(const SlotFormatValue& slot);
+  _IGNORE(gtk_scale_set_format_value_func)
+
+  /** Undoes the effect of a previous call to set_format_value_func().
+   */
+  void unset_format_value_func();
+
+  _WRAP_PROPERTY("digits", int)
+  _WRAP_PROPERTY("draw-value", bool)
+  _WRAP_PROPERTY("value-pos", PositionType)
+  _WRAP_PROPERTY("has-origin", bool)
+};
+
+} //namespace Gtk

@@ -1,0 +1,136 @@
+# Factoring
+#
+# Note that Factorize is built in now and uses Pollard-Rho, though plans
+# are to implement other factoring methods
+
+SetHelp("PrimeFactors", "number_theory", "Return all prime factors of a number")
+function PrimeFactors (n) = (
+	if not IsPositiveInteger(n) then
+		(error("PrimeFactors: argument not an integer larger than 0");bailout);
+	if n == 1 then return null;
+
+	fac = Factorize(n);
+	if IsNull(fac) then return null;
+
+	fac@(1,2:columns(fac))
+)
+
+SetHelp("MaximalPrimePowerFactors", "number_theory", "Return all maximal prime power factors of a number")
+function MaximalPrimePowerFactors (n) = (
+	if not IsPositiveInteger(n) then
+		(error("MaximalPrimePowerFactors: argument not an integer larger than 0");bailout);
+	if n == 1 then return null;
+
+	fac = Factorize(n);
+	if IsNull(fac) then return null;
+
+	for k=2 to columns(fac) do
+		fac@(1,k) = fac@(1,k)^fac@(2,k);
+
+	fac@(1,2:columns(fac))
+)
+
+# given two factorizations, returns factorization of the product
+# (useful for factoring rational numbers, for instance)
+SetHelp ("CombineFactorizations", "number_theory", "Given two factorizations, give the factorization of the product, see Factorize")
+function CombineFactorizations(a,b) = (
+  if not IsMatrix(a) or not IsMatrix(b) or rows(a) != 2 or rows(b) != 2 then
+  	(error("CombineFactorizations: arguments not factorizations");bailout);
+
+  # multiplication by 0
+  if a@(1,1) == 0 or b@(1,1) == 0 then
+	return [0;1];
+
+  combined = [a@(1,1)*b(1,1);1];
+
+  n=2;
+  k=2;
+  l=2;
+  while k <= columns(a) or l <= columns(b) do (
+    if k > columns(a) or a@(1,k) > b@(1,l) then (
+      combined@(1,n) = a@(1,l);
+      combined@(2,n) = a@(2,l);
+      increment l
+    ) else if l > columns(b) or a@(1,k) < b@(1,l) then (
+      combined@(1,n) = a@(1,k);
+      combined@(2,n) = a@(2,k);
+      increment k
+    ) else if a@(1,k) == b@(1,l) then (
+      combined@(1,n) = a@(1,k);
+      combined@(2,n) = a@(2,k) + b@(2,k);
+      increment k;
+      increment l
+    );
+    increment n
+  );
+  combined
+)
+
+# Returns all factors of n, i.e., all numbers between 1 and n that divide
+# n.  For small n does a naive implementation by trying all factors
+# up to square root, for large numbers does Factorize first and then
+# combines the factors in all possible ways.
+SetHelp("Factors", "number_theory", "Return all factors of a number")
+function Factors(n) = (
+  if not IsInteger(n) then
+  	(error("Factors: argument not an integer");bailout);
+  if n == 0 then return null;
+
+  list = null;
+
+  if n < 0 then (
+    n = -n;
+    list = [-1]
+  );
+
+  # for small n do naive implementation which is faster
+  if n < 100000 then (
+    back_list=null;
+
+    for loop = 1 to floor(sqrt(n-1)) do (
+      if Divides(loop,n) then (
+        list=[list,loop];
+        back_list=[n/loop,back_list]
+      )
+    );
+
+    if IsPerfectSquare(n) then
+      r = [list,sqrt(n),back_list]
+    else
+      r = [list,back_list];
+    r
+  ) else (
+    fnc = fn = Factorize (n);
+    for j=2 to columns(fnc) do fnc@(2,j) = 0;
+  
+    do (
+      list = [list, (prod j=2 to columns(fnc) do fnc@(1,j)^fnc@(2,j))];
+    
+      gotnext = false;
+      for j = 2 to columns(fnc) do (
+        if fnc@(2,j) < fn@(2,j) then (
+          increment fnc@(2,j);
+          gotnext = true;
+          break
+        ) else ( #fnc@(2,j) == fn@(2,j)
+          fnc@(2,j) := 0
+        )
+      )
+    ) while (gotnext); 
+    SortVector(list)
+  ) 
+)
+
+SetHelp("FermatFactorization", "number_theory", "Attempt Fermat factorization of n into (t-s)*(t+s), returns t and s as a vector if possible, null otherwise")
+function FermatFactorization(n,tries) = (
+  if not IsPositiveInteger(n) or not IsPositiveInteger(tries) then
+  	(error("FermatFactorization: arguments not positive integers");bailout);
+  t = floor(sqrt(n));
+  for i=1 to tries do (
+    increment t;
+    m = t^2 - n;
+    s = sqrt(m);
+    if IsInteger (s) then return [t,s]
+  );
+  null
+)

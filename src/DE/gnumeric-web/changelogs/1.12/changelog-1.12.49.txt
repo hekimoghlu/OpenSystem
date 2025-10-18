@@ -1,0 +1,92 @@
+2021-03-14  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.49
+
+2021-02-22  Jean Brefort  <jean.brefort@normalesup.org>
+
+	reviewed by: <delete if not using a buddy>
+
+	* src/sheet-object-graph.c (sog_update_graph_size),
+	(gnm_sog_bounds_changed):
+
+2021-02-21  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (gnm_sog_bounds_changed): don't take anchors
+	into account when updating the graph inside a graph sheet. [#565]
+
+2021-02-14  Morten Welinder  <terra@gnome.org>
+
+	* src/cell.c (gnm_cell_get_effective_style): New function to
+	resolve conditional styling.
+
+	* src/rendered-value.c (gnm_rendered_value_new): Use
+	gnm_cell_get_effective_style instead of doing it by hand.
+
+
+2021-01-30  Morten Welinder  <terra@gnome.org>
+
+	* autogen.sh: check that YELP_HELP_INIT has been expanded.
+
+2021-01-28  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-graph.c (gnm_sog_bounds_changed): Make sure to
+	tell the graph about the new size.
+	(gnm_sog_set_sheet): Tell the graph object about the initial size.
+	(sheet_object_graph_set_gog): Ditto.
+
+	* src/number-match.c (format_match_decimal_number_with_locale): If
+	the thousands separator is a space character, allow plain space
+	also.
+
+2021-01-19  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_linked_sheet_changed): Make sure to tell
+	the GnmStyleConditions what is going on.  Fixes #547, item 3.
+
+2020-12-19  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_range_unrender): New function.
+
+	* src/sheet-conditions.c (csgd_changed): Force rerendering of
+	cells.
+	(collect_group_deps_rr): Improve the deduced dependency range for
+	semi-absolute references.
+
+2020-12-18  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-conditions.c (update_group): Fix eval pos -- it's
+	different for each range, even if we hang everything on the same
+	dep.  Don't use a set for dependency -- that only works right in
+	array mode -- but use a call to SUM instead.
+
+2020-10-17  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (gnm_sog_bounds_changed): fix graph size issue
+	when the graph is in its own sheet. [#516]
+
+2020-10-15  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_sheet): Don't try to parse entries
+	with single quote or equal sign as numbers; use stf_cell_set_text.
+	(stf_parse_options_guess_formats): Skip entries with '=' also.
+
+2020-10-12  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-priv.h: Introspection doesn't like empty structs so
+	throw it a bone.
+
+	* src/stf-parse.c (stf_parse_options_guess_csv): Don't get
+	confused over quotes in quoted text.  Fixes #537.
+
+2020-10-04  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_options_guess_csv): Don't trim
+	spaces, see https://tools.ietf.org/html/rfc4180#section-2
+
+	* src/workbook-view.c (workbook_view_save_as): If we don't get a
+	modtime from the url, don't try to do anything with in.  Notably
+	happens with fd://1
+
+2020-08-12  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

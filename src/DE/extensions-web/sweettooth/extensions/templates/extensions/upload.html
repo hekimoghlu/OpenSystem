@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block extra-messages %}
+  {{ block.super }}
+  {% for error in errors %}
+  <p class="message error">
+    {{ error }}
+  </p>
+  {% endfor %}
+{% endblock %}
+
+{% block body %}
+<h3>{% trans "Upload extension" %}</h3>
+<div class='alert alert-info'>
+    <p>
+        {% blocktrans trimmed %}
+        Upload your extension Zip file to submit it for review. Later versions can be uploaded using the same form. Once your extension has been reviewed you will be notified of the result by e-mail.
+        {% endblocktrans %}
+    </p>
+    <p>
+        {% blocktrans trimmed with url="https://gjs.guide/extensions/review-guidelines/review-guidelines.html" %}
+        Please see the <a href="{{ url }}">Review Guidelines</a> to learn what is required for approval.
+        {% endblocktrans %}
+    </p>
+    <p>
+        {% blocktrans trimmed with url="https://gjs.guide/extensions" %}
+        If this is your first extension, please see the documentation on <a href="{{ url }}">gjs.guide</a> for directions on creating an extension and preparing it for upload.
+        {% endblocktrans %}
+    </p>
+</div>
+<div class='alert alert-info'>
+    <p>
+        {% blocktrans trimmed with url="https://conduct.gnome.org" %}
+        Extensions distributed via this website are subject to the <a href="{{ url }}">Code of Conduct</a>.
+        {% endblocktrans %}
+    </p>
+    <p>
+        {% blocktrans trimmed with url="https://conduct.gnome.org" %}
+        Extensions that violate the <a href="{{ url }}">Code of Conduct</a> will be removed from this website.
+        {% endblocktrans %}
+    </p>
+</div>
+
+<form enctype="multipart/form-data" action="" method="POST" class="form-horizontal">
+    {% csrf_token %}
+
+    {{ form.non_field_errors }}
+
+    <div class="form-group row">
+        <div class="col-sm-12{% if field.errors %} has-error{% endif %}">
+            {{ form.source }}
+            {% if form.source.errors %}
+            <div class="help-block">
+            {% for error in form.source.errors %}
+                <p>{{ error|escape }}</p>
+            {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% for field in form.visible_fields %}
+    {% if field.name != 'source' %}
+    <div class="form-group row">
+      <div class="col-sm-8 col-form-label">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% if field.help_text %}
+        <div>
+          <small class="form-text text-muted">{{ field.help_text }}</small>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-sm-4{% if field.errors %} has-error{% endif %}">
+        {{ field }}
+        {% if field.errors %}
+        <div class="help-block">
+          {% for error in field.errors %}
+            <p>{{ error|escape }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <div class="form-group row">
+        <div class="col-sm-12">
+            <button type="submit" class="btn btn-primary">Upload extension</button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block navclass %}upload{% endblock %}

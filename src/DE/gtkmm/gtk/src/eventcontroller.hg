@@ -1,0 +1,105 @@
+/* Copyright (C) 2014 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <gtkmm/widget.h>
+#include <gdkmm/device.h>
+#include <gdkmm/event.h>
+#include <gdkmm/enums.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+/** @defgroup Gestures Event Controllers and Gestures
+ *
+ * These classes handle input events.
+ *
+ * Event controllers are standalone objects that can perform specific actions
+ * upon received Gdk::Event%s. These are tied to a Widget, and can be told of
+ * the event propagation phase at which they will manage the events.
+ *
+ * Gestures are a set of specific controllers that are prepared to handle pointer
+ * and/or touch events. Each gestures implementation attempts to recognize specific
+ * actions out of the received events, notifying of the state/progress accordingly to
+ * let the widget react to those. On multi-touch gestures, every interacting touch
+ * sequence will be tracked independently.
+ *
+ * See the <a href="https://docs.gtk.org/gtk4/input-handling.html">
+ * Overview of GTK input and event handling</a>
+ * for more information about input events and gestures.
+ *
+ * @newin{3,14}
+ */
+
+_WRAP_ENUM(PropagationPhase, GtkPropagationPhase, decl_prefix GTKMM_API)
+_WRAP_ENUM(PropagationLimit, GtkPropagationLimit, decl_prefix GTKMM_API)
+
+/** Self-contained handler of series of events.
+ *
+ * This is an abstract base class, low-level implementation for event
+ * controllers. Those react to a series of Gdk::Event%s, and possibly trigger
+ * actions as a consequence of those.
+ *
+ * @newin{3,14}
+ *
+ * @ingroup Gestures
+ */
+class GTKMM_API EventController : public Glib::Object
+{
+  _CLASS_GOBJECT(EventController, GtkEventController, GTK_EVENT_CONTROLLER, Glib::Object, GObject, , , GTKMM_API)
+
+protected:
+  /** There is no create() method that corresponds to this constructor,
+   * because only derived classes shall be created.
+   */
+  _CTOR_DEFAULT
+
+public:
+  // No create() because only derived classes shall be instantiated.
+
+  _WRAP_METHOD(Widget* get_widget(), gtk_event_controller_get_widget)
+  _WRAP_METHOD(const Widget* get_widget() const, gtk_event_controller_get_widget, constversion)
+  _WRAP_METHOD(void reset(), gtk_event_controller_reset)
+  _WRAP_METHOD(PropagationPhase get_propagation_phase() const, gtk_event_controller_get_propagation_phase)
+  _WRAP_METHOD(void set_propagation_phase(PropagationPhase phase), gtk_event_controller_set_propagation_phase)
+  _WRAP_METHOD(PropagationLimit get_propagation_limit() const, gtk_event_controller_get_propagation_limit)
+  _WRAP_METHOD(void set_propagation_limit(PropagationLimit limit), gtk_event_controller_set_propagation_limit)
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_event_controller_get_name)
+  _WRAP_METHOD(void set_name(const Glib::ustring& name), gtk_event_controller_set_name)
+  _IGNORE(gtk_event_controller_set_static_name)
+
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Event> get_current_event() const,
+    gtk_event_controller_get_current_event, refreturn)
+  _WRAP_METHOD(guint32 get_current_event_time() const,
+    gtk_event_controller_get_current_event_time)
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Device> get_current_event_device(),
+    gtk_event_controller_get_current_event_device, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Device> get_current_event_device() const,
+    gtk_event_controller_get_current_event, refreturn, constversion)
+  _WRAP_METHOD(Gdk::ModifierType get_current_event_state() const,
+    gtk_event_controller_get_current_event_state)
+
+  _WRAP_PROPERTY("widget", Widget*)
+  _WRAP_PROPERTY("propagation-phase", PropagationPhase)
+  _WRAP_PROPERTY("propagation-limit", PropagationLimit)
+  _WRAP_PROPERTY("name", Glib::ustring)
+
+  // EventController has no signals
+};
+
+} // namespace Gtk

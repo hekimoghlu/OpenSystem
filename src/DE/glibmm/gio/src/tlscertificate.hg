@@ -1,0 +1,100 @@
+/* Copyright (C) 2012 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/object.h>
+#include <glibmm/datetime.h>
+#include <giomm/enums.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Glib
+{
+
+// Forward declaration.
+class GLIBMM_API ByteArray;
+
+}
+
+namespace Gio
+{
+
+class GIOMM_API SocketConnectable;
+
+/** TlsCertificate - TLS certificate.
+ * A certificate used for TLS authentication and encryption. This can represent
+ * either a certificate only (eg, the certificate received by a client from a
+ * server), or the combination of a certificate and a private key (which is
+ * needed when acting as a TlsServerConnection).
+ * @newin{2,36}
+ */
+class GIOMM_API TlsCertificate : public Glib::Object
+{
+  _CLASS_GOBJECT(TlsCertificate, GTlsCertificate, G_TLS_CERTIFICATE, Glib::Object, GObject, , , GIOMM_API)
+
+protected:
+  //TODO: These constructors don't work. Delete them when we can break ABI and API.
+  // There are no properties with the same names as the parameters.
+  // _WRAP_CTOR() is not useful here anyway. See the next comment.
+  _WRAP_CTOR(TlsCertificate(const std::string& data, gssize length), g_tls_certificate_new_from_pem, errthrow)
+  _WRAP_CTOR(TlsCertificate(const std::string& file), g_tls_certificate_new_from_file, errthrow)
+  _WRAP_CTOR(TlsCertificate(const std::string& cert_file, const std::string& key_file), g_tls_certificate_new_from_files, errthrow)
+
+public:
+  // We can't use _WRAP_CTOR() and _WRAP_CREATE() because all the
+  // g_tls_certificate_new_*() functions do more than just call g_object_new().
+  _WRAP_METHOD(static Glib::RefPtr<TlsCertificate> create_from_pem(const std::string& data, gssize length = -1),
+    g_tls_certificate_new_from_pem, errthrow)
+  _WRAP_METHOD(static Glib::RefPtr<TlsCertificate> create(const std::string& file),
+    g_tls_certificate_new_from_file, errthrow)
+  _WRAP_METHOD(static Glib::RefPtr<TlsCertificate> create(const std::string& cert_file, const std::string& key_file),
+    g_tls_certificate_new_from_files, errthrow)
+
+#m4 _CONVERSION(`GList*', `std::vector< Glib::RefPtr<TlsCertificate> >', `Glib::ListHandler< Glib::RefPtr<TlsCertificate> >::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(static std::vector< Glib::RefPtr<TlsCertificate> > create_list_from_file(const std::string& file), g_tls_certificate_list_new_from_file, errthrow)
+
+  _WRAP_METHOD(Glib::RefPtr<TlsCertificate> get_issuer(), g_tls_certificate_get_issuer, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const TlsCertificate> get_issuer() const, g_tls_certificate_get_issuer, constversion)
+
+  _WRAP_METHOD(TlsCertificateFlags verify(const Glib::RefPtr<const SocketConnectable>& identity{?}, const Glib::RefPtr<const TlsCertificate>& trusted_ca{?}) const, g_tls_certificate_verify)
+  _WRAP_METHOD(bool is_same(const Glib::RefPtr<const TlsCertificate>& cert_two) const, g_tls_certificate_is_same)
+
+  _WRAP_METHOD(Glib::DateTime get_not_valid_before() const, g_tls_certificate_get_not_valid_before)
+  _WRAP_METHOD(Glib::DateTime get_not_valid_after() const, g_tls_certificate_get_not_valid_after)
+  _WRAP_METHOD(Glib::ustring get_subject_name() const, g_tls_certificate_get_subject_name)
+  _WRAP_METHOD(Glib::ustring get_issuer_name() const, g_tls_certificate_get_issuer_name)
+
+  _WRAP_PROPERTY("certificate", Glib::RefPtr<Glib::ByteArray>)
+  _WRAP_PROPERTY("certificate-pem", std::string)
+  _WRAP_PROPERTY("private-key", Glib::RefPtr<Glib::ByteArray>, newin "2,72")
+  _WRAP_PROPERTY("private-key-pem", std::string, newin "2,72")
+  _WRAP_PROPERTY("issuer", Glib::RefPtr<TlsCertificate>)
+  _WRAP_PROPERTY("pkcs11-uri", std::string, newin "2,72")
+  _WRAP_PROPERTY("private-key-pkcs11-uri", std::string, newin "2,72")
+  _WRAP_PROPERTY("not-valid-before", Glib::DateTime)
+  _WRAP_PROPERTY("not-valid-after", Glib::DateTime)
+  _WRAP_PROPERTY("subject-name", Glib::ustring)
+  _WRAP_PROPERTY("issuer-name", Glib::ustring)
+
+protected:
+#m4 _CONVERSION(`GSocketConnectable*',`const Glib::RefPtr<const SocketConnectable>&',`Glib::wrap($3, true)')
+#m4 _CONVERSION(`GTlsCertificate*',`const Glib::RefPtr<const TlsCertificate>&',`Glib::wrap($3, true)')
+  _WRAP_VFUNC(TlsCertificateFlags verify(const Glib::RefPtr<const SocketConnectable>& identity, const Glib::RefPtr<const TlsCertificate>& trusted_ca) const, "verify")
+};
+
+} // namespace Gio

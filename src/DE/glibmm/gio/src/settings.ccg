@@ -1,0 +1,164 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/exceptionhandler.h>
+#include <glibmm/vectorutils.h>
+#include <giomm/settingsschema.h>
+
+namespace
+{
+struct SettingsMapSlots
+{
+  SettingsMapSlots(const Gio::Settings::SlotGetMapping& get_mapping,
+    const Gio::Settings::SlotSetMapping& set_mapping)
+  : from_setting_to_property(get_mapping), from_property_to_setting(set_mapping)
+  {
+  }
+
+  Gio::Settings::SlotGetMapping from_setting_to_property;
+  Gio::Settings::SlotSetMapping from_property_to_setting;
+};
+
+extern "C"
+{
+// Shall be static. Non-static functions with C linkage get external linkage,
+// even if they are defined in an anonymous namespace.
+static gboolean
+Settings_get_mapping_callback(
+  GValue* to_value, GVariant* from_variant, gpointer user_data)
+{
+  Gio::Settings::SlotGetMapping& the_slot =
+    static_cast<SettingsMapSlots*>(user_data)->from_setting_to_property;
+
+  bool result = false;
+  try
+  {
+    result = the_slot(to_value, from_variant);
+  }
+  catch (...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+  return result;
+}
+
+static GVariant*
+Settings_set_mapping_callback(
+  const GValue* from_value, const GVariantType* expected_type, gpointer user_data)
+{
+  Gio::Settings::SlotSetMapping& the_slot =
+    static_cast<SettingsMapSlots*>(user_data)->from_property_to_setting;
+
+  GVariant* result = nullptr;
+  try
+  {
+    result = the_slot(from_value, expected_type);
+  }
+  catch (...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+  return result;
+}
+
+static void
+Settings_map_callback_destroy(gpointer user_data)
+{
+  delete static_cast<SettingsMapSlots*>(user_data);
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gio
+{
+
+void Settings::bind_value(const Glib::ustring& key,
+  Glib::ObjectBase* object, const Glib::ustring& property, BindFlags flags,
+  const SlotGetMapping& get_mapping, const SlotSetMapping& set_mapping)
+{
+  if (get_mapping.empty() && set_mapping.empty())
+  {
+    // No user-supplied mappings.
+    g_settings_bind(gobj(), key.c_str(), object->gobj(),
+      property.c_str(), (GSettingsBindFlags)flags);
+  }
+  else
+  {
+    // Create copies of the slots. A pointer to this will be passed
+    // through the callback's data parameter. It will be deleted
+    // when Settings_map_callback_destroy() is called.
+    SettingsMapSlots* slots_copy = new SettingsMapSlots(get_mapping, set_mapping);
+
+    g_settings_bind_with_mapping(gobj(), key.c_str(),
+      object->gobj(), property.c_str(), (GSettingsBindFlags)flags,
+      get_mapping.empty() ? nullptr : &Settings_get_mapping_callback,
+      set_mapping.empty() ? nullptr : &Settings_set_mapping_callback, slots_copy,
+      &Settings_map_callback_destroy);
+  }
+}
+
+void
+Settings::get_value(const Glib::ustring& key, Glib::VariantBase& value) const
+{
+  const auto g_value = g_settings_get_value(const_cast<GSettings*>(gobj()), key.c_str());
+  if (!g_value)
+    return;
+
+  value.init(g_value, false /* don't take a reference */);
+}
+
+bool
+Settings::get_user_value(const Glib::ustring& key, Glib::VariantBase& value) const
+{
+  const auto g_value = g_settings_get_user_value(const_cast<GSettings*>(gobj()), key.c_str());
+  if (!g_value)
+    return false;
+
+  value.init(g_value, false /* don't take a reference */);
+  return true;
+}
+
+void
+Settings::get_default_value(const Glib::ustring& key, Glib::VariantBase& value) const
+{
+  const auto g_value = g_settings_get_default_value(const_cast<GSettings*>(gobj()), key.c_str());
+  if (!g_value)
+    return;
+
+  value.init(g_value, false /* don't take a reference */);
+}
+void
+Settings::bind(
+  const Glib::ustring& key, const Glib::PropertyProxy_Base& property_proxy, BindFlags flags)
+{
+  bind(key, property_proxy.get_object(), property_proxy.get_name(), flags);
+}
+
+void
+Settings::bind_writable(
+  const Glib::ustring& key, const Glib::PropertyProxy_Base& property_proxy, bool inverted)
+{
+  bind_writable(key, property_proxy.get_object(), property_proxy.get_name(), inverted);
+}
+
+//static
+void Settings::unbind(const Glib::PropertyProxy_Base& property_proxy)
+{
+  unbind(property_proxy.get_object(), property_proxy.get_name());
+}
+
+}

@@ -1,0 +1,69 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace
+{
+
+extern "C"
+{
+
+static gboolean ClockID_Clock_gstreamermm_callback(GstClock* clock, GstClockTime time, GstClockID id, void* data)
+{
+  Gst::ClockID::SlotClock* the_slot = static_cast<Gst::ClockID::SlotClock*>(data);
+
+  try
+  {
+    bool result = (*the_slot)(Glib::wrap(clock, true), time,
+      Glib::wrap(reinterpret_cast<GstClockEntry*>(id), true));
+
+    //Delete the once executing slot before returning result
+    delete the_slot;
+
+    return result;
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false;
+}
+
+
+static void ClockID_Clock_gstreamermm_callback_destroy(void* data)
+{
+  delete static_cast<Gst::ClockID::SlotClock*>(data);
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+ClockReturn ClockID::wait_async(const SlotClock& slot)
+{
+  SlotClock* slot_copy = new SlotClock(slot);
+  return static_cast<ClockReturn>(gst_clock_id_wait_async(gobj(), &ClockID_Clock_gstreamermm_callback, slot_copy, &ClockID_Clock_gstreamermm_callback_destroy));
+}
+
+}

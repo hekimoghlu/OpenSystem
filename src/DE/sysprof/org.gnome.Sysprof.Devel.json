@@ -1,0 +1,148 @@
+{
+    "app-id" : "org.gnome.Sysprof.Devel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "sysprof",
+    "tags" : [
+        "nightly"
+    ],
+    "desktop-file-name-suffix" : " (Nightly)",
+    "finish-args" : [
+        "--require-version=1.0.0",
+        "--allow=devel",
+        "--talk-name=org.freedesktop.Flatpak",
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--socket=session-bus",
+        "--socket=system-bus",
+        "--filesystem=home",
+        "--filesystem=host",
+        "--share=network",
+        "--talk-name=org.gtk.vfs.*",
+        "--system-talk-name=org.freedesktop.PolicyKit1",
+        "--system-talk-name=org.gnome.Sysprof3",
+        "--system-talk-name=org.freedesktop.Avahi",
+        "--filesystem=xdg-run/gvfsd",
+        "--filesystem=/var/lib/flatpak:ro",
+        "--filesystem=~/.local/share/flatpak:ro"
+    ],
+    "build-options" : {
+        "cflags" : "-O2 -g -fno-omit-frame-pointer",
+        "cxxflags" : "-O2 -g -fno-omit-frame-pointer"
+    },
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/doc",
+        "/share/vala",
+        "/share/bash-completions",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name": "intltool",
+            "cleanup": [ "*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256": "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ]
+        },
+        {
+            "name" : "polkit",
+            "buildsystem": "meson",
+            "config-opts" : [
+                "-Dlibs-only=true",
+                "-Dintrospection=false",
+                "-Dauthfw=shadow"
+            ],
+            "cleanup" : [
+                "/bin/*",
+                "/etc/dbus-1",
+                "/etc/pam.d",
+                "/include",
+                "/lib/pkgconfig",
+                "/lib/polkit-1",
+                "/share/dbus-1/system-services/*",
+                "/share/polkit-1"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/polkit-org/polkit/archive/refs/tags/126.tar.gz",
+                    "sha256" : "2814a7281989f6baa9e57bd33bbc5e148827e2721ccef22aaf28ab2b376068e8"
+                }
+            ]
+        },
+        {
+            "name" : "libpanel",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "--buildtype=debugoptimized",
+                "-Ddocs=disabled",
+                "-Dintrospection=disabled",
+                "-Dinstall-examples=false",
+                "-Ddevelopment=true",
+                "-Dvapi=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libpanel.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "libdex",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "--buildtype=debugoptimized",
+                "-Ddocs=false",
+                "-Dintrospection=enabled",
+                "-Dexamples=false",
+                "-Dtests=false",
+                "-Dsysprof=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libdex.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "sysprof",
+            "config-opts" : [
+                "--libdir=/app/lib",
+                "--buildtype=debugoptimized",
+                "-Ddevelopment=true",
+                "-Dlibsysprof=true",
+                "-Dtools=true",
+                "-Dgtk=true",
+                "-Dsysprofd=host"
+            ],
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/sysprof.git",
+                    "branch" : "master"
+                }
+            ]
+        }
+    ]
+}

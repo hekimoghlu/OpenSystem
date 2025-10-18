@@ -1,0 +1,15 @@
+SELECT ?video ?u
+WHERE {
+  GRAPH tracker:Video {
+    ?video a nfo:Video ;
+      nie:isStoredAs ?u .
+    ?u nie:dataSource ?ds .
+    OPTIONAL {
+      ?ds tracker:available ?available
+    }
+  }
+  FILTER (~showAll^^xsd:boolean || ?available)
+}
+ORDER BY ASC(?u)
+OFFSET ~offset
+LIMIT ~limit

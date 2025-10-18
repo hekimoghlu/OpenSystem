@@ -1,0 +1,48 @@
+[workspace]
+members = [ "aperture" ]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.88"
+license = "GPL-3.0-or-later"
+authors = ["The GNOME Project"]
+
+[workspace.dependencies]
+log = "0.4"
+futures-channel = "0.3.30"
+gst = { package = "gstreamer", version = "0.24" , features = ["v1_20"] }
+gst-base = { package = "gstreamer-base", version = "0.24" }
+gst-pbutils = { package = "gstreamer-pbutils", version = "0.24", features = ["v1_20"] }
+gst-video = { package = "gstreamer-video", version = "0.24" }
+gtk = { package = "gtk4", version = "0.10", features = ["gnome_46", "v4_18"] }
+
+[package]
+name = "snapshot"
+version = "46.0.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+# This is manually enabled by meson
+[features]
+x11 = ["ashpd/gtk4_x11"]
+
+[profile.release]
+lto = true
+
+[dependencies]
+adw = { package = "libadwaita", version = "0.8", features = ["v1_8"] }
+anyhow = "1.0"
+ashpd = { version = "0.12", default-features = false, features = ["gtk4_wayland", "tracing", "async-std"] }
+futures-channel = { workspace = true }
+gettext-rs = { version = "0.7", features = ["gettext-system"] }
+glycin = { version = "3.0.0", features = ["gdk4"] }
+gst = { workspace = true }
+gtk = { workspace = true, features = ["gnome_47"] }
+log = { workspace = true }
+tracing-subscriber = "0.3"
+aperture = { path = "aperture" }
+
+[profile.dev.package.rqrr]
+opt-level = 3

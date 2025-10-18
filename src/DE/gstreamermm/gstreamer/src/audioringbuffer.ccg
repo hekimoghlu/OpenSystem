@@ -1,0 +1,255 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/handle_error.h>
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace Gst
+{
+
+AudioRingBufferSpec::AudioRingBufferSpec()
+: m_spec(g_try_new(GstAudioRingBufferSpec, 1)),
+  take_ownership(true)
+{
+  // Handle possible memory allocation failure.
+  if(!m_spec)
+  {
+    gstreamermm_handle_error(
+      "Failed to allocate a new Gst::AudioRingBufferSpec.");
+    return;
+  }
+}
+
+AudioRingBufferSpec::AudioRingBufferSpec(const Glib::RefPtr<Gst::Caps>& caps,
+  Gst::AudioRingBufferFormatType type,
+  guint64 latency_time, guint64 buffer_time, int segsize, int segtotal,
+  int seglatency)
+: m_spec(g_try_new(GstAudioRingBufferSpec, 1)),
+  take_ownership(true)
+{
+  // Handle possible memory allocation failure.
+  if(!m_spec)
+  {
+    gstreamermm_handle_error("Failed to allocate a new Gst::AudioRingBufferSpec.");
+    return;
+  }
+
+  GstAudioRingBufferSpec* spec = gobj();
+
+  spec->caps = Glib::unwrap(caps);
+
+  // Keep a copy of the caps (it will be unreferenced in the destructor).
+  if (caps)
+    caps->reference();
+
+  spec->type = static_cast<GstAudioRingBufferFormatType>(type);
+  spec->latency_time = latency_time;
+  spec->buffer_time = buffer_time;
+  spec->segsize = segsize;
+  spec->segtotal = segtotal;
+  spec->seglatency = seglatency;
+}
+
+
+AudioRingBufferSpec::AudioRingBufferSpec(GstAudioRingBufferSpec& castitem, bool take_ownership)
+: m_spec(&castitem),
+  take_ownership(take_ownership)
+{
+  // Keep a copy of the caps (it will be unreferenced in the destructor).
+  if(castitem.caps)
+      gst_caps_ref(castitem.caps);
+}
+
+AudioRingBufferSpec::AudioRingBufferSpec(const AudioRingBufferSpec& other)
+: m_spec(g_try_new(GstAudioRingBufferSpec, 1)),
+  take_ownership(true)
+{
+  // Handle possible memory allocation failure.
+  if(!m_spec)
+  {
+    gstreamermm_handle_error("Failed to allocate a new Gst::AudioRingBufferSpec.");
+    return;
+  }
+
+  m_spec->caps = other.m_spec->caps;
+
+  // Keep a copy of the caps (it will be unreferenced in the destructor).
+  if(m_spec->caps)
+    gst_caps_ref(m_spec->caps);
+
+  m_spec->type = other.m_spec->type;
+  m_spec->latency_time = other.m_spec->latency_time;
+  m_spec->buffer_time = other.m_spec->buffer_time;
+  m_spec->segsize = other.m_spec->segsize;
+  m_spec->segtotal = other.m_spec->segtotal;
+  m_spec->seglatency = other.m_spec->seglatency;
+}
+
+AudioRingBufferSpec& AudioRingBufferSpec::operator=(const AudioRingBufferSpec& other)
+{
+  AudioRingBufferSpec temp(other);
+  swap(temp);
+  return *this;
+}
+
+AudioRingBufferSpec::~AudioRingBufferSpec()
+{
+  // Unref existing reference to caps.
+  if(m_spec->caps)
+    gst_caps_unref(m_spec->caps);
+
+  // Release the underlying m_spec if it is owned.
+  if(take_ownership)
+    g_free(m_spec);
+}
+
+void AudioRingBufferSpec::swap(AudioRingBufferSpec& other)
+{
+  GstAudioRingBufferSpec* spec_temp = m_spec;
+  m_spec = other.m_spec;
+  other.m_spec = spec_temp;
+
+  const bool take_temp = take_ownership;
+  take_ownership = other.take_ownership;
+  other.take_ownership = take_temp;
+}
+
+bool AudioRingBuffer::prepare_read(int& segment, std::vector<guint8>& readptr,
+  int& len)
+{
+  guint8* c_readptr = nullptr;
+
+  const bool result = static_cast<bool>(gst_audio_ring_buffer_prepare_read(gobj(), &segment, &c_readptr, &len));
+  readptr.assign(c_readptr, c_readptr + len);
+
+  if (c_readptr)
+    g_free(c_readptr);
+
+  return result;
+}
+
+gboolean AudioRingBuffer_Class::acquire_vfunc_callback(GstAudioRingBuffer* self, GstAudioRingBufferSpec* spec)
+{
+  Glib::ObjectBase *const obj_base = static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  if(obj_base && obj_base->is_derived_())
+  {
+    CppObjectType *const obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if(obj) // This can be NULL during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        Gst::AudioRingBufferSpec cpp_spec(*spec);
+
+        // Call the virtual member method, which derived classes might override.
+        return static_cast<int>(obj->acquire_vfunc(cpp_spec));
+
+      }
+      catch(...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+  
+  BaseClassType *const base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  // Call the original underlying C function:
+  if(base && base->acquire)
+    return (*base->acquire)(self, spec);
+
+
+  typedef gboolean RType;
+  return RType();
+}
+bool Gst::AudioRingBuffer::acquire_vfunc(Gst::AudioRingBufferSpec& spec) 
+{
+  BaseClassType *const base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(gobject_)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  if(base && base->acquire)
+    return static_cast<bool>((*base->acquire)(gobj(), spec.gobj()));
+
+  typedef bool RType;
+  return RType();
+}
+guint AudioRingBuffer_Class::commit_vfunc_callback(GstAudioRingBuffer* self, guint64* sample, guchar* data, gint in_samples, gint out_samples, gint* accum)
+{
+  Glib::ObjectBase *const obj_base = static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  if(obj_base && obj_base->is_derived_())
+  {
+    CppObjectType *const obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if(obj) // This can be NULL during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        // Declare the ArrayHandle for the C++ vfunc.
+        Glib::ArrayHandle<guchar> cpp_data(data, self->size, Glib::OWNERSHIP_NONE);
+        // Call the virtual member method, which derived classes might override.
+        return obj->commit_vfunc(*(sample), Glib::ArrayHandler<guint8>::array_to_vector(data, self->size, Glib::OWNERSHIP_NONE), in_samples, out_samples, *(accum));
+      }
+      catch(...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+  
+  BaseClassType *const base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  // Call the original underlying C function:
+  if(base && base->commit)
+    return (*base->commit)(self, sample, data, in_samples, out_samples, accum);
+
+
+  typedef guint RType;
+  return RType();
+}
+guint Gst::AudioRingBuffer::commit_vfunc(guint64& sample, const std::vector<guint8>& data, int in_samples, int out_samples, int& accum) 
+{
+  BaseClassType *const base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(gobject_)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  if(base && base->commit)
+    return (*base->commit)(gobj(),&sample,Glib::ArrayHandler<guint8>::vector_to_array(data).data(),in_samples,out_samples,&accum);
+
+  typedef guint RType;
+  return RType();
+}
+
+} // namespace Gst

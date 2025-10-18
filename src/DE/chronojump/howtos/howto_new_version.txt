@@ -1,0 +1,265 @@
+----
+Initial checks:
+1- Check that on windows we can compile (for the length of the compile order on cygwin, see: how_to_compile.txt)
+2- Check that Sqlite db is created ok from 0
+3- Check that Sqlite db is updated ok from a really old db
+----
+
+1) copy manual PDFs from chronojump-docs repository, because in chronojump repository PDFs are not updated
+check is "updated to last version"
+cp ../chronojump-docs/chronojump_manual_e*.pdf manual/
+git commit manual/chronojump_manual_e*.pdf -m "Copied updated manuals from docs repo)"
+git push
+
+2) take care of unstaged changes, because next steps will commit and push them. So if don't want to commit them, do git stash
+
+3) git tag (Chronojump's version depends on the tag):
+VERSION=1.6.2
+git commit -a -m "Bump version $VERSION"
+
+git tag -a "$VERSION"
+(added links to changes here, maybe better on the previous git commit)
+git push
+git push origin --tags
+
+
+See also howto_git.md "Cherry branches and new versions"
+
+# If some day we decide to do branching instead of tags:
+#with branching:
+#git checkout -b "tags/$VERSION" # creates a new branch
+# keep doing commits:
+# git commit -a
+# git commit -a
+# git cherry-pick -x "commit-from-master-or-some-branch-that-we-want-here"
+# And see other comments of the document
+
+Linux stuff
+------------
+#sh autogen.sh
+#make dist
+
+#If it is a sub-version, like chronojump-2.3.0-31-gf819edfc8.tar.gz
+#rename: chronojump-2.3.0_31.tar.gz
+#file-roller it to rename its internal directory to: hronojump-2.3.0-31.tar.gz
+#Note: the file is with '_' and the internal dir is with '-'
+
+#scp filename xaviblas@master.gnome.org:.
+#ssh xaviblas@master.gnome.org
+#ftpadmin install (filename)
+
+#with branching:
+#Go back to master:
+#git checkout master
+
+#fixing previous release
+#git note:
+#If we want to release 0.9.4 based on an bug fix from 0.9.3:
+#
+#git checkout tags/0.9.3
+#git checkout -b tags/0.9.4 # creates a new branch based on 0.9.3
+#git cherry-pick -x "commit-from-master-or-some-branch-that-we-want-here"
+#vim "fix something"
+#git commit -a -m "Important fix"
+#VERSION=0.9.4
+#Then go to [1]
+
+
+DEB) create deb package (2023)
+
+sh autogen.sh
+make dist
+
+VERSIONCODE=2.3.0-525
+VERSIONFULL=2.3.0-525-gf445d7141
+
+tar -zxvf chronojump-$VERSIONFULL.tar.gz
+cd chronojump-$VERSIONFULL
+./configure
+make
+checkinstall --pkgname="Chronojump" --pkgversion="$VERSIONCODE" --maintainer="Xavier de Blas" --pkglicense="GPL2" --requires="libgtk3.0-cil,libmono-sqlite4.0-cil,libmono-posix4.0-cil,libmono-system-json4.0-cil,r-base,ffmpeg,p7zip-full" --install=no
+
+When asking for the description put the English lines on README.md (but without the blank lines)
+
+Upload to master.gnome.org
+cp thefile /ftp/pub/gnome/binaries/linux/chronojump/
+#remember cp ant not mv !
+
+DEB) create deb package (OLD)
+
+DEB.A) 1st time
+sudo apt-get install devscripts dput debhelper cdbs mono-devel cli-common-dev libdistro-info-perl
+
+GPG key (add random)
+apt-get install rng-tools
+rngd -r /dev/urandom
+GPG generate key:
+gpg --gen-key
+(use the values on DEBFULLNAME and DEBEMAIL, see below)
+
+DEB.B) every time
+
+on Debian Jessie need to disable GNOME-Keyring http://wiki.gnupg.org/GnomeKeyring
+
+sudo dpkg-divert --local --rename --divert /etc/xdg/autostart/gnome-keyring-gpg.desktop-disable --add /etc/xdg/autostart/gnome-keyring-gpg.desktop
+(need to restart)
+
+If you later decide to reenable it, then you can use:
+sudo dpkg-divert --rename --remove /etc/xdg/autostart/gnome-keyring-gpg.desktop
+(maybe need to restart)
+
+export DEBFULLNAME="Xavier de Blas"
+export DEBEMAIL="info@chronojump.org"
+./deb-pkg.sh 1 (broken, needs: libmono-sqlite2.0-cil libmono-winforms2.0-cil python-wxgtk2.8)
+
+read carefully screen messages. Once says: successfully uploaded, need to wait 1h 30' aprox, then an email will be sent from launchpad telling if ok or not.
+
+if there are problems, remove build-deb and repeat process
+
+DEB.C..a) On Debian Jessie:
+needs this ~/.dput.cf
+
+[chronojump-ppa]
+fqdn = ppa.launchpad.net
+method = ftp
+incoming = ~u-info-x/ubuntu/chronojump-ppa/
+login = anonymous
+allow_unsigned_uploads = 0
+
+debian/control needs to change: python-wxgtk2.8 to python-wxgtk3.0
+BUT this does not work for Ubuntu Launchpad, so continue with python-wxgtk-2.8
+
+And upload like this:
+dput chronojump-ppa build-deb/chronojump_..._source.changes
+
+
+DEB.C.b ) On raspbian
+needs this ~/.dput.cf
+
+[chronojump-ppa]
+fqdn = ppa.launchpad.net
+method = ftp
+incoming = ~u-info-x/chronojump-ppa/ubuntu/
+login = anonymous
+allow_unsigned_uploads = 0
+
+and upload like this:
+dput chronojump-ppa build-deb/chronojump..._source.changes
+
+
+
+macosx stuff
+------------
+
+Check if there are new static ffmpeg binaries on:
+https://evermeet.cx/ffmpeg/
+download compressed files, uncompress and put ffmpeg and ffplay files on binariesMac dir
+
+If is for internal use, mv into: /Users/chronojump/BinarisMac/
+to be automatically available on owncloud
+
+7z https://www.7-zip.org/download.html
+find Zip for MacOS: console version
+extract the 7zz and put on binariesMac folder
+
+download (with filezilla is very fast), using owncloud is nice also
+/Users/chronojump/chronojump/Chronojump-1.4.2-x86_64.dmg
+scp -l 8192 Chronojump...dmg xaviblas@master.gnome.org:.
+ssh xaviblas@master.gnome.org
+
+cp Chrono...dmg /ftp/pub/gnome/binaries/mac/chronojump
+remember cp and no mv, because "mv always maintains the SELinux context of a specific file whereas cp does not"
+https://discourse.gnome.org/t/signal-ftp-sync-removed-on-master-gnome-org/13239/7
+
+windows stuff
+------------
+
+1) if chronojump_importer.py has changed, need to manually create the importer for python3
+It changed on: 27 Apr 2021!!
+because windows compile machine has cerbero with python2 and we do not want to break stuff installing python3
+
+update ffmpeg, ffplay, ffprobe:
+https://www.gyan.dev/ffmpeg/builds/
+download ffmpeg-release-essentials.7z uncompress, copy to win32/deps/bin
+
+on my local laptop:
+
+cp src/chronojump-importer/py2exec_chronojump_importer.py ~/informatica/virtualbox_windows_shared/
+cp src/chronojump-importer/chronojump_importer.py ~/informatica/virtualbox_windows_shared/
+there move them to python34 folder
+open terminal CMD on python34 folder and there (from the CMD commandline)
+python py2exec_chronojump_importer.py py2exe -d chronojump-importer-pyhon3
+copy chronojump-importer-python3 dir to  ~/informatica/virtualbox_windows_shared/
+and there move to win32/deps/bin
+git commit / push
+
+---
+msvcr100.dll problem:
+note if an user cannot get version on chronojump-importer execution, try running the python file from the commandline:
+cd C:\Program Files (x86)\Chronojump\bin\chronojump-importer-python3
+chronojump_importer.exe
+- if the dll is missing, it will not show any message on the terminal, and for this reason we don't know it on the log, but on the screen will show a dialog: telling that MSVCR100.dll is missing
+Note the dialog says that reinstalling the program (don't know if it's the dll or chronojump) it fixes it. But we think Chronojump does not install that dll
+if the dll is not missing, then will say on the terminal:
+usage: chronojump_importer.exe [-h] --source SOURCE, and other params needed as help in more lines
+
+to solve this, just copy msvcr100.dll on that dir. I have it on ~/informatica/virtualbox_windows_shared
+---
+
+7z https://www.7-zip.org/download.html
+Install 7zr.exe
+7zr(1) is a stand-alone executable. It is a "light-version" of 7za that only handles 7z archives. In contrast to 7za, it cannot handle encrypted archives. (https://wiki.archlinux.org/title/p7zip#Differences_between_7z.2C_7za_and_7zr_binaries)
+
+2) See: howto_compile.txt
+
+3) Upload
+If is for internal use, copy int: c:/Usuarios/chronojump/BinarisWin/
+to be automatically available on owncloud
+
+scp -l 8192 Chronojump...exe xaviblas@master.gnome.org:.
+ssh xaviblas@master.gnome.org
+
+cp Chrono...exe /ftp/pub/gnome/binaries/win32/chronojump
+remember cp and no mv, because "mv always maintains the SELinux context of a specific file whereas cp does not"
+https://discourse.gnome.org/t/signal-ftp-sync-removed-on-master-gnome-org/13239/7
+
+Wordpress
+---------
+Update shortcode variables on wordpress
+
+API (GetLastVersion)
+--------------------
+ssh to chronojump server
+su
+vi /etc/chronojump.conf
+
+Change: chronojump_stable_version
+
+example for major version:
+chronojump_stable_version=1.8.1
+
+example for minor version:
+chronojump_stable_version=1.8.1-37-g2e4a586
+
+systemctl restart gunicorn
+verify:
+curl http://api.chronojump.org:8080/version
+
+tell people stuff
+-------------
+twitters
+publish on website en/es (change shortcode variables)
+Tell people to update wikipedia page
+twitters again with photos, changes, ...
+
+other stuff
+-----------
+Update manual/s to chronojump site if changed
+
+_____________ OLD _____________
+
+server stuff
+------------
+ssh to chronojump server, sqlite-3 chronojump_server.db
+update preferences set value="0.9.3.0" where name="versionAvailable";
+

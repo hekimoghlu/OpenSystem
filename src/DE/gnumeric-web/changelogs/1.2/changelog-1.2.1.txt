@@ -1,0 +1,196 @@
+2003-10-08  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.2.1
+
+2003-10-07  Jody Goldberg <jody@gnome.org>
+
+	* src/graph.c (gnm_go_data_get_dep) : Its ok to have other GOData's.
+	(gnm_go_data_set_sheet) : ditto.
+
+2003-10-06  Jody Goldberg <jody@gnome.org>
+
+	* src/value.c (criteria_test_equal) : privatize
+	(criteria_test_less) : privatize
+	(criteria_test_greater) : privatize
+	(criteria_test_less_or_equal) : privatize
+	(criteria_test_greater_or_equal) : privatize
+	(criteria_test_unequal) : privatize and have it handle empty.
+	(parse_criteria) : avoid replicated code.  Handle the trivial ==number
+	  case here too.
+	(parse_criteria_range) : use the new simplified interface.
+
+2003-10-05  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control.c (wb_control_parse_and_jump) : skip blanks
+
+	* src/func.c (function_def_get_arg_type_string) : handle 'B' a scalar
+	  that can even be blank.
+	(function_call_with_list) : ditto.
+
+2003-10-05  Jody Goldberg <jody@gnome.org>
+
+	* src/ssconvert.c : if no export file name is specified try to
+	  generate one based on the exporter.
+
+2003-10-05  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-graphic.c (sheet_object_graphic_user_config):
+	gtk_combo_box renamed to gnm_combo_box.
+
+	* src/workbook-control-gui.c (ur_stack, wbcg_undo_redo_clear,
+	wbcg_undo_redo_truncate, wbcg_undo_redo_pop,
+	wbcg_undo_redo_push, workbook_create_standard_toolbar,
+	workbook_create_standard_toolbar): Ditto.
+
+	* src/workbook-format-toolbar.c (workbook_create_format_toolbar):
+	Ditto.
+
+2003-09-29  Morten Welinder  <terra@gnome.org>
+
+	* src/format.c (render_number): Keep track of number of
+	significant digits so we don't show garbage.
+
+2003-09-27  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* src/ssconvert.c: Handle bad command lines in a sensible manner.
+
+2003-09-27  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Updated ALL_LINGUAS as po/hi.po has been removed.
+
+2003-09-25  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c (gnm_pango_context_get) : simple wrapper to enable
+	  windowless operation.
+	(font_init) : move the global_font crap here temporarily to enable
+	  windowless operation.
+	(font_shutdown) :  new merged in global_font_shutdown.
+
+	* src/ssconvert.c : stick this ins CVS as an incentive to someone to
+	  polish it up a bit and finish it.
+
+	* src/sheet.c (sheet_new) : Use the new gnm_pango_context_get.
+
+	* src/libgnumeric.c (gnm_common_init) : global_gnome_font_init is gone
+	(gnm_shutdown) : ditto global_gnome_font_shutdown.
+
+	* src/global-gnome-font.c : rip the init and shutdown logic out of here
+
+	* src/style-color.c (gnumeric_color_init) : allow this to work with no
+	  display.
+
+	* src/command-context-stderr.c (command_context_stderr_new) : change
+	  return type to the more useful and popular base class.
+
+2003-09-25  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=123226
+	* gnumeric.spec.in : patch the bugs mentioned and some general cleanup
+
+2003-09-24  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (compute_value): Reduce the number of
+	localtime calls when matching partial dates.
+
+2003-09-23  Jody Goldberg <jody@gnome.org>
+
+	* src/str.h : Start of the big renaming s/String/GnmString/
+
+2003-09-23  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_probe) : revert need to change libgsf api.  That
+	  was a bug in libxml-2.6.0-beta2
+	* configure.in :  ditto
+	* gnumeric.spec.in : ditto
+	* README : ditto
+
+2003-09-22  Jody Goldberg <jody@gnome.org>
+
+	From John Gill :
+	* src/sheet-filter.c (sheet_filter_guess_region) : Some heuristics to
+	  guess the region to autofilter when only 1 cell or row is selected.
+	* src/workbook-control-gui.c (cb_auto_filter) : Use it.
+
+2003-09-22  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_graph_dim_editor_update) : ignore if
+	  dataset has already been deleted.
+	(cb_dim_editor_weakref_notify) : new.
+	(graph_dim_editor_free) : new.
+	(wbcg_data_allocator_editor) : add a weakref to handle situation where
+	  the dataset is deleted before the widget.
+
+2003-09-22  Jody Goldberg <jody@gnome.org>
+
+	* configure.in :  require libgsf 1.9.0 because it works around changes
+	  in libxml2 semantics for 2.6.0 that break our sax based importers.
+
+	* src/style.c (style_font_new_simple) : cache the font height too.
+
+	* src/sheet.c (cb_max_cell_height) : be smarter.  There is no need to
+	  render a cell whose value does not wrap.
+
+2003-09-22  Morten Welinder  <terra@gnome.org>
+
+	* src/format.c (format_boolean): Use function.
+	(format_value_gstring): Use format_boolean.	
+
+	* src/number-match.c (format_match_simple): Ditto.
+	* src/value-sheet.c (value_dump): Ditto.
+	* src/value.c (value_get_as_gstring): Ditto.
+
+2003-09-22  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (csv_tsv_probe) : probe only by name.  Always accepting
+	  content turned this into a catch all importer.
+
+	* src/plugin-service.c (gnm_plugin_file_opener_can_probe) : new.
+	(gnm_plugin_file_opener_class_init) : hook it up.
+
+	* src/file.c (gnm_file_opener_can_probe_real) : new.
+	(gnm_file_opener_class_init) : link it up.
+	(gnm_file_opener_can_probe) : call it here.
+
+	* src/workbook-view.c (wb_view_new_from_input) : be more explicit
+	  about when not to probe for content.  The underlying code is in
+	  desperate need of cleanup.
+
+2003-09-21  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (stf_text_to_columns) : relax requirements, blanks and
+	  hidden are ok.  It might be nice to skip hidden, or filter blanks
+	  but we have no capabilities to paste into 'non-hidden' region.  So
+	  it makes sense to ignore hidden for consistency.
+	(cb_get_content) : accept blanks.
+
+2003-09-18  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (cb_free_keyed_dialog_context) : remove the
+	  unnecessary precondition.  If we're being called during wbcg::finalize
+	  then the data is already gone.
+
+2003-09-16  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (do_expr_as_string) : fill in ParsePos::sheet too so that
+	  names get properly qualified.
+
+2003-09-15  Jody Goldberg <jody@gnome.org>
+
+	* src/graph.c (gnm_go_data_vector_load_len) : don't get confused by
+	  references to empty sheets.
+	(gnm_go_data_vector_load_values) : set flags and min/max even for
+	  empty vectors.
+
+2003-09-15  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Require libgsf-gnome-1 >= 1.8.2. No big deal, we 
+	were already requiring libgsf-1 >= 1.8.2 elsewhere.
+	Remove big bad "unstable branch" warning.
+
+2003-09-15  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the gsf-gnome req to 1.8.2 also.
+
+2003-09-15  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump

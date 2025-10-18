@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.0"/>
+  <requires lib="GtkSource" version="5.0"/>
+  <template class="EditorPreferencesDialog" parent="AdwPreferencesDialog">
+    <style>
+      <class name="org-gnome-TextEditor"/>
+      <class name="preferences"/>
+    </style>
+    <child>
+      <object class="AdwPreferencesPage">
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Appearance</property>
+            <child>
+              <object class="GtkSourceView" id="source_view">
+                <property name="editable">false</property>
+                <property name="cursor-visible">false</property>
+                <property name="top-margin">8</property>
+                <property name="bottom-margin">8</property>
+                <property name="left-margin">12</property>
+                <property name="right-margin">12</property>
+                <property name="right-margin-position">30</property>
+                <property name="monospace">true</property>
+                <property name="show-line-numbers">true</property>
+                <property name="margin-bottom">24</property>
+                <property name="buffer">
+                  <object class="GtkSourceBuffer" id="buffer">
+                  </object>
+                </property>
+                <style>
+                  <class name="preview"/>
+                  <class name="card"/>
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkFlowBox" id="scheme_group">
+                <signal name="child-activated" handler="style_scheme_activated_cb" swapped="true"/>
+                <property name="hexpand">true</property>
+                <property name="column-spacing">12</property>
+                <property name="row-spacing">12</property>
+                <property name="max-children-per-line">4</property>
+                <property name="max-children-per-line">4</property>
+                <property name="selection-mode">none</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <child>
+              <object class="AdwExpanderRow">
+                <property name="title" translatable="yes">Custom _Font</property>
+                <property name="use-underline">true</property>
+                <property name="expanded" bind-source="use_custom_font" bind-property="active" bind-flags="sync-create|bidirectional"/>
+                <child type="action">
+                  <object class="GtkSwitch" id="use_custom_font">
+                    <property name="halign">end</property>
+                    <property name="valign">center</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="EditorPreferencesFont" id="custom_font">
+                    <property name="schema-key">custom-font</property>
+                    <property name="sensitive" bind-source="use_custom_font" bind-property="active" bind-flags="sync-create"/>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <child>
+              <object class="EditorPreferencesSwitch" id="show_grid">
+                <property name="title" translatable="yes">Show Grid Pattern</property>
+                <property name="schema-key">show-grid</property>
+                <property name="visible">false</property>
+              </object>
+            </child>
+            <child>
+              <object class="EditorPreferencesSwitch" id="display_line_numbers">
+                <property name="title" translatable="yes">Display _Line Numbers</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">show-line-numbers</property>
+              </object>
+            </child>
+            <child>
+              <object class="EditorPreferencesSwitch" id="highlight_current_line">
+                <property name="title" translatable="yes">_Highlight Current Line</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">highlight-current-line</property>
+              </object>
+            </child>
+            <child>
+              <object class="EditorPreferencesSwitch" id="map">
+                <property name="title" translatable="yes">Display _Overview Map</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">show-map</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <child>
+              <object class="EditorPreferencesSwitch">
+                <property name="title" translatable="yes">Check _Spelling</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">spellcheck</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Line Wrap</property>
+            <child>
+              <object class="EditorPreferencesSwitch">
+                <property name="title" translatable="yes">Show _Right Margin</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">show-right-margin</property>
+              </object>
+            </child>
+            <child>
+              <object class="EditorPreferencesSpin" id="right_margin">
+                <property name="title" translatable="yes">_Margin Position</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">right-margin-position</property>
+              </object>
+            </child>
+            <child>
+              <object class="EditorPreferencesSwitch">
+                <property name="title" translatable="yes">_Wrap Lines Automatically (Alt+W)</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">wrap-text</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Indentation</property>
+            <child>
+              <object class="EditorPreferencesSwitch">
+                <property name="title" translatable="yes">A_uto Indentation</property>
+                <property name="use-underline">true</property>
+                <property name="schema-key">auto-indent</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="character_row">
+                <property name="title" translatable="yes">_Character</property>
+                <property name="use-underline">True</property>
+                <property name="model">indent_model</property>
+                <property name="expression">
+                  <lookup name="name" type="EditorIndent"/>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="tab_width">
+                <property name="title" translatable="yes">Spaces Per _Tab</property>
+                <property name="use-underline">True</property>
+                <property name="climb-rate">1</property>
+                <property name="digits">0</property>
+                <property name="numeric">true</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment" id="tab_width_adjustment">
+                    <property name="lower">1</property>
+                    <property name="upper">32</property>
+                    <property name="value">8</property>
+                    <property name="step-increment">1</property>
+                    <property name="page-increment">4</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="indent_width">
+                <property name="title" translatable="yes">Spaces Per _Indent</property>
+                <property name="use-underline">True</property>
+                <property name="climb-rate">1</property>
+                <property name="digits">0</property>
+                <property name="numeric">true</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment" id="indent_width_adjustment">
+                    <signal name="value-changed" handler="on_indent_value_changed_cb" swapped="true"/>
+                    <property name="lower">1</property>
+                    <property name="upper">32</property>
+                    <property name="value">8</property>
+                    <property name="step-increment">1</property>
+                    <property name="page-increment">4</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Behavior</property>
+            <child>
+              <object class="EditorPreferencesSwitch" id="discover">
+                <property name="title" translatable="yes">_Discover Document Settings</property>
+                <property name="use-underline">true</property>
+                <property name="subtitle" translatable="yes">Apply settings using modelines, editorconfig, or sensible defaults</property>
+                <property name="schema-key">discover-settings</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="restore_session">
+                <property name="title" translatable="yes">_Restore Session</property>
+                <property name="use-underline">true</property>
+                <property name="subtitle" translatable="yes">Return to your previous session when Text Editor is started</property>
+                <property name="active" bind-source="clear_history_group" bind-property="sensitive" bind-flags="sync-create|bidirectional"/>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup" id="clear_history_group">
+            <child>
+              <object class="AdwButtonRow">
+                <property name="action-name">app.clear-history</property>
+                <property name="focus-on-click">False</property>
+                <property name="title" translatable="yes">_Clear History</property>
+                <property name="use-underline">True</property>
+                <style>
+                  <class name="destructive-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+  <object class="EditorIndentModel" id="indent_model">
+  </object>
+</interface>

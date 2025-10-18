@@ -1,0 +1,113 @@
+include:
+    - project: "gnome/citemplates"
+      file: "flatpak/flatpak_ci_initiative.yml"
+    - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+      inputs:
+        dist-job-name: "flatpak"
+    - component: "gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master"
+      inputs:
+        job-stage: "test"
+        meson-options: >-
+          -Ddocumentation=true
+          -Dsysprof=true
+          -Dinstall-tests=true
+        lsan-options: "suppressions=${CI_PROJECT_DIR}/testsuite/lsan.supp"
+
+stages:
+    - test
+    - docs
+    - deploy
+
+variables:
+    FEDORA_IMAGE: "registry.fedoraproject.org/fedora:42"
+
+flatpak:
+    variables:
+        FLATPAK_MODULE: "gtksourceview"
+        BUNDLE: "gtksourceview-test-widget-dev.flatpak"
+        MANIFEST_PATH: "org.gnome.GtkSourceView.TestWidget.json"
+        RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+        APP_ID: "org.gnome.GtkSourceView.TestWidget"
+    extends: ".flatpak"
+
+reference:
+    image: $FEDORA_IMAGE
+    stage: docs
+    needs: []
+    variables:
+    script:
+        - sudo dnf install -y gtk4-devel
+                dbus-daemon
+                ccache
+                desktop-file-utils
+                expat-devel
+                gcc
+                gcc-c++
+                gettext
+                gi-docgen
+                gi-docgen-fonts
+                git
+                glib2-devel
+                gobject-introspection-devel
+                gtk4-devel
+                itstool
+                libadwaita-devel
+                libicu-devel
+                libjpeg-turbo-devel
+                libpng-devel
+                libxkbcommon-devel
+                libXrandr-devel
+                libXi-devel
+                libXcursor-devel
+                libXdamage-devel
+                libXinerama-devel
+                libdrm-devel
+                libglvnd-devel
+                glslc
+                mesa-vulkan-drivers
+                meson
+                ninja-build
+                redhat-rpm-config
+                shared-mime-info
+                vala
+                weston
+                xorg-x11-server-Xvfb
+                vulkan-devel
+                vulkan-headers
+                vulkan-loader-devel
+        - mkdir -p pfx/
+        - meson --prefix=${PWD}/pfx -Ddocumentation=true _build
+                -Dc_std=c11
+                -Dcpp_std=c++11
+                -Dwerror=false
+                -Dglib:tests=false
+                -Dgtk:media-gstreamer=disabled
+                -Dgtk:broadway-backend=false
+                -Dgtk:build-demos=false
+                -Dgtk:build-examples=false
+                -Dgtk:build-tests=false
+                -Dgtk:build-testsuite=false
+                -Dgtk:werror=false
+                -Dlibsass:werror=false
+                -Dsassc:werror=false
+                -Dlibadwaita:werror=false
+        - export XDG_RUNTIME_DIR="$(mktemp -p $(pwd) -d xdg-runtime-XXXXXX)"
+        - weston --backend=headless-backend.so --socket=wayland-5 --idle-time=0 &
+        - dbus-run-session -- env WAYLAND_DISPLAY=wayland-5 ninja -C _build test
+        - ninja -C _build install
+        - mkdir -p _reference/
+        - mv pfx/share/doc/gtksourceview5/ _reference/
+    artifacts:
+        paths:
+            - _reference
+
+pages:
+    stage: deploy
+    needs: ['reference']
+    script:
+        - mv _reference public/
+    artifacts:
+        paths:
+            - public
+    only:
+        - master

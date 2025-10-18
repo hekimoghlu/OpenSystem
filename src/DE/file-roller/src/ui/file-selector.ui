@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <menu id="file_list_context_menu_model">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Select All</attribute>
+        <attribute name="action">file-selector-dialog.select-all</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Dese_lect All</attribute>
+        <attribute name="action">file-selector-dialog.deselect-all</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Show Hidden Files</attribute>
+        <attribute name="action">file-selector-dialog.show-hidden</attribute>
+      </item>
+    </section>
+  </menu>
+  <object class="GtkListStore" id="files_liststore">
+    <columns>
+      <column type="GIcon"/>
+      <column type="gchararray"/>
+      <column type="gchararray"/>
+      <column type="gchararray"/>
+      <column type="GObject"/>
+      <column type="gchararray"/>
+      <column type="gint64"/>
+      <column type="glong"/>
+      <column type="gboolean"/>
+      <column type="gboolean"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="places_liststore">
+    <columns>
+      <column type="GIcon"/>
+      <column type="gchararray"/>
+      <column type="GObject"/>
+      <column type="gboolean"/>
+      <column type="gint"/>
+      <column type="gint"/>
+    </columns>
+  </object>
+  <object class="GtkBox" id="content">
+    <property name="orientation">vertical</property>
+    <property name="spacing">0</property>
+    <child>
+      <object class="GtkBox" id="content_box">
+        <property name="vexpand">True</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkPaned" id="main_paned">
+            <property name="vexpand">True</property>
+            <property name="resize-start-child">False</property>
+            <child>
+              <object class="GtkBox" id="places_sidebar">
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox" id="file_list_container">
+                <property name="hexpand">True</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkScrolledWindow" id="scrolledwindow2">
+                    <property name="vexpand">True</property>
+                    <property name="child">
+                      <object class="GtkTreeView" id="files_treeview">
+                        <property name="model">files_liststore</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection" id="treeview-selection2">
+                            <property name="mode">single</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="treeviewcolumn2">
+                            <property name="resizable">True</property>
+                            <property name="sizing">fixed</property>
+                            <property name="title" translatable="yes" context="File">Name</property>
+                            <property name="expand">True</property>
+                            <property name="reorderable">True</property>
+                            <property name="sort_column_id">1</property>
+                            <child>
+                              <object class="GtkCellRendererToggle" id="is_selected_cellrenderertoggle">
+                                <property name="xpad">5</property>
+                              </object>
+                              <attributes>
+                                <attribute name="active">9</attribute>
+                              </attributes>
+                            </child>
+                            <child>
+                              <object class="GtkCellRendererPixbuf" id="cellrendererpixbuf2">
+                                <property name="xpad">5</property>
+                              </object>
+                              <attributes>
+                                <attribute name="gicon">0</attribute>
+                              </attributes>
+                            </child>
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext4">
+                                <property name="ellipsize">end</property>
+                                <property name="ypad">5</property>
+                              </object>
+                              <attributes>
+                                <attribute name="text">1</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="treeviewcolumn_size">
+                            <property name="resizable">True</property>
+                            <property name="sizing">fixed</property>
+                            <property name="fixed-width">150</property>
+                            <property name="title" translatable="yes" context="File">Size</property>
+                            <property name="reorderable">True</property>
+                            <property name="sort_column_id">2</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext2">
+                                <property name="xpad">5</property>
+                                <property name="ypad">5</property>
+                              </object>
+                              <attributes>
+                                <attribute name="text">2</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="treeviewcolumn4">
+                            <property name="resizable">True</property>
+                            <property name="sizing">fixed</property>
+                            <property name="fixed-width">150</property>
+                            <property name="title" translatable="yes" context="File">Modified</property>
+                            <property name="reorderable">True</property>
+                            <property name="sort_column_id">3</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext3">
+                                <property name="xpad">5</property>
+                                <property name="ypad">5</property>
+                              </object>
+                              <attributes>
+                                <attribute name="text">3</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkBox" id="extra_widget_container">
+        <property name="orientation">vertical</property>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkSizeGroup" id="toolbar_sizegroup"/>
+</interface>

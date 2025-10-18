@@ -1,0 +1,109 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/bus.h>
+#include <gstreamermm/caps.h>
+#include <gstreamermm/elementfactory.h>
+#include <gstreamermm/event.h>
+#include <gstreamermm/pad.h>
+#include <gstreamermm/padtemplate.h>
+#include <gstreamermm/query.h>
+#include <gstreamermm/iterator.h>
+#include <gstreamermm/handle_error.h>
+
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace Gst
+{
+
+namespace Enums
+{
+
+Glib::ustring get_name(State s)
+{
+  return gst_element_state_get_name(GstState(s));
+}
+
+Glib::ustring get_name(StateChangeReturn s)
+{
+  return gst_element_state_change_return_get_name(GstStateChangeReturn(s));
+}
+
+} //namespace Enums
+
+Glib::RefPtr<Gst::Element> Element::link(const Glib::RefPtr<Gst::Element>& dest)
+{
+  if(!dest)
+    gstreamermm_handle_error("Failed to link null element.");
+    
+  const bool result = gst_element_link(gobj(), Glib::unwrap(dest));
+
+  if(result)
+    return dest;
+  else
+  {
+    gstreamermm_handle_error("failed to link: " + get_name() + "->" +
+      dest->get_name());
+    return Glib::RefPtr<Gst::Element>();
+  }
+}
+
+Glib::RefPtr<Gst::Element> Element::link(const Glib::RefPtr<Gst::Element>& dest, const Glib::RefPtr<Gst::Caps>& filter)
+{
+  if(!dest)
+    gstreamermm_handle_error("Failed to link null element.");
+    
+  const bool result = gst_element_link_filtered(gobj(), Glib::unwrap(dest),
+    Glib::unwrap(filter));
+
+  if(result)
+    return dest;
+  else
+  {
+    gstreamermm_handle_error("failed to link: " + get_name() + "->" +
+      dest->get_name());
+    return Glib::RefPtr<Gst::Element>();
+  }
+}
+
+void Element::post_message(int code, int line, MessageType type,
+  const Glib::QueryQuark& domain, const Glib::ustring& text,
+  const Glib::ustring& debug, const Glib::ustring& file,
+  const Glib::ustring& function)
+{
+  gchar* gst_text = g_strdup(text.c_str());
+  gchar* gst_debug = g_strdup(debug.c_str());
+
+  gst_element_message_full(gobj(), static_cast<GstMessageType>(type),
+    domain, code, gst_text, gst_debug, file.c_str(), function.c_str(), line);
+}
+
+bool Element::send_event(const Glib::RefPtr<Gst::Event>& event)
+{
+  event->reference();
+  return gst_element_send_event(gobj(), Glib::unwrap(event));
+}
+
+Glib::RefPtr<Gst::PadTemplate> Gst::Element::get_pad_template(const Glib::ustring &factory_name) const
+{
+  return Glib::wrap(gst_element_class_get_pad_template(GST_ELEMENT_GET_CLASS(gobject_), factory_name.c_str()), true);
+}
+
+} //namespace Gst

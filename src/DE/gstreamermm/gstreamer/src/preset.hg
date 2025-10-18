@@ -1,0 +1,93 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <glibmm/arrayhandle.h>
+#include <glibmm/interface.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** A helper interface for element presets.
+ * This interface offers methods to query and manipulate parameter preset sets.
+ * A preset is a bunch of property settings, together with meta data and a
+ * name. The name of a preset serves as key for subsequent method calls to
+ * manipulate single presets. All instances of one type will share the list of
+ * presets. The list is created on demand, if presets are not used, the list is
+ * not created.
+ *
+ * The interface comes with a default implementation that serves most plugins.
+ * Wrapper plugins will override most methods to implement support for the
+ * native preset format of those wrapped plugins. One method that is useful to
+ * be overridden is property_names_vfunc(). With that, one can control which
+ * properties are saved and in which order.
+ *
+ * Last reviewed on 2016-06-06 (1.8.0)
+ * @ingroup GstInterfaces
+ */
+class Preset : public Glib::Interface
+{
+  _CLASS_INTERFACE(Preset, GstPreset, GST_PRESET, GstPresetInterface)
+
+public:
+#m4 _CONVERSION(`gchar**', `Glib::StringArrayHandle', `Glib::StringArrayHandle($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(Glib::StringArrayHandle get_preset_names() const, gst_preset_get_preset_names)
+  _WRAP_METHOD(Glib::StringArrayHandle get_property_names() const, gst_preset_get_property_names)
+  _WRAP_METHOD(bool load_preset(const Glib::ustring& name), gst_preset_load_preset)
+  _WRAP_METHOD(bool save_preset(const Glib::ustring& name), gst_preset_save_preset)
+  _WRAP_METHOD(bool rename_preset(const Glib::ustring& old_name, const Glib::ustring& new_name), gst_preset_rename_preset)
+  _WRAP_METHOD(bool delete_preset(const Glib::ustring& name), gst_preset_delete_preset)
+  _WRAP_METHOD(bool set_meta(const Glib::ustring& name, const Glib::ustring& tag, const Glib::ustring& value), gst_preset_set_meta)
+  _WRAP_METHOD(bool is_editable() const, gst_preset_is_editable)
+
+  _WRAP_METHOD_DOCS_ONLY(gst_preset_get_meta)
+  bool get_meta(const Glib::ustring& name, const Glib::ustring& tag, Glib::ustring& value) const;
+
+#m4 _CONVERSION(`Glib::StringArrayHandle', `gchar**', `const_cast<gchar**>(($3).data())')
+
+  virtual Glib::StringArrayHandle get_preset_names_vfunc() const;
+  virtual Glib::StringArrayHandle get_property_names_vfunc() const;
+
+  _WRAP_VFUNC(bool load_preset(const Glib::ustring& name), "load_preset")
+  _WRAP_VFUNC(bool save_preset(const Glib::ustring& name) const, "save_preset")
+  _WRAP_VFUNC(bool rename_preset(const Glib::ustring& old_name, const Glib::ustring& new_name), "rename_preset")
+  _WRAP_VFUNC(bool delete_preset(const Glib::ustring& name), "delete_preset")
+  _WRAP_VFUNC(bool set_meta(const Glib::ustring& name, const Glib::ustring& tag, const Glib::ustring& value), "set_meta")
+
+  virtual bool get_meta_vfunc(const Glib::ustring& name,
+    const Glib::ustring& tag, Glib::ustring& value) const;
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->get_preset_names = &get_preset_names_vfunc_callback;
+  klass->get_property_names = &get_property_names_vfunc_callback;
+  klass->get_meta = &get_meta_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static gchar** get_preset_names_vfunc_callback(GstPreset* self);
+  static gchar** get_property_names_vfunc_callback(GstPreset* self);
+  static gboolean get_meta_vfunc_callback(GstPreset* self, const gchar* name,
+    const gchar* tag, gchar** value);
+  _POP()
+#m4end
+};
+
+} // namespace Gst

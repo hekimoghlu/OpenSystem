@@ -1,0 +1,46 @@
+/* Copyright (C) 2010 Jonathon Jongsma
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/socketconnection.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/socketconnection_p.h)
+
+namespace Gio
+{
+
+/**
+ * A TCP SocketConnection
+ *
+ * This is the subclass of SocketConnection that is created
+ * for TCP/IP sockets.
+ *
+ * @newin{2,24}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API TcpConnection : public Gio::SocketConnection
+{
+    _CLASS_GOBJECT(TcpConnection, GTcpConnection, G_TCP_CONNECTION, Gio::SocketConnection, GSocketConnection, , , GIOMM_API)
+
+public:
+    _WRAP_METHOD(void set_graceful_disconnect (bool graceful_disconnect), g_tcp_connection_set_graceful_disconnect)
+    _WRAP_METHOD(bool get_graceful_disconnect () const, g_tcp_connection_get_graceful_disconnect)
+
+    _WRAP_PROPERTY("graceful-disconnect", bool)
+};
+
+} // namespace Gio

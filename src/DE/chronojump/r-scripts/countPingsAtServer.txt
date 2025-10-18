@@ -1,0 +1,26 @@
+Different Chronojump installations of a version by operating system
+
+SELECT COUNT(DISTINCT machineID), substring(osVersion, 1,6) AS osv FROM ping WHERE cjVersion LIKE "%2.0.2%" GROUP BY osv;
+
+or:
+
+SELECT COUNT(DISTINCT machineID), osVersion FROM ping WHERE cjVersion LIKE "%2.0.2%" GROUP BY osVersion;
+
+or:
+
+SELECT COUNT(*) FROM ping WHERE cjVersion LIKE "%2.0.2%" AND osVersion LIKE "%MacOSX%" GROUP BY machineID;
+SELECT COUNT(*) FROM ping WHERE cjVersion LIKE "%2.0.2%" AND osVersion LIKE "Unix, %" GROUP BY machineID;
+SELECT COUNT(*) FROM ping WHERE cjVersion LIKE "%2.0.2%" AND osVersion LIKE "%Win%" GROUP BY machineID;
+
+to see evolution of pings by years:
+select count(*) from ping where dtPing > "2021-01-01" and dtPing < "2022-01-01";
+
+
+SELECT count(*) AS conta, socialNetwork FROM socialNetwork GROUP BY socialNetwork ORDER BY conta DESC;
+
+#R code
+png(filename="chronojump-use.png", width=1080, height=1080)
+years=2017:2022
+pings=c(31998,48838,60656,27754,60715,84402)
+barplot(pings, names.arg=years, col=rev(heat.colors(length(years))), main="Chronojump use by year", sub="2022 forecast at March 9.")
+dev.off()

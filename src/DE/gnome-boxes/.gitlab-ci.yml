@@ -1,0 +1,60 @@
+include:
+  - project: 'GNOME/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: flatpak
+      tarball-artifact-path: ".flatpak-builder/build/gnome-boxes/_flatpak_build/meson-dist/gnome-boxes-$CI_COMMIT_TAG.tar.xz"
+
+stages:
+- test
+- fedora
+- deploy
+
+flatpak:
+    variables:
+        MANIFEST_PATH: "build-aux/flatpak/org.gnome.BoxesDevel.json"
+        FLATPAK_MODULE: "gnome-boxes"
+        RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+        APP_ID: "org.gnome.BoxesDevel"
+        BUNDLE: "gnome-boxes.flatpak"
+        GIT_SUBMODULE_STRATEGY: recursive
+    extends: .flatpak
+
+nightly:
+    extends: '.publish_nightly'
+    dependencies: ['flatpak']
+    needs: ['flatpak']
+
+fedora:latest:
+    image: fedora:40
+    stage: fedora
+    when: manual
+    needs: []
+    before_script:
+    - dnf update -y --nogpgcheck
+    - dnf install -y meson git vala gtk3-devel
+                     libosinfo-devel libsecret-devel
+                     libvirt-gconfig-devel libvirt-gobject-devel
+                     spice-gtk3-vala libarchive-devel gettext
+                     libgudev-devel webkit2gtk4.1-devel libusbx-devel
+                     tracker3-devel libosinfo-vala
+                     python3-devel libxml2-devel
+                     libhandy1-devel desktop-file-utils
+                     itstool libsoup3-devel libportal-gtk3-devel
+                     --nogpgcheck
+
+    script:
+        - meson _build .
+        - ninja -C _build
+
+pages:
+    when: manual
+    image: fedora:37
+    script:
+    - mkdir ./public
+    - dnf install -y yelp-tools
+    - yelp-build html -i --output public/ help/C/*page
+    artifacts:
+        paths:
+        - public

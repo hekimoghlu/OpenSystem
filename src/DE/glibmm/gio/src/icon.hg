@@ -1,0 +1,90 @@
+/* Copyright (C) 2007 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/interface.h>
+#include <glibmm/variant.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GIconIface GIconIface;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gio
+{
+
+/** This is a very minimal interface for icons.
+ * It provides functions for checking the equality of two icons,
+ * hashing of icons and serializing an icon to and from strings and Variants.
+ *
+ * Gio::Icon does not provide the actual pixmap for the icon as this is out
+ * of GIO's scope. However implementations of Icon may contain the name of an
+ * icon (see ThemedIcon), or the path to an icon (see LoadableIcon).
+ *
+ * To obtain a hash of an Icon instance, see hash().
+ *
+ * To check if two Icon instances are equal, see equal().
+ *
+ * For serializing an Icon, use serialize() and deserialize().
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API Icon : public Glib::Interface
+{
+  _CLASS_INTERFACE(Icon, GIcon, G_ICON, GIconIface, , , GIOMM_API)
+
+public:
+  // We can't just use a _WRAP_CREATE macro here since this is an abstract
+  // interface class, so implement it by hand
+  /** Generate an Icon instance from @a str.
+   *
+   * This function can fail if @a str is not valid. See to_string() for discussion.
+   *
+   * If your application or library provides one or more Icon
+   * implementations, you need to ensure that each GType is registered
+   * with the type system prior to calling create().
+   *
+   * @newin{2,20}
+   *
+   * @param str A string obtained via to_string().
+   * @return An object implementing the Icon interface, or throws an exception.
+   * @throw Gio::Error
+   */
+  static Glib::RefPtr<Icon> create(const std::string& str);
+  _IGNORE(g_icon_new_for_string)
+  _WRAP_METHOD(guint hash() const, g_icon_hash)
+  _WRAP_METHOD(std::string to_string() const, g_icon_to_string)
+
+  _IGNORE(g_icon_equal)
+  // TODO: should this, and File's equal(), be virtual, in order to
+  // be available to derived classes?
+  bool equal(const Glib::RefPtr<Icon>& other) const;
+
+  _WRAP_METHOD(Glib::VariantBase serialize() const, g_icon_serialize, newin "2,48")
+  _WRAP_METHOD(static Glib::RefPtr<Icon> deserialize(const Glib::VariantBase& value), g_icon_deserialize, newin "2,48")
+
+protected:
+  //_WRAP_VFUNC(guint hash() const, "hash")
+
+  // TODO: also kind of related to equal() being virtual or not,
+  // do we need to have equal_vfunc()? Or rather, why would we want
+  // to have it generally...
+};
+
+} // namespace Gio

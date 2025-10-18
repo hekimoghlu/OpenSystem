@@ -1,0 +1,71 @@
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix nao: <http://tracker.api.gnome.org/ontology/v3/nao#> .
+@prefix nrl: <http://tracker.api.gnome.org/ontology/v3/nrl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+nao: a nrl:Namespace, nrl:Ontology ;
+	nrl:prefix "nao" ;
+	nrl:lastModified "2010-12-25T16:00:00Z" .
+
+nao:Tag a rdfs:Class ;
+	rdfs:comment "Represents a generic tag" ;
+	rdfs:subClassOf rdfs:Resource ;
+	nrl:notify true .
+
+nao:prefLabel a rdf:Property ;
+	rdfs:comment "A preferred label for a resource" ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain nao:Tag ;
+	rdfs:range xsd:string ;
+	nrl:fulltextIndexed true ;
+	nrl:weight 10 .
+
+nao:description a rdf:Property ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain nao:Tag ;
+	rdfs:range xsd:string ;
+	rdfs:subPropertyOf rdfs:comment ;
+	rdfs:comment "In the context of the social semantic desktop the textual annotation provided via rdfs:comment is meant for technical users, the textual annotation here is aimed at average users and is meant to be used to define custom descriptions of resources on the desktop" ;
+	nrl:fulltextIndexed true ;
+	nrl:weight 3 .
+
+nao:hasTag a rdf:Property ;
+	rdfs:comment "Defines an existing tag for a resource" ;
+	rdfs:domain rdfs:Resource ;
+	rdfs:range rdfs:Resource ;
+	nrl:indexed true .
+
+nao:identifier a rdf:Property ;
+	rdfs:comment "Defines a generic identifier for a resource" ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain rdfs:Resource ;
+	rdfs:range xsd:string .
+
+nao:numericRating a rdf:Property ;
+	rdfs:comment "Annotation for a resource in the form of a numeric rating (float value), allowed values are between 1 and 10 whereas 0 is interpreted as not set" ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain rdfs:Resource ;
+	rdfs:range xsd:double .
+
+nao:deprecated a rdf:Property;
+	rdfs:domain rdfs:Resource;
+	rdfs:range xsd:boolean;
+	nrl:maxCardinality 1 ;
+	rdfs:label "deprecated";
+	rdfs:comment "If this property is assigned, the subject class, property, or resource, is deprecated and should not be used in production systems any longer. It may be removed without further notice." .
+
+nao:lastModified a rdf:Property ;
+	rdfs:label "lastModified" ;
+	rdfs:comment "last modification date" ;
+	rdfs:subPropertyOf dc:date ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain rdfs:Resource ;
+	rdfs:range xsd:dateTime .
+
+nao:isRelated a rdf:Property ;
+	rdfs:label "Is related" ;
+	rdfs:comment "This property defines a symmetric relation between any two resources. In order for this property to be used legally, the relationship must be symmetric." ;
+	rdfs:domain rdfs:Resource ;
+	rdfs:range rdfs:Resource .

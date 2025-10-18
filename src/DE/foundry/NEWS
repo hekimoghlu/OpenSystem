@@ -1,0 +1,109 @@
+Foundry 1.0.0
+=============
+
+ * Give access to VIM im context from FoundrySourceView
+ * Simplified GActions for many FoundryService-derived managers
+ * Foundry executable is now dynamically linked
+ * FoundrySearchResult gained icon support
+ * New API to allow creating a PTY producer from a consumer FD
+ * Many fit'n'finish fixes for 1.0 API
+ * The FoundryFileManager can now discover content-type from a
+   filename if the content-type is not provided to determine
+   appropriate symbolic icons.
+ * Improvements to terminal palette parsing
+ * A new FoundryMenuProxy enables easily integrationg with
+   GMenuModel with a menu ID referenced in the applications
+   merged menus (See FoundryMenuManager).
+ * The fallback storage for extended attributes (SQLite) now
+   properly ensures uniqueness for columns based on file URI.
+ * Some API was renamed to improve future expansion.
+
+Foundry 1.0.rc
+==============
+
+ * Much work on LLM, VCS/Git, Tweak, and Template APIs.
+
+Foundry 1.0.beta
+================
+
+This is our beta for the upcoming GNOME 49 release.
+
+I do anticipate additional API additions before release candidates.
+
+ * A new feature flags system which allows compiling out major portions of
+   libfoundry for situations where they are not necessary or desired. I would
+   expect this mostly used for static linking situations as it does affect
+   the ABI produced by the library.
+
+ * Various new CLI commands such as `llm complete`, `test list`, `test run`,
+   `clone`, `vcs log`.
+
+ * The build and run subsystems have grown GActions and support for wriring
+   up PTY for those actions.
+
+ * Their is a new input abstraction which is used for template input,
+   providing input to auth providers, and more in the future.
+
+   A TTY input mechanism now exists on FoundryCommandLine to make reading
+   input in an interactive manner simple.
+
+ * A new word-completion provider which can scan input across included
+   files similar to Vim.
+
+ * New pre/post load operations for text document addins. Spellcheck has
+   been rebuilt on top of this mechanism to simplify weak ref management.
+
+   Document loading has been cleaned up significantly as part of this.
+
+ * A JSONRPC subsystem has been implemented using a new JsonrpcDriver
+   helper to support multiple jsonrpc dialects. As such, the dependency
+   on jsonrpc-glib has been dropped.
+
+ * A new test management subsystem has been added to extract tests from
+   the active build system.
+
+ * Improved support for code actions on text documents.
+
+ * New CTags integration.
+
+ * A gutter renderer for diagnostics has been added.
+
+ * Improved bridge for Foundry based addins to GtkSourceView equivalents
+   like hover, completion, and indenters.
+
+ * A new symbol API has been implemented to provide introspection on
+   symbols and their hierarchy.
+
+ * Many version control abstractions have landed with an implementation
+   for the Git backend.
+
+ * The git backend has been rewritten using libgit2 directly and wrapping
+   the git structures in a more sound way. Additionally threading has been
+   used to help keep operations off the main thread when they have a
+   potential for blocking IO.
+
+ * A new LLM subsystem that can list models and request completions for
+   said models.
+
+ * A new Ollama plugin which provides scaffolding for applications to talk
+   to a local model if they wish.
+
+Foundry 1.0.alpha
+=================
+
+This is the initial release of Foundry as I work towards getting the API in
+place for a 1.0 release with GNOME 49.
+
+The long term goal is for libfoundry to be a shared base library among many
+developer tools in the GNOME eco-system such as Manuals, Builder, and Sysprof
+with potentially more to follow.
+
+There is a command line tool `foundry` which allows exercising much of the
+libfoundry API.
+
+There is also a libfoundry-gtk module that is not currently used by any
+applications yet but will be in the future by GNOME Builder. It is not
+necessary to build for GNOME 49 and distributions may want to choose to
+build with `-Dgtk=false` to disable it.
+
+Thanks!

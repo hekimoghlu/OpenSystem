@@ -1,0 +1,211 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2015 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/miniobject.h>
+#include <gstreamermm/clock.h>
+#include <gstreamermm/memory.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(BufferFlags, GstBufferFlags)
+_WRAP_ENUM(BufferCopyFlags, GstBufferCopyFlags)
+
+class Memory;
+
+/**
+ * Data-passing buffer type.
+ * See also: Pad, MiniObject, Memory, Meta, BufferPool
+ *
+ * Buffers are the basic unit of data transfer in GStreamer. They contain the
+ * timing and offset along with other arbitrary metadata that is associated
+ * with the #GstMemory blocks that the buffer contains.
+ *
+ * Buffers are usually created with Gst::Buffer::create. After a buffer has been
+ * created one will typically allocate memory for it and add it to the buffer.
+ * The following example creates a buffer that can hold a given video frame
+ * with a given width, height and bits per plane.
+ *
+ * Buffers can contain a list of Gst::Memory objects. You can retrieve how many
+ * memory objects with n_memory() and you can get a pointer
+ * to memory with peek_memory()
+ *
+ * A buffer will usually have timestamps, and a duration, but neither of these
+ * are guaranteed (they may be set to #GST_CLOCK_TIME_NONE). Whenever a
+ * meaningful value can be given for these, they should be set. The timestamps
+ * and duration are measured in nanoseconds (they are Gst::ClockTime values).
+ *
+ * The buffer DTS refers to the timestamp when the buffer should be decoded and
+ * is usually monotonically increasing. The buffer PTS refers to the timestamp when
+ * the buffer content should be presented to the user and is not always
+ * monotonically increasing.
+ *
+ * A buffer can also have one or both of a start and an end offset. These are
+ * media-type specific. For video buffers, the start offset will generally be
+ * the frame number. For audio buffers, it will be the number of samples
+ * produced so far. For compressed data, it could be the byte offset in a
+ * source or destination file. Likewise, the end offset will be the offset of
+ * the end of the buffer. These can only be meaningfully interpreted if you
+ * know the media type of the buffer (the preceeding CAPS event). Either or both
+ * can be set to Gst::BUFFER_OFFSET_NONE.
+ *
+ * To efficiently create a smaller buffer out of an existing one, you can
+ * use copy_region(). This method tries to share the memory objects
+ * between the two buffers.
+ *
+ * If a plug-in wants to modify the buffer data or metadata in-place, it should
+ * first obtain a buffer that is safe to modify by using
+ * create_writable().  This function is optimized so that a copy will
+ * only be made when it is necessary.
+ *
+ * Several flags of the buffer can be set and unset with the
+ * GST_BUFFER_FLAG_SET() and GST_BUFFER_FLAG_UNSET() macros. Use
+ * GST_BUFFER_FLAG_IS_SET() to test if a certain Gst::BufferFlag is set.
+ *
+ * Buffers can be efficiently merged into a larger buffer with
+ * append(). Copying of memory will only be done when absolutely
+ * needed.
+ *
+ * Arbitrary extra metadata can be set on a buffer with add_meta().
+ * Metadata can be retrieved with get_meta(). See also Gst::Meta
+ *
+ * An element should either unref the buffer or push it out on a src pad
+ * using Gst::Pad::push() (see Gst::Pad).
+ */
+class Buffer : public MiniObject
+{
+  _CLASS_OPAQUE_REFCOUNTED(Buffer, GstBuffer, gst_buffer_new, gst_buffer_ref, gst_buffer_unref)
+  _IGNORE(gst_buffer_ref, gst_buffer_unref)
+
+public:
+  _WRAP_METHOD(Glib::RefPtr<Gst::Buffer> copy() const, gst_buffer_copy)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Buffer> copy_deep() const, gst_buffer_copy_deep)
+
+  _WRAP_METHOD(static void copy_into(const Glib::RefPtr<Gst::Buffer>& destination_buffer, const Glib::RefPtr<Gst::Buffer>& source_buffer, BufferCopyFlags flags, gsize offset, gsize size), gst_buffer_copy_into)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Buffer> copy_region(Gst::BufferCopyFlags flags, gsize offset, gsize size), gst_buffer_copy_region)
+
+  static Glib::RefPtr<Gst::Buffer> create(guint size);
+
+  /** Makes a writable buffer from the given buffer. If the source buffer is
+   * already writable, this will simply return the same buffer. A copy will
+   * otherwise be made.
+   * @return A buffer (possibly the same pointer) that is writable.
+   */
+  Glib::RefPtr<Gst::Buffer> create_writable();
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Memory> get_memory(guint idx) const, gst_buffer_get_memory)
+
+  _WRAP_METHOD(gsize get_size() const, gst_buffer_get_size)
+
+  _WRAP_METHOD(gsize get_sizes(gsize& offset, gsize& max_size) const, gst_buffer_get_sizes)
+
+  _WRAP_METHOD(gsize get_sizes_range(guint idx, gint length, gsize& offset, gsize& max_size) const, gst_buffer_get_sizes_range)
+
+  _WRAP_METHOD(bool resize_range(guint idx, gint length, gssize offset, gssize size), gst_buffer_resize_range)
+
+  _WRAP_METHOD(void resize(gssize offset, gssize size), gst_buffer_resize)
+
+  _WRAP_METHOD(void set_size(gssize size), gst_buffer_set_size)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Memory> peek_memory(guint idx), gst_buffer_peek_memory, refreturn)
+
+  _WRAP_METHOD(guint n_memory() const, gst_buffer_n_memory)
+
+  _WRAP_METHOD(void insert_memory(gint idx, Glib::RefPtr<Gst::Memory>&& mem), gst_buffer_insert_memory)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Memory> get_all_memory() const, gst_buffer_get_all_memory)
+
+  _WRAP_METHOD(gsize fill(gsize offset, gconstpointer src, gsize size), gst_buffer_fill)
+
+  _WRAP_METHOD(void replace_memory_range(guint idx, gint length, Glib::RefPtr<Gst::Memory>&& mem), gst_buffer_replace_memory_range)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Memory> get_memory_range(guint idx, gint length), gst_buffer_get_memory_range)
+
+  _WRAP_METHOD(void remove_memory_range(guint idx, gint length), gst_buffer_remove_memory_range)
+
+  _WRAP_METHOD(bool find_memory(gsize offset, gsize size, guint& idx, guint& length, gsize& skip), gst_buffer_find_memory)
+
+  _WRAP_METHOD(void prepend_memory(Glib::RefPtr<Gst::Memory>&& mem), gst_buffer_prepend_memory)
+
+  _WRAP_METHOD(void append_memory(Glib::RefPtr<Gst::Memory>&& mem), gst_buffer_append_memory)
+
+  _WRAP_METHOD(void remove_memory(guint idx), gst_buffer_remove_memory)
+
+  _WRAP_METHOD(void remove_all_memory(), gst_buffer_remove_all_memory)
+
+  _WRAP_METHOD(gsize memset(gsize offset, guint8 val, gsize size), gst_buffer_memset)
+
+  _WRAP_METHOD(void replace_memory(guint idx, Glib::RefPtr<Gst::Memory>&& mem), gst_buffer_replace_memory)
+
+  _WRAP_METHOD(void replace_all_memory(Glib::RefPtr<Gst::Memory>&& mem), gst_buffer_replace_all_memory)
+
+  _WRAP_METHOD(gsize extract(gsize offset, gpointer dest, gsize size), gst_buffer_extract)
+
+  _WRAP_METHOD(void extract_dup(gsize offset, gsize size, gpointer& dest, gsize& dest_size), gst_buffer_extract_dup)
+
+  _WRAP_METHOD(int memcmp(gsize offset, gconstpointer mem, gsize size), gst_buffer_memcmp)
+
+  _WRAP_METHOD(bool is_all_memory_writable() const, gst_buffer_is_all_memory_writable)
+
+  _WRAP_METHOD(bool is_memory_range_writable(guint idx, gint length) const, gst_buffer_is_memory_range_writable)
+
+  _WRAP_METHOD(bool map(Gst::MapInfo& info, Gst::MapFlags flags), gst_buffer_map)
+
+  _WRAP_METHOD(bool map_range(guint idx, gint length, Gst::MapInfo& info, MapFlags flags), gst_buffer_map_range)
+
+  _WRAP_METHOD(void unmap(Gst::MapInfo& info), gst_buffer_unmap)
+
+  Glib::RefPtr<Gst::Buffer> append_region(Glib::RefPtr<Gst::Buffer>&& buf, gssize offset, gssize size);
+  _IGNORE(gst_buffer_append_region)
+
+  Glib::RefPtr<Gst::Buffer> append(Glib::RefPtr<Gst::Buffer>&& buf);
+  _IGNORE(gst_buffer_append)
+
+  _MEMBER_GET(pts, pts, ClockTime, GstClockTime)
+  _MEMBER_SET(pts, pts, ClockTime, GstClockTime)
+
+  _MEMBER_GET(dts, dts, ClockTime, GstClockTime)
+  _MEMBER_SET(dts, dts, ClockTime, GstClockTime)
+
+  /** Get duration of this buffer.
+   * @return he duration in nanoseconds (as a Gst::ClockTime) of the data in
+   * the buffer. Value will be Gst::CLOCK_TIME_NONE if the duration is unknown.
+   */
+  _MEMBER_GET(duration, duration, ClockTime, GstClockTime)
+  _MEMBER_SET(duration, duration, ClockTime, GstClockTime)
+  /** Get the offset of this buffer.
+   * @return The offset in the source file of the beginning of this buffer.
+   */
+  _MEMBER_GET(offset, offset, guint64, guint64)
+
+  /** Get the offset end of this buffer.
+   * @return The offset in the source file of the end of this buffer.
+   */
+  _MEMBER_GET(offset_end, offset_end, guint64, guint64)
+
+  /** Constant for no-offset return results.
+   */
+  static guint64 offset_none();
+};
+
+}//namespace Gst

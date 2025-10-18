@@ -1,0 +1,164 @@
+
+stages:
+  - build
+  - deploy
+
+variables:
+  MYSQL_DATABASE: "test"
+  MYSQL_ROOT_PASSWORD: "test1"
+  MYSQL_HOST: "mysql"
+  G_MESSAGES_DEBUG: "all"
+  DEPENDENCIES: "gcc gettext gtk-doc-tools make autoconf
+                meson ninja-build
+                libxml2-dev gnome-common
+                gobject-introspection
+                libssl-dev
+                libsoup2.4-dev
+                libxslt1-dev
+                libjson-glib-dev
+                libgcrypt20-dev
+                libssl-dev
+                yelp-tools
+                iso-codes
+                libgirepository1.0-dev
+                libgee-0.8-dev
+                valadoc"
+  
+  DEPENDENCIES_SQLITE:
+                "libsqlite3-dev"
+  
+  DEPENDENCIES_SQLITECIPHER:
+                "libsqlcipher-dev"
+  
+  DEPENDENCIES_MYSQL: "libmysqlclient-dev"
+  
+  DEPENDENCIES_FIREBIRD:
+
+  DEPENDENCIES_UI: "libgtk-3-dev
+                libgtksourceview-3.0-dev
+                libgdk-pixbuf2.0-dev
+                libgraphviz-dev
+                libgoocanvas-2.0-dev
+                libgladeui-dev"
+  
+  DEPENDENCIES_LDAP: "libldap2-dev"
+  
+  DEPENDENCIES_HSQL: "libhsqldb1.8.0-java"
+
+  GIT_SUBMODULE_STRATEGY: "normal"
+  
+  SQLITE_DBCREATE_PARAMS: "DB_DIR=."
+  SQLITE_CNC_PARAMS: "DB_DIR=."
+  MYSQL_CNC_PARAMS: "DB_NAME=$MYSQL_DATABASE;HOST=$MYSQL_HOST;USERNAME=root;PASSWORD=$MYSQL_ROOT_PASSWORD"
+  MYSQL_META_CNC: "DB_NAME=$MYSQL_DATABASE;HOST=$MYSQL_HOST;USERNAME=root;PASSWORD=$MYSQL_ROOT_PASSWORD"
+  SQLITE_SO_DDL: "DB_DIR=.;DB_NAME=ci_test_db.db"
+
+before_script:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt update
+  - apt -y install $DEPENDENCIES
+
+library:
+  stage: build
+  image: ubuntu:23.10
+  script:
+  - meson setup --prefix=/usr --buildtype=debug --werror _build
+  - cd _build
+  - ninja
+  - ninja test
+  - ninja install
+  artifacts:
+    when: on_failure
+    paths:
+    - _build/meson-logs/testlog.txt
+    - _build/meson-logs/meson-log.txt
+    expire_in: 1 week
+
+postgres:
+  stage: build
+  variables:
+    DEPENDENCIES_POSTGRES:
+                "postgresql
+                postgresql-client
+                postgresql-client-common
+                libpq-dev"
+
+    POSTGRES_USER: "test"
+    POSTGRES_DB: "test"
+    POSTGRES_PASSWORD: "test1"
+    POSTGRES_HOST: "localhost"
+    POSTGRES_HOST_AUTH_METHOD: "trust"
+    POSTGRESQL_DBCREATE_PARAMS: "HOST=$POSTGRES_HOST;ADM_LOGIN=$POSTGRES_USER;ADM_PASSWORD=$POSTGRES_PASSWORD"
+    POSTGRESQL_CNC_PARAMS: "HOST=$POSTGRES_HOST;USERNAME=$POSTGRES_USER;PASSWORD=$POSTGRES_PASSWORD"
+    POSTGRESQL_META_CNC: "HOST=$POSTGRES_HOST;USERNAME=$POSTGRES_USER;PASSWORD=$POSTGRES_PASSWORD"
+  image: ubuntu:23.10
+  script:
+  - apt -y install $DEPENDENCIES_POSTGRES
+  - service postgresql start
+  - su postgres -c 'until psql -c "\l"; do echo "PostgreSQL is starting up"; sleep 1; done'
+  - echo "PostgreSQL is ready"
+  - touch setup.sql
+  - echo -e "CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD' CREATEDB;\nCREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;\n\q\n" >> setup.sql
+  - su postgres -c "psql -d template1 < setup.sql"
+  - export PGPASSWORD=$POSTGRES_PASSWORD
+  - psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 'OK' AS status;"
+  - meson setup --prefix=/usr --buildtype=debug --werror _build
+  - cd _build
+  - ninja
+  - ninja test
+  - ninja install
+  artifacts:
+    when: on_failure
+    paths:
+    - _build/meson-logs/testlog.txt
+    - _build/meson-logs/meson-log.txt
+    expire_in: 1 week
+
+# This requires to promote UI as non-experimental in order to run it automatically
+ui:
+  stage: build
+  image: ubuntu:23.10
+  script:
+  - apt -y install $DEPENDENCIES_UI
+  - meson setup --prefix=/usr --buildtype=debug -Dexperimental=true -Dui  -Ddoc=true _build
+  - cd _build
+  - ninja
+  - broadwayd &
+  - GDK_BACKEND=broadway ninja test
+  - ninja install
+  - mkdir ../public/C/libgdaui
+  - mv doc/C/libgdaui/html/* ../public/C/libgdaui/
+  - mkdir ../public/vala
+  - mv doc/Gda-6.0 ../public/vala
+  - cp libgda/libgda-6.0.vapi ../public/vala
+  - mv doc/Gdaui-6.0 ../public/vala
+  - cp libgda-ui/libgdaui-6.0.vapi ../public/vala
+  allow_failure: true
+  when: manual
+  artifacts:
+    when: on_failure
+    paths:
+    - _build/meson-logs/testlog.txt
+    - _build/meson-logs/meson-log.txt
+    expire_in: 1 week
+
+pages:
+  stage: deploy
+  image: ubuntu:23.10
+  script:
+  - meson _build --prefix=/usr -Ddoc=true
+  - cd _build
+  - ninja
+  - ninja install
+  - mkdir ../public
+  - mv doc/index.html ../public/
+  - mkdir ../public/C
+  - mkdir ../public/C/libgda
+  - mv doc/C/libgda/html/* ../public/C/libgda/
+  - mkdir ../public/vala
+  - mv doc/Gda-6.0 ../public/vala
+  - cp libgda/libgda-6.0.vapi ../public/vala
+  allow_failure: true
+  artifacts:
+    paths:
+    - public

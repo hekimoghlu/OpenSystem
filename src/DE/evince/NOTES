@@ -1,0 +1,68 @@
+
+SOME RANDOM COMMENTS:
+=====================
+
+ * We assume that all documents can be broken down into a linear
+   collection of pages.
+
+ * If a document type doesn't break down in such a way (like web pages)
+   then it's probably not a good fit for this application.
+
+ * Each page has a natural page size in pixels.  This is generally
+   ignored in favor of a scale-to-fit mode, but is occasionally
+   important for backends like the image backend.
+
+ * Each page is not necessarily the same size.
+
+ * We refer to pages by page number.  This number ranges from 1 to
+   document->n_pages.  A page index of -1 means the current set page,
+   and a page index of 0 is not used.
+
+
+THOUGHTS ON THREADING:
+=====================
+
+ * The primary thing we are trying to do is minimize switching pages, as
+   doing so is slow for backends.  Additionally, some operations on the
+   backend are slow, leaving poor interactivity.
+
+THOUGHTS ON SELECTION:
+=====================
+
+ * On button_press, we record selection_start, and set in_selection.
+
+ * selection_list must be ordered!!!
+
+ * On motion_notify, we update selection_end and call compute_selection,
+   that keeps an ordered list of the selections.
+
+ * If any of the selection changes, we notify the pixbuf_cache right
+   away.
+
+ * On button_release, we unset in_selection, and trim all the current
+   pixbufs.
+
+ * If a resize (somehow) occurs, during a selection, we clear
+   in_selection and abort.
+
+ * I'd like to support shift-click to handle extending the selection,
+   but for that to survive resizing, I might need to store the points as
+   doubles, etc.  It should be possible to reconstruct it from the
+   existing EvViewSelection structs, so maybe I don't need it.
+
+ * click-drag, dbl click, triple click, shift-click, search, shift-cursor move
+
+
+THOUGHTS ON HISTORY:
+====================
+
+ * We need single history button, back/forward will complicate things.
+
+ * When we jump on dest link we should add current page and link to the history.
+
+ * When we jump on external link we should just add external link.
+
+ * It's enough to have 7 entries in history, too many entries complicates things.
+
+ * We should avoid duplicate entries in history. If we'll activate entry
+   that already exists (have the same title) we can just move it to the top.

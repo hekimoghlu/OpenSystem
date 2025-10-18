@@ -1,0 +1,64 @@
+/* Copyright (C) 2010 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+
+namespace
+{
+extern "C"
+{
+static void CssProvider_signal_parsing_error_callback(GtkCssProvider* self, GtkCssSection* p0,const GError* p1,void* data)
+{
+  using namespace Gtk;
+  typedef sigc::slot<void(const Glib::RefPtr<const CssSection>&,const Glib::Error&)> SlotType;
+
+  auto obj = dynamic_cast<CssProvider*>(Glib::ObjectBase::_get_current_wrapper((GObject*) self));
+  // Do not try to call a signal on a disassociated wrapper.
+  if(obj)
+  {
+    try
+    {
+      Glib::Error::throw_exception(g_error_copy(p1));
+    }
+    catch (const Glib::Error& ex)
+    {
+      // ex can be (and usually is) an instance of a subclass of Glib::Error.
+      try
+      {
+        if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot(data))
+          (*static_cast<SlotType*>(slot))(Glib::wrap(p0, true), ex);
+      }
+      catch (...)
+      {
+         Glib::exception_handlers_invoke();
+      }
+    }
+  }
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gtk
+{
+_DEPRECATE_IFDEF_START
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+void CssProvider::load_from_data(const std::string& data)
+{
+  gtk_css_provider_load_from_data(gobj(), data.c_str(), -1);
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+_DEPRECATE_IFDEF_END
+} //namespace Gtk

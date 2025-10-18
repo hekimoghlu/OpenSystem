@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<sect2 id="VirtualIntro" xmlns:xi="http://www.w3.org/2003/XInclude">
+  <title>Introduction to virtual connections</title>
+  <para>
+    &LIBGDA; implements so called virtual connections which are used like normal 
+    <link linkend="GdaConnection">GdaConnection</link> objects (open, close, execute SQL commands, etc)
+    but which in fact don't access any real DBMS.
+  </para>
+  <para>
+    Virtual connections allow one to use SQL to work on data when it is normally not available, such as sorting data
+    physically stored in CSV or XML files.
+  </para>
+  <para>
+    A virtual connection is not created in the same way as for a normal connection:
+    <itemizedlist>
+      <listitem><para>A specific <link linkend="GdaServerProvider">GdaServerProvider</link> object is required</para></listitem>
+      <listitem><para>No data source (DSN) or connection string can be used</para></listitem>
+      <listitem><para>One must use the <link linkend="gda-virtual-connection-open">gda_virtual_connection_open()</link>
+	  method which creates and "opens" a virtual connection. </para></listitem>
+    </itemizedlist>
+    Here is an example of code on how to create a virtual connection using the <link linkend="GdaVproviderDataModel">GdaVproviderDataModel</link> virtual provider:
+    <programlisting>
+GdaConnection *cnc;
+GdaVirtualProvider *provider;
+
+provider = gda_vprovider_data_model_new ();
+cnc = gda_virtual_connection_open (provider, NULL);
+    </programlisting>
+  </para>
+  <para>
+    Some examples of virtual connections usage can be found in the source distribution of Libgda in:
+    <itemizedlist>
+      <listitem><para><filename class="directory">examples/Virtual</filename></para></listitem>
+      <listitem><para><filename class="directory">examples/DirDataModel</filename></para></listitem>
+      <listitem><para><filename class="directory">examples/F-Spot</filename></para></listitem>
+      <listitem><para><filename class="directory">testing/virtual-test.c</filename></para></listitem>
+      <listitem><para><filename class="directory">testing/virtual-test-2.c</filename></para></listitem>
+    </itemizedlist>
+  </para>
+<xi:include href="virtual-notice.xml"/>
+</sect2>

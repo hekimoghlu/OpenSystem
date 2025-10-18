@@ -1,0 +1,317 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/audio/audio.h>
+#include <gst/audio/gstaudioringbuffer.h>
+#include <gstreamermm/caps.h>
+#include <gstreamermm/object.h>
+#include <gstreamermm/format.h>
+#include <gstreamermm/clock.h>
+#include <glibmm/arrayhandle.h>
+#include <memory>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(AudioChannelPosition, GstAudioChannelPosition)
+_WRAP_ENUM(AudioRingBufferState, GstAudioRingBufferState)
+_WRAP_ENUM(AudioRingBufferFormatType, GstAudioRingBufferFormatType)
+
+/** A class containing the format specification of a Gst::AudioRingBuffer.
+ * Gst::AudioRingBufferSpec contains the format specification of a
+ * Gst::AudioRingBuffer.  The "in" members should be specified by the caller of
+ * the acquire() method while the "in/out" members may be
+ * set by the caller but are also modifiable by
+ * acquire().  The "out" members are generated as a
+ * result of the call to acquire().
+ * @see acquire().
+ */
+class AudioRingBufferSpec
+{
+  _CLASS_GENERIC(AudioRingBufferSpec, GstAudioRingBufferSpec)
+public:
+  /** Default constructor.
+   * @throw std::runtime_error if memory is unavailable for the new
+   * Gst::AudioRingBufferSpec.
+   */
+  AudioRingBufferSpec();
+
+  /** Fully construct a Gst::AudioRingBufferSpec.  Only the "(in)" parameters
+   * are required.  The "(in/out)" parameters are optional and may be modified
+   * by the call to the Gst::AudioRingBuffer::acquire() method.
+   * @param caps The caps of the buffer (in).
+   * @param type The sample type (in/out).
+   * @param latency_time The latency in microseconds (in/out).
+   * @param buffer_time The total buffer size in microseconds (in/out).
+   * @param segsize The size of one segment in bytes (in/out).
+   * @param segtotal The total number of segments (in/out).
+   * @param seglatency Number of segments queued in the lower level device,
+   * defaults to @a segtotal in the C API (in/out).
+   *
+   * @throw std::runtime_error if memory is unavailable for the new
+   * Gst::AudioRingBufferSpec.
+   */
+  AudioRingBufferSpec(const Glib::RefPtr<Gst::Caps>& caps,
+    Gst::AudioRingBufferFormatType type = Gst::AUDIO_RING_BUFFER_FORMAT_TYPE_RAW,
+    guint64 latency_time = 0,
+    guint64 buffer_time = 0,
+    int segsize = 0, int segtotal = 0, int seglatency = 0);
+
+  /// Construct a Gst::AudioRingBufferSpec from a GstAudioRingBufferSpec.
+  explicit AudioRingBufferSpec(GstAudioRingBufferSpec& castitem,
+    bool take_ownership = false);
+
+  /** Copy constructor.
+   *
+   * @throw std::runtime_error if memory is unavailable for the new
+   * Gst::AudioRingBufferSpec.
+   */
+  AudioRingBufferSpec(const AudioRingBufferSpec& other);
+
+  /// Assignment operator.
+  AudioRingBufferSpec& operator=(const AudioRingBufferSpec& other);
+
+  /// Destructor.
+  virtual ~AudioRingBufferSpec();
+
+  void swap(AudioRingBufferSpec& other);
+
+  /// Gets the underlying gobject.
+  GstAudioRingBufferSpec* gobj() { return m_spec; };
+
+  /// Gets the underlying gobject.
+  const GstAudioRingBufferSpec* gobj() const { return m_spec; };
+
+  /** Get the caps of the buffer (in). */
+  _MEMBER_GET_GOBJECT(caps, caps, Gst::Caps, GstCaps*)
+
+  /** Set the caps of the buffer (in). */
+  _MEMBER_SET_GOBJECT(caps, caps, Gst::Caps, GstCaps*)
+
+  /** Get the sample type (in/out).
+   */
+  _MEMBER_GET(type, type, Gst::AudioRingBufferFormatType, GstAudioRingBufferFormatType)
+
+  /** Set the sample type (in/out).
+   */
+  _MEMBER_SET(type, type, Gst::AudioRingBufferFormatType, GstAudioRingBufferFormatType)
+
+  /** Get the latency in microseconds (in/out).
+   */
+  _MEMBER_GET(latency_time, latency_time, guint64, guint64)
+
+  /** Set the latency in microseconds (in/out).
+   */
+  _MEMBER_SET(latency_time, latency_time, guint64, guint64)
+
+  /** Get the total buffer size in microseconds (in/out).
+   */
+  _MEMBER_GET(buffer_time, buffer_time, guint64, guint64)
+
+  /** Set the total buffer size in microseconds (in/out).
+   */
+  _MEMBER_SET(buffer_time, buffer_time, guint64, guint64)
+
+  /** Get the size of one segment in bytes (in/out).
+   */
+  _MEMBER_GET(segsize, segsize, int, gint)
+
+  /** Set the size of one segment in bytes (in/out).
+   */
+  _MEMBER_SET(segsize, segsize, int, gint)
+
+  /** Get the total number of segments (in/out).
+   */
+  _MEMBER_GET(segtotal, segtotal, int, gint)
+
+  /** Set the total number of segments (in/out).
+   */
+  _MEMBER_SET(segtotal, segtotal, int, gint)
+
+  /** Get the number of segments queued in the lower level device, defaults to
+   * segtotal (in/out).
+   */
+  _MEMBER_GET(seglatency, seglatency, int, gint)
+
+  /** Set the number of segments queued in the lower level device, defaults to
+   * segtotal (in/out).
+   */
+  _MEMBER_SET(seglatency, seglatency, int, gint)
+
+#m4 _CONVERSION(`guint8*', `Glib::ArrayHandle<guint8>', `Glib::ArrayHandle<guint8>($3, GSTREAMERMM_RING_BUFFER_SPEC_SILENCE_SAMPLE, Glib::OWNERSHIP_NONE)')
+
+
+protected:
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  GstAudioRingBufferSpec* m_spec;
+  // Tells whether the m_spec member should be freed upon destruction.
+  bool take_ownership;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+};
+
+/** A base class for audio audioringbuffer implementations.
+ * This object is the base class for audio ringbuffers used by the base audio
+ * source and sink classes.
+ *
+ * The audioringbuffer abstracts a circular buffer of data. One reader and one
+ * writer can operate on the data from different threads in a lockfree manner.
+ * The base class is sufficiently flexible to be used as an abstraction for
+ * DMA based audioringbuffer as well as a pure software implementations.
+ *
+ * Last reviewed on 2016-04-23 (1.8.0).
+ * @ingroup GstBaseClasses
+ */
+class AudioRingBuffer : public Gst::Object
+{
+  _CLASS_GOBJECT(AudioRingBuffer, GstAudioRingBuffer, GST_AUDIO_RING_BUFFER, Gst::Object, GstObject)
+
+public:
+  /** For example,
+   * bool on_fill(const Glib::RefPtr<Gst::AudioRingBuffer>& rbuf,
+   * const std::vector<guint8>& data, guint len);.
+   * This slot is set with set_fill_slot() and is called to fill the memory at
+   * data with len bytes of samples.
+   */
+  typedef sigc::slot<void, const Glib::ArrayHandle<guint8>&, guint> SlotFill;
+
+  //TODO: _MEMBER_GET(cond, cond, Glib::Cond, GCond*)
+
+  /** Sets the given fill slot on the buffer. The slot will be called every
+   * time a segment has been written to a device.
+   *
+   * MT safe.
+   *
+   * @param slot The fill slot to set.
+   */
+  void set_fill_slot(const SlotFill& slot);
+  _IGNORE(gst_audio_ring_buffer_set_callback)
+
+  _WRAP_METHOD(bool acquire(Gst::AudioRingBufferSpec& spec), gst_audio_ring_buffer_acquire)
+  _WRAP_METHOD(bool release(), gst_audio_ring_buffer_release)
+  _WRAP_METHOD(bool is_acquired() const, gst_audio_ring_buffer_is_acquired)
+  _WRAP_METHOD(bool activate(bool active), gst_audio_ring_buffer_activate)
+  _WRAP_METHOD(bool is_active() const, gst_audio_ring_buffer_is_active)
+  _WRAP_METHOD(bool start(), gst_audio_ring_buffer_start)
+  _WRAP_METHOD(bool pause(), gst_audio_ring_buffer_pause)
+  _WRAP_METHOD(bool stop(), gst_audio_ring_buffer_stop)
+  _WRAP_METHOD(guint get_delay() const, gst_audio_ring_buffer_delay)
+  _WRAP_METHOD(guint64 get_samples_done() const, gst_audio_ring_buffer_samples_done)
+  _WRAP_METHOD(void set_sample(guint64 sample), gst_audio_ring_buffer_set_sample)
+  _WRAP_METHOD(void set_channel_position(const Gst::AudioChannelPosition& position), gst_audio_ring_buffer_set_channel_positions)
+  _WRAP_METHOD(gboolean is_flushing(), gst_audio_ring_buffer_is_flushing)
+  _WRAP_METHOD(void set_timestamp(gint readseg, ClockTime timestamp), gst_audio_ring_buffer_set_timestamp)
+
+#m4 _CONVERSION(`const std::vector<guint8>&', `guint8*', `Glib::ArrayHandler<guint8>::vector_to_array($3).data()')
+
+  _WRAP_METHOD(guint commit(guint64& sample, const std::vector<guint8>& data, int in_samples, int out_samples, int& accum), gst_audio_ring_buffer_commit)
+
+  _WRAP_METHOD(bool convert(Gst::Format src_fmt, gint64 src_val, Gst::Format dest_fmt, gint64& dest_val) const, gst_audio_ring_buffer_convert)
+
+  _WRAP_METHOD_DOCS_ONLY(gst_audio_ring_buffer_prepare_read)
+  bool prepare_read(int& segment, std::vector<guint8>& readptr, int& len);
+
+  _WRAP_METHOD(guint read(guint64 sample, const std::vector<guint8>& data, guint len, Gst::ClockTime& timestamp), gst_audio_ring_buffer_read)
+
+  _WRAP_METHOD(void clear(int segment), gst_audio_ring_buffer_clear)
+  _WRAP_METHOD(void clear_all(), gst_audio_ring_buffer_clear_all)
+  _WRAP_METHOD(void advance(guint advance), gst_audio_ring_buffer_advance)
+  _WRAP_METHOD(bool close_device(), gst_audio_ring_buffer_close_device)
+  _WRAP_METHOD(bool open_device(), gst_audio_ring_buffer_open_device)
+  _WRAP_METHOD(bool device_is_open() const, gst_audio_ring_buffer_device_is_open)
+  _WRAP_METHOD(void set_may_start(bool allowed), gst_audio_ring_buffer_may_start)
+  _WRAP_METHOD(static bool parse_caps(Gst::AudioRingBufferSpec&, const Glib::RefPtr<Gst::Caps>& caps), gst_audio_ring_buffer_parse_caps)
+  _WRAP_METHOD(void set_flushing(bool flushing), gst_audio_ring_buffer_set_flushing)
+
+  /** Virtual function to open the device.  Don't set any params or allocate
+   * anything.
+   */
+  _WRAP_VFUNC(bool open_device(), "open_device")
+
+  /** Virtual function to allocate the resources for the ring buffer using the
+   * given spec.
+   */
+  virtual bool acquire_vfunc(Gst::AudioRingBufferSpec& spec);
+
+  /** Virtual function to free resources of the ring buffer.
+   */
+  _WRAP_VFUNC(bool release(), "release")
+
+  /** Virtual function to close the device.
+   */
+  _WRAP_VFUNC(bool close_device(), "close_device")
+
+  /** Virtual function to start processing of samples.
+   */
+  _WRAP_VFUNC(bool start(), "start")
+
+  /** Virtual function to pause processing of samples.
+   */
+  _WRAP_VFUNC(bool pause(), "pause")
+
+  /** Virtual function to resume processing of samples after pause.
+   */
+  _WRAP_VFUNC(bool resume(), "resume")
+
+  /** Virtual function to stop processing of samples.
+   */
+  _WRAP_VFUNC(bool stop(), "stop")
+
+  /** Virtual function to get number of samples queued in device.
+   */
+  _WRAP_VFUNC(guint delay(), "delay")
+
+  /** Virtual function to activate the thread that starts pulling and
+   * monitoring the consumed segments in the device. Since 0.10.22.
+   */
+  _WRAP_VFUNC(bool activate(bool active), "activate")
+
+  /** Virtual function to write samples into the ring buffer.
+   */
+  virtual guint commit_vfunc(guint64& sample, const std::vector<guint8>& data,
+    int in_samples, int out_samples, int& accum);
+
+  /** Virtual function to clear the entire audioringbuffer Since 0.10.24.
+   */
+  _WRAP_VFUNC(void clear_all(), "clear_all")
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->acquire = &acquire_vfunc_callback;
+  klass->commit = &commit_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static gboolean acquire_vfunc_callback(GstAudioRingBuffer* self, GstAudioRingBufferSpec* spec);
+  static guint commit_vfunc_callback(GstAudioRingBuffer* self, guint64* sample, guchar* data, gint in_samples, gint out_samples, gint* accum);
+  _POP()
+#m4end
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+private:
+  // todo this slot should be moved in move constructor, but for now it's
+  // impossible to provide custom move constructor
+  // (see https://bugzilla.gnome.org/show_bug.cgi?id=756593).
+  // However, task should be managed by RefPtr class, so move constructor
+  // and move assignment operator will never be called.
+  std::unique_ptr<SlotFill> m_slot;
+#endif
+};
+
+} // namespace Gst

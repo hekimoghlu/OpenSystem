@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# This script finds all tarballs that are different between two releases,
+# or, if the --same parameter is passed, finds all tarballs that are the
+# same between two releases.
+#
+# This script does not modify anything
+#
+# Input is of the form
+#     release-diff [--same] <old-directory> <new-directory>
+#   e.g.
+#     release-diff /ftp/pub/GNOME/desktop/2.10/2.10.1/sources \
+#                  /ftp/pub/GNOME/desktop/2.10/2.10.2/sources
+#
+# Note that the sources/ directory may be necessary due to people screwing
+# up the release directories by putting windows stuff in there.  ;-)
+# (e.g. the win32 directory under /ftp/pub/GNOME/desktop/2.12/2.12.0/)
+#
+# Output is of the form
+#     module           version1   version2
+#   e.g.
+#     control-center   2.10.1     2.10.2
+#     epiphany         1.6.2      1.6.4
+#     nautilus-media   0.8.1      -none-
+
+
+# do we want to see which modules haven't changed?
+if [ "$1" == "--same" ]; then
+  UNIQUE=""
+  shift
+else
+  UNIQUE=1
+fi
+
+# did we get any useful parameters?
+if [ $# -eq 2 ]; then
+  all_tarballs=$(find $1 $2 -name *.gz | sed 's#.*/\(.*\).tar.gz#\1#' | sort)
+  if [[ $UNIQUE ]]; then
+    tarballs=$(echo $all_tarballs | tr ' ' '\n'      \
+               | uniq -c | grep "^[ ]*1" | cut -f 2)
+  else
+    tarballs=$(echo $all_tarballs | tr ' ' '\n' | uniq -d)
+  fi
+  modules=$(echo $tarballs | tr ' ' '\n' | sed 's#\(.*\)\-.*#\1#' | uniq)
+  echo $modules | tr ' ' '\n' | while read module; do
+    module1=$(find $1 -name $module-[0-9\.]*.tar.gz \
+             | sed "s#.*/$module-\(.*\).tar.gz#\1#")
+    module2=$(find $2 -name $module-[0-9\.]*.tar.gz \
+             | sed "s#.*/$module-\(.*\).tar.gz#\1#")
+    [ -z $module1 ] && module1="-none-"
+    [ -z $module2 ] && module2="-none-"
+    # Output is "module version1 version2"
+    printf "%-25s %-10s %-10s\n" $module $module1 $module2
+  done
+else
+  echo "Usage: release-diff [--same] <old-directory> <new-directory>"
+  exit 1
+fi

@@ -1,0 +1,34 @@
+# Misc Constants/functions for Dr. Genius
+
+#make something a string
+SetHelp("string","basic","Make a string");
+function string(s) = s + ""
+
+SetHelp("Compose","basic","Compose two functions")
+function Compose(f,g) = (`(x)[f,g]=(local *;f(g(x))))
+
+SetHelp("ComposePower","basic","Compose a function with itself n times, passing x as argument, and returning x if n == 0")
+function ComposePower(f,n,x) = (
+	local *;
+	for k=1 to n do
+		x = f call (x);
+	x
+)
+
+SetHelp("PrintTable","basic","Print a table of values for f(n) for numbers from vector v, or if v is a number for integers from 1 to v")
+function PrintTable(f,v) = (
+	local *;
+	# Note we can't check the 2 arguments, FIXME
+	if not IsFunction(f) then
+		(error("PrintTable: f must be a function of one argument");bailout);
+
+	if IsVector(v) then (
+		for k in v do
+			print("" + k + "\t" + (f call (k)))
+	) else if IsPositiveInteger(v) then (
+		for k=1 to v do
+			print("" + k + "\t" + (f call (k)))
+	) else (
+		(error("PrintTable: v must be a vector or a positive integer");bailout)
+	)
+)

@@ -1,0 +1,90 @@
+/* Copyright (C) 2019 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <glibmm/refptr.h>
+#include <giomm/listmodel.h>
+#include <gtkmm/selectionmodel.h>
+#include <gtk/gtk.h> // Declares GtkSingleSelection and GtkSingleSelectionClass
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+//TODO: Derive from (and implement) SectionModel when we can break ABI.
+/** A selection model that allows selecting a single item.
+ *
+ * %Gtk::SingleSelection is an implementation of the Gtk::SelectionModel interface 
+ * that allows selecting a single element. It is the default selection method
+ * used by list widgets in GTK.
+ *
+ * Note that the selection is *persistent* -- if the selected item is removed
+ * and re-added in the same Gio::ListModel::signal_items_changed() emission,
+ * it stays selected. In particular, this means that changing the sort order
+ * of an underlying sort model will preserve the selection.
+ *
+ * @see SelectionModel
+ * @ingroup ListView
+ * @newin{3,96}
+ */
+class GTKMM_API SingleSelection : public Glib::Object, public Gio::ListModel, public SelectionModel
+{
+  _CLASS_GOBJECT(SingleSelection, GtkSingleSelection, GTK_SINGLE_SELECTION, Glib::Object, GObject, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Gio::ListModel)
+  _IMPLEMENTS_INTERFACE(SelectionModel)
+  _DO_NOT_DERIVE_GTYPE dnl// GtkSingleSelection is a final type
+  _ABI_AS_WITH_DERIVED_GTYPE dnl// Remove when we can break ABI
+  _STRUCT_NOT_HIDDEN
+
+protected:
+  _CTOR_DEFAULT()
+  _WRAP_CTOR(SingleSelection(const Glib::RefPtr<Gio::ListModel>& model), gtk_single_selection_new)
+
+public:
+  _WRAP_CREATE()
+  _WRAP_CREATE(const Glib::RefPtr<Gio::ListModel>& model)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> get_model(), gtk_single_selection_get_model, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_model() const, gtk_single_selection_get_model, refreturn, constversion)
+  _WRAP_METHOD(void set_model(const Glib::RefPtr<Gio::ListModel>& model), gtk_single_selection_set_model)
+
+  _WRAP_METHOD(guint get_selected() const, gtk_single_selection_get_selected)
+  _WRAP_METHOD(void set_selected(guint position), gtk_single_selection_set_selected)
+
+#m4 _CONVERSION(`gpointer',`Glib::RefPtr<Glib::ObjectBase>',`Glib::make_refptr_for_instance<Glib::ObjectBase>(Glib::wrap_auto(G_OBJECT($3)))')
+  _WRAP_METHOD(Glib::RefPtr<Glib::ObjectBase> get_selected_item(),
+    gtk_single_selection_get_selected_item, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Glib::ObjectBase> get_selected_item() const,
+    gtk_single_selection_get_selected_item, refreturn, constversion)
+
+  _WRAP_METHOD(bool get_autoselect() const, gtk_single_selection_get_autoselect)
+  _WRAP_METHOD(void set_autoselect(bool autoselect = true), gtk_single_selection_set_autoselect)
+  _WRAP_METHOD(bool get_can_unselect() const, gtk_single_selection_get_can_unselect)
+  _WRAP_METHOD(void set_can_unselect(bool can_unselect = true), gtk_single_selection_set_can_unselect)
+
+  _WRAP_PROPERTY("autoselect", bool)
+  _WRAP_PROPERTY("can-unselect", bool)
+  _WRAP_PROPERTY("selected", guint)
+  _WRAP_PROPERTY("selected-item", Glib::RefPtr<Glib::ObjectBase>)
+  _WRAP_PROPERTY("item-type", GType)
+  _WRAP_PROPERTY("model", Glib::RefPtr<Gio::ListModel>)
+  _WRAP_PROPERTY("n-items", unsigned int)
+
+  // There are no signals or vfuncs.
+};
+
+} // namespace Gtk

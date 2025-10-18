@@ -1,0 +1,110 @@
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      job-stage: deploy
+      dist-job-name: "dist-kiosk-tarball"
+      tarball-artifact-path: $TARBALL_ARTIFACT_PATH
+
+stages:
+        - build
+        - test
+        - deploy
+
+variables:
+  IMAGE_REGISTRY: registry.gitlab.gnome.org/gnome/mutter/fedora/43:x86_64-2025-09-13.0
+  COMMON_FLAGS: --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64 -Dinput-selector=true
+  TARBALL_ARTIFACT_PATH: build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
+
+build-fedora:
+        image: ${IMAGE_REGISTRY}
+        stage: build
+        before_script:
+                - dnf upgrade -y
+                - dnf -y install ibus-devel
+                - .gitlab-ci/install-common-dependencies.sh
+                - .gitlab-ci/checkout-mutter.sh
+                - meson mutter mutter/build --prefix=/usr
+                - meson install -C mutter/build
+        script:
+                - export BUILD_ROOT=_build
+                - meson . $BUILD_ROOT $COMMON_FLAGS
+                - ninja -C $BUILD_ROOT
+                - ninja -C $BUILD_ROOT install
+                - ninja -C $BUILD_ROOT dist
+                - find -depth -type d -name '*.p' -exec rm -rf "{}" \;
+        except:
+                - tags
+        artifacts:
+                paths:
+                        - mutter
+                        - _build
+        only:
+            - merge_requests
+
+test-fedora:
+        image: ${IMAGE_REGISTRY}
+        stage: test
+        before_script:
+                - dnf upgrade -y
+                - dnf -y install patchutils ibus-devel
+                - meson install --no-rebuild -C mutter/build
+        script:
+                - export BUILD_ROOT=_build
+                - meson . $BUILD_ROOT $COMMON_FLAGS
+                - ninja -C $BUILD_ROOT
+                - ninja -C $BUILD_ROOT test
+                - find -depth -type d -name '*.p' -exec rm -rf "{}" \;
+        except:
+                - tags
+        artifacts:
+                paths:
+                        - _build
+        only:
+            - merge_requests
+
+dist-kiosk:
+  image: ${IMAGE_REGISTRY}
+  stage: deploy
+  before_script:
+    - dnf upgrade -y
+    - dnf -y install ibus-devel
+    - .gitlab-ci/install-common-dependencies.sh
+    - .gitlab-ci/checkout-mutter.sh
+    - meson mutter mutter/build --prefix=/usr
+    - meson install -C mutter/build
+  script:
+    - meson setup . build
+        --prefix /usr
+        --werror
+        --wrap-mode nofallback
+        -Dbuildtype=debugoptimized
+    - meson dist -C build --include-subprojects
+  artifacts:
+    expire_in: 7 day
+    name: "kiosk-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - build/meson-private/dist-build/meson-logs
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/meson.build"
+        - meson/*
+      when: on_success
+    - if: '$GITLAB_USER_LOGIN == "marge-bot"'
+      when: on_success
+    - if: '$CI_MERGE_REQUEST_ASSIGNEES == "marge-bot"'
+      when: on_success
+
+dist-kiosk-tarball:
+  extends: dist-kiosk
+  artifacts:
+    expose_as: 'Get tarball here'
+    name: "${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - $TARBALL_ARTIFACT_PATH
+  rules:
+    - if: '$CI_COMMIT_TAG'

@@ -1,0 +1,129 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/video/videooverlay.h>
+#include <glibmm/interface.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** An interface for setting/getting a Window on elements supporting it.
+ * The VideoOverlay interface is used for 2 main purposes :
+ *
+ * - To get a grab on the Window where the video sink element is going to
+ * render. This is achieved by either being informed about the Window
+ * identifier that the video sink element generated, or by forcing the video
+ * sink element to use a specific Window identifier for rendering.
+ *
+ * - To force a redrawing of the latest video frame the video sink element
+ * displayed on the Window. Indeed if the Pipeline is in STATE_PAUSED state,
+ * moving the Window around will damage its content. Application developers
+ * will want to handle the Expose events themselves and force the video sink
+ * element to refresh the Window's content.
+ *
+ * Using the Window created by the video sink is probably the simplest
+ * scenario, in some cases, though, it might not be flexible enough for
+ * application developers if they need to catch events such as mouse moves and
+ * button clicks.
+ *
+ * Setting a specific Window identifier on the video sink element is the most
+ * flexible solution but it has some issues. Indeed the application needs to
+ * set its Window identifier at the right time to avoid internal Window
+ * creation from the video sink element. To solve this issue a Message is
+ * posted on the bus to inform the application that it should set the Window
+ * identifier immediately. Here is an example on how to do that correctly:
+ *
+ * @code
+ * #include <gdk/gdkx.h>
+ * ...
+ * void PlayerWindow::on_bus_message_sync(
+ *     const Glib::RefPtr<Gst::Message>& message)
+ * {
+ *   // ignore anything but 'prepare-xwindow-id' element messages
+ *   if(message->get_message_type() != Gst::MESSAGE_ELEMENT)
+ *    return;
+ *
+ *   if(!message->get_structure().has_name("prepare-xwindow-id"))
+ *      return;
+ *
+ *   Glib::RefPtr<Gst::Element> element =
+ *       Glib::RefPtr<Gst::Element>::cast_dynamic(message->get_source());
+ *
+ *   Glib::RefPtr< Gst::ElementInterfaced<Gst::XOverlay> > xoverlay =
+ *       Gst::Interface::cast <Gst::XOverlay>(element);
+ *
+ *   if(xoverlay)
+ *   {
+ *     const gulong xWindowId =
+ *     GDK_WINDOW_XID(widget->get_window()->gobj());
+ *     xoverlay->set_xwindow_id(xWindowId);
+ *   }
+ * }
+ * ...
+ * int main (int argc, char *argv[])
+ * {
+ *   ...
+ *   // Get the bus from the pipeline:
+ *   Glib::RefPtr<Gst::Bus> bus = pipeline->get_bus();
+ * 
+ *  // Enable synchronous message emission:
+ *  bus->enable_sync_message_emission();
+ *
+ *  // Connect to bus's synchronous message signal:
+ *  bus->signal_sync_message().connect(
+ *    sigc::mem_fun(*this, &PlayerWindow::on_bus_message_sync));
+ *   ...
+ * }
+ * @endcode
+ * @ingroup GstInterfaces
+ */
+class VideoOverlay : public Glib::Interface
+{
+  _CLASS_INTERFACE(VideoOverlay, GstVideoOverlay, GST_VIDEO_OVERLAY, GstVideoOverlayInterface)
+
+public:
+  _WRAP_METHOD(void set_window_handle(guintptr window_handle), gst_video_overlay_set_window_handle)
+  _WRAP_METHOD(void got_window_handle(guintptr window_handle), gst_video_overlay_got_window_handle)
+  _WRAP_METHOD(void prepare_window_handle(), gst_video_overlay_prepare_window_handle)
+  _WRAP_METHOD(void expose(), gst_video_overlay_expose)
+  _WRAP_METHOD(void handle_events(bool handle_events), gst_video_overlay_handle_events)
+  _WRAP_METHOD(bool set_render_rectangle(int x, int y, int width, int height), gst_video_overlay_set_render_rectangle)
+
+  /** Virtual method to configure the window handle.
+   */
+  _WRAP_VFUNC(void set_window_handle(guintptr handle), "set_window_handle")
+
+  /** Virtual method to handle expose events.
+   */
+  _WRAP_VFUNC(void expose(), "expose")
+
+  /** Virtual method to handle events.
+   */
+  _WRAP_VFUNC(void handle_events(bool handle_events), "handle_events")
+
+  /** Virtual method to set the render rectangle.
+   */
+  _WRAP_VFUNC(void set_render_rectangle(int x, int y, int width, int height), "set_render_rectangle")
+
+};
+
+} // namespace Gst
+

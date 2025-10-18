@@ -1,0 +1,34 @@
+PackageKit Release Notes
+
+1. Write NEWS entries for gnome-packagekit in the same format as usual.
+
+git log --format="%s" 43.0.. | grep -i -v trivial | grep -v Merge | uniq
+Add any user visible changes into data/metainfo/*.xml.in
+
+3. Commit changes in gnome-packagekit git:
+
+git commit -a -m "Release version 43.1"
+git tag -s 43.1 -m "Version 43.1"
+<wait>
+git push --tags
+git push
+
+4. Create tarball
+
+ninja dist
+
+5. Upload tarballs:
+
+scp meson-dist/*.tar.xz rhughes@master.gnome.org:
+
+6. Install module
+
+ssh rhughes@master.gnome.org
+ftpadmin install gnome-packagekit-*.tar.xz
+
+7. Do post release version bump in meson.build
+
+8. Commit trivial changes:
+
+git commit -a -m "trivial: Post release version bump"
+git push

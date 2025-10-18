@@ -1,0 +1,71 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/video/videoorientation.h>
+#include <glibmm/interface.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** An interface for elements providing video orientation controls.
+ * The interface allows unified access to control flipping and autocenter
+ * operation of video-sources or operators.
+ * @ingroup GstInterfaces
+ */
+class VideoOrientation : public Glib::Interface
+{
+  _CLASS_INTERFACE(VideoOrientation, GstVideoOrientation, GST_VIDEO_ORIENTATION, GstVideoOrientationInterface)
+
+public:
+  _WRAP_METHOD(bool get_hcenter(int& center) const, gst_video_orientation_get_hcenter)
+  _WRAP_METHOD_DOCS_ONLY(gst_video_orientation_get_hflip)
+  bool get_hflip(bool& flip) const;
+  _WRAP_METHOD(bool get_vcenter(int& center) const, gst_video_orientation_get_vcenter)
+  _WRAP_METHOD_DOCS_ONLY(gst_video_orientation_get_vflip)
+  bool get_vflip(bool& flip) const;
+  _WRAP_METHOD(bool set_hcenter(int center), gst_video_orientation_set_hcenter)
+  _WRAP_METHOD(bool set_hflip(bool flip), gst_video_orientation_set_hflip)
+  _WRAP_METHOD(bool set_vcenter(int center), gst_video_orientation_set_vcenter)
+  _WRAP_METHOD(bool set_vflip(bool flip), gst_video_orientation_set_vflip)
+
+  virtual bool get_hflip_vfunc(bool& flip) const;
+  virtual bool get_vflip_vfunc(bool& flip) const;
+
+  _WRAP_VFUNC(bool get_hcenter(int& center) const, "get_hcenter")
+  _WRAP_VFUNC(bool get_vcenter(int& center) const, "get_vcenter")
+  _WRAP_VFUNC(bool set_hflip(bool flip), "set_hflip")
+  _WRAP_VFUNC(bool set_vflip(bool flip), "set_vflip")
+  _WRAP_VFUNC(bool set_hcenter(int center), "set_hcenter")
+  _WRAP_VFUNC(bool set_vcenter(int center), "set_vcenter")
+
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->get_hflip = &get_hflip_vfunc_callback;
+  klass->get_vflip = &get_vflip_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static gboolean get_hflip_vfunc_callback(GstVideoOrientation* self, gboolean* flip);
+  static gboolean get_vflip_vfunc_callback(GstVideoOrientation* self, gboolean* flip);
+  _POP()
+#m4end
+};
+
+} // namespace Gst

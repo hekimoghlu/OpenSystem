@@ -1,0 +1,152 @@
+2011-06-16  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.16
+
+2011-06-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.h (gnm_load_pango_attributes_into_buffer): add
+	argument, change all callers
+	* src/gui-util.c (gnm_load_pango_attributes_into_buffer): add
+	argument, correctly align pango offsets with buffer char-offsets
+	(gnm_load_pango_byte_to_char): new
+
+2011-05-30  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (gnm_x_claim_clipboard): Rename from
+	x_claim_clipboard.
+	(gnm_x_store_clipboard_if_needed): Rename from
+	x_store_clipboard_if_needed.
+	(gnm_x_request_clipboard): Rename from x_request_clipboard.
+
+2011-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/application.c (gnm_app_workbook_get_by_uri): made static
+	(gnm_app_workbook_foreach): made static
+	* src/application.h (gnm_app_workbook_get_by_uri): deleted
+	(gnm_app_workbook_foreach): deleted
+	* src/search.c (gnm_search_replace_value): made static
+	* src/search.h (gnm_search_replace_value): deleted
+	* src/sheet-filter.c (gnm_filter_overlaps_range): made static
+	* src/sheet-filter.h (gnm_filter_overlaps_range): deleted
+
+2011-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/rangefunc.c (gnm_range_minabs): deleted
+	(gnm_range_correl_est): deleted
+	* src/rangefunc.h (gnm_range_minabs): deleted
+	(gnm_range_correl_est): deleted
+	* src/stf-parse.c (stf_parse_options_new): made static
+	* src/stf-parse.h (stf_parse_options_new): deleted
+	* src/workbook.c (workbook_local_functions): deleted
+	* src/workbook.h (workbook_local_functions): deleted
+
+2011-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/parse-util.h (gnm_conventions_dup): delete again
+	* src/parse-util.c (gnm_conventions_dup): delete again
+	* src/workbook-control.c (wb_control_parse_and_jump): use
+	existing GnmConventions
+
+2011-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook.c (workbook_sheet_state_size): adjust scale
+	(cmd_reorganize_sheets): use workbook_sheet_state_size
+
+2011-05-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (table_cellregion_read): Avoid
+	workbook_sheets because it allocates needlessly.
+
+2011-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/parse-util.h (gnm_conventions_dup): new
+	* src/parse-util.c (gnm_conventions_dup): new
+	* src/workbook-control.c (wb_control_parse_and_jump): accept both
+	  both A1 and R1C1 style addresses.
+
+2011-05-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook-control.h (wb_control_jump): new
+	* src/workbook-control.c (wb_control_jump): make non-static
+
+2011-05-24  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_constructed): Don't chain up before
+	actually checking that the parent has the method.
+
+	* src/wbc-gtk-edit.c (wbcg_auto_completing): Unused.  Remove.
+
+2011-05-23  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_iterate_do_value): Make static.
+
+	* src/parser.y: Make yyparse static.
+
+2011-05-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (_PrintInformation): new field
+	(print_info_set_from_settings): new
+	(print_info_get_printrange): new
+	(print_info_set_printrange): new
+	* src/print-info.c (print_info_set_from_settings): new
+	(print_info_get_printrange): new
+	(print_info_set_printrange): new
+	(print_info_load_defaults): use settings
+	(print_info_get_printtofile_uri): load defaults
+	* src/print.c (gnm_print_sheet): use printrange from printinfo
+	* src/xml-sax-read.c (xml_sax_print_print_range): new
+	* src/xml-sax-write.c (xml_write_print_info): write printrange
+
+2011-05-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_uri_change_extension): if the setting has no
+	extension, specify one
+
+2011-05-22  Morten Welinder  <terra@gnome.org>
+
+	* src/complex.h: Use goffice's stuff as far as possible.
+
+	* src/sheet-view.c (sv_is_region_empty_or_selected): Unused.  Remove.
+
+	* src/gnm-marshalers.list: Remove unused marshallers.
+
+	* src/gnm-pane.c (control_circle_get_type, item_acetate_get_type):
+	Make static.
+
+	* src/colrow.c (colrow_find_adjacent_visible): Unused.  Remove.
+
+	* src/sort.c (gnm_sort_data_length): Make static.
+
+	* src/sheet.c (sheet_redraw_cell): Make static.
+
+	* src/sheet-style.c (sheet_style_set_col, sheet_style_set_row):
+	Unused.  Remove.
+
+	* src/func-builtin.c (gnumeric_sum, gnumeric_product): Make
+	static.
+
+	* src/wbc-gtk.c (wbcg_ui_update_begin, wbcg_ui_update_end): Make
+	static.
+
+	* src/expr-name.c (expr_name_set_is_placeholder): New function.
+	(expr_name_downgrade_to_placeholder): Simplify using
+	expr_name_set_is_placeholder.
+	(sheet_names_get_available): Unused.  Remove.
+	(do_expr_name_loop_check): Extend to look for either a name as a
+	string or an explicit GnmNamedExpr.
+	(expr_name_in_use): Fix search.
+
+	* src/workbook.h (WORKBOOK_FOREACH_SHEET): Move from
+	workbook-priv.h
+
+2011-05-21  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (expr_name_set_pos): Rename from
+	expr_name_set_scope and extended to handle all position changes.
+	All callers changed.
+	(gnm_named_expr_collection_rename): Remove.
+	(expr_name_set_name): New function.
+
+2011-05-21  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

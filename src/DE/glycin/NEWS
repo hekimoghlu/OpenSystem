@@ -1,0 +1,756 @@
+## 2.0.3 (2025-10-09)
+
+This release contains the following new component versions:
+
+- glycin-common 1.0.3
+- glycin-heif 2.0.3
+- glycin-image-rs 2.0.3
+- glycin-jpeg2000 2.0.3
+- glycin-jxl 2.0.3
+- glycin-raw 2.0.3
+- glycin-svg 2.0.3
+- glycin-thumbnailer 2.0.3
+- glycin-utils 4.0.3
+- glycin 3.0.3
+- libglycin 2.0.3
+- libglycin-gtk4 2.0.3
+
+### Added
+
+- glycin/sandbox: Drop `CAP_DAC_OVERRIDE` and `CAP_DAC_READ_SEARCH_POSTION`
+  during directory resolution to ensure that bwrap does not try to mount
+  directories that it does no longer have access to after it dropped these caps.
+
+### Fixed
+
+- SIGSYS because `restart_syscall` syscall is not allowed. #213
+- glycin: Also detect SIGSYS from bwrap exit code.
+- glycin: Honor apply_transformations for imgage dimensions. Before, the width
+  and height would be changed for rotated images if `apply_transformations` was
+  set to false. #215
+
+### Changed
+
+- glycin/libglycin: Drastically reduce the number of used threads, especially
+  for libglycin.
+- glycin: Avoid loading configs or checking system properties multiple times
+  because of race condition in cache.
+- svg: Round image dimensions instead of rounding up.
+
+## 2.0.2 (2025-09-27)
+
+This release contains the following new component versions:
+
+- glycin-heif 2.0.2
+- glycin-jpeg2000 2.0.2
+- glycin-jxl 2.0.2
+- glycin-raw 2.0.2
+- glycin-svg 2.0.2
+- glycin-utils 4.0.2
+
+### Fixed
+
+- Loaders in 2.0.1 required specifying the loop_animation field explicitly,
+  making it incompatible with previous glycin/libglycin versions. The
+  loop_animation is now assumed to be false when not present, as originally
+  intended.
+
+## 2.0.1 (2025-09-26)
+
+This release contains the following new component versions:
+
+- glycin-image-rs 2.0.1
+- glycin-utils 4.0.1
+- glycin 3.0.1
+- libglycin 2.0.1
+- libglycin-gtk4 2.0.1
+
+### Added
+
+- glycin/libglycin: Add API to disable animation looping.
+- glycin/sandbox: Detect if bwrap can't be used due to syscalls being blocked.
+  This is an indication of running in an already sandboxed environment like
+  libgnome-desktop thumbnailer or a CI. In this case we fall back to unsandboxed
+  mode.
+
+### Fixed
+
+- Close all unused FDs in fork. Before we were sharing all FDs that don't have
+  CLOEXEC set. In Rust that's usually not a problem because that's set by
+  default. But when used by C in libglycin this is much more unclear. This is an
+  attempt at fixing Firefox issues.
+- There was no timeout spawned that would ensure that unused loaders are killed
+  after they have been unused for the specified maximum retention time.
+- glycin/sandobx: Canonicalize fontconfig paths before passing to --ro-bind-try
+  as source because wrap fails on symlinks otherwise.
+- glycin: u16_to_u8 testcase on big endian machines
+- heif: Overwrite matrix coefficients (YCbCr) in CICP since currently RGB is
+  forced and GSK gl and cairo don't support YCbCr. This fixes wrong colors in
+  HEIC and AVIF images.
+
+## 2.0.0 (2025-09-11)
+
+This release contains the following new component versions:
+
+- glycin-common 1.0.0
+- glycin-heif 2.0.0
+- glycin-image-rs 2.0.0
+- glycin-jpeg2000 2.0.0
+- glycin-jxl 2.0.0
+- glycin-raw 2.0.0
+- glycin-svg 2.0.0
+- glycin-thumbnailer 2.0.0
+- glycin-utils 4.0.0
+- glycin 3.0.0
+- libglycin 2.0.0
+- libglycin-gtk4 2.0.0
+
+### Fixed
+
+- Use new versions of TIFF, GIF, PNG decoders, and image-rs to support more
+  variants of these formats.
+- Using --clear-env actually breaks the portal due to a Flatpak bug
+  <https://github.com/flatpak/flatpak/issues/5271>.
+- glycin/sandbox: Allow uname sycall for Arm64 SVE
+- glycin/sandbox: Pass XDG_RUNTIME_DIR env var to flatpak-spawn. This fixes
+  flatpak-spawn not working.
+- libglycin-gtk4: List "glycin" in the public "Requires" for pkgconf
+- svg: Keep aspect ratio when scaling
+
+## 2.0.rc (2025-08-28)
+
+This release contains the following new component versions:
+
+- glycin-common 1.0.0-rc
+- glycin-heif 2.0.0-rc
+- glycin-image-rs 2.0.0-rc
+- glycin-jpeg2000 2.0.0-rc
+- glycin-jxl 2.0.0-rc
+- glycin-raw 2.0.0-rc
+- glycin-svg 2.0.0-rc
+- glycin-thumbnailer 2.0.0-rc
+- glycin-utils 4.0.0-rc
+- glycin 3.0.0-rc
+- libglycin 2.0.0-rc
+- libglycin-gtk4 2.0.0-rc
+
+### Added
+
+- Experimental untested JPEG 2000 loader with basic features. Is not enabled in
+  builds by default.
+- glycin/sandbox: Support /nix to make it work on nixOS by default.
+
+### Fixed
+
+- Environment not getting filtered for flatpak-spawn.
+- glycin/sandbox: Use configured PATH to find bwrap
+
+### Changed
+
+- Don't pin to zbus 5.6, depend on 5.10 instead which fixes sandbox issues.
+- glycin/creator: Allow last line to not have complete stride length for
+  GdkPixbuf compatibility
+
+## 2.0.beta.3 (2025-08-22)
+
+This release contains the following new component versions:
+
+- glycin-common 1.0.0-beta.3
+- glycin-heif 2.0.0-beta.3
+- glycin-image-rs 2.0.0-beta.3
+- glycin-jxl 2.0.0-beta.3
+- glycin-raw 2.0.0-beta.3
+- glycin-svg 2.0.0-beta.3
+- glycin-thumbnailer 2.0.0-beta.3
+- glycin-utils 4.0.0-beta.3
+- glycin 3.0.0-beta.3
+- libglycin 2.0.0-beta.3
+- libglycin-gtk4 2.0.0-beta.3
+
+### Added
+
+- Expose more API in libglycin that was needed by gdk-pixbuf glycin loaders to
+  work correctly.
+
+### Fixed
+
+- Allow `exit_group` syscall, needed by some systems to load SVGs.
+- Allow recv syscall since it is needed on PowerPC64 LE.
+- Apply rotation to the dimension in `Image` as well. They were correct in
+  `Frame`s already.
+- Bump gufo-jpeg to fix editing some JPEGs saved with progressive mode.
+- Fix glycin-thumbnailer not working inside the thumbnailer sandbox due to an
+  issue introduced in zbus 5.7. Pin to zbus 5.6 for now. See
+  <https://github.com/dbus2/zbus/pull/1472>
+- Regular unnecessary recompiles of components.
+- glycin/sandbox: Allow `{get,set}priority` syscalls, since they are used by
+  libheif on Gentoo.
+
+### Changed
+
+- Don't use the image-rs feature in jpegxl-rs to convert texture date to avoid a
+  copy of the data. This speeds up loading.
+- glycin: Parallelize ICC profile transformations.
+- jxl: Use a parallel runner for decoding, reducing image loading times.
+
+## 2.0.beta.2 (2025-08-01)
+
+This release contains the following new component versions:
+
+- glycin-common 1.0.0-beta.1
+- glycin-heif 2.0.0-beta.1
+- glycin-image-rs 2.0.0-beta.1
+- glycin-jxl 2.0.0-beta.1
+- glycin-raw 2.0.0-beta.1
+- glycin-svg 2.0.0-beta.1
+- glycin-thumbnailer 2.0.0-beta.1
+- glycin-utils 4.0.0-beta.1
+- glycin 3.0.0-beta.1
+- libglycin 2.0.0-beta.2
+- libglycin-gtk4 2.0.0-beta.2
+
+### Added
+
+- CICP support for HEIC and AVIF.
+- jxl: Support saving images.
+- libglycin-gtk4: gly_gtk_frame_get_texture now sets the GdkColorState if a CICP
+  value is present.
+
+### Fixed
+
+- glycin: Pool according to sandbox mechanism. Previously, a wrong mechanism
+  could be used, if different mechanisms inside the same process were requested.
+
+## 2.0.alpha.7 (2025-07-07)
+
+This release contains the following new component versions:
+
+- glycin-common 1.0.0-alpha.7
+- glycin-tools 2.0.0-alpha.7
+- glycin-utils 4.0.0-alpha.7
+- glycin 3.0.0-alpha.7
+- libglycin 2.0.0-alpha.7
+- libglycin-gtk4 2.0.0-alpha.7
+- glycin-heif 2.0.0-alpha.7
+- glycin-image-rs 2.0.0-alpha.7
+- glycin-jxl 2.0.0-alpha.7
+- glycin-raw 2.0.0-alpha.7
+- glycin-svg 2.0.0-alpha.7
+- glycin-thumbnailer 2.0.0-alpha.7
+
+### Fixed
+
+- glycin: Don't prioritize entries from configs that are in lower priority
+  directories.
+
+### Changed
+
+- Don't vendor cargo crates for tarball anymore.
+- Instead of using the STDIN of the loader/editor for the D-Bus connection, use
+  a new FD, specified via the command line.
+- Moved some type definition to a new glycin-commons crate for better API
+  stability.
+- Rename various fields in the internal API for clarity.
+- The editing API is now split into two steps: First the image is loaded. Then,
+  onto the loaded image, differente editing operations can be applied. This can
+  speed-up the preview of editing operations, since the image doesn't need to be
+  loaded each time.
+- glycin: Wrap the internal APIs into glycin specific types to guarantee API
+  stability.
+- jxl: Require libjxl 0.11
+
+## 2.0.alpha.6 (2025-07-03)
+
+This release contains the following new component versions:
+
+- glycin-tools 2.0.0-alpha.6
+- glycin-utils 4.0.0-alpha.6
+- glycin 3.0.0-alpha.6
+- libglycin 2.0.0-alpha.6
+- libglycin-gtk4 2.0.0-alpha.6
+- glycin-heif 2.0.0-alpha.6
+- glycin-image-rs 2.0.0-alpha.6
+- glycin-jxl 2.0.0-alpha.6
+- glycin-raw 2.0.0-alpha.6
+- glycin-svg 2.0.0-alpha.6
+- glycin-thumbnailer 2.0.0-alpha.6
+
+### Fixed
+
+- image-rs: Add missing editor definitions for GIF, WebP, TIFF, TGA, BMP, ICO,
+  EXR, QOI. Without these, the creator API is not working.
+
+### Changed
+
+- glycin: The sandbox selector now also disables the sandbox for app IDs that
+  end in `Devel`, not just `.Devel`.
+
+## 2.0.alpha.5 (2025-06-27)
+
+This release contains the following new component versions:
+
+- glycin-tools 2.0.0-alpha.4
+- glycin-utils 4.0.0-alpha.4
+- glycin 3.0.0-alpha.5
+- libglycin 2.0.0-alpha.4
+- libglycin-gtk4 2.0.0-alpha.4
+- glycin-heif 2.0.0-alpha.4
+- glycin-jxl 2.0.0-alpha.4
+- glycin-raw 2.0.0-alpha.4
+- glycin-svg 2.0.0-alpha.4
+- glycin-thumbnailer 2.0.0-alpha.4
+
+### Added
+
+- Saving/encoding new images for the BMP, DDS, Farbfeld, GIF, ICO, JPEG,
+  OpenEXR, PNG, PNM, QOI, TGA, TIFF, and WebP image formats.
+
+### Fixed
+
+- glycin: Exit pooled loaders in Flatpak when app exits.
+- glycin: Fix the process handling thread expecting the receivers for process
+  info being still alive.
+- glycin: Fixed a memory leak in retriving fontconfigs cache dirs.
+
+## 2.0.alpha.2 (2025-06-13)
+
+This release contains the following new component versions:
+
+- glycin-tools 2.0.0-alpha.2
+- glycin-utils 4.0.0-alpha
+- glycin 3.0.0-alpha
+- libglycin 2.0.0-alpha.2
+- libglycin-gtk4 2.0.0-alpha.2
+- glycin-heif 2.0.0-alpha.2
+- glycin-jxl 2.0.0-alpha.2
+- glycin-raw 2.0.0-alpha.2
+- glycin-svg 2.0.0-alpha.2
+- glycin-thumbnailer 2.0.0-alpha.2
+
+### Added
+
+- Added specific error for when requesting the next frame and there are no more
+  frames left.
+- Pooled loaders and editors. Pooled loaders will re-use existing loader
+  processes, without having to go through the costly process of spawning a new
+  loader. Using pooled loaders will drastically increase the speed for loading a
+  lot of small images, like, for example, thumbnails. Loader and editor pools
+  are now used by default. Loader processes are spawned on demand. The pools are
+  not shared between processes or apps.
+- Return `key_value` metadata from PNG's tEXt and zTXt chunks.
+- glycin: Create loaders from bytes in memory or a `GInputStream` instead of a
+  `GFile`.
+- glycin: Support setting accepted memory formats. If a texture isn't using a
+  specifieds memory format, it will be transformed into one specified as
+  supported.
+
+### Fixed
+
+- Previously, loaders could exit early if the thread in which they were created
+  was terminated.
+
+### Changed
+
+- Exposing the base directory is no longer enabled by default. For loading SVGs
+  that include external images, `loader.use_expose_basedir(true)` has to be
+  used.
+- Use a new loader/editor D-Bus API version 2+ and simultanously bump libglycin
+  to 2.0 and glycin (Rust API) to 3.0. This was required for supporting pooled
+  loaders.
+
+## 1.2.4 (2025-09-11)
+
+This release contains the following new component versions:
+
+- glycin 2.1.4
+- libglycin 1.0.4
+- glycin-svg 1.2.4
+
+### Fixed
+
+- glycin/sandbox: Allow `recv` syscall. Needed on powerpc.
+- jpeg: Bump gufo-jpeg to fix editing some JPEG with progressive mode.
+- svg: Correctly define data from rsvg as premultiplied.
+
+## 1.2.3 (2025-08-01)
+
+This release contains the following new component versions:
+
+- glycin-image-rs 1.2.3
+
+### Fixed
+
+- image-rs: Force at least zune-jpeg 0.4.19 to fix a JPEG loading issues for
+  images with extra data at the end.
+
+## 1.2.2 (2025-06-27)
+
+This release contains the following new component versions:
+
+- glycin-image-rs 1.2.2
+
+### Fixed
+
+- image-rs: Force at least zune-jpeg 0.4.18 to fix multiple JPEG loading issues.
+
+## 1.2.1 (2025-04-11)
+
+This release contains the following new component versions:
+
+- glycin-utils 3.0.1
+- glycin 2.1.1
+- libglycin 1.0.2
+- libglycin-gtk4 1.0.2
+- glycin-image-rs 1.2.1
+
+### Fixed
+
+- Fix editing for PNGs and JPEGs that are already rotated via an orientation tag
+  in the Exif data.
+- Remove rotation via legacy Exif rotation entries when editing PNG images to
+  not make them aditionally rotated after editing. This is a fix just for legacy
+  Exif entries via tEXt and zTEx chunks with keyword "Raw profile type exif".
+- Revert to using sRGB instead of Rec2020 to pass images with ICC profile to
+  GTK. This fixes some color deviations when displaying the images.
+- glycin: Allow additional syscalls needed for armv7 and on Alpine Linux in
+  sandbox.
+
+## 1.2.0 (2025-03-14)
+
+This release contains the following new component versions:
+
+- glycin-utils 3.0.0
+- glycin 2.1.0
+- libglycin 1.0.1
+- libglycin-gtk4 1.0.1
+- glycin-heif 1.2.0
+- glycin-image-rs 1.2.0
+- glycin-jxl 1.2.0
+- glycin-raw 1.2.0
+- glycin-svg 1.2.0
+
+### Changed
+
+- tests: Replace `serde_yml` crate with `serde_yaml_ng` due to questionable
+  maintenance of the former. It is also possible to use the (unmaintained)
+  `serde_yaml` crate instead.
+
+## 1.2.rc (2025-02-28)
+
+This release contains the following new component versions:
+
+- glycin-utils 3.0.0-rc
+- glycin 2.1.0-rc
+- libglycin 1.0.1-rc
+- libglycin-gtk4 1.0.1-rc
+- glycin-heif 1.2.0-rc
+- glycin-image-rs 1.2.0-rc
+- glycin-jxl 1.2.0-rc
+- glycin-raw 1.2.0-rc
+- glycin-svg 1.2.0-rc
+
+### Fixed
+
+- glycin-utils: Fix editing for images with more than 4 billion pixels.
+- glycin: Printing a color state error even if there is no problem.
+- jpeg: Allow to edit images with a dimension larger than 16384 px.
+- jpeg: Handle pure rotation or mirror operations correct for non-sparse output.
+  Also, properly combine multiple operations of this type into a single Exif
+  change.
+- libglycin: Generate .vapi with correct names.
+
+### Changed
+
+- glycin-utils: Handle clip width/height that would exceed the image boundaries
+  gracefully by reducing them to the image boundaries.
+- glycin: Increased maximally considered RAM to 20GB for memory limits.
+- glycin: Use a specific error type for canceled operations.
+
+## 1.2.beta (2025-01-31)
+
+This release contains the following new component versions:
+
+- glycin-utils 3.0.0-beta
+- glycin 2.1.0-beta
+- libglycin 1.0.1-beta
+- glycin-heif 1.2.0-beta
+- glycin-image-rs 1.2.0-beta
+- glycin-jxl 1.2.0-beta
+- glycin-raw 1.2.0-beta
+- glycin-svg 1.2.0-beta
+
+### Fixed
+
+- libglycin: Fix wrong g-i annotations for callbacks.
+
+### Changed
+
+- raw: Update to libopenraw 0.4.0-alpha.9 with Panasonic support
+
+## 1.2.alpha.10 (2025-01-06)
+
+This release contains the following new component versions:
+
+- glycin-utils 3.0.0-alpha.1
+- glycin 2.1.0-alpha.1
+- libglycin 1.0.1-alpha.1
+- libglycin-gtk4 1.0.1-alpha.1
+- glycin-heif 1.2.0-alpha.1
+- glycin-image-rs 1.2.0-alpha.1
+- glycin-jxl 1.2.0-alpha.1
+- glycin-raw 1.2.0-alpha.1
+- glycin-svg 1.2.0-alpha.1
+
+### Changed
+
+- Depend on zbus 5 instead of zbus 4.
+
+## 1.2.alpha (2025-01-03)
+
+This release contains the following new component versions:
+
+- glycin-utils 3.0.0-alpha
+- glycin 2.1.0-alpha
+- glycin-heif 1.2.0-alpha
+- glycin-image-rs 1.2.0-alpha
+- glycin-jxl 1.2.0-alpha
+- glycin-raw 1.2.0-alpha
+- glycin-svg 1.2.0-alpha
+
+### Added
+
+- By using gufo, XMP data are now provided for JPEGs.
+- Support the eXIf chunk for Exif metadata in PNGs.
+- glycin: API to list available editors with their supported operations.
+- image-rs/jpeg: Support for crop and flip in image editing.
+- image-rs/png: CICP support (variant of HDR content)
+- image-rs/png: Editing support for PNGs with crop, rotate, flip.
+
+### Changed
+
+- Repository location is now `GNOME/glycin` on GNOME GitLab.
+- glycin: Images with an ICC color profile are now passed in Rec. 2020 linear
+  color space to GTK, supporting a far wider color gamut than the sRGB format
+  before
+
+## 1.1.6 (2025-02-27)
+
+### Fixed
+
+- apng: Also support image/apng mime-type in loader.
+
+## 1.1.5 (2025-02-24)
+
+### Fixed
+
+- apng: Support image/apng mime-type to support animated PNGs again. This mime-
+  type is now detected due to upstream changes at xdg/shared-mime-info.
+
+## 1.1.4 (2024-01-03)
+
+This release contains the following new component versions:
+
+- libglycin 1.0.0
+- libglycin-gtk4 1.0.0
+
+### Fixed
+
+- image-rs: Support `image/qoi` mime-type for QOI in addition to `image/x-qoi`.
+- libglycin: Include stdint.h.
+- libglycin: Remove dependency on gtk in header and move it to libglycin-gtk4.
+
+## 1.1.2 (2024-11-22)
+
+### Added
+
+- Output loader output as debug messages. The loader output is captured and
+  added to errors. But it's not accessible if the loader doesn't return. In that
+  case, this feature is useful.
+
+### Fixed
+
+- Fix jpegxl-rs version to 0.10.3. Version 0.10.4 does not build on arm64 and
+  builds libjxl instead of using the system library.
+- Fix memory format mapping for RGBA 32bit float image from image-rs. This fixes
+  rendering for a lot of OpenEXR images.
+- glycin-heif: Disable bindgen for libheif-rs since it won't build with libheif
+  1.19 or newer otherwise.
+
+## 1.1.1 (2024-09-16)
+
+### Fixed
+
+- Glycin failed to detect the SVGZ format since the files were just detected as
+  gzip files via the magic bytes.
+
+## 1.1.0 (2024-09-13)
+
+### Fixed
+
+- tests: Update to test image which uses an explicit font name in SVG, not
+  depending on the correct default font setting on the system for the test to
+  pass.
+
+### Changed
+
+- glycin-utils: Don't use regex feature of env-logger to save almost 1 MB binary
+  size in each loader
+
+## 1.1.beta (2024-08-02)
+
+### Added
+
+- Add tests for animations
+- Automatically detect if glycin is used inside a Flatpak development
+  environment and disable sandbox in that case. Otherwise, flatpak-spawn
+  wouldn't use the loaders from the right Flatpak or might not find a installed
+  Flatpak at all.
+- Capture the stderr and stdout from loaders and editors and included it in the
+  new ErrorCtx type that the API now returns
+
+### Fixed
+
+- Also include free swap as free memory in the calculation of how much memory a
+  loader can use
+- If the fontconfig cache was not up-to-date, rendering SVGs with text would
+  fail. There is now a loader config option to enable passing a writable
+  fontconfig cache dir into the loader sandbox. This fixes the issue. The cache
+  is per loader binary.
+- Sealing memfds sometimes fails. Is is solved via retrying the seal until it
+  works. In the past this was limited to very short time of retries. The
+  interval is now much longer and properly async.
+- There was an error in the hardcoded limit for the texture size. The limit is
+  now fixed and 8GB as intended.
+
+## 1.1.alpha (2024-06-28)
+
+### Added
+
+- A specific error if no loaders are configured instead of giving an unknown
+  format error
+- Bindings for C and other languages via GObject Introspection under the name
+  libglycin and libglycin-gtk4
+- Loaders are now accompanied by editors that can return an image with image
+  operations applied
+- Option to use tokio throughout instead of async-io
+- glycin: List of mime types `glycin::DEFAULT_MIME_TYPES` that the default
+  loaders support
+- glycin: New loader option to apply transformations like rotate/mirror from
+  metadata by default
+- loaders: Use specific OutOfMemory error type
+
+### Changed
+
+- glycin: Use a specific error type when no loaders are configured
+- jxl: Libjxl version 0.10 is now required
+- svg: Use C bindings in SVG loader to reduce binary size
+
+## 1.0.2
+
+- sandbox: Add directories and syscalls needed for fontconfig to work
+
+## 1.0.1
+
+- loaders/utils: Register SIGSYS handler as early as possible for better debugging for unallowed syscalls
+- sandbox: Allow membarrier, open, stat syscalls
+
+## 1.0.0
+
+- glycin: Change to stable crate version
+- svg: Change to stable rsvg version
+
+## 1.0.rc
+
+- glycin: Allow fstat syscall
+- glycin: Treat files detected as XML as SVG if they have .svg file ending #48
+- jxl: Allow libjxl 0.10 as well
+
+## 1.0.beta.2
+
+- api: Rename a few functions
+- api: Use memfds for larger metadata like Exif or ICC profiles
+- glycin/glycin-utils: Drop all uses of anyhow
+- glycin/glycin-utils: Use thiserror to define types
+- glycin: Check image width and height are not zero
+- loaders/image-rs: Disable memory limits since we have our own
+- loaders: Use new error utils tracking code location
+
+## 1.0.beta.1
+
+- Update to zbus 4.0
+
+- glycin: Use more fine-tuned memory limits using max 80% available memory
+
+## 1.0.beta
+
+- Consitently use Loader instead of Decoder terminology in code
+
+- glycin/utils: Only use checked math operations
+- glycin: Add seccomp filter based on allow list for bwrap sandboxes
+- glycin: Attach command line to error messages
+- glycin: Clear env when using bwrap sandbox
+- glycin: Fix closing an already closed fd
+- glycin: Fix race condition in initialization
+- glycin: Limit memory usage when using flatpak sandbox
+- glycin: Retry sealing an memfd if it fails
+- glycin: Use more robust transfer of /lib.. symlinks into sandbox
+- jxl: Support Exif
+- jxl: Use libjxl instead of jxl-oxide for performance reasons
+- loaders: Use isolated install for tests in meson
+- utils: Add root cause info to decoding errors
+
+## 1.0.alpha
+
+- Replace async-std with other crates
+- Use a new D-Bus API version 1+ allowing for backward compatible extendability
+
+- glycin: Don't allow access to / in bwrap sandbox
+- glycin: Limit memory using when using bwrap sandbox
+- glycin: Don't block on applying ICC profiles
+- glycin: Add tokio feature for when zbus is used with tokio
+
+## 0.1.2
+
+- GIF/APNG/WEBP: Assume frame length of 100ms if provided frame length is zero or invalid
+
+## 0.1.1
+
+- Distribute correct Cargo.lock for glycin-loaders tarballs
+
+## 0.1.0
+
+- Update dependencies
+
+## 0.1.rc
+
+- Update dependencies
+
+## 0.1.beta.4
+
+- Relicense under MPL-2.0 OR LGPL-2.1-or-later
+- Add symlinks for license files in crates
+- Add cairo dependency for svg loader
+- HEIC: Fix filetype detection in config
+- tests: Add HEIC tests
+- tests: Add option to skip image formats in tests
+- tests: Run required install before tests (can be disabled)
+
+## 0.1.beta.3
+
+- Add consitency checks for stride and texture size
+- Fix applying ICC profiles to grayscale images
+- DDS/ICO: Fixed filetype detection in image-rs
+- Fix build on some 32 bit architectures
+
+## 0.1.beta.2
+
+- Use (outdated) librsvg from crates.io instead of git for now
+
+## 0.1.beta.1
+
+- Update dependencies
+- Update image-rs to 0.24.7
+    * WebP/TIFF: Adds ICC profile support to TIFF and WebP
+    * WebP: Fixes frequent decoding issues
+- WebP: Use transparent background instead of color suggested by image in
+  animations

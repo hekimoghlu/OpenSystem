@@ -1,0 +1,198 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/bufferedinputstream.h>
+#include <giomm/enums.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/bufferedinputstream_p.h)
+
+namespace Gio
+{
+
+/**
+ * An implementation of BufferedInputStream that allows for high-level data
+ * manipulation of arbitrary data (including binary operations).
+ *
+ * @ingroup Streams
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API DataInputStream : public Gio::BufferedInputStream
+{
+  _CLASS_GOBJECT(DataInputStream, GDataInputStream, G_DATA_INPUT_STREAM, Gio::BufferedInputStream, GBufferedInputStream, , , GIOMM_API)
+
+protected:
+  _WRAP_CTOR(DataInputStream(const Glib::RefPtr<InputStream>& base_stream), g_data_input_stream_new)
+
+public:
+
+  _WRAP_CREATE(const Glib::RefPtr<InputStream>& base_stream)
+
+  _WRAP_METHOD(void set_byte_order(DataStreamByteOrder order), g_data_input_stream_set_byte_order)
+  _WRAP_METHOD(DataStreamByteOrder get_byte_order() const, g_data_input_stream_get_byte_order)
+  _WRAP_METHOD(void set_newline_type(DataStreamNewlineType type), g_data_input_stream_set_newline_type)
+  _WRAP_METHOD(DataStreamNewlineType get_newline_type() const, g_data_input_stream_get_newline_type)
+
+  _WRAP_METHOD(guchar read_byte(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_byte, errthrow)
+
+  _WRAP_METHOD(gint16 read_int16(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_int16, errthrow)
+
+  _WRAP_METHOD(guint16 read_uint16(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_uint16, errthrow)
+
+  _WRAP_METHOD(gint32 read_int32(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_int32, errthrow)
+
+  _WRAP_METHOD(guint32 read_uint32(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_uint32, errthrow)
+
+  _WRAP_METHOD(gint64 read_int64(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_int64, errthrow)
+
+  _WRAP_METHOD(guint64 read_uint64(const Glib::RefPtr<Cancellable>& cancellable{?}), g_data_input_stream_read_uint64, errthrow)
+
+  //Note that we return a bool because we can't use std::string to distinguish between an empty string and a nullptr.
+
+  /** Reads a line from the data input stream.
+   *
+   * The operation can be cancelled by triggering the cancellable object from
+   * another thread. If the operation
+   * was cancelled, a Gio::Error with CANCELLED will be thrown.
+   *
+   * @param[out] line A string to fill with the read data (without the newlines).
+   * @param cancellable A cancellable object.
+   * @result true if the read succeeded without error.
+   */
+  bool read_line(std::string& line, const Glib::RefPtr<Cancellable>& cancellable);
+  _IGNORE(g_data_input_stream_read_line)
+
+  /** A non-cancellable version of read_line().
+   *
+   * @param[out] line A string to fill with the read data (without the newlines).
+   * @result true if the read succeeded without error.
+   */
+  bool read_line(std::string& line);
+
+#m4 _INITIALIZATION(`std::string&',`return-char*',`$3 = Glib::convert_return_gchar_ptr_to_stdstring($4)')
+  /** Reads a UTF-8 encoded line from the data input stream.
+   *
+   * If @a cancellable is supplied and not equal to Glib::RefPtr<Cancellable>(),
+   * then the operation can be cancelled by triggering the cancellable object
+   * from another thread. If the operation was cancelled, Gio::Error with
+   * code() == Gio::Error::CANCELLED will be thrown.
+   *
+   * @newin{2,30}
+   *
+   * @param[out] line A UTF-8 string with the line that was read in (without the newlines).
+   *   Supply @a length to get the length of the read line. On an error,
+   *   @a line is set to an empty string and an exception is thrown. For UTF-8
+   *   conversion errors, a Glib::ConvertError is thrown. If there's no content
+   *   to read, @a line will still be set to an empty string, but no exception
+   *   will be thrown.
+   * @param cancellable Optional Cancellable object.
+   * @param[out] length An optional gsize to get the length of the data read in.
+   */
+  _WRAP_METHOD(void read_line_utf8(std::string& line{OUT}, const Glib::RefPtr<Cancellable>& cancellable{.?}, gsize& length{.?}), g_data_input_stream_read_line_utf8, errthrow)
+
+  /** The asynchronous version of read_line(). It is
+   * an error to have two outstanding calls to this function.
+   *
+   * @param slot The slot to call when the request is satisfied.
+   * @param cancellable A cancellable object.
+   * @param io_priority The I/O priority of the request.
+   */
+  void read_line_async(const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable, int io_priority = Glib::PRIORITY_DEFAULT);
+  _IGNORE(g_data_input_stream_read_line_async)
+
+  /** Finish an asynchronous call started by read_line_async().
+   *
+   * @param result The AsyncResult that was provided to the callback slot.
+   * @param[out] data A string to fill with the read data.
+   * @result true if the read succeeded without error.
+   */
+  bool read_line_finish(const Glib::RefPtr<AsyncResult>& result, std::string& data);
+  _IGNORE(g_data_input_stream_read_line_finish)
+
+  /** Finish an asynchronous call started by read_line_async().
+   *
+   * @newin{2,30}
+   *
+   * @param result The AsyncResult that was provided to the callback.
+   * @param[out] data A UTF-8 string with the line that was read in (without the newlines).
+   *   Supply @a length to get the length of the read line. On an error,
+   *   @a line is set to an empty string and an exception is thrown. For UTF-8
+   *   conversion errors, a Glib::ConvertError is thrown. If there's no content
+   *   to read, @a line will still be set to an empty string, but no exception
+   *   will be thrown.
+   * @param[out] length An optional gsize to get the length of the data read in.
+   */
+  _WRAP_METHOD(void read_line_finish_utf8(const Glib::RefPtr<AsyncResult>& result{.}, std::string& data{OUT}, gsize& length{.?}), g_data_input_stream_read_line_finish_utf8, errthrow)
+
+  _IGNORE(g_data_input_stream_read_until, g_data_input_stream_read_until_async,
+    g_data_input_stream_read_until_finish)dnl// deprecated
+
+ /** Reads a string from the data input stream, up to the first
+   * occurrence of any of the stop characters.
+   *
+   * This method does <em>not</em> consume the stop character. You have
+   * to use read_byte() to get it before calling %read_upto() again.
+   *
+   * @param[out] data A string to fill with the read data.
+   * @param stop_chars Characters to terminate the read.
+   * @param cancellable A cancellable object.
+   * @result true if the read succeeded without error.
+   */
+  bool read_upto(std::string& data, const std::string& stop_chars, const Glib::RefPtr<Cancellable>& cancellable);
+  _IGNORE(g_data_input_stream_read_upto)
+
+  /** A non-cancellable version of read_upto().
+   * @param[out] data A string to fill with the read data.
+   * @param stop_chars Characters to terminate the read.
+   * @result true if the read succeeded without error.
+   */
+  bool read_upto(std::string& data, const std::string& stop_chars);
+
+  //TODO: Add a version that takes the stop_chars length, to allow a 0 in the middle?
+
+  /** The asynchronous version of read_upto(). It is
+   * an error to have two outstanding calls to this function.
+   *
+   * This method does <em>not</em> consume the stop character. You have
+   * to use read_byte() to get it before calling %read_upto_async() again.
+   *
+   * @param stop_chars Characters to terminate the read.
+   * @param slot The slot to call when the request is satisfied.
+   * @param cancellable A cancellable object.
+   * @param io_priority The I/O priority of the request.
+   */
+  void read_upto_async(const std::string& stop_chars, const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable, int io_priority = Glib::PRIORITY_DEFAULT);
+  _IGNORE(g_data_input_stream_read_upto_async)
+
+  /** Finish an asynchronous call started by read_upto_async().
+   *
+   * Note that this function does <em>not</em> consume the
+   * stop character. You have to use read_byte() to
+   * get it before calling read_upto_async() again.
+   *
+   * @param result The AsyncResult that was provided to the callback slot.
+   * @param[out] data A string to fill with the read data.
+   * @result true if the read succeeded without error.
+   */
+  bool read_upto_finish(const Glib::RefPtr<AsyncResult>& result, std::string& data);
+  _IGNORE(g_data_input_stream_read_upto_finish)
+
+  _WRAP_PROPERTY("byte-order", DataStreamByteOrder)
+  _WRAP_PROPERTY("newline-type", DataStreamNewlineType)
+};
+
+} // namespace Gio

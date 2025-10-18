@@ -1,0 +1,79 @@
+include:
+  - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+    inputs:
+      dist-job-name: "dist-job"
+
+default:
+  image: debian:unstable
+
+  before_script:
+    - export DEBIAN_FRONTEND=noninteractive
+    - export LANG=C.UTF-8
+    - apt update --assume-yes --quiet=2 > /dev/null &&
+        apt install --assume-yes --quiet=2
+          build-essential meson pkg-config gtk-doc-tools libxml2-utils
+          gobject-introspection dbus dbus-x11 libdbus-1-dev
+          libgirepository1.0-dev libglib2.0-dev bash-completion lcov
+          valac shellcheck > /dev/null
+    - apt install --assume-yes --quiet=2 git > /dev/null
+
+variables:
+  MESON_TEST_TIMEOUT_MULTIPLIER: 2
+
+stages:
+  - build
+  - deploy
+
+build-and-test:
+  stage: build
+  script:
+    - meson setup -Db_coverage=true -Dman=true -Dgtk_doc=true --buildtype debug --werror _build
+    - ninja -C _build all dconf-doc
+
+    - mkdir -p _coverage
+    - lcov --rc lcov_branch_coverage=1 --directory _build --capture --initial --output-file "_coverage/${CI_JOB_NAME}-baseline.lcov"
+
+    - meson test -C _build --timeout-multiplier ${MESON_TEST_TIMEOUT_MULTIPLIER}
+    - lcov --rc lcov_branch_coverage=1 --directory _build --capture --output-file "_coverage/${CI_JOB_NAME}.lcov"
+  coverage: '/^\s+lines\.+:\s+([\d.]+\%)\s+/'
+  except:
+    - tags
+  artifacts:
+    when: always
+    name: "dconf-_${CI_COMMIT_REF_NAME}"
+    paths:
+      - "_build/meson-logs"
+      - "_coverage"
+
+dist-job:
+  stage: build
+  only:
+    - tags
+  script:
+    - meson setup --buildtype release _build
+    - ninja -C _build dist
+    - cp -r _build/meson-dist/ public-dist/
+  artifacts:
+    paths:
+      - "public-dist/"
+
+pages:
+  stage: deploy
+  only:
+    - main
+  script:
+    - meson setup -Db_coverage=true -Dgtk_doc=true _build
+    - ninja -C _build all dconf-doc
+
+    - mkdir -p _coverage
+    - lcov --rc lcov_branch_coverage=1 --directory _build --capture --initial --output-file "_coverage/${CI_JOB_NAME}-baseline.lcov"
+
+    - meson test -C _build --timeout-multiplier ${MESON_TEST_TIMEOUT_MULTIPLIER}
+    - lcov --rc lcov_branch_coverage=1 --directory _build --capture --output-file "_coverage/${CI_JOB_NAME}.lcov"
+
+    - mkdir -p public/
+    - mv _build/docs/html/ public/docs/
+    - mv _coverage/ public/coverage/
+  artifacts:
+    paths:
+      - public

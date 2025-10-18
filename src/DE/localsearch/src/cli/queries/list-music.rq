@@ -1,0 +1,15 @@
+SELECT ?audio ?u
+WHERE {
+  GRAPH tracker:Audio {
+    ?audio a nmm:MusicPiece ;
+      nie:isStoredAs ?u .
+    ?u nie:dataSource ?ds .
+    OPTIONAL {
+      ?ds tracker:available ?available
+    }
+  }
+  FILTER (~showAll^^xsd:boolean || ?available)
+}
+ORDER BY ASC(?u)
+OFFSET ~offset
+LIMIT ~limit

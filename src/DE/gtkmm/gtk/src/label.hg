@@ -1,0 +1,177 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or(at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+_PINCLUDE(gtk/gtk.h)
+
+#include <gtkmm/widget.h>
+#include <pangomm/attrlist.h>
+#include <pangomm/tabarray.h>
+#include <giomm/menumodel.h>
+
+namespace Gtk
+{
+
+class GTKMM_API Menu;
+
+//TODO: Derive from (and implement) AccessibleText when we can break ABI.
+
+/** A widget that displays a small to medium amount of text.
+ *
+ * A simple setable widget for holding a Glib::ustring.
+ *
+ * Key values are the codes which are sent whenever a key is pressed or released.
+ * The complete list of key values can be found in the
+ * <a href="https://gitlab.gnome.org/GNOME/gtk/tree/main/gdk/gdkkeysyms.h">gdk/gdkkeysyms.h</a>
+ * header file. They are prefixed with <tt>GDK_KEY_</tt>.
+ *
+ * The Label widget looks like this:
+ * @image html label1.png
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Label : public Widget
+{
+  _CLASS_GTKOBJECT(Label, GtkLabel, GTK_LABEL, Gtk::Widget, GtkWidget, , , GTKMM_API)
+public:
+  Label();
+  explicit Label(const Glib::ustring& label, bool mnemonic = false);
+
+  /** This constructor is a shortcut to create a Label with Widget
+   * alignment properties different from the default Align::FILL.
+   * @code
+   * Gtk::Label label(text, h, v, mnemonic);
+   * @endcode
+   * is equivalent to:
+   * @code
+   * Gtk::Label label(text, mnemonic);
+   * label.set_halign(h);
+   * label.set_valign(v);
+   * @endcode
+   */
+  Label(const Glib::ustring& label, Align halign, Align valign = Align::CENTER, bool mnemonic = false);
+
+  _WRAP_METHOD(void set_text(const Glib::ustring &str), gtk_label_set_text)
+  _WRAP_METHOD(Glib::ustring get_text() const, gtk_label_get_text)
+
+  _WRAP_METHOD(void set_attributes(Pango::AttrList& attrs), gtk_label_set_attributes)
+  _WRAP_METHOD(Pango::AttrList get_attributes() const, gtk_label_get_attributes)
+
+  _WRAP_METHOD(void set_label(const Glib::ustring& str), gtk_label_set_label)
+  _WRAP_METHOD(Glib::ustring get_label() const, gtk_label_get_label)
+  _WRAP_METHOD(void set_markup(const Glib::ustring& str), gtk_label_set_markup)
+  _WRAP_METHOD(void set_use_markup(bool setting = true), gtk_label_set_use_markup)
+  _WRAP_METHOD(bool get_use_markup() const, gtk_label_get_use_markup)
+  _WRAP_METHOD(void set_use_underline(bool setting = true), gtk_label_set_use_underline)
+  _WRAP_METHOD(bool get_use_underline() const, gtk_label_get_use_underline)
+
+  _WRAP_METHOD(void set_markup_with_mnemonic(const Glib::ustring& str), gtk_label_set_markup_with_mnemonic)
+  _WRAP_METHOD(guint get_mnemonic_keyval() const, gtk_label_get_mnemonic_keyval)
+  _WRAP_METHOD(void set_mnemonic_widget(Widget& widget), gtk_label_set_mnemonic_widget)
+  _WRAP_METHOD(Widget* get_mnemonic_widget(), gtk_label_get_mnemonic_widget)
+  _WRAP_METHOD(const Widget* get_mnemonic_widget() const, gtk_label_get_mnemonic_widget)
+  _WRAP_METHOD(void set_text_with_mnemonic(const Glib::ustring& str), gtk_label_set_text_with_mnemonic)
+  _WRAP_METHOD(void set_justify(Justification jtype),gtk_label_set_justify)
+  _WRAP_METHOD(Justification get_justify() const, gtk_label_get_justify)
+
+  _WRAP_METHOD(void set_ellipsize(Pango::EllipsizeMode mode), gtk_label_set_ellipsize)
+  _WRAP_METHOD(Pango::EllipsizeMode get_ellipsize() const, gtk_label_get_ellipsize)
+
+  _WRAP_METHOD(void set_width_chars(int n_chars), gtk_label_set_width_chars)
+  _WRAP_METHOD(int get_width_chars() const, gtk_label_get_width_chars)
+
+  _WRAP_METHOD(void set_max_width_chars(int n_chars), gtk_label_set_max_width_chars)
+  _WRAP_METHOD(int get_max_width_chars() const, gtk_label_get_max_width_chars)
+
+  _WRAP_METHOD(void set_lines(int lines), gtk_label_set_lines)
+  _WRAP_METHOD(int get_lines() const, gtk_label_get_lines)
+
+  _WRAP_METHOD(void set_wrap(bool wrap = true), gtk_label_set_wrap)
+  _WRAP_METHOD(bool get_wrap() const, gtk_label_get_wrap)
+  _WRAP_METHOD(void set_wrap_mode(Pango::WrapMode wrap_mode), gtk_label_set_wrap_mode)
+  _WRAP_METHOD(Pango::WrapMode get_wrap_mode() const, gtk_label_get_wrap_mode)
+  _WRAP_METHOD(void set_natural_wrap_mode(NaturalWrapMode wrap_mode), gtk_label_set_natural_wrap_mode)
+  _WRAP_METHOD(NaturalWrapMode get_natural_wrap_mode() const, gtk_label_get_natural_wrap_mode)
+  _WRAP_METHOD(void set_selectable(bool setting = true), gtk_label_set_selectable)
+  _WRAP_METHOD(bool get_selectable() const, gtk_label_get_selectable)
+  _WRAP_METHOD(void select_region(int start_offset, int end_offset), gtk_label_select_region)
+
+  /** Selects a range of characters in the label, from @a start_offset to the end,
+   * if the label is selectable.
+   * See gtk_label_set_selectable(). If the label is not selectable,
+   * this function has no effect.
+   *
+   * @param start_offset Start offset (in characters not bytes)
+   */
+  void select_region(int start_offset);
+
+  _WRAP_METHOD(bool get_selection_bounds(int& start, int& end) const, gtk_label_get_selection_bounds)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::Layout> get_layout(), gtk_label_get_layout, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::Layout> get_layout() const, gtk_label_get_layout, refreturn, constversion)
+  _WRAP_METHOD(void get_layout_offsets(int& x, int& y) const, gtk_label_get_layout_offsets)
+
+  _WRAP_METHOD(void set_single_line_mode(bool single_line_mode = true), gtk_label_set_single_line_mode)
+  _WRAP_METHOD(bool get_single_line_mode() const, gtk_label_get_single_line_mode)
+
+  _WRAP_METHOD(Glib::ustring get_current_uri() const, gtk_label_get_current_uri)
+
+  _WRAP_METHOD(void set_xalign (float xalign), gtk_label_set_xalign)
+  _WRAP_METHOD(float get_xalign() const, gtk_label_get_xalign)
+  _WRAP_METHOD(void set_yalign (float yalign), gtk_label_set_yalign)
+  _WRAP_METHOD(float get_yalign() const, gtk_label_get_yalign)
+
+  _WRAP_METHOD(void set_extra_menu(const Glib::RefPtr<Gio::MenuModel>& model), gtk_label_set_extra_menu)
+  _WRAP_METHOD(Glib::RefPtr<Gio::MenuModel> get_extra_menu(), gtk_label_get_extra_menu, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::MenuModel> get_extra_menu() const, gtk_label_get_extra_menu, refreturn, constversion)
+
+#m4 _CONVERSION(`const Pango::TabArray&',`PangoTabArray*',`const_cast<Pango::TabArray&>($3).gobj()')
+#m4 _CONVERSION(`PangoTabArray*',`Pango::TabArray',`Pango::TabArray(($3), false)')
+ _WRAP_METHOD(void set_tabs(const Pango::TabArray& tabs), gtk_label_set_tabs)
+ _WRAP_METHOD(Pango::TabArray get_tabs() const, gtk_label_get_tabs)
+
+#m4 _CONVERSION(`const char*',`const Glib::ustring&',__GCHARP_TO_USTRING)
+  _WRAP_SIGNAL(bool activate_link(const Glib::ustring& uri), "activate-link", no_default_handler)
+
+  //Keybinding signals:
+  _IGNORE_SIGNAL("move_cursor")
+  _IGNORE_SIGNAL("copy_clipboard")
+  _IGNORE_SIGNAL("activate-current-link")
+
+  _WRAP_PROPERTY("label", Glib::ustring)
+  _WRAP_PROPERTY("attributes", Pango::AttrList)
+  _WRAP_PROPERTY("use-markup", bool)
+  _WRAP_PROPERTY("use-underline", bool)
+  _WRAP_PROPERTY("justify", Justification)
+  _WRAP_PROPERTY("wrap", bool)
+  _WRAP_PROPERTY("wrap-mode", Pango::WrapMode)
+  _WRAP_PROPERTY("natural-wrap-mode", NaturalWrapMode)
+  _WRAP_PROPERTY("selectable", bool)
+  _WRAP_PROPERTY("mnemonic-keyval", guint)
+  _WRAP_PROPERTY("mnemonic-widget", Widget*)
+  _WRAP_PROPERTY("ellipsize", Pango::EllipsizeMode)
+  _WRAP_PROPERTY("width-chars", int)
+  _WRAP_PROPERTY("single-line-mode", bool)
+  _WRAP_PROPERTY("max_width_chars", int)
+  _WRAP_PROPERTY("lines", int)
+  _WRAP_PROPERTY("xalign", float)
+  _WRAP_PROPERTY("yalign", float)
+  _WRAP_PROPERTY("extra-menu", Glib::RefPtr<Gio::MenuModel>)
+  _WRAP_PROPERTY("tabs", Pango::TabArray)
+};
+
+}  // namespace Gtk

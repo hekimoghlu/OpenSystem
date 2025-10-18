@@ -1,0 +1,194 @@
+----------
+2018 TODO:
+----------
+
+mail compujump
+
+Club de futbol:
+	a l'sprint sembla que lo del decimal com a punt o coma no acaba d'anar bé perque pugen t1,t2,t3,t4 com a 0
+	xavip mirarà a veure si pot arreglar lo de el R pq no es quedi parat
+	ara tal i com està al club de 1er nivell, estem desactivant la primera pq tenim problemes amb els dobles contactes, hem desactivat dobles contactes a les preferencies i han de sortir des de la segona dempeus, i les dades que pugen son amb t1,t2,t3,t4 == 0
+	Pendent:
+1) arreglar lo de les t1,t4 al software provant amb el meu i actualitzar-lis la maquina sprint (la 18) FET
+	2) arreglar lo dels dobles contactes pq funcioni be. FET!
+	3) tornar a posar la barrera 1 tornar a activar els dobles contactes
+
+
+que a graph.R single es pugui veure f mitjana i a mitjana. fmitjana segur pq hi ha els valors al treeview.
+lo ideal seria que hi hagues una funcio cridada pel paint i que ho faci per cadascun de: v, f, p
+
+andoni diu que si fem make distcheck veurem l'error i que s'arreglara posant-los a EXTRA_DIST
+funciona pel Makefile.in 1er, pero no per la resta de coses que son per la compilacio
+
+  ------------------------------------------------------
+  arreglant compilacio dels tar.gz
+  atencio pq els del git funcionen perfecte i es compilen amb autogen (he actualitzat info a la web)
+  en canvi els del ftp no van be i tenen aquests problemes que de moment solvento copiant 4 arxius:
+  ------------------------------------------------------
+
+  pq vagi el ./configure
+  ~/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/chronojump_server$ cp ../../../chronojump_server/Makefile.in .
+  fallos del make:
+(1)
+	make[3]: Entering directory '/home/xavier/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/chronopic-firmware/chronopic-firmwarecord'
+	make[3]: ** No rule to make target 'chronopic-firmware-multitest.hex', needed by 'all-am'.  Stop.
+(1 solucio)
+	xavier@d2015:~/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/chronopic-firmware/chronopic-firmwarecord$ cp ../../../../chronopic-firmware/chronopic-firmwarecord/chronopic-firmware-multitest.hex
+
+(2)
+	Making all in rfid
+	make[1]: Entering directory '/home/xavier/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/rfid'
+	make[1]: ** No rule to make target 'chronojump_rfid_capture.py', needed by 'all-am'.  Stop.
+(2 solucio)
+	~/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/rfid$ cp ../../../rfid/chronojump_rfid_capture.py .
+	~/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/rfid$ cp ../../../rfid/MFRC522.py .
+
+(3)
+	error CS1566: Error reading resource file `./../images/encoder-rotary-friction-on-fixed-pulley-with-weighted-moving-pulley.png'
+	error CS1566: Error reading resource file `./../images/encoder-rotary-axis-on-fixed-pulley-with-weighted-moving-pulley.png'
+(3 solucio)
+	~/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/images$ cp ../../../images/encoder-rotary-friction-on-fixed-pulley-with-weighted-moving-pulley.png .
+	~/informatica/progs_meus/chronojump/chronojump/build-deb/chronojump-1.7.1-8-gf1d4baf8~trusty2/images$ cp ../../../images/encoder-rotary-axis-on-fixed-pulley-with-weighted-moving-pulley.png .
+
+
+	Compujump: posar controls de finestra més grans!! per slide de treeview
+
+	1RM i carga necesaria para la max potencia calculats automaticament
+	comptant les 3 ultimes setmanes con mas preferencia de la ultima
+
+	Compujump: comprovar pq no va el 1RM a press banca a primer mode, potser li falta la dada a ejercicio
+
+	Si una repeticion inicial o final es mucho peor que el resto (30% de perdida de velocidad respecto a la media (no se si incluyendo estas),
+			entonces que salga ventana para decir si se tienen en cuenta o no para la pérdida
+			cuando se aprete algun boton se corregira la perdida y se subira
+			si no se apreta en 30 segundos, entonces sube toda la serie
+
+			intersession, o 1 sessio, poder a analisis date on x que surti una finestra de threshold o algo que es vegi la millora
+
+			que al analitzar grafic es pugui enviar mail al entrenador del club de primer nivell
+
+			lo de grafiques galgues amb analisi instantani tipus encoder, sembla que no es tan dificil
+			la cosa és fer una classe pare de la EncoderAnalyzeInstant, i un fill seria aquest i l'altre el de força
+			crec que es pot reaprofitar molta cosa
+
+
+
+
+
+
+
+----------------
+REALLY OLD TODO:
+----------------
+
+continue with titles and subtitles for all graphs
+fix global, jumper, rjEvolution
+
+check all software (for the Util.TrimDecimals change)
+
+website velleman put retardo de desactivacion instead of tiempo de respuesta ajustable
+
+
+
+++++++++++++++++++++++++++++++++++++++++ solved +++++
+runAnalysis bug it's always:
+- when calling error window (gui/chronojump.cs 2805 (between cfmt5 and cfmt6) (try catch seems not to work) now print writelines from error window, let's see
+-maybe is because first cp kills the PulseGTK and then 2nd cp has no access to this PulseGTK (because thread is killed) (and maybe it cannot end it's work or repaint screen or whatever) then need another pulse for 2nd cp, or just the 2nd cp is the one who has the real finish:
+first cp has a trigger on finishing
+second cp when knows that trigger
+
+what should happen:
+1 when first cp ends (arrive 2ns photocell)
+2 it does the finish
+3 message printed to user (press cp2)
+4 cp2 is pressed 
+5 totallyFinished 2 is displayed
+6 all is over
+
+------------
+ATTENTION:
+gui/chronojump.cs line has been commented:
+currentEventExecute.FakeButtonFinished.Clicked += new EventHandler(on_multi_chronopic_finished);
+and nothing is written (as run analysis and as mc) and nothing is in treeview
+but never fails!!!!!!!!!
+maybe is simple problem that on_multi_chronopic_finished calls on_finish_multi_clicked and later continues with it's code
+maybe is a bad call, try to uncomment the Fake again, but comment this call:
+on_finish_multi_clicked(o, args);
+-aixi funciona perfectament (provat amb 13runA) i guarda dades i fa treeview, l'unic que cal recrodar-se de fer el click al cp2 després del cp1
+
+ATTENTION2:
+*** seems that no errorwindow or dialogmessage can be used until pulseGtk code is ended ***
+maybe SOLUTION is to show a message on eventWindow from pulseGTK, and not from gui/chronojump with the 4 TotallyFinished calls
+++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+fix two bugs (really difficult to reproduce):
+1.- the chronojump.cs findVersion (just do more tests check that the error is fixed easily) 
+work done (30 apr (2)), just do more tests. added a try catch, hope it's done now
+2.- the sqlite problem with the thread at start... need to explore more
+
+multiChronopic:
+-syncFirst and deleteFirst are not working now
+-export!!
+-repair
+-tempTable
+-upload server
+
+
+new multichronopic tests:
+- discrimitative reaction time with two lights and two fotocells (or platforms)
+(4cp) when evaluator push left or right button, cp 1 or cp2 lights, person has to cross fotocell a or b (connected to cp 3, 4)
+better with only two chronopics, if evaluator push cp1, light1 gets on and person has tocross fotocell1 (or platform). Then with two we have all.
+we can also have three or four to have more discriminative
+
+
+server: study possible locks, see sqlite book
+
+done by R script and calling to database
+http://cran.r-project.org/web/packages/RSQLite/index.html
+http://cran.r-project.org/web/packages/RSQLite/INSTALL
+http://cran.r-project.org/web/packages/DBI/index.html
+
+do the ping gets real IP
+
+implement all server evaluator SAFE stuff 
+
+put thread in other server situations:
+-upload evaluator
+-upload session (doing) pending to generate wsdl proxy in order to download
+
+http://en.csharp-online.net/ASP.NET_Security_Hacks¿Avoiding_SQL_Injection
+http://ferruh.mavituna.com/sql-injection-cheatsheet-oku/
+every string that gets on server or complex object, sanitize it: see on sql or
+c# books. Or look for ; and after alter, insert, delete, drop, update, ...
+(low and hight case)
+i think there will be no problems because all is parametrized
+
+Put description of runAnalysis
+Put description of reactionTime
+Add longDescription on margaria
+
+Update manual
+
+
+intersession stats only have to show one max or avg, not n max or all jumps
+stats all and limit is not updating the treeview stats. 
+
+create a server mini program that tries to do a ping and if it fails, 
+then write something in a file, and another program restarts server
+fo it as to chrons. Record some stat data in another file
+just to know how xsp2 is working
+
+
+merge databases
+
+
+- Capacitat de salt Total: (SJ+100%) + (sj-sj+100%) + (cmj-sj) + (abk-cmj) + (dj-abk)
+(altura DJ ?). Aixo funciona, pero no agafa la linia si falta algun salt:
+sqlite> SELECT j1.personID, person.name, (j1.tv + j2.tv-j1.tv + j3.tv-j2.tv + j4.tv-j3.tv + j5.tv-j4.tv) AS index_total, j1.tv AS index1, (j2.tv - j1.tv) AS index2, (j3.tv - j2.tv) AS index3, (j4.tv - j3.tv) AS index4, (j5.tv - j4.tv) AS index5 FROM jump AS j1, jump AS j2, jump AS j3, jump AS j4, jump AS j5, person WHERE j1.type="SJ+" and j1.weight="100%" and j2.type="SJ" AND j3.type="CMJ" AND j4.type="ABK" AND j5.type="DJ" AND j1.personID=j2.personID AND j2.personID=j3.personID AND j3.personID=j4.personID AND j4.personID=j5.personID AND j1.personID=person.uniqueID GROUP BY j1.personID;
+2|pepa|0.0993004424028567|0.184782230008758|0.280872289780933|-0.280872289780933|-0.065258488461962|-0.0202232991439393
+1|xavi1|0.186643592820803|0.465654519789691|-0.366973106920241|0.366973106920241|-0.002864390799247|-0.276146536169641
+
+	we can check the lines we need, and execute, and if a line it's not found, try to discover wich values are needed
+	graf this
+

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load comments i18n %}
+
+{% block title %}{% trans "Preview your comment" %}{% endblock %}
+
+{% block body %}
+    {% if request.user.is_authenticated %}
+    <div id="rating_form" class="preview">
+        <form action="{% comment_form_target %}" method="post">{% csrf_token %}
+            {% if next %}
+                <div><input type="hidden" name="next" value="{{ next }}"/></div>{% endif %}
+            {% if form.errors %}
+                <h2>{% blocktrans count counter=form.errors|length %}Please correct the error below{% plural %}Please correct the errors below{% endblocktrans %}</h2>
+            {% else %}
+                <h2>{% trans "Preview your comment" %}</h2>
+                <blockquote>{{ comment|linebreaks }}</blockquote>
+                <p>
+                    <input type="submit" name="submit" class="btn btn-default" value="{% trans "Post Comment" %}" id="submit"/>
+                </p>
+                <hr>
+                <h2>{% trans "Edit your comment" %}:</h2>
+            {% endif %}
+            <p><strong>Rating</strong></p>
+            <div class="rating"></div>
+            <input type="hidden" name="show_rating" value="{{ form.data.show_rating }}" />
+            <p><strong>Summary</strong></p>
+            <p>{% trans "What do you think about this GNOME extension?" %}</p>
+            {% for field in form %}
+                {% if field.name != "rating" %}
+                    {% if field.is_hidden %}
+                        <div>{{ field }}</div>
+                    {% else %}
+                        {% if field.errors %}{{ field.errors }}{% endif %}
+                        <p
+                                {% if field.errors %} class="error"{% endif %}
+                                {% if field.name == "honeypot" %} style="display:none;"{% endif %}>
+                            {% if field.name != "comment" %}{{ field.label_tag }} {% endif %}{{ field }}
+                        </p>
+                    {% endif %}
+                {% else %}
+                    <input type="hidden" name="rating_initial" value="{{ field.value }}" />
+                {% endif %}
+            {% endfor %}
+            <p class="submit">
+                <input type="submit" name="submit" class="btn btn-default" value="{% trans "Post" %}"/>
+                <input type="submit" name="preview" class="btn btn-primary" value="{% trans "Preview" %}"/>
+            </p>
+        </form>
+    </div>
+    {% else %}
+        <p class="unauthenticated">
+            Unfortunately, to help prevent spam, we require that you <a href="{% url 'auth-login' %}">log in to GNOME
+            Shell Extensions</a> in order to post a comment or report an error. You understand, right?
+        </p>
+    {% endif %}
+{% endblock %}
+
+{% block navclass %}main{% endblock %}

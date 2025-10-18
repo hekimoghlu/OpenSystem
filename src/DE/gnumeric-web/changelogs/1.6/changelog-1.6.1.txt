@@ -1,0 +1,162 @@
+2005-11-14  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.6.1
+
+2005-11-14  Jody Goldberg <jody@gnome.org>
+
+	The rest of the Maemo port.
+	From eduardo.lima@indt.org.br
+	http://bugzilla.gnome.org/show_bug.cgi?id=321073
+	* src/Makefile.am
+	* src/gnumeric-canvas.c
+	* src/gui-file.c
+	* src/item-grid.c
+	* src/sheet-control-gui.c
+	* src/wbc-gtk.c
+	* src/wbcg-actions.c
+	* src/workbook-control-gui-priv.h
+	* src/workbook-control-gui.c : Merge the remaining Maemo/Hildon patches.
+
+2005-11-14  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump goffice req to 0.1.2 to get morten's fix.
+	  Add a < 0.2.0 to avoid problems when we branch.
+	  Disable the DEPRECATED warnings in the stable release.
+
+2005-11-13  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (cb_hscrollbar_adjust_bounds) : we weren't
+	  extending while at the very top.
+	(cb_vscrollbar_adjust_bounds) : ditto.
+
+2005-11-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnumeric-canvas.c: (gnm_canvas_key_press),
+	(gnm_canvas_commit_cb): use localized decimal separator [#80139].
+	* src/gnumeric-canvas.h:
+	* src/widgets/gnumeric-expr-entry.c: (cb_gee_key_press_event): ditto.
+
+2005-11-10  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnumeric_application_finalize): Free
+	->clipboard_cut_range.
+
+2005-11-06  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml.in : Include menu item for R1C1
+
+2005-11-05  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c : Delete the original DOM based export.  The pseudo-sax
+	  based variant is faster and lighter and there's not much point in
+	  maintaining two code bases.
+
+	* src/gnm-so-filled.c (gnm_so_filled_write_xml_dom) : delete.
+	* src/gnm-so-line.c (gnm_so_line_write_xml_dom) : delete.
+	* src/gnm-so-polygon.c (gnm_so_polygon_write_xml_dom) : delete.
+	* src/sheet-object-cell-comment.c (cell_comment_write_xml_dom) : delete.
+	* src/sheet-object-image.c (sheet_object_image_write_xml_dom) : delete.
+	* src/sheet-object-widget.c
+	(sheet_widget_frame_write_xml_dom) : delete.
+	(sheet_widget_button_write_xml_dom) : delete.
+	(sheet_widget_adjustment_write_xml_dom) : delete.
+	(sheet_widget_checkbox_write_xml_dom) : delete.
+	(sheet_widget_list_base_write_xml_dom) : delete.
+	* src/sheet-object-graph.c (sheet_object_graph_write_xml_dom) : delete.
+	(sheet_object_graph_prep_xml_sax) : new.
+	(sog_xml_finish) : new.
+	(sheet_object_graph_write_object) : use the sax interface.
+
+	* src/xml-sax-read.c (xml_sax_wb) : ICK.  We are actually depenent on
+	  the prefix for the namespace.  The change from gmr -> gnm broke the
+	  version test here.  Add gnm to fix it.
+	(xml_sax_wb_sheetname) : be more flexible and only create a sheet if
+	  we really need it.
+	(xml_sax_object_start) : implement.
+
+2005-11-02  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-autofill.c : remove the i18n flags for string lists as far
+	  as I can tell they were always true.
+	(type_is_compatible) : an item might be in
+	  multiple lists.  Check that the current item is in the previous list
+	  or that the previous item is in the current list.
+
+2005-10-25  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-filter.c (collect_unique_elements) : yes that is the type
+	  of equality and hash we want.  Remove the warning.
+
+2005-11-01  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c: Move include of popt stuff here.  It has
+	no business in libgnumeric.h
+
+2005-11-01  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* README: Updated list archives URL (Debian #336699).
+
+2005-11-01  Stepan Kasal  <kasal@ucw.cz>
+
+	* src/sheet-filter.c, src/xml-io.c, src/tools/analysis-tools.c:
+	#include <stdlib.h>, for the qsort() prototype.
+	* src/gnumeric-gconf.c: In the non-gconf case, #include glib/gstdio.h.
+
+2005-10-31  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c: Implement non-gconf case, see #310354.
+	(Patch from Allin Cottrell.)
+
+2005-10-24  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_dump_defs): Describe args too.
+
+2005-10-24  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (function_dump_defs): Do the minimum for the new
+	function doc stuff.
+
+2005-10-23  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (r1c1_rangeref_parse) : cut-n-paste-o
+	(r1c1_get_index) : == max is ok, we're about to decrement.
+
+	* src/parser.y (yylex) : special case check for #N/A which does not
+	  end in '!' or '?'.
+	(cellref) : Allow RANGEREF : RANGEREF
+
+2005-10-15  Jody Goldberg <jody@gnome.org>
+
+	* src/wbcg-actions.c (cb_format_general) : Fix fmt accelerators.
+	  ctrl-~ == general not number
+	  ctrl-! == number not accounting
+
+	* src/gnm-format.c (format_value_gstring) : Use the last element as a
+	  catch all. eg [>10][Blue]0;0 will fmt 1 in black even though it's
+	  implicit condition is <0
+
+	* src/sheet-view.c (sv_freeze_panes) : if frozen == unfrozen unfreeze
+	  things.
+
+2005-10-12  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (gnumeric_gnome_reqs): Require libgsf-gnome >= 1.13.0,
+	  1.12.x cannot be used in combination with libgsf >= 1.13.2 anyway.
+	* README: Sync all version requirements with configure.in.
+
+2005-10-10  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (csv_tsv_probe): Fix a pile of content-probe issues.
+	Fixes #318419.
+	Handle empty csv files sanely.
+
+2005-10-10  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_sheet_read) : xml_node_get_bool returns TRUE on
+	  success.  Only set the value if we have one.  The other code is
+	  reading directly into the value and setting it to a constant on
+	  failure.
+
+2005-10-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

@@ -1,0 +1,141 @@
+/* Copyright (C) 2006 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+_DEFS(gtkmm,gtk)
+
+#include <glibmm/keyfile.h>
+#include <glibmm/value.h>
+#include <vector>
+
+namespace Gtk
+{
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+struct PaperSizeTraits;
+#endif
+
+/** Common paper names, from PWG 5101.1-2002 PWG: Standard for Media Standardized Names
+ */
+extern GTKMM_API const Glib::ustring PAPER_NAME_A3;
+extern GTKMM_API const Glib::ustring PAPER_NAME_A4;
+extern GTKMM_API const Glib::ustring PAPER_NAME_A5;
+extern GTKMM_API const Glib::ustring PAPER_NAME_B5;
+extern GTKMM_API const Glib::ustring PAPER_NAME_LETTER;
+extern GTKMM_API const Glib::ustring PAPER_NAME_EXECUTIVE;
+extern GTKMM_API const Glib::ustring PAPER_NAME_LEGAL;
+
+_WRAP_ENUM(Unit, GtkUnit, decl_prefix GTKMM_API)
+
+/** PaperSize handles paper sizes. It uses the standard called "PWG 5101.1-2002 PWG: Standard for Media Standardized Names"
+ * to name the paper sizes (and to get the data for the page sizes). In addition to standard paper sizes, PaperSize allows
+ * to construct custom paper sizes with arbitrary dimensions.
+ *
+ * The PaperSize object stores not only the dimensions (width and height) of a paper size and its name, it also provides
+ * default print margins.
+ *
+ * @ingroup Printing
+ */
+class GTKMM_API PaperSize
+{
+  // Cannot pass the _new function here, it must accept the 'name' argument.
+  _CLASS_BOXEDTYPE(PaperSize, GtkPaperSize, NONE, gtk_paper_size_copy, gtk_paper_size_free, GTKMM_API)
+public:
+
+  // We don't use a "" default parameter value, though gtk_paper_size_new() can take NULL,
+  // because there is already a (desired) default constructor (creating an invalid instance).
+  // get_default() does what name="" would do.
+  explicit PaperSize(const Glib::ustring& name);
+  explicit PaperSize(const Glib::ustring& ppd_name, const Glib::ustring& ppd_display_name, double width, double height);
+  explicit PaperSize(const Glib::ustring& name, const Glib::ustring& display_name, double width, double height, Unit unit);
+
+  /** Reads a paper size from the group @a group_name in the key file @a key_file.
+   *
+   * @param key_file The Glib::KeyFile to retrieve the paper size from.
+   * @param group_name The name of the group in the key file to read,
+   *                   or an empty string to read the first group.
+   *
+   * @throws Gtk::PrintError, Glib::KeyFileError
+   */
+  explicit PaperSize(const Glib::RefPtr<const Glib::KeyFile>& key_file, const Glib::ustring& group_name = {});
+
+  _IGNORE(gtk_paper_size_copy, gtk_paper_size_free, gtk_paper_size_is_equal)
+  bool equal(const PaperSize& other) const;
+
+   /** Returns true if the PaperSize is a valid object.
+    * For instance,
+    * @code
+    * if(papersize)
+    *   do_something()
+    * @endcode
+    *
+    * @newin{3,22}
+    */
+   explicit operator bool() const;
+
+  #m4 _CONVERSION(`GList*', `std::vector<PaperSize>',`Glib::ListHandler<PaperSize, PaperSizeTraits>::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(static std::vector<PaperSize> get_paper_sizes(bool include_custom = true), gtk_paper_size_get_paper_sizes)
+
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_paper_size_get_name)
+  _WRAP_METHOD(Glib::ustring get_display_name() const, gtk_paper_size_get_display_name)
+  _WRAP_METHOD(Glib::ustring get_ppd_name() const, gtk_paper_size_get_ppd_name)
+
+  _WRAP_METHOD(double get_width(Unit unit) const, gtk_paper_size_get_width)
+  _WRAP_METHOD(double get_height(Unit unit) const, gtk_paper_size_get_height)
+  _WRAP_METHOD(bool is_custom() const, gtk_paper_size_is_custom)
+  _WRAP_METHOD(bool is_ipp() const, gtk_paper_size_is_ipp)
+
+  _WRAP_METHOD(void set_size(double width, double height, Unit unit), gtk_paper_size_set_size)
+  _WRAP_METHOD(double get_default_top_margin(Unit unit) const, gtk_paper_size_get_default_top_margin)
+  _WRAP_METHOD(double get_default_bottom_margin(Unit unit) const, gtk_paper_size_get_default_bottom_margin)
+  _WRAP_METHOD(double get_default_left_margin(Unit unit) const, gtk_paper_size_get_default_left_margin)
+  _WRAP_METHOD(double get_default_right_margin(Unit unit) const, gtk_paper_size_get_default_right_margin)
+
+  _WRAP_METHOD(static Glib::ustring get_default(), gtk_paper_size_get_default)
+
+  _WRAP_METHOD(void save_to_key_file(const Glib::RefPtr<Glib::KeyFile>& key_file, const Glib::ustring& group_name), gtk_paper_size_to_key_file)
+
+  /** This function adds the paper size to @a key_file in the first group.
+   *
+   * @param key_file The Glib::KeyFile to save the paper size to.
+   */
+  void save_to_key_file(const Glib::RefPtr<Glib::KeyFile>& key_file);
+};
+
+/** @relates Gtk::PaperSize */
+inline bool operator==(const PaperSize& lhs, const PaperSize& rhs)
+  { return lhs.equal(rhs); }
+
+/** @relates Gtk::PaperSize */
+inline bool operator!=(const PaperSize& lhs, const PaperSize& rhs)
+  { return !lhs.equal(rhs); }
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+struct PaperSizeTraits
+{
+  typedef PaperSize  CppType;
+  typedef const GtkPaperSize*      CType;
+  typedef GtkPaperSize*            CTypeNonConst;
+
+  static CType   to_c_type      (const CppType& obj) { return obj.gobj();     }
+  static CType   to_c_type      (CType          ptr) { return ptr;                   }
+  static CppType to_cpp_type    (CType          ptr) { return PaperSize(const_cast<GtkPaperSize*>(ptr), true /* make_copy */); /* Does not take ownership */ }
+  static void    release_c_type (CType          ptr);
+};
+#endif //DOXYGEN_SHOULD_SKIP_THIS
+
+} // namespace Gtk

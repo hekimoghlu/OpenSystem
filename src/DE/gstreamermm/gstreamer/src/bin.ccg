@@ -1,0 +1,93 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/pad.h>
+#include <gstreamermm/ghostpad.h>
+#include <gstreamermm/iterator.h>
+#include <gstreamermm/bus.h>
+#include <gstreamermm/handle_error.h>
+
+_PINCLUDE(glibmm/private/object_p.h)
+_PINCLUDE(gstreamermm/private/element_p.h)
+
+namespace Gst
+{
+
+Bin::Bin()
+: _CONSTRUCT("name", nullptr)
+{}
+
+Glib::RefPtr<Gst::Bin> Bin::add(const Glib::RefPtr<Gst::Element>& element)
+{
+  if(!element)
+    gstreamermm_handle_error("Failed to add null element.");
+
+  GstElement* celement = Glib::unwrap(element);
+
+  // The following is needed because when adding an element to a bin, the bin
+  // likes to have the last reference and then destroy it when the bin itself
+  // is destroyed.  Without the extra reference, when the last Glib::RefPtr<>
+  // to the element goes out of scope, the element may be destroyed before the
+  // bin and GStreamer complains about it.  The extra reference to the element
+  // is removed when the bin is destroyed or when the element is removed from
+  // the bin (see gst_bin_remove).
+  if(G_LIKELY(g_object_is_floating(celement)))
+    element->reference();
+
+  const bool result = gst_bin_add(gobj(), celement);
+
+  // If addition successful, return RefPtr<..> to this bin, otherwise throw an
+  // exception
+  if(!result)
+    gstreamermm_handle_error("Failed to add " + element->get_name() +
+      " element.");
+
+  return Glib::wrap(gobj(), true);
+}
+
+Glib::RefPtr<Gst::Bin> Bin::remove(const Glib::RefPtr<Gst::Element>& element)
+{
+  if(!element)
+    gstreamermm_handle_error("Failed to remove null element.");
+
+
+  const bool result = gst_bin_remove(gobj(), Glib::unwrap(element));
+
+  // If removal successful, return RefPtr<..> to this bin, otherwise throw an
+  // exception
+  if(!result)
+    gstreamermm_handle_error("Failed to remove " + element->get_name() +
+      " element.");
+
+  return Glib::wrap(gobj(), true);
+}
+
+Glib::RefPtr<Gst::GhostPad> Bin::add_ghost_pad(const
+  Glib::RefPtr<Gst::Element>& element, const Glib::ustring& pad_name, const
+  Glib::ustring& name)
+{
+  Glib::RefPtr<Gst::Pad> static_pad = element->get_static_pad(pad_name);
+  Glib::RefPtr<Gst::GhostPad> ghost_pad = Gst::GhostPad::create(static_pad,
+    name);
+  add_pad(ghost_pad);
+  return ghost_pad;
+}
+
+} //namespace Gst

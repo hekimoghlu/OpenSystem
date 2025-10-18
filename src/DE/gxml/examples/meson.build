@@ -1,0 +1,2 @@
+subdir('vala')
+subdir('c')

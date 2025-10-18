@@ -1,0 +1,80 @@
+
+import os
+import sys
+from pathlib import Path
+
+__package__ = "meld"
+__version__ = "3.23.1"
+
+APPLICATION_NAME = 'Meld'
+APPLICATION_ID = 'org.gnome.Meld'
+SETTINGS_SCHEMA_ID = 'org.gnome.meld'
+RESOURCE_BASE = '/org/gnome/meld'
+
+DATADIR = Path(sys.prefix) / "share" / "meld"
+LOCALEDIR = Path(sys.prefix) / "share" / "locale"
+
+CONFIGURED = '@configured@'
+# Treat an unconfigured installation as development
+PROFILE = "Devel"
+
+if CONFIGURED == 'True':
+    APPLICATION_ID = '@application_id@'
+    DATADIR = '@pkgdatadir@'
+    LOCALEDIR = '@localedir@'
+    PROFILE = '@profile@'
+
+# Flag enabling some workarounds if data dir isn't installed in standard prefix
+DATADIR_IS_UNINSTALLED = False
+PYTHON_REQUIREMENT_TUPLE = (3, 6)
+
+
+# Installed from main script
+def no_translation(gettext_string: str) -> str:
+    return gettext_string
+
+
+_ = no_translation
+ngettext = no_translation
+
+
+def frozen():
+    global DATADIR, LOCALEDIR, DATADIR_IS_UNINSTALLED
+
+    # FIXME: This is duplicating logic in get_meld_dir in bin/meld
+    # Also, we probably don't actually need the non-_MEIPASS branch
+    if hasattr(sys, '_MEIPASS'):
+        melddir = sys._MEIPASS
+        DATADIR_IS_UNINSTALLED = False
+    else:
+        melddir = os.path.dirname(sys.executable)
+        DATADIR_IS_UNINSTALLED = True
+
+    DATADIR = os.path.join(melddir, "share", "meld")
+    LOCALEDIR = os.path.join(melddir, "share", "mo")
+    PROFILE = ""
+
+
+def uninstalled():
+    global DATADIR, LOCALEDIR, DATADIR_IS_UNINSTALLED
+
+    melddir = Path(__file__).resolve().parent.parent
+
+    DATADIR = melddir / "data"
+    LOCALEDIR = melddir / "build" / "mo"
+    DATADIR_IS_UNINSTALLED = True
+
+    resource_path = melddir / "meld" / "resources"
+    os.environ['G_RESOURCE_OVERLAYS'] = f'{RESOURCE_BASE}={resource_path}'
+
+
+def setup_macos_application_bundle():
+    global DATADIR, LOCALEDIR, DATADIR_IS_UNINSTALLED
+
+    # When running from inside an application bundle, adjust paths relative
+    # to the location of the main binary.
+    base_dir = Path(sys.executable).resolve().parent.parent
+    share_dir = base_dir / "Resources" / "share"
+    DATADIR = share_dir / "meld"
+    LOCALEDIR = share_dir / "locale"
+    DATADIR_IS_UNINSTALLED = False

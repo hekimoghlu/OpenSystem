@@ -1,0 +1,15 @@
+polkit.addRule(function(action, subject) {
+    if (!subject.isInGroup("@GDM_GROUPNAME@"))
+        return undefined;
+
+    if (action.id == "org.freedesktop.NetworkManager.settings.modify.system" &&
+        subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+
+    if ((action.id == "org.debian.pcsc-lite.access_pcsc" ||
+         action.id == "org.debian.pcsc-lite.access_card") &&
+        subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

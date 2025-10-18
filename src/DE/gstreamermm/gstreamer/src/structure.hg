@@ -1,0 +1,390 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/clock.h>
+#include <gstreamermm/enums.h>
+#include <gstreamermm/value.h>
+#include <glibmm/date.h>
+#include <glibmm/datetime.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/**
+ * Generic class containing fields of names and values.
+ * A Gst::Structure is a collection of key/value pairs. The keys are expressed
+ * as GQuarks and the values can be of any GType.
+ *
+ * In addition to the key/value pairs, a Gst::Structure also has a name. The name
+ * starts with a letter and can be filled by letters, numbers and any of "/-_.:".
+ *
+ * Gst::Structure is used by various GStreamer subsystems to store information
+ * in a flexible and extensible way. A Gst::Structure does not have a refcount
+ * because it usually is part of a higher level object such as Gst::Caps,
+ * Gst::Message, Gst::Event, Gst::Query.
+ *
+ * A Gst::Structure can be created with constructor, which take a name
+ * and an optional set of key/value pairs along with the types of the values.
+ *
+ * Field values can be changed with set_field() or set_fields().
+ *
+ * Field values can be retrieved with gst_get_field().
+ *
+ * Fields can be removed with remove_field().
+ *
+ * Strings in structures must be ASCII or UTF-8 encoded.
+ *
+ * Be aware that the current Gst::Caps / Gst::Structure serialization into string
+ * has limited support for nested Gst::Caps / Gst::Structure fields. It can only
+ * support one level of nesting. Using more levels will lead to unexpected
+ * behavior when using serialization features, such as Gst::Caps::to_string() or
+ * gst_value_serialize() and their counterparts.
+ *
+ * Last reviewed on 2016-07-12 (1.8.0)
+ */
+class Structure
+{
+ _CLASS_BOXEDTYPE(Structure, GstStructure, NONE, gst_structure_copy, gst_structure_free)
+  _IGNORE(gst_structure_copy, gst_structure_free, gst_structure_set_parent_refcount)
+
+public:
+  /** Creates a Structure with the given @a name. Parses the list of variable
+   * arguments and sets fields to the values listed. Variable arguments
+   * should be passed as field name and value
+   */
+  template<class ...DataTypes>
+  explicit Structure(const Glib::ustring &name, DataTypes... data);
+
+  /** Creates a Gst::Structure from a string representation.
+   *
+   * @param the_string A string representation of a Gst::Structure. See to_string().
+   * @return A Structure. This will be invalid (see operator=) when the string 
+   * could not be parsed.
+   */
+  static Structure create_from_string(const Glib::ustring& the_string);
+  _IGNORE(gst_structure_from_string)
+
+  /** Use this to discover if the Structure is a valid object.
+   */
+  operator const void*() const;
+
+  /** Release the ownership of underlying GstStructure instance.
+   *
+   * Gst::Structure's underlying instance is set to nullptr, therefore underlying
+   * object can't be accessed through this Gst::Structure anymore.
+   * @return an underlying instance of GstStructure object.
+   *
+   * Most users should not use release(). It can spoil the automatic destruction
+   * of the managed object.
+   */
+  GstStructure* release() noexcept;
+
+  _WRAP_METHOD(Glib::ustring get_name() const, gst_structure_get_name)
+  _WRAP_METHOD(bool has_name(const Glib::ustring& name) const, gst_structure_has_name)
+  _WRAP_METHOD(void set_name(const Glib::ustring& name), gst_structure_set_name)
+  _WRAP_METHOD(Glib::QueryQuark get_name_id() const, gst_structure_get_name_id)
+  _WRAP_METHOD(void remove_all_fields(), gst_structure_remove_all_fields)
+  _WRAP_METHOD(GType get_field_type(const Glib::ustring& fieldname) const, gst_structure_get_field_type)
+  _WRAP_METHOD(int size() const, gst_structure_n_fields)
+  _WRAP_METHOD(Glib::ustring get_nth_field_name(guint index) const, gst_structure_nth_field_name)
+  _WRAP_METHOD(Glib::ustring to_string() const, gst_structure_to_string)
+  _WRAP_METHOD(bool fixate_field_nearest_int(const Glib::ustring& name, int target), gst_structure_fixate_field_nearest_int)
+  _WRAP_METHOD(bool fixate_field_nearest_double(const Glib::ustring& name, double target), gst_structure_fixate_field_nearest_double)
+  _WRAP_METHOD(bool fixate_field_string(const Glib::ustring& name, const Glib::ustring& target), gst_structure_fixate_field_string)
+  _WRAP_METHOD(bool fixate_field(const Glib::ustring& name), gst_structure_fixate_field)
+  _WRAP_METHOD(bool fixate_field_boolean(const Glib::ustring& name, bool target), gst_structure_fixate_field_boolean)
+  _WRAP_METHOD(Gst::Structure intersect(const Gst::Structure& struct2) const, gst_structure_intersect)
+  _WRAP_METHOD(bool is_equal(const Gst::Structure& struct2) const, gst_structure_is_equal)
+  _WRAP_METHOD(bool is_subset(const Gst::Structure& superset) const, gst_structure_is_subset)
+  _WRAP_METHOD(bool can_intersect(const Gst::Structure& struct2) const, gst_structure_can_intersect)
+  _WRAP_METHOD(void fixate(), gst_structure_fixate)
+  _WRAP_METHOD(bool get_flagset(const Glib::ustring& fieldname, guint& value_flags, guint& value_mask) const, gst_structure_get_flagset)
+
+  _WRAP_METHOD(bool has_field(const Glib::ustring& fieldname) const, gst_structure_has_field)
+  _IGNORE(gst_structure_id_has_field)
+
+  _WRAP_METHOD(bool has_field(const Glib::ustring& fieldname, GType type) const, gst_structure_has_field_typed)
+  _IGNORE(gst_structure_id_has_field_typed)
+
+  /** Get the value of the field with name @a fieldname.
+   *
+   * @param fieldname The name of the field to get.
+   * @param value The Value class in which to store the value.
+   */
+  void get_field(const Glib::ustring& fieldname, Glib::ValueBase& value) const;
+
+  /** Get the value of the field with name @a fieldname.
+   *
+   * @param fieldname The name of the field to get.
+   * @param value The Value class in which to store the value.
+   */
+  template<typename DataType>
+  void get_field(const Glib::ustring& fieldname, Glib::Value<DataType>& value) const;
+
+    /** Gets the value of field @a fieldname with GType enum type @a enumtype
+   * into integer @a value.  Caller is responsible for making sure the
+   * field exists and has the correct type.  A call to this method would look
+   * like so:
+   * @code
+   * ...
+   * int state;
+   * structure.get_field("state", Glib::Value<Gst::State>::value_type(),
+   * state);
+   * ...
+   * @endcode
+   *
+   * @param fieldname The name of a field.
+   * @param enumtype The enum GType of the field.
+   * @param value An output parameter that will be set with the value.
+   * @return true if @a value could be set correctly. If there was no field
+   * with @a fieldname or the existing field did not contain an enum, this
+   * function returns false.
+   */
+  bool get_field(const Glib::ustring& fieldname, GType enumtype, int& value) const;
+  _IGNORE(gst_structure_get_enum)
+
+  /** Gets the value of field @a fieldname into DataType @a value.
+   * The caller is responsible for making sure the field exists and has the
+   * correct type.
+   *
+   * @param fieldname The name of a field.
+   * @param value The DataType to set.
+   */
+  template<typename DataType>
+  bool get_field(const Glib::ustring& fieldname, DataType& value) const;
+
+  // These are ignored because they are useful in the C API but are either
+  // variable argument functions or their functionality is already provided.
+  _IGNORE(gst_structure_id_get_value,
+          gst_structure_get_value,
+          gst_structure_id_get_valist,
+          gst_structure_get,
+          gst_structure_id_get,
+          gst_structure_get_valist,
+	  gst_structure_get_int64,
+	  gst_structure_get_fraction,
+	  gst_structure_get_date_time,
+	  gst_structure_get_clock_time,
+	  gst_structure_get_int,
+	  gst_structure_get_boolean,
+	  gst_structure_get_double,
+	  gst_structure_get_uint,
+	  gst_structure_get_date,
+	  gst_structure_get_uint64,
+	  gst_structure_get_string
+	)
+
+  /** Sets the field with name @a fieldname to value. If the field does not
+   * exist, it is created. If the field exists, the previous value is replaced
+   * and freed.
+   *
+   * @param fieldname The name of the field to set.
+   * @param value The value to set the field to.
+   */
+  void set_field(const Glib::ustring& fieldname, const Glib::ValueBase& value);
+  _IGNORE(gst_structure_id_set_value,
+    gst_structure_set_value,
+    gst_structure_id_set_valist,
+    gst_structure_set_valist
+  )
+
+  /** Sets the field with name @a fieldname to value. If the field does not
+   * exist, it is created. If the field exists, the previous value is replaced
+   * and freed.
+   *
+   * @param fieldname The name of the field to set.
+   * @param value The value to set the field to.
+   */
+  template<typename DataType>
+  void set_field(const Glib::ustring& fieldname, const Glib::Value<DataType>& value);
+
+  /** Sets the field with name @a fieldname to value. If the field does not
+   * exist, it is created. If the field exists, the previous value is replaced
+   * and freed.
+   *
+   * @param fieldname The name of the field to set.
+   * @param value The value to set the field to.
+   */
+  void set_field(const Glib::ustring& fieldname, const char* value);
+
+  /** Sets the fields with name @a fieldname to values. If one of the fields does not
+   * exist, it is created. If the field exists, the previous value is replaced
+   * and freed.
+   *
+   * @param fieldname The name of the field to set.
+   * @param value The value to set the field to.
+   * @param further_data List of pairs of the format: fieldname, value.
+   */
+  template<class DataType, class ...DataTypes>
+  void set_fields(const Glib::ustring & fieldname, const DataType& value, DataTypes ...further_data);
+
+  /** Sets the field with name @a fieldname to the value @a value of the enum
+   * type @a enum_type. If the field does not exist, it is created. If the
+   * field exists, the previous value is replaced and freed.  Caller is
+   * responsible for making sure that @a value is a valid @a enumtype.  A call
+   * to this method would look like so:
+   * @code
+   * ...
+   * structure.set_field("state", Glib::Value<Gst::State>::value_type(),
+   * Gst::STATE_PAUSED);
+   * ...
+   * @endcode
+   *
+   * @param fieldname The name of the field to set.
+   * @param enumtype The enum GType that @a value should be treated as.
+   * @param value The value to set the field to.
+   */
+  void set_field(const Glib::ustring& fieldname, GType enumtype, int value);
+
+  /** Sets the field with name @a fieldname field to the DataType @a value.
+   * If the field does not exist, it is created. If the field exists,
+   * the previous value is replaced and freed. Please note that when setting
+   * fields to special types such as Gst::Fourcc and Gst::Fraction and
+   * Glib::Date they are converted to the GStreamer GTypes and thus when
+   * attempting to get these fields back as GValues, they will have the
+   * GStreamer GType.
+   *
+   * @param fieldname The name of the field to set.
+   * @param value The value to set the field to.
+   */
+  template<typename DataType>
+  void set_field(const Glib::ustring& fieldname, const DataType& value);
+
+  // These take ownership of the GValue so they are not wrapped.
+  _IGNORE(gst_structure_take_value, gst_structure_id_take_value)
+
+  /** Removes the field with name @a fieldname. If the field with the given
+   * name does not exist, the structure is unchanged.
+   *
+   * @param fieldname The name of the field to remove.
+   */
+  void remove_field(const Glib::ustring& fieldname);
+  _IGNORE(gst_structure_remove_field, gst_structure_remove_fields, gst_structure_remove_fields_valist)
+
+  /** For example,
+   * bool on_foreach(const Glib::ustring& id, const Glib::ValueBase& value);.
+   * The on_foreach function should return true if the foreach operation should
+   * continue, or false if the operation should stop with false.
+   */
+  typedef sigc::slot<bool, const Glib::ustring&, const Glib::ValueBase&> SlotForeach;
+
+  /** Calls the provided slot once for each field in the Gst::Structure. The
+   * slot must not modify the fields. See also map_in_place().
+   *
+   * @param slot A slot to call for each field.
+   * @return true if the supplied slot returns true For each of the fields,
+   * false otherwise.
+   */
+  bool foreach(const SlotForeach& slot);
+  _IGNORE(gst_structure_foreach)
+
+  /** For example,
+   * bool on_map(const Glib::ustring& id, Glib::ValueBase& value);.
+   * The map function should return true if the map operation should continue,
+   * or false if the operation should stop with false.
+   */
+  typedef sigc::slot<bool, const Glib::ustring&, Glib::ValueBase&> SlotMap;
+
+  /** Calls the provided slot once for each field in the Gst::Structure. In
+   * contrast to foreach(), the function may modify but not delete the fields.
+   * The structure must be mutable.
+   *
+   * @param slot A slot to call for each field.
+   * @return true if the supplied slot returns true For each of the fields,
+   * false otherwise.
+   */
+  bool map_in_place(const SlotMap& slot);
+  _IGNORE(gst_structure_map_in_place)
+
+  /** Fixates a Gst::Structure by changing the given field to the nearest
+   * fraction to given Gst::Fraction that is a subset of the existing field.
+   *
+   * @param field_name A field in structure.
+   * @param target The target value of the fixation.
+   * @return true If the structure could be fixated.
+   */
+  bool fixate_nearest_fraction(const Glib::ustring& field_name, const Gst::Fraction& target);
+  _IGNORE(gst_structure_fixate_field_nearest_fraction)
+
+  //Variable argument functions are ignored.
+  _IGNORE(gst_structure_set, gst_structure_id_set)
+
+
+
+private:
+  // This method is used for varadic template recursion
+  void set_fields() {}
+};
+
+template<class ...DataTypes>
+Structure::Structure(const Glib::ustring &name, DataTypes... data)
+{
+  gobject_ = gst_structure_new_empty(name.c_str());
+  set_fields(data...);
+}
+
+template<class DataType, class ...DataTypes>
+void Structure::set_fields(const Glib::ustring & name, const DataType& data, DataTypes ...further_data)
+{
+  this->set_field(name, data);
+  this->set_fields(further_data...);
+}
+
+template<typename DataType>
+bool Structure::get_field(const Glib::ustring& fieldname, DataType& value) const
+{
+  typedef Glib::Value<DataType> ValueType;
+
+  bool ret = ValueType::value_type() == get_field_type(fieldname);
+
+  if (ret)
+  {
+    ValueType v;
+    this->get_field(fieldname, reinterpret_cast<Glib::ValueBase&>(v));
+    value = v.get();
+  }
+
+  return ret;
+}
+
+template<typename DataType>
+void Structure::set_field(const Glib::ustring& fieldname, const DataType& value)
+{
+  typedef Glib::Value<DataType> ValueType;
+  ValueType v;
+  v.init(ValueType::value_type());
+  v.set(value);
+  this->set_field(fieldname, reinterpret_cast<const Glib::ValueBase&>(v));
+}
+
+template<typename DataType>
+void Structure::get_field(const Glib::ustring& fieldname, Glib::Value<DataType>& value) const
+{
+  get_field(fieldname, reinterpret_cast<Glib::ValueBase&>(value));
+}
+
+template<typename DataType>
+void Structure::set_field(const Glib::ustring& fieldname, const Glib::Value<DataType>& value)
+{
+  set_field(fieldname, reinterpret_cast<const Glib::ValueBase&>(value));
+}
+
+} //namespace Gst

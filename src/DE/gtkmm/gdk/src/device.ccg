@@ -1,0 +1,90 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gdk/gdk.h>
+#include <gdkmm/cursor.h>
+#include <gdkmm/devicetool.h>
+#include <gdkmm/devicewithpad.h>
+#include <gdkmm/display.h>
+#include <gdkmm/seat.h>
+#include <gdkmm/surface.h>
+
+namespace Gdk
+{
+
+Glib::RefPtr<Surface> Device::get_surface_at_position()
+{
+  auto retvalue = Glib::wrap(gdk_device_get_surface_at_position(gobj(), nullptr, nullptr));
+  if(retvalue)
+    retvalue->reference(); //The function does not do a ref for us.
+  return retvalue;
+}
+
+Glib::RefPtr<const Surface> Device::get_surface_at_position() const
+{
+  return const_cast<Device*>(this)->get_surface_at_position();
+}
+
+//TODO: Has gdk_device_get_device_tool() been deprecated by mistake?
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+Glib::RefPtr<DeviceTool> Device::get_device_tool()
+{
+  auto retvalue = Glib::wrap(gdk_device_get_device_tool(gobj()));
+  if(retvalue)
+    retvalue->reference(); //The function does not do a ref for us.
+  return retvalue;
+}
+
+Glib::RefPtr<const DeviceTool> Device::get_device_tool() const
+{
+  return const_cast<Device*>(this)->get_device_tool();
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+
+// Custom wrap_new() because we want to create a DeviceWithPad, if the underlying
+// C class implements the GdkDevicePad interface.
+Glib::ObjectBase* Device_Class::wrap_new(GObject* object)
+{
+  // GdkDevice is an abstract class. C functions that return a GdkDevice* usually
+  // (always?) return a pointer to a subclass of GdkDevice. Some subclasses, e.g.
+  // GdkWaylandDevicePad, implement the GdkDevicePad interface.
+  // Give C++ programmers a chance to access methods in that interface, although
+  // gtkmm does not wrap subclasses of GdkDevice.
+
+  if (GDK_IS_DEVICE_PAD(object))
+     return new DeviceWithPad((GdkDevice*)object);
+  return new Device((GdkDevice*)object);
+}
+
+bool Device::has_device_pad() const
+{
+  return dynamic_cast<const DeviceWithPad*>(this) != nullptr;
+}
+
+Glib::RefPtr<DeviceWithPad> Device::device_with_pad_cast()
+{
+  auto retvalue = Glib::make_refptr_for_instance<DeviceWithPad>(dynamic_cast<DeviceWithPad*>(this));
+  if (retvalue)
+    retvalue->reference();
+  return retvalue;
+}
+
+Glib::RefPtr<const DeviceWithPad> Device::device_with_pad_cast() const
+{
+  return const_cast<Device*>(this)->device_with_pad_cast();
+}
+
+} // namespace Gdk

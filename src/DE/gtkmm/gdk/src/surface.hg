@@ -1,0 +1,210 @@
+/* Copyright(C) 1998-2010 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License or(at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gdkmmconfig.h)
+
+#include <glibmm/object.h>
+#include <gdkmm/drag.h>
+#include <cairomm/region.h>
+#include <gdkmm/device.h>
+#include <gdkmm/enums.h>
+#include <gdkmm/event.h>
+#include <gdkmm/popuplayout.h>
+#include <cairomm/context.h>
+#include <gdk/gdk.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gdk
+{
+
+class GDKMM_API ContentProvider;
+class GDKMM_API Cursor;
+class GDKMM_API CairoContext;
+class GDKMM_API GLContext;
+class GDKMM_API FrameClock;
+class GDKMM_API Monitor;
+
+/** Onscreen display areas in the target window system.
+ *
+ * A %Gdk::Surface is a (usually) rectangular region on the screen.
+ * It’s a low-level object, used to implement high-level objects
+ * such as Gtk::Window or Gtk::Dialog in GTK.
+ *
+ * The surfaces you see in practice are either Gdk::Toplevel or
+ * Gdk::Popup, and those interfaces provide much of the required
+ * API to interact with these surfaces. Other, more specialized
+ * surface types exist, but you will rarely interact with them
+ * directly.
+ *
+ * @see Gdk::Toplevel, Gdk::Popup
+ */
+class GDKMM_API Surface : public Glib::Object
+{
+  _CLASS_GOBJECT(Surface, GdkSurface, GDK_SURFACE, Glib::Object, GObject, , , GDKMM_API)
+  _STRUCT_NOT_HIDDEN
+  _CUSTOM_WRAP_NEW
+  _IGNORE(gdk_surface_destroy, gdk_surface_is_destroyed)
+
+public:
+  // _WRAP_CREATE() would not be very useful here.
+  // The gdk_surface_new_*() functions do more than call g_object_new().
+
+  /** Creates a new toplevel surface.
+   *
+   * The created surface is usually a subclass of Gdk::Surface that implements
+   * the Gdk::Toplevel interface. To use toplevel API, do something like
+   * @code
+   * auto surface = Gdk::Surface::create_toplevel(display);
+   * auto toplevel = std::dynamic_pointer_cast<Gdk::ToplevelSurfaceImpl>(surface);
+   * if (toplevel)
+   *   toplevel->do_something();
+   * @endcode
+   * 
+   * @param display The display to create the surface on.
+   * @return The new %Gdk::Surface.
+   */
+  _WRAP_METHOD(static Glib::RefPtr<Surface> create_toplevel(const Glib::RefPtr<Display>& display), gdk_surface_new_toplevel)
+
+  /** Create a new popup surface.
+   * 
+   * The surface will be attached to @a parent and can be positioned
+   * relative to it using Gdk::Popup::present().
+   *
+   * The created surface is usually a subclass of Gdk::Surface that implements
+   * the Gdk::Popup interface. To use popup API, do something like
+   * @code
+   * auto surface = Gdk::Surface::create_popup(parent, autohide);
+   * auto popup = std::dynamic_pointer_cast<Gdk::PopupSurfaceImpl>(surface);
+   * if (popup)
+   *   popup->do_something();
+   * @endcode
+   * 
+   * @param parent The parent surface to attach the surface to.
+   * @param autohide Whether to hide the surface on outside clicks.
+   * @return A new %Gdk::Surface.
+   */
+  _WRAP_METHOD(static Glib::RefPtr<Surface> create_popup(
+    const Glib::RefPtr<Surface>& parent, bool autohide), gdk_surface_new_popup)
+
+  _WRAP_METHOD(Glib::RefPtr<Display> get_display(), gdk_surface_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Display> get_display() const, gdk_surface_get_display, refreturn, constversion)
+
+  _WRAP_METHOD(void hide(), gdk_surface_hide)
+
+  _WRAP_METHOD(void set_input_region(const ::Cairo::RefPtr< ::Cairo::Region>& region), gdk_surface_set_input_region)
+
+  _WRAP_METHOD(bool get_mapped() const, gdk_surface_get_mapped)
+
+  _WRAP_METHOD(void set_cursor(const Glib::RefPtr<Cursor>& cursor), gdk_surface_set_cursor)
+
+  /** Use the parent surface's cursor.
+   * For top-level windows this means that it will use the default cursor for the ROOT window.
+   */
+  void set_cursor();
+
+  _WRAP_METHOD(void set_device_cursor(const Glib::RefPtr<Device>& device, const Glib::RefPtr<Cursor>& cursor), gdk_surface_set_device_cursor)
+
+  _WRAP_METHOD(Glib::RefPtr<Cursor> get_device_cursor(const Glib::RefPtr<Device>& device), gdk_surface_get_device_cursor, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Cursor> get_device_cursor(const Glib::RefPtr<const Device>& device) const, gdk_surface_get_device_cursor, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<Cursor> get_cursor(), gdk_surface_get_cursor, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Cursor> get_cursor() const, gdk_surface_get_cursor, refreturn, constversion)
+
+  _WRAP_METHOD(int get_width() const, gdk_surface_get_width)
+  _WRAP_METHOD(int get_height() const, gdk_surface_get_height)
+
+  /** Translates coordinates between two surfaces.
+   *
+   * Note that this only works if this surface and @a to are popups or
+   * transient-for to the same toplevel (directly or indirectly).
+   *
+   * @newin{4,18}
+   *
+   * @param to The target surface.
+   * @param[in,out] x Coordinate to translate.
+   * @param[in,out] y Coordinate to translate.
+   * @return <tt>true</tt> if the coordinates were successfully translated.
+   */
+  _WRAP_METHOD(bool translate_coordinates(const Glib::RefPtr<const Surface>& to, double& x, double& y) const,
+    gdk_surface_translate_coordinates, newin "4,18")
+
+  _WRAP_METHOD(int get_scale_factor() const, gdk_surface_get_scale_factor)
+  _WRAP_METHOD(double get_scale() const, gdk_surface_get_scale)
+
+  _WRAP_METHOD(bool get_device_position(const Glib::RefPtr<const Device>& device, double& x, double& y, ModifierType& mask) const, gdk_surface_get_device_position)
+
+  #m4 _CONVERSION(`::Cairo::Content',`cairo_content_t',`(cairo_content_t)($3)')
+  _WRAP_METHOD(::Cairo::RefPtr< ::Cairo::Surface> create_similar_surface(::Cairo::Content content, int width,  int height),
+    gdk_surface_create_similar_surface, deprecated "Create a suitable cairo image surface yourself.")
+
+  _WRAP_METHOD(void beep(), gdk_surface_beep)
+
+  _WRAP_METHOD(Glib::RefPtr<Drag> drag_begin_from_point(const Glib::RefPtr<Device>& device,
+    const Glib::RefPtr<ContentProvider>& content, DragAction actions, double dx, double dy), gdk_drag_begin)
+
+  _WRAP_METHOD(void queue_render(), gdk_surface_queue_render)
+  _WRAP_METHOD(void request_layout(), gdk_surface_request_layout)
+
+  _WRAP_METHOD(Glib::RefPtr<FrameClock> get_frame_clock(), gdk_surface_get_frame_clock, refreturn, newin "3,24")
+  _WRAP_METHOD(Glib::RefPtr<const FrameClock> get_frame_clock() const, gdk_surface_get_frame_clock, refreturn, constversion, newin "3,24")
+
+  _WRAP_METHOD(void set_opaque_region(const ::Cairo::RefPtr<const ::Cairo::Region>& region), gdk_surface_set_opaque_region,
+    deprecated "4.16: GDK can figure out the opaque parts of a window itself by inspecting the contents that are drawn.")
+
+  /** Creates a new GLContext matching the framebuffer format to the visual of the
+   * Surface. The context is disconnected from any particular surface.
+   *
+   * If the creation of the GLContext failed an error will be thrown.
+   *
+   * Before using the returned GLContext, you will need to call
+   * GLContext::make_current() or GLContext::realize().
+   *
+   * @newin{3,18}
+   *
+   * @return GLContext The newly created context.
+   *
+   * @throws GLError On missing GL implementation or extension required for context creation.
+   */
+  _WRAP_METHOD(Glib::RefPtr<Gdk::GLContext> create_gl_context(), gdk_surface_create_gl_context, errthrow)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::CairoContext> create_cairo_context(), gdk_surface_create_cairo_context,
+    deprecated "4.18: Drawing content with Cairo should be done via Cairo rendernodes, not by using the Cairo renderer.")
+  _IGNORE(gdk_surface_create_vulkan_context)dnl// deprecated
+
+  // no_default_handler because the wrapped C signals have no default handlers.
+  _WRAP_SIGNAL(void layout(int width, int height), "layout", no_default_handler)
+#m4 _CONVERSION(`CairoRegion*',`const ::Cairo::RefPtr<const ::Cairo::Region>&',`Gdk::Cairo::wrap($3, false)')
+  _WRAP_SIGNAL(bool render(const ::Cairo::RefPtr<const ::Cairo::Region>& expose_region),
+    "render", no_default_handler)
+#m4 _CONVERSION(`GdkEvent*',`const Glib::RefPtr<const Event>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(bool event(const Glib::RefPtr<const Event>& event), "event", no_default_handler)
+#m4 _CONVERSION(`GdkMonitor*',`const Glib::RefPtr<Monitor>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void enter_monitor(const Glib::RefPtr<Monitor>& monitor), "enter-monitor", no_default_handler)
+  _WRAP_SIGNAL(void leave_monitor(const Glib::RefPtr<Monitor>& monitor), "leave-monitor", no_default_handler)
+
+  _WRAP_PROPERTY("cursor", Glib::RefPtr<Cursor>)
+  _WRAP_PROPERTY("display", Glib::RefPtr<Display>)
+  _WRAP_PROPERTY("frame-clock", Glib::RefPtr<FrameClock>)
+  _WRAP_PROPERTY("mapped", bool)
+  _WRAP_PROPERTY("width", int)
+  _WRAP_PROPERTY("height", int)
+  _WRAP_PROPERTY("scale-factor", int)
+  _WRAP_PROPERTY("scale", double)
+};
+
+} // namespace Gdk

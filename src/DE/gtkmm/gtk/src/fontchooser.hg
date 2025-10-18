@@ -1,0 +1,133 @@
+/* Copyright (C) 2011 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#include <glibmm/interface.h>
+#include <pangomm/fontface.h>
+#include <pangomm/fontdescription.h>
+#include <pangomm/fontfamily.h>
+#include <pangomm/fontmap.h>
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+extern "C"
+{
+typedef struct _GtkFontChooserIface GtkFontChooserIface;
+}
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gtk
+{
+
+/** An interface implemented by widgets displaying fonts.
+ *
+ * FontChooser widgets list the available fonts, styles and
+ * sizes, allowing the user to select a font.
+ *
+ * To set the font which is initially selected, use set_font_name().
+ *
+ * To get the selected font use get_font_name().
+ *
+ * To change the text which is shown in the preview area, use set_preview_text().
+ *
+ * @newin{3,2}
+ * @deprecated 4.10: Use Gtk::FontDialog and Gtk::FontDialogButton instead.
+ */
+class GTKMM_API FontChooser : public Glib::Interface
+{
+  _CLASS_INTERFACE(FontChooser, GtkFontChooser, GTK_FONT_CHOOSER, GtkFontChooserIface, , , GTKMM_API)
+public:
+  _WRAP_ENUM(Level, GtkFontChooserLevel, decl_prefix GTKMM_API)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::FontFamily> get_font_family(), gtk_font_chooser_get_font_family, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::FontFamily> get_font_family() const, gtk_font_chooser_get_font_family, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::FontFace> get_font_face(), gtk_font_chooser_get_font_face, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::FontFace> get_font_face() const, gtk_font_chooser_get_font_face, refreturn, constversion)
+
+  _WRAP_METHOD(int get_font_size() const, gtk_font_chooser_get_font_size)
+
+#m4 _CONVERSION(`PangoFontDescription*',`Pango::FontDescription',`Glib::wrap(const_cast<PangoFontDescription*>($3), false)')
+  _WRAP_METHOD(Pango::FontDescription get_font_desc() const, gtk_font_chooser_get_font_desc)
+  _WRAP_METHOD(void set_font_desc(const Pango::FontDescription& font_desc), gtk_font_chooser_set_font_desc)
+
+  _WRAP_METHOD(Glib::ustring get_font() const, gtk_font_chooser_get_font)
+  _WRAP_METHOD(void set_font(const Glib::ustring& fontname), gtk_font_chooser_set_font)
+  _WRAP_METHOD(Glib::ustring get_preview_text() const, gtk_font_chooser_get_preview_text)
+  _WRAP_METHOD(void set_preview_text(const Glib::ustring& text),gtk_font_chooser_set_preview_text)
+
+  _WRAP_METHOD(bool get_show_preview_entry() const, gtk_font_chooser_get_show_preview_entry)
+  _WRAP_METHOD(void set_show_preview_entry(bool show_preview_entry = true), gtk_font_chooser_set_show_preview_entry)
+
+  /** Font filter callback.
+   * For instance,
+   * @code
+   * bool on_font_fitler(const Glib::RefPtr<const Pango::FontFamily>& font_family, const Glib::RefPtr<const Pango::FontFace>& font_face);
+   * @endcode
+   *
+   * @param font_family A Pango FontFamily.
+   * @param font_face A Font Face belonging to the @a font_family.
+   * @result true if the font should be displayed.
+   *
+   * This is used for deciding what fonts should be shown in a FontChooser.
+   * See set_filter_func().
+   *
+   * @newin{3,4}
+   */
+  typedef sigc::slot<bool(const Glib::RefPtr<const Pango::FontFamily>&, const Glib::RefPtr<const Pango::FontFace>&)> SlotFontFilter;
+
+  /** Adds a filter function that decides which fonts to display in the font chooser.
+   *
+   * @param slot A callback, to be called for each font.
+   *
+   * @newin{3,4}
+   */
+  void set_filter_func(const SlotFontFilter& slot);
+  _IGNORE(gtk_font_chooser_set_filter_func)
+
+  _WRAP_METHOD(void set_font_map(const Glib::RefPtr<Pango::FontMap>& fontmap), gtk_font_chooser_set_font_map)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::FontMap> get_font_map(), gtk_font_chooser_get_font_map, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::FontMap> get_font_map() const, gtk_font_chooser_get_font_map, refreturn, constversion)
+
+  _WRAP_METHOD(void set_level(Level level), gtk_font_chooser_set_level)
+  _WRAP_METHOD(Level get_level() const, gtk_font_chooser_get_level)
+  _WRAP_METHOD(Glib::ustring get_font_features() const, gtk_font_chooser_get_font_features)
+  _WRAP_METHOD(Glib::ustring get_language() const, gtk_font_chooser_get_language)
+  _WRAP_METHOD(void set_language(const Glib::ustring& language), gtk_font_chooser_set_language)
+
+  _WRAP_SIGNAL(void font_activated(const Glib::ustring& fontname), "font-activated")
+
+  _WRAP_PROPERTY("font", Glib::ustring)
+  _WRAP_PROPERTY("font-desc", Pango::FontDescription)
+  _WRAP_PROPERTY("preview-text", Glib::ustring)
+  _WRAP_PROPERTY("show-preview-entry", bool)
+  _WRAP_PROPERTY("level", Level)
+  _WRAP_PROPERTY("font-features", Glib::ustring)
+  _WRAP_PROPERTY("language", Glib::ustring)
+};
+
+} // namespace Gtk

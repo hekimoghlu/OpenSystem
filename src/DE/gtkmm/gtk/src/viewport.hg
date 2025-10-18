@@ -1,0 +1,58 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/scrollable.h>
+#include <gtkmm/scrollinfo.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk {
+
+/** An adapter which makes widgets scrollable.
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ */
+class GTKMM_API Viewport
+ : public Widget,
+   public Scrollable
+{
+  _CLASS_GTKOBJECT(Viewport, GtkViewport, GTK_VIEWPORT, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Scrollable)
+public:
+
+  _WRAP_CTOR(Viewport(const Glib::RefPtr<Adjustment>& hadjustment, const Glib::RefPtr<Adjustment>& vadjustment), gtk_viewport_new)
+
+  _WRAP_METHOD(void set_scroll_to_focus(bool scroll_to_focus = true), gtk_viewport_set_scroll_to_focus)
+  _WRAP_METHOD(bool get_scroll_to_focus() const, gtk_viewport_get_scroll_to_focus)
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_viewport_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_viewport_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_viewport_get_child, constversion)
+
+  // gtk_viewport_scroll_to() does not take a ref (transfer full).
+#m4 _CONVERSION(`const Glib::RefPtr<const ScrollInfo>&', `GtkScrollInfo*', `const_cast<GtkScrollInfo*>(Glib::unwrap_copy($3))')
+  _WRAP_METHOD(void scroll_to(const Widget& descendant,
+    const Glib::RefPtr<const ScrollInfo>& scroll = {}), gtk_viewport_scroll_to)
+
+  _WRAP_PROPERTY("scroll-to-focus", bool)
+  _WRAP_PROPERTY("child", Widget*)
+};
+
+}  //namespace Gtk

@@ -1,0 +1,54 @@
+test-extraction-data
+====================
+
+Each test for the extractor is defined by a .expected file.
+
+.expected file format
+=====================
+
+It is a JSON file with two toplevel key: "test" and "metadata".
+
+The "test" key should contain the following subkeys:
+* Filename (mandatory): relative path from the .expected of the file under test.
+* Bugzilla (optional): reference to a bug related with the file.
+* Comment (optional): brief description of why that file is in the test suite (problematic, format example...)
+
+The "metadata" section lists the metadata we expect to see returned by
+tracker-extract (when tracker-extract is run with --output-format=json-ld).
+
+There are a few special rules:
+
+1. If the property name is prefixed with '@' then the property is expected in the extraction, but the value
+   won't be checked.
+
+2. If the property name is prefixed with '!' then the property is NOT expected in the extraction
+   If the negated property has a value, it forbids the exact value. Otherwise, it forbids the property at all.
+
+   E.G.   The extraction is:    { "@type": "nmm:Video", "nfo:duration": 50 }
+
+       { "!@type": "nmm:Audio" }     -> PASS because there is no { "@type": "nmm:Audio" }
+       { "!nfo_duration": "12" }     -> PASS because duration has a different value
+       { "!nfo_duration": null} }    -> FAIL because there shouldn't be any nfo:duration at all
+
+3. There is (so far only) one constant defined to use in the values:
+
+   @URNUUID@  meaning an automatic generated urn:uuid:1231-123-123 URL
+     [This constant must not be used with multiple-valued properties. The code only check the first result.]
+
+Example
+======
+
+Everything together should look like this:
+
+{
+    "test": {
+        "Filename": "x.mp4",
+        "Bugzilla": "GB#123123",
+        "Comment": "Video usually clasiffied as Audio by mistake"
+    },
+    "metadata": {
+        "@type": "nmm:Video",
+        "!@type": "nmm:Audio",
+        "nfo:duration": 123
+    }
+}

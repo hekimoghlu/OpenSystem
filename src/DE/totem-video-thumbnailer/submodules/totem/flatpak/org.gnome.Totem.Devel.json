@@ -1,0 +1,269 @@
+{
+    "app-id": "org.gnome.Totem.Devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "totem",
+    "tags": ["nightly"],
+    "finish-args": [
+        /* X11 + XShm access */
+        "--share=ipc", "--socket=fallback-x11",
+        /* Wayland access */
+        "--socket=wayland",
+        /* OpenGL access */
+        "--device=dri",
+        /* Needs to talk to the network: */
+        "--share=network",
+        /* Online accounts support */
+        "--talk-name=org.gnome.OnlineAccounts",
+        /* Avahi */
+        "--system-talk-name=org.freedesktop.Avahi",
+        /* DLNA server */
+        "--talk-name=com.intel.dleyna-server",
+        /* Play sounds */
+        "--socket=pulseaudio",
+        /* Browse user's Videos directory and Downloads */
+        "--filesystem=xdg-videos",
+        "--filesystem=xdg-download",
+        /* Browse gvfs */
+        "--talk-name=org.gtk.vfs.*",
+        "--filesystem=xdg-run/gvfs", "--filesystem=xdg-run/gvfsd",
+        /* screensaver plugin */
+        "--talk-name=org.gnome.ScreenSaver",
+        /* save-file plugin */
+        "--talk-name=org.gnome.Nautilus",
+        /* MPRIS plugin */
+        "--own-name=org.mpris.MediaPlayer2.totem",
+        /* im-status plugin */
+        "--talk-name=org.gnome.SessionManager"
+    ],
+    "cleanup": [ "/include", "/share/bash-completion" ],
+    "modules": [
+        "shared-modules/lua5.4/lua-5.4.json",
+        {
+            "name": "gnome-common",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-common.git"
+                }
+            ]
+        },
+        {
+            "name": "intltool",
+            "cleanup": [ "*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256": "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ]
+        },
+        {
+            "name": "libpeas",
+            "buildsystem": "meson",
+            "config-opts": [ "-Dlua51=false", "-Dgjs=false" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libpeas.git",
+                    "branch": "main"
+                }
+            ]
+        },
+        {
+            "name": "totem-pl-parser",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/totem-pl-parser.git"
+                }
+            ],
+            "cleanup": [ "/include" ]
+        },
+        {
+            "name": "grilo",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Denable-grl-net=true",
+                "-Dsoup3=true",
+                "-Denable-grl-pls=true"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/grilo.git"
+                }
+            ],
+            "cleanup": [ "/include" ]
+        },
+        {
+            "name": "librest",
+            "buildsystem": "meson",
+            "config-opts": [ "-Dgtk_doc=false", "-Dtests=false", "-Dexamples=false" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/librest.git"
+                }
+            ]
+        },
+        {
+            "name": "gom",
+            "buildsystem": "meson",
+            "config-opts": [ "-Denable-introspection=false" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gom.git"
+                }
+            ]
+        },
+        {
+            "name": "localsearch",
+            "cleanup": [ "/bin", "/etc" ],
+            "buildsystem": "meson",
+            "config-opts" : [
+                "-Dman=false",
+                "-Dminer_fs=true",
+                "-Dminer_rss=false",
+                "-Dsystemd_user_services=false",
+                "-Dwriteback=false",
+                "-Dbattery_detection=none",
+                "-Dlandlock=disabled",
+                "-Ddomain_prefix=org.gnome.Totem.Devel",
+                "-Dminer_fs_cache_location=$XDG_CACHE_HOME/totem/miner/files",
+                "-Ddefault_index_recursive_dirs=['&VIDEOS']",
+                "-Ddefault_index_single_dirs=['&DOWNLOAD']",
+                "-Dfunctional_tests=false",
+                "-Dsandbox_tests=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/localsearch.git",
+                    "commit": "69471d118d88ae47e950e1bc04b0488fe7c77145"
+                },
+                {
+                    "type": "patch",
+                    "path": "0001-common-Cast-function-argument-to-expected-type.patch"
+                }
+            ]
+        },
+        {
+            "name": "libmediaart",
+            "cleanup": [ "/bin", "/etc", "/libexec" ],
+            "buildsystem": "meson",
+            "config-opts": [ "-Dimage_library=gdk-pixbuf" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libmediaart.git"
+                }
+            ]
+        },
+        {
+            "name": "avahi",
+            "cleanup": [ "/bin/*avahi*", "share/man/man1/*avahi*" ],
+            "config-opts": [
+                "--with-distro=none",
+                "--enable-gobject",
+                "--with-xml=expat",
+                "--disable-libdaemon",
+                "--disable-core-docs",
+                "--disable-manpages",
+                "--disable-mono",
+                "--disable-qt3",
+                "--disable-qt4",
+                "--disable-python",
+                "--disable-gtk",
+                "--disable-gtk3"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://avahi.org/download/avahi-0.7.tar.gz",
+                    "sha256": "57a99b5dfe7fdae794e3d1ee7a62973a368e91e414bd0dfa5d84434de5b14804"
+                }
+            ]
+        },
+        /* XXX Remove the Lua sources we won't use */
+        {
+            "name": "grilo-plugins",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Denable-filesystem=yes",
+                "-Denable-optical-media=yes",
+                "-Denable-youtube=no",
+                "-Denable-bookmarks=yes",
+                "-Denable-lua-factory=yes",
+                "-Denable-metadata-store=yes",
+                "-Denable-tracker=no",
+                "-Denable-tracker3=yes",
+                "-Denable-local-metadata=yes",
+                "-Denable-dleyna=yes",
+                "-Denable-thetvdb=yes",
+                "-Denable-tmdb=yes",
+                "-Denable-freebox=yes"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/grilo-plugins.git"
+                }
+            ],
+            "cleanup": [ "/include" ]
+        },
+        {
+            "name": "gnome-desktop",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Ddesktop_docs=false",
+                "-Ddebug_tools=false",
+                "-Dintrospection=false",
+                "-Dudev=disabled",
+                "-Dsystemd=disabled",
+                "-Dbuild_gtk4=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-desktop.git"
+                }
+            ]
+        },
+        {
+            "name" : "libhandy",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dexamples=false",
+                "-Dglade_catalog=disabled",
+                "-Dtests=false"
+            ],
+            "sources" : [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libhandy",
+                    "branch": "main"
+                }
+            ]
+        },
+        {
+            "name": "totem",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dinspector-page=true",
+                "-Dprofile=development",
+                "-Dui-tests=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/totem.git"
+                }
+            ]
+        }
+    ]
+}

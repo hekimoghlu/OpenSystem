@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+               "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd" [
+]>
+<refentry id="connectedcb">
+	<refmeta>
+		<refentrytitle>Connected Callback</refentrytitle>
+		<manvolnum>3</manvolnum>
+		<refmiscinfo>Libdmapsharing</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>Connected Callback</refname>
+		<refpurpose>
+			Defining a Connected Callback
+		</refpurpose>
+	</refnamediv>
+
+	<refsect1>
+		<title>Connected Callback</title>
+		<para>
+Once the DmapConnection object completes its interrogation of a DMAP
+server, it will emit the "connected" signal. Libdmapsharing has fully
+populated the DmapConnection's DmapDb by this point. The following is
+a simple "connected" callback which assumes db had previously been passed as the
+third argument to dmap_connection_start:
+
+		</para>
+		<screen>
+static void
+connected_cb(DmapConnection *connection, gboolean result, const char *reason, DmapDb *db)
+{
+	g_print ("DB has %lu entries\n", dmap_db_count (db));
+	dmap_db_foreach (db, print_record, NULL);
+	g_main_loop_quit (loop);
+}
+		</screen>
+	</refsect1>
+</refentry>

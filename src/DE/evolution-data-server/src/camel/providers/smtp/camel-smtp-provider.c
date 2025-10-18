@@ -1,0 +1,77 @@
+/* camel-smtp-provider.c: smtp provider registration code
+ *
+ * Copyright (C) 1999-2008 Novell, Inc. (www.novell.com)
+ *
+ * This library is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors: Jeffrey Stedfast <fejj@ximian.com>
+ */
+
+#include "evolution-data-server-config.h"
+
+#include <camel/camel.h>
+#include <glib/gi18n-lib.h>
+
+#include "camel-smtp-transport.h"
+
+#ifdef G_OS_WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
+CamelProviderConfEntry smtp_conf_entries[] = {
+	{ CAMEL_PROVIDER_CONF_SECTION_START, "smtpsection", NULL,
+	  N_("Send Options") },
+	{ CAMEL_PROVIDER_CONF_CHECKBOX, "reencode-data", NULL,
+	  N_("_Re-encode message before send"), "0" },
+	{ CAMEL_PROVIDER_CONF_SECTION_END },
+	{ CAMEL_PROVIDER_CONF_END }
+};
+
+CamelProviderPortEntry smtp_port_entries[] = {
+	{ 25, N_("Default SMTP port"), FALSE },
+	{ 465, N_("SMTP over TLS"), TRUE },
+	{ 587, N_("Message submission port"), FALSE },
+	{ 0, NULL, 0 }
+};
+
+static CamelProvider smtp_provider = {
+	.protocol = "smtp",
+	.name = N_("SMTP"),
+
+	.description = N_("For delivering mail by connecting to a remote mailhub "
+	   "using SMTP."),
+
+	.domain = "mail",
+
+	.flags = CAMEL_PROVIDER_IS_REMOTE | CAMEL_PROVIDER_SUPPORTS_SSL,
+
+	.url_flags = CAMEL_URL_NEED_HOST | CAMEL_URL_ALLOW_AUTH | CAMEL_URL_ALLOW_USER,
+
+	.extra_conf = smtp_conf_entries,
+
+	.port_entries = smtp_port_entries,
+
+	/* ... */
+};
+
+void
+camel_provider_module_init (void)
+{
+	smtp_provider.object_types[CAMEL_PROVIDER_TRANSPORT] = camel_smtp_transport_get_type ();
+	smtp_provider.authtypes = g_list_append (camel_sasl_authtype_list (TRUE), camel_sasl_authtype ("LOGIN"));
+	smtp_provider.authtypes = g_list_append (smtp_provider.authtypes, camel_sasl_authtype ("POPB4SMTP"));
+	smtp_provider.translation_domain = GETTEXT_PACKAGE;
+
+	camel_provider_register (&smtp_provider);
+}

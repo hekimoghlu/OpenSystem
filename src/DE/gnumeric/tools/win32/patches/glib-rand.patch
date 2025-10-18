@@ -1,0 +1,50 @@
+--- glib-2.43.2/glib/grand.c.orig	2014-09-15 15:51:01.000000000 -0400
++++ glib-2.43.2/glib/grand.c	2014-12-20 17:42:06.754659718 -0500
+@@ -55,6 +55,7 @@
+ #endif
+ 
+ #ifdef G_OS_WIN32
++#include <windows.h>
+ #include <stdlib.h>
+ #include <process.h> /* For getpid() */
+ #endif
+@@ -269,14 +270,32 @@
+   for (i = 0; i < G_N_ELEMENTS (seed); i++)
+     rand_s (&seed[i]);
+ #else
+-#warning Using insecure seed for random number generation because of missing rand_s() in Windows XP
+-  GTimeVal now;
++  static BOOLEAN (* g_RtlGenRandom) (PVOID RandomBuffer, ULONG RandomBufferLength);
++  if (g_once_init_enter (&g_RtlGenRandom))
++    {
++      /* See
++       * http://msdn.microsoft.com/en-us/library/windows/desktop/aa387694%28v=vs.85%29.aspx
++       *
++       * This is available on Windows XP and later, so we can
++       * hard-depend on it.
++       */
++      BOOLEAN (* func) (PVOID RandomBuffer, ULONG RandomBufferLength);
++      HMODULE h;
++
++      h = LoadLibrary ("advapi32.dll");
++
++      if (!h)
++	g_error ("Unable to load advapi32.dll, required for random number generation");
++
++      func = (gpointer) GetProcAddress (h, "SystemFunction036");
++
++      if (!func)
++	g_error ("Unable to load RtlGenRandom() from advapi32.dll");
++
++      g_once_init_leave (&g_RtlGenRandom, func);
++    }
+ 
+-  g_get_current_time (&now);
+-  seed[0] = now.tv_sec;
+-  seed[1] = now.tv_usec;
+-  seed[2] = getpid ();
+-  seed[3] = 0;
++  (* g_RtlGenRandom) (seed, sizeof seed);
+ #endif
+ 
+ #endif

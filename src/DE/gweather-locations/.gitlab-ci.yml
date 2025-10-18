@@ -1,0 +1,134 @@
+include:
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    ref: '707b49ef'
+    file:
+      - 'templates/fedora.yml'
+  - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+    inputs:
+      job-stage: "build"
+      dist-job-name: "release-build"
+ 
+stages:
+  - prepare
+  - build
+ 
+# Common variables
+variables:
+  FDO_UPSTREAM_REPO: ebassi/gweather-locations
+  COMMON_MESON_FLAGS: "-Dwerror=true --prefix /usr"
+  MESON_TEST_TIMEOUT_MULTIPLIER: 3
+ 
+workflow:
+  rules:
+    # run merge request pipelines
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # do not run branch pipelines if corresponding merge requests exist...
+    # (this avoids duplicate pipelines)
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    # ...but otherwise run branch pipelines
+    - if: $CI_COMMIT_BRANCH
+    # run tag pipelines
+    - if: $CI_COMMIT_TAG
+
+default:
+  retry:
+    max: 2
+    when:
+      - 'runner_system_failure'
+      - 'stuck_or_timeout_failure'
+      - 'scheduler_failure'
+      - 'api_failure'
+  interruptible: true
+
+.container.fedora:
+  variables:
+    BASE_TAG: '2025-09-02.1'
+    FDO_DISTRIBUTION_VERSION: 42
+    FDO_DISTRIBUTION_TAG: "x86_64-${BASE_TAG}"
+    FDO_DISTRIBUTION_PACKAGES:
+      gettext
+      gettext-devel
+      git
+      itstool
+      libxml2-devel
+      meson
+      ninja-build
+      pylint
+      python3
+      python3-docutils
+      python3-gobject
+      python3-jinja2
+      python3-markdown
+      python3-pip
+      python3-pygments
+      python3-setuptools
+      python3-toml
+      python3-typogrify
+      python3-wheel
+
+.distribution.fedora:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .container.fedora
+
+container:fedora:
+  extends:
+    - .container.fedora
+    - .fdo.container-build@fedora@x86_64
+  # DNS issues can cause this to fail
+  retry:
+    max: 2
+    exit_codes: 137
+  stage: prepare
+
+.test-runner:
+  artifacts:
+    name: "gweather-locations-${CI_COMMIT_REF_NAME}"
+    when: always
+    reports:
+      junit:
+        - "${CI_PROJECT_DIR}/_build/meson-logs/testlog.junit.xml"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+      - "${CI_PROJECT_DIR}/_build/meson-dist"
+
+.dist-runner:
+  artifacts:
+    name: "gweather-locations-dist-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/public-dist"
+
+fedora-x86_64:
+  extends:
+    - .test-runner
+    - .distribution.fedora
+  stage: build
+  needs: ["container:fedora"]
+  variables:
+    EXTRA_MESON_FLAGS: "-Dbuildtype=debug"
+  script:
+    - meson setup ${COMMON_MESON_FLAGS} ${EXTRA_MESON_FLAGS} _build
+    - meson compile -C _build
+    - meson test -C _build
+
+release-build:
+  extends:
+    - .dist-runner
+    - .distribution.fedora
+  stage: build
+  needs: ['container:fedora']
+  variables:
+    EXTRA_MESON_FLAGS: "--buildtype=release"
+  script:
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - mkdir _install
+    - meson setup
+            --prefix=${CI_PROJECT_DIR}/_install
+            ${COMMON_MESON_FLAGS}
+            ${EXTRA_MESON_FLAGS}
+            _build
+    - meson compile -C _build
+    - meson dist -C _build
+    - cp -r "_build/meson-dist" "${CI_PROJECT_DIR}/public-dist/"

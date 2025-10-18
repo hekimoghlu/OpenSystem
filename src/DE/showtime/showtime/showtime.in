@@ -1,0 +1,43 @@
+#!@PYTHON@
+
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright 2024-2025 kramo
+
+import os
+import sys
+import signal
+from pathlib import Path
+import locale
+import gettext
+from platform import system
+
+pkgdatadir = "@pkgdatadir@"
+localedir = "@localedir@"
+
+sys.path.insert(1, pkgdatadir)
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+if system() == "Linux":
+    locale.bindtextdomain("showtime", localedir)
+    locale.textdomain("showtime")
+    gettext.install("showtime", localedir)
+else:
+    gettext.install("showtime")
+
+if __name__ == "__main__":
+    import gi
+
+    from gi.repository import Gio, GLib
+
+    try:
+        # For a macOS application bundle
+        resource = Gio.Resource.load(
+            str(Path(__file__).parent / "Resources" / "showtime.gresource")
+        )
+    except GLib.GError:
+        resource = Gio.Resource.load(os.path.join(pkgdatadir, "showtime.gresource"))
+    resource._register()
+
+    from showtime import main
+
+    sys.exit(main.main())

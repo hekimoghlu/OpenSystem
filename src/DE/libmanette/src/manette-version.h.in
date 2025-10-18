@@ -1,0 +1,119 @@
+/* libmanette-version.h.in
+ *
+ * Copyright (C) 2017 Adrien Plazas <kekun.plazas@laposte.net>
+ *
+ * This file is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of the
+ * License, or (at your option) any later version.
+ *
+ * This file is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+
+#if !defined(__MANETTE_INSIDE__) && !defined(MANETTE_COMPILATION)
+# error "Only <libmanette.h> can be included directly."
+#endif
+
+#include <glib.h>
+
+G_BEGIN_DECLS
+
+/**
+ * MANETTE_MAJOR_VERSION:
+ *
+ * libmanette major version component (e.g. 1 if the version is 1.2.3).
+ */
+#define MANETTE_MAJOR_VERSION (@MAJOR_VERSION@)
+
+/**
+ * MANETTE_MINOR_VERSION:
+ *
+ * libmanette minor version component (e.g. 2 if the version is 1.2.3).
+ */
+#define MANETTE_MINOR_VERSION (@MINOR_VERSION@)
+
+/**
+ * MANETTE_MICRO_VERSION:
+ *
+ * libmanette micro version component (e.g. 3 if the version is 1.2.3).
+ */
+#define MANETTE_MICRO_VERSION (@MICRO_VERSION@)
+
+/**
+ * MANETTE_VERSION:
+ *
+ * libmanette version.
+ */
+#define MANETTE_VERSION (@VERSION@)
+
+/**
+ * MANETTE_VERSION_S:
+ *
+ * libmanette version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define MANETTE_VERSION_S "@VERSION@"
+
+#define MANETTE_ENCODE_VERSION(major,minor,micro) \
+        ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * MANETTE_VERSION_HEX:
+ *
+ * libmanette version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define MANETTE_VERSION_HEX \
+        (MANETTE_ENCODE_VERSION (MANETTE_MAJOR_VERSION, MANETTE_MINOR_VERSION, MANETTE_MICRO_VERSION))
+
+/**
+ * MANETTE_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to `TRUE` if the version
+ * of libmanette is greater than the required one.
+ */
+#define MANETTE_CHECK_VERSION(major,minor,micro)   \
+        (MANETTE_MAJOR_VERSION > (major) || \
+         (MANETTE_MAJOR_VERSION == (major) && MANETTE_MINOR_VERSION > (minor)) || \
+         (MANETTE_MAJOR_VERSION == (major) && MANETTE_MINOR_VERSION == (minor) && \
+          MANETTE_MICRO_VERSION >= (micro)))
+
+#ifndef _MANETTE_EXTERN
+#define _MANETTE_EXTERN extern
+#endif
+
+#if defined(MANETTE_DISABLE_DEPRECATION_WARNINGS) || defined(MANETTE_COMPILATION)
+#  define _MANETTE_DEPRECATED             _MANETTE_EXTERN
+#  define _MANETTE_DEPRECATED_FOR(f)      _MANETTE_EXTERN
+#  define _MANETTE_DEPRECATED_TYPE
+#  define _MANETTE_DEPRECATED_TYPE_FOR(f)
+#else
+#  define _MANETTE_DEPRECATED             G_DEPRECATED        _MANETTE_EXTERN
+#  define _MANETTE_DEPRECATED_FOR(f)      G_DEPRECATED_FOR(f) _MANETTE_EXTERN
+#  define _MANETTE_DEPRECATED_TYPE        G_DEPRECATED
+#  define _MANETTE_DEPRECATED_TYPE_FOR(f) G_DEPRECATED_FOR(f)
+#endif
+
+#define MANETTE_UNAVAILABLE(major, minor) G_UNAVAILABLE(major, minor) _MANETTE_EXTERN
+
+#define MANETTE_AVAILABLE_IN_ALL _MANETTE_EXTERN
+
+MANETTE_AVAILABLE_IN_ALL
+guint manette_get_major_version (void);
+MANETTE_AVAILABLE_IN_ALL
+guint manette_get_minor_version (void);
+MANETTE_AVAILABLE_IN_ALL
+guint manette_get_micro_version (void);
+
+G_END_DECLS

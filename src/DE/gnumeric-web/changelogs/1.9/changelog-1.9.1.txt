@@ -1,0 +1,190 @@
+2008-06-25  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.9.1
+
+2008-06-23  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-datetime.c (datetime_value_to_g): Clear date in case of
+	failure.  Fixes #539808.
+
+2008-06-22  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_direction_change) : Only change the direction for
+	  the current scg. [#499910]
+
+2008-06-22  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_expr_cursor_bound_set) : use blue instead
+	  of red for default range selector cursor.
+	* src/item-cursor.c (item_cursor_expr_range_event) : new.
+
+2008-06-22  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c: (sog_datas_set_sheet): set the workbook
+	as the graph document to support the new image framework.
+	* src/workbook-control.c: (wb_control_set_view): set the document for
+	the underlying GOControlDoc.
+
+2008-06-21  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_header_init) : Add a GtkAlignment wrapper
+	  to the col/row headers to avoid problems when scaling to very small
+	  sizes with group buttons. [#154687]
+
+2008-06-21  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_mode_edit) : unselect objects even
+	  during destruction.
+
+2008-06-19  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_error_error_info): Quote markup.  Fixes
+	#386412.
+
+2008-06-19  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (scg_get_nth_scg) : new convenience routine to
+	  localize use of SHEET_CONTROL_KEY, and add some safety checks.
+	(wbcg_get_scg) : Use it.
+	(cb_sheet_label_drag_data_get) : ditto.
+	(cb_notebook_switch_page) : ditto.
+	(wbcg_sheet_order_changed) : ditto.
+	(wbcg_focus_cur_scg) : ditto.
+	(wbc_gtk_init) : Move new_object from scg -> wbcg.
+	(wbcg_update_action_sensitivity) : ditto.
+	(wbcg_menu_state_update) : ditto.
+
+	* src/wbc-gtk-edit.c (wbcg_insert_object) : moved from
+	  wbcg_insert_object and made smarter to walk through all scgs and
+	  setting cursor visibilty, and unanting.
+	(wbcg_insert_object_clear) : reworked from scg_mode_clear and made
+	  smarter.
+
+	* src/wbc-gtk-actions.c (cb_insert_image) : Use wbcg_insert_object.
+	(cb_add_graph) : ditto.
+	(create_object) : ditto, and remove the sheet_update/recalc.  It does
+	  not belong here.
+
+	* src/sheet-control-gui.c (scg_cursor_visible) : make public.
+	(scg_mode_clear) : moved into wbcg_insert_object_clear, and
+	  simplified.
+	(scg_mode_create_object) : reworked as wbcg_insert_object.
+	(scg_mode_edit) : Use the new wbcg_insert_object_clear and simplify.
+	(scg_object_select) : Adapt to moving new_object from SCG -> WBCG
+	(scg_objects_nudge) : ditto.
+	(scg_set_display_cursor) :  ditto.
+	* src/gnm-pane.c (gnm_pane_key_press) : ditto.
+	* src/item-bar.c (item_bar_draw) : ditto.
+	* src/item-grid.c (item_grid_draw) : ditto.
+	(ig_obj_create_begin) : ditto.
+	(item_grid_button_press) : ditto.
+
+2008-06-18  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (MATHLIB_ERROR): Return a NaN instead of
+	aborting.  Fixes #534475.
+
+2008-06-17  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_create_opener_filter): Suffix
+	patterns should match upper and lower case file names.  Fixes
+	#510036.
+
+2008-06-17  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.c (print_info_set_page_setup) : fix a life cycle
+	  error and document.  Fixes page setup on win32.
+
+2008-06-16  Jody Goldberg <jody@gnome.org>
+
+	* src/item-edit.c (item_edit_dispose) : delete the feedback ranges.
+	  Don't disable their creation into the future.
+
+2008-06-16  Jody Goldberg <jody@gnome.org>
+
+	* tools/win32/gnumeric.nsi.in : Make the default install set
+	  'Standard' and do not overwrite the common type (Excel/OOo).  [#534231]
+
+2008-06-13  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_regenerate_window_menu) : we need to remove the
+	  action group from the UI, not just unref it.
+	(wbc_gtk_reload_recent_file_menu) : ditto.
+
+2008-05-27  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c (try_auto_date): Don't generate an invalid time
+	format.  Fixes #534514.  Fix detection of fractional seconds.
+
+2008-05-21  Morten Welinder  <terra@gnome.org>
+
+	* src/value-sheet.c (value_area_foreach): Always NULL ->cell_iter.
+
+	* src/parser.y: Further parser fixes.  Clarify the error handling
+	rules.  Fixes #534131.
+
+2008-05-20  Morten Welinder  <terra@gnome.org>
+
+	* src/value-sheet.c (value_area_get_x_y): Make sure to return an
+	empty value, not NULL, when a cell in a range isn't there.  Fixes
+	#533953.
+
+	* src/mathfunc.c (random_exppow): Add domain check.  Fixes
+	#533965.
+
+2008-05-19  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (fold_positive_constant, fold_negative_constant,
+	build_unary_op, build_binop, build_logical, build_not,
+	build_intersect, build_set): Propagate errors.  Fixes #533951.
+
+	* src/stf.c (stf_read_workbook_auto_csvtab): Don't assume that the
+	command context is a gui.  Fixes #533511.
+
+	* src/expr.c (value_intersection): Handle empty array.  [#533516]
+	Fix from Jean.
+
+2008-05-19  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (r1c1_get_index) : handle =RC-10 as
+	      <ref "RC"><unary-><10> #533943
+
+2008-05-17  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (qpois): Return nan on invalid lambda.  Fixes
+	#533515.
+	(discpfuncinverter): Handle overflow when searching for missing
+	side better.  Also fixes #533515.
+
+2008-05-16  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (tokenized_help_new): Translate old-style help texts.
+	fixes part of #533193.
+
+2008-05-15  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (random_gamma): Handle overflow and bogus
+	arguments.  Fixes #533288.
+
+2008-05-12  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: request libgoffice-0.8 >= 0.7.0.
+	* src/Makefile.am: removed obsolete (moved to goffice) files.
+	* src/gnm-conf-gconf.c: ditto.
+	* src/gnm-conf-keyfile.c: ditto.
+	* src/gnm-conf-win32.c: ditto.
+	* src/gnumeric-gconf.c: ditto.
+	* src/gnumeric-gconf.h: ditto.
+
+2008-05-07  Jody Goldberg <jody@gnome.org>
+
+	Merge patch from Seán de Búrca [#450444]
+	* configure.in : add the new icon dirs.
+	* gnumeric.desktop.in : remove icon suffix.
+	* icons/Makefile.am : deploy the icons, and do some cleanup.
+	* src/wbc-gtk.c (wbc_gtk_class_init) : Now we can use the nice simple
+	  gtk_window_set_default_icon_name.
+
+2008-05-04  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump.

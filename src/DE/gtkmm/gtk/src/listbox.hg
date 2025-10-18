@@ -1,0 +1,410 @@
+/* Copyright (C) 2013 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/listboxrow.h>
+#include <gtkmm/enums.h>
+#include <giomm/liststore.h>
+#include <glibmm/exceptionhandler.h>
+#include <vector>
+#include <utility> // std::forward
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+extern "C"
+{
+GTKMM_API
+GtkWidget* gtkmm_ListBox_create_widget_callback(void* item, void* data);
+
+GTKMM_API
+void gtkmm_ListBox_create_widget_callback_destroy(void* data);
+
+} // extern "C"
+
+// Like GtkListBoxCreateWidgetFunc and GDestroyNotify, but with C++ linkage.
+using ListBoxCreateWidgetFuncType = GtkWidget* (*)(void* item, void* data);
+using ListBoxCreateWidgetDestroyFuncType = void (*)(void* data);
+
+// A ListBoxCreateWidgetDestroyFuncType destroys the data in ListBoxCreateWidgetData.
+// gtkmm_ListBox_create_widget_callback_destroy() also destroys the ListBoxCreateWidgetData.
+struct ListBoxCreateWidgetData
+{
+  ListBoxCreateWidgetFuncType func;
+  ListBoxCreateWidgetDestroyFuncType destroy_func;
+  void* data; // A SlotCreateWidget<T_item>
+};
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+class Adjustment;
+
+/** A %ListBox is a vertical container that contains ListBoxRow
+ * children. These rows can by dynamically sorted and filtered, and
+ * headers can be added dynamically depending on the row content.
+ * It also allows keyboard and mouse navigation and selection like
+ * a typical list.
+ *
+ * Using %ListBox is often an alternative to TreeView, especially
+ * when the list contents have a more complicated layout than what is allowed
+ * by a CellRenderer, or when the contents are interactive (e.g. contain a
+ * button).
+ *
+ * Although a %ListBox must have only ListBoxRow children you can
+ * add any kind of widget to it via prepend(), append() and insert(), and a ListBoxRow
+ * widget will automatically be inserted between the list and the widget.
+ *
+ * Also see FlowBox.
+ *
+ * A %ListBox looks like this:
+ * @image html listbox1.png
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ *
+ * @newin{3,10}
+ */
+class GTKMM_API ListBox : public Widget
+{
+  _CLASS_GTKOBJECT(ListBox, GtkListBox, GTK_LIST_BOX, Gtk::Widget, GtkWidget, , , GTKMM_API)
+public:
+  _CTOR_DEFAULT
+
+  /** For instance: bool on_filter(ListBoxRow* row);
+   *
+   * Will be called whenever the row changes or is added and lets you control
+   * if the row should be visible or not.
+   *
+   * @param row The row that may be filtered
+   * @returns <tt>true</tt> if the row should be visible, <tt>false</tt> otherwise
+   *
+   * @newin{3,10}
+   */
+  typedef sigc::slot<bool(ListBoxRow*)> SlotFilter;
+
+  /** For instance: int on_sort(ListBoxRow* row1, ListBoxRow* row2);
+   *
+   * Compare two rows to determine which should be first.
+   *
+   * @param row1 The first row
+   * @param row2 The second row
+   * @returns < 0 if @a row1 should be before @a row2, 0 if they are
+   *          equal and > 0 otherwise
+   *
+   * @newin{3,10}
+   */
+  typedef sigc::slot<int(ListBoxRow*, ListBoxRow*)> SlotSort;
+
+  /** For instance: void on_update_header(ListBoxRow* row, ListBoxRow* before);
+   *
+   * Whenever @a row changes or which row is before @a row changes this
+   * is called, which lets you update the header on @a row. You may
+   * remove or set a new one via ListBoxRow::set_header() or
+   * just change the state of the current header widget.
+   *
+   * @param row The row to update
+   * @param before The row before @a row, or <tt>0</tt> if it is first
+   *
+   * @newin{3,10}
+   */
+  typedef sigc::slot<void(ListBoxRow*, ListBoxRow*)> SlotUpdateHeader;
+
+  _WRAP_METHOD(void prepend(Widget& child), gtk_list_box_prepend)
+  _WRAP_METHOD(void append(Widget& child), gtk_list_box_append)
+  _WRAP_METHOD(void insert(Widget& child, int position), gtk_list_box_insert)
+  _WRAP_METHOD(void remove(Widget& child), gtk_list_box_remove)
+  _WRAP_METHOD(void remove_all(), gtk_list_box_remove_all)
+
+  _WRAP_METHOD(ListBoxRow* get_selected_row(), gtk_list_box_get_selected_row)
+  _WRAP_METHOD(const ListBoxRow* get_selected_row() const, gtk_list_box_get_selected_row, constversion)
+  _WRAP_METHOD(ListBoxRow* get_row_at_index(int index), gtk_list_box_get_row_at_index)
+  _WRAP_METHOD(const ListBoxRow* get_row_at_index(int index) const, gtk_list_box_get_row_at_index, constversion)
+  _WRAP_METHOD(ListBoxRow* get_row_at_y(int y), gtk_list_box_get_row_at_y)
+  _WRAP_METHOD(const ListBoxRow* get_row_at_y(int y) const, gtk_list_box_get_row_at_y, constversion)
+  _WRAP_METHOD(void select_row(ListBoxRow& row), gtk_list_box_select_row)
+
+  /** Unselects the currently selected row, if any.
+   *
+   * @newin{3,10}
+   */
+  void unselect_row();
+
+  _WRAP_METHOD(void set_placeholder(Widget& placeholder), gtk_list_box_set_placeholder)
+
+  /** Removes the placeholder widget, if any.
+   *
+   * @newin{3,10}
+   */
+  void unset_placeholder();
+
+  _WRAP_METHOD(void set_adjustment(const Glib::RefPtr<Adjustment>& adjustment), gtk_list_box_set_adjustment)
+  _WRAP_METHOD(Glib::RefPtr<Adjustment> get_adjustment(), gtk_list_box_get_adjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_adjustment() const, gtk_list_box_get_adjustment, refreturn, constversion)
+
+  /** For instance,
+   * void on_foreach(ListBoxRow* row);
+   */
+  typedef sigc::slot<void(ListBoxRow*)> SlotForeach;
+
+  void selected_foreach(const SlotForeach& slot);
+  _IGNORE(gtk_list_box_selected_foreach)
+
+#m4 _CONVERSION(`GList*',`std::vector<ListBoxRow*>',`Glib::ListHandler<ListBoxRow*>::list_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<ListBoxRow*> get_selected_rows(), gtk_list_box_get_selected_rows)
+
+#m4 _CONVERSION(`GList*',`std::vector<const ListBoxRow*>',`Glib::ListHandler<ListBoxRow*>::list_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<ListBoxRow*> get_selected_rows() const, gtk_list_box_get_selected_rows)
+
+
+  _WRAP_METHOD(void unselect_row(ListBoxRow* row), gtk_list_box_unselect_row)
+  _WRAP_METHOD(void select_all(), gtk_list_box_select_all)
+  _WRAP_METHOD(void unselect_all(), gtk_list_box_unselect_all)
+
+
+  _WRAP_METHOD(void set_selection_mode(SelectionMode mode), gtk_list_box_set_selection_mode)
+  _WRAP_METHOD(SelectionMode get_selection_mode() const, gtk_list_box_get_selection_mode)
+
+  /** Sets a filter function.
+   *
+   * By setting a filter function on the ListBox one can decide dynamically which
+   * of the rows to show. For instance, to implement a search function on a list that
+   * filters the original list to only show the matching rows.
+   *
+   * The @a slot will be called for each row after the call, and it will
+   * continue to be called each time a row changes (via ListBoxRow::changed()) or
+   * when invalidate_filter() is called.
+   *
+   * @param slot Callback that lets you filter which rows to show
+   * @newin{3,10}
+   */
+  void set_filter_func(const SlotFilter& slot);
+  _IGNORE(gtk_list_box_set_filter_func)
+
+  /** Removes the filter function, if any.
+   * @newin{3,10}
+   */
+  void unset_filter_func();
+
+  /** Sets a sort function.
+   *
+   * By setting a sort function on the ListBox one can dynamically reorder the rows
+   * of the list, based on the contents of the rows.
+   *
+   * The @a slot will be called for each row after the call, and will continue to
+   * be called each time a row changes (via ListBoxRow::changed()) and when
+   * invalidate_sort() is called.
+   *
+   * @param slot The sort function.
+   * @newin{3,10}
+   */
+  void set_sort_func(const SlotSort& slot);
+  _IGNORE(gtk_list_box_set_sort_func)
+
+  /** Removes the sort function, if any.
+   * @newin{3,10}
+   */
+  void unset_sort_func();
+
+  /** Sets a header function.
+   *
+   * By setting a header function on the ListBox one can dynamically add headers
+   * in front of rows, depending on the contents of the row and its position in the list.
+   * For instance, one could use it to add headers in front of the first item of a
+   * new kind, in a list sorted by the kind.
+   *
+   * The @a slot can look at the current header widget using ListBoxRow::get_header()
+   * and either update the state of the widget as needed, or set a new one using
+   * ListBoxRow::set_header(). If no header is needed, use ListBoxRow::unset_header().
+   *
+   * Note that you may get many calls to this @a slot for a particular row when e.g.
+   * changing things that don't affect the header. In this case it is important for performance
+   * to not blindly replace an exisiting header with an identical one.
+   *
+   * The @a slot function will be called for each row after the call, and it will
+   * continue to be called each time a row changes (via ListBoxRow::changed()) and when
+   * the row before changes (either by ListBoxRow::changed() on the previous row, or when
+   * the previous row becomes a different row). It is also called for all rows when
+   * invalidate_headers() is called.
+   *
+   * @param slot Callback that lets you add row headers
+   * @newin{3,10}
+   */
+  void set_header_func(const SlotUpdateHeader& slot);
+  _IGNORE(gtk_list_box_set_header_func)
+
+  /** Removes the header function, if any.
+   * @newin{3,10}
+   */
+  void unset_header_func();
+
+  _WRAP_METHOD(void invalidate_filter(), gtk_list_box_invalidate_filter)
+  _WRAP_METHOD(void invalidate_sort(), gtk_list_box_invalidate_sort)
+  _WRAP_METHOD(void invalidate_headers(), gtk_list_box_invalidate_headers)
+  _WRAP_METHOD(void set_activate_on_single_click(bool single = true), gtk_list_box_set_activate_on_single_click)
+  _WRAP_METHOD(bool get_activate_on_single_click() const, gtk_list_box_get_activate_on_single_click)
+  _WRAP_METHOD(void drag_unhighlight_row(), gtk_list_box_drag_unhighlight_row)
+  _WRAP_METHOD(void drag_highlight_row(ListBoxRow& row), gtk_list_box_drag_highlight_row)
+
+  /** For instance:
+   * Gtk::Widget* on_create_widget(const Glib::RefPtr<T_item>& item);
+   *
+   * Called for list boxes that are bound to a Gio::ListModel with bind_model()
+   * or bind_list_store() for each item that gets added to the model.
+   *
+   * Versions of GTK+ prior to 3.18 called show_all() on the rows
+   * created by the SlotCreateWidget, but this forced all widgets
+   * inside the row to be shown, and is no longer the case. Applications should
+   * be updated to show the desired row widgets.
+   *
+   * @newin{3,22}
+   *
+   * @tparam T_item Base class of the items in the Gio::ListModel. All items must
+   *                be of type T_item or a type derived from T_item.
+   *                T_item must be Glib::Object or a type derived from Glib::Object.
+   * @param item The item from the model for which to create a widget.
+   * @return A Gtk::Widget that represents @a item.
+   */
+  template <typename T_item>
+  using SlotCreateWidget = sigc::slot<Gtk::Widget*(const Glib::RefPtr<T_item>&)>;
+
+  /** Binds a Gio::ListModel.
+   *
+   * If this ListBox was already bound to a model, that previous binding is
+   * destroyed.
+   *
+   * The contents of the ListBox are cleared and then filled with widgets that
+   * represent items from @a model. The ListBox is updated whenever @a model changes.
+   * If @a model is an empty Glib::RefPtr, the ListBox is left empty.
+   *
+   * It is undefined to add or remove widgets directly (for example, with
+   * insert()) while the ListBox is bound to a model.
+   *
+   * Note that using a model is incompatible with the filtering and sorting
+   * functionality in ListBox. When using a model, filtering and sorting
+   * should be implemented by the model.
+   *
+   * @newin{3,22}
+   *
+   * @param model The Gio::ListModel to be bound.
+   * @param slot_create_widget A slot that creates widgets for items.
+   *
+   * @see bind_list_store()
+   */
+  void bind_model(const Glib::RefPtr<Gio::ListModel>& model,
+    const SlotCreateWidget<Glib::Object>& slot_create_widget);
+  _IGNORE(gtk_list_box_bind_model)
+
+  /** Binds a Gio::ListStore<>.
+   *
+   * If this ListBox was already bound to a Gio::ListModel, that previous binding is
+   * destroyed. (Gio::ListStore is a Gio::ListModel.)
+   *
+   * The contents of the ListBox are cleared and then filled with widgets that
+   * represent items from @a store. The ListBox is updated whenever @a store changes.
+   * If @a store is an empty Glib::RefPtr, the ListBox is left empty.
+   *
+   * It is undefined to add or remove widgets directly (for example, with
+   * insert()) while the ListBox is bound to a model.
+   *
+   * Note that using a model is incompatible with the filtering and sorting
+   * functionality in ListBox. When using a model, filtering and sorting
+   * should be implemented by the model.
+   *
+   * @newin{3,22}
+   *
+   * @tparam T_item Base class of the items in the Gio::ListStore. All items must
+   *                be of type T_item or a type derived from T_item.
+   *                T_item must be Glib::Object or a type derived from Glib::Object.
+   * @tparam T_slot SlotCreateWidget<T_item> or a type that can be converted
+   *                to SlotCreateWidget<T_item>.
+   * @param store The Gio::ListStore<> to be bound.
+   * @param slot_create_widget A slot that creates widgets for items.
+   */
+  template <typename T_item, typename T_slot>
+  void bind_list_store(const Glib::RefPtr<Gio::ListStore<T_item>>& store,
+    T_slot&& slot_create_widget);
+
+  _WRAP_METHOD(void set_show_separators(bool show_separators = true), gtk_list_box_set_show_separators)
+  _WRAP_METHOD(bool get_show_separators() const, gtk_list_box_get_show_separators)
+  _WRAP_METHOD(void set_tab_behavior(ListTabBehavior tab_behavior), gtk_list_box_set_tab_behavior)
+  _WRAP_METHOD(ListTabBehavior get_tab_behavior() const, gtk_list_box_get_tab_behavior)
+
+  _WRAP_PROPERTY("selection-mode", SelectionMode)
+  _WRAP_PROPERTY("activate-on-single-click", bool)
+  _WRAP_PROPERTY("accept-unpaired-release", bool)
+  _WRAP_PROPERTY("show-separators", bool)
+  _WRAP_PROPERTY("tab-behavior", ListTabBehavior)
+
+  // no_default_handler because GtkListBoxClass is private.
+  _WRAP_SIGNAL(void row_selected(ListBoxRow* row), row-selected, no_default_handler)
+  _WRAP_SIGNAL(void row_activated(ListBoxRow* row), row-activated, no_default_handler)
+
+  _WRAP_SIGNAL(void selected_rows_changed(), selected-rows-changed, no_default_handler)
+
+  _IGNORE_SIGNAL(activate-cursor-row, toggle-cursor-row, move-cursor, select-all, unselect-all) // Action signals
+
+private:
+  template <typename T_item>
+  static GtkWidget* proxy_bind_list_store_create_widget_callback(void* item, void* data);
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+template <typename T_item, typename T_slot>
+void ListBox::bind_list_store(const Glib::RefPtr<Gio::ListStore<T_item>>& store,
+  T_slot&& slot_create_widget)
+{
+  // Create a copy of the slot.
+  // It will be deleted by Glib::destroy_notify_delete<SlotCreateWidget>.
+  auto slot_copy = new SlotCreateWidget<T_item>(std::forward<T_slot>(slot_create_widget));
+
+  auto create_widget_data =
+    new ListBoxCreateWidgetData{&proxy_bind_list_store_create_widget_callback<T_item>,
+    &Glib::destroy_notify_delete<SlotCreateWidget<T_item>>, slot_copy};
+  gtk_list_box_bind_model(gobj(),
+    store ? store->Gio::ListModel::gobj() : nullptr,
+    &gtkmm_ListBox_create_widget_callback, create_widget_data,
+    &gtkmm_ListBox_create_widget_callback_destroy);
+}
+
+template <typename T_item>
+GtkWidget* ListBox::proxy_bind_list_store_create_widget_callback(void* item, void* data)
+{
+  auto& slot = *static_cast<SlotCreateWidget<T_item>*>(data);
+  auto cobject = static_cast<typename T_item::BaseObjectType*>(item);
+
+  try
+  {
+    // cast_dynamic is necessary if T_item is a user-defined type, such as
+    // class MyObject : public Glib::Object
+    // take_copy is true here, because wrap() returns a Glib::RefPtr<>.
+    // cobject will be unreferenced when the RefPtr is deleted.
+    Gtk::Widget* widget = slot(std::dynamic_pointer_cast<T_item>(Glib::wrap(cobject, true)));
+    if (widget)
+      return widget->gobj();
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+  return nullptr;
+}
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+} // namespace Gtk

@@ -1,0 +1,29 @@
+# Inputs: uri
+
+# Delete all information elements for the given data object
+DELETE WHERE {
+  GRAPH ?g {
+    ~uri a rdfs:Resource ;
+      nie:interpretedAs ?ie .
+    ?ie a rdfs:Resource .
+  }
+};
+
+# Ensure there are no stale resources keeping the inverse relation
+DELETE {
+  GRAPH ?g {
+    ?ie a rdfs:Resource .
+  }
+} WHERE {
+  GRAPH ?g {
+    ?ie nie:isStoredAs ?f .
+    ?f nie:url ~uri .
+  }
+};
+
+# Delete extractorHash, to ensure the file is extracted again.
+DELETE WHERE {
+  GRAPH tracker:FileSystem {
+    ~uri tracker:extractorHash ?h .
+  }
+}

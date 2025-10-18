@@ -1,0 +1,282 @@
+# GEL routines for working in Z/n (the integer modulo n)
+
+# phi(n), the Euler phi function, i.e., the number of integers between
+# 1 and n that are relatively prime to n
+# Note that if the prime factorization of n is p_1^a_1 * ... p_r^a_r,
+# then EulerPhi(n)=n*(1-1/p_1)*...*(1-1/p_r). We use this to calculate
+SetHelp("EulerPhi","number_theory","Compute phi(n), the Euler phi function, that is the number of integers between 1 and n relatively prime to n");
+function EulerPhi(n) =
+(
+	if not IsPositiveInteger(n) then
+		(error("EulerPhi: argument not an integer larger than 0");bailout);
+	n * (prod p in PrimeFactors(n) do (1-(1/p)))
+)
+
+# Silver-Pohlig-Hellman as described in
+# Neil Koblitz, A Course in Number Theory and Cryptography, Springer, 1987
+# page 102-103
+SetHelp("SilverPohligHellmanWithFactorization", "number_theory", "Find discrete log of n base b in F_q where q is a prime using the Silver-Pohlig-Hellman algorithm, given f being the factorization of q-1");
+function SilverPohligHellmanWithFactorization(n,b,q,f) = (
+  if not IsPositiveInteger(n) or
+     not IsPositiveInteger(b) or
+     not IsPositiveInteger(q) or q < 2 or b < 2 then
+    (error("SilverPohligHellmanWithFactorization: Bad arguments");bailout);
+
+  # Run the precalculation of the pth roots of unity
+  # for each p in the factorization of q-1
+  r = null;
+  for i = 2 to columns(f) do (
+    p = f@(1,i);
+    for j = 0 to p-1 do
+      r@(i-1,j+1) = b^(j*(q-1)/p) mod q
+  );
+
+  # utility function to find the root in the table
+  function FindRoot(rt,p,i) = (
+    for j = 1 to p do
+      if r@(i-1,j) == rt then return j-1;
+    (error("DiscreteLog: Error finding log, probably bogus arguments");bailout)
+  );
+
+  # This will be our vector of moduli for the ChineseRemainder
+  m = null;
+  # this will be our vector of results for the ChineseRemainder
+  x = null;
+
+  # loop through all the prime factors of q-1
+  for i = 2 to columns(f) do (
+    p = f@(1,i); alpha = f@(2,i);
+    m@(i-1) = p^alpha;
+
+    xx = 0;
+    for l = 0 to alpha-1 do (
+      y = n/(b^xx);
+      rt = y^((q-1)/p^(l+1)) mod q;
+      xx = xx + FindRoot(rt,p,i) * p^l
+    );
+    x@(i-1) = xx
+  );
+
+  # Now return the chinese remainder of the system
+  ChineseRemainder(x,m)
+)
+
+# compute the discrete log using the SilverPohligHellman alg
+SetHelp("DiscreteLog", "number_theory", "Find discrete log of n base b in F_q where q is a prime using the Silver-Pohlig-Hellman algorithm");
+function DiscreteLog(n,b,q) = (
+  if not IsPositiveInteger(n) or
+     not IsPositiveInteger(b) or
+     not IsPositiveInteger(q) or q < 2 or b < 2 then
+    (error("DiscreteLog: Bad arguments");bailout);
+
+  f = Factorize(q-1);
+  SilverPohligHellmanWithFactorization(n,b,q,f)
+)
+
+# precalculates the table of logarithms for the
+# factor base mentioned in S for the generator b mod q
+# FIXME: it is evil in the way it seraches for an invertible
+# matrix, it will take longer then needed.
+#ref: 
+# Neil Koblitz, A Course in Number Theory and Cryptography, Springer, 1987
+SetHelp("IndexCalculusPrecalculation", "number_theory", "Run the precalculation step of IndexCalculus for logarithms base b in F_q (q a prime) for the factor base S (where S is a column vector of primes).  The logs will be precalculated and returned in the second column.");
+function IndexCalculusPrecalculation (b, q, S) = (
+  if not IsPositiveInteger(b) or
+     not IsPositiveInteger(q) or
+     q < 2 or b < 2 or
+     not IsMatrix (S) or
+     elements (S) < 2 then
+    (error("IndexCalculus: Bad arguments");bailout);
+
+  # helper function for factoring n using the factor base
+  # S.  If can't be factored using this, then return null
+  # if it can return the corresponding matrix row to be
+  # solved.
+  function FactorUsingFactorBase (n,S) = (
+    fact = zeros(1,rows(S));
+    for i = 1 to rows(S) do (
+      do (
+        divn = n / S@(i,1);
+        if IsInteger (divn) then (
+          fact@(i) = fact@(i) + 1;
+          n = divn
+        )
+      ) while n > 1 and IsInteger(divn);
+    );
+    if n > 1 then
+      null
+    else (
+      fact
+    )
+  );
+
+  mat = null;
+  v = null;
+  do (
+    k = randint(q-1);
+    n = b^k mod q;
+    fact = FactorUsingFactorBase (n, S);
+    if not IsNull (fact) then (
+      mat = [mat;fact];
+      v = [v;k];
+
+      if rows (mat) == rows(S) and
+        # FIXME: This is very stupid.  If we don't get an invertible
+        # matrix we throw it away
+        gcd(det(mat),q-1) != 1 then (
+        mat = null;
+        v = null
+      )
+    )
+  ) while IsNull(mat) or rows (mat) < rows(S);
+
+  set ("mat", mat);
+
+  # return the first column of S and as the second
+  # column the computed logarithms
+  [S@(,1) , mat^-1 * v mod q-1]
+);
+
+# outputs log_b n mod q (using factor base S),
+# first column of S is the factor base and second column
+# is the table of logarithms.  If the second column is
+# not given, it is precalculated.  This way the precalculation
+# can be done ahead for many different n's
+#ref: 
+# Neil Koblitz, A Course in Number Theory and Cryptography, Springer, 1987
+SetHelp("IndexCalculus", "number_theory", "Compute discrete log base b of n in F_q (q a prime) using the factor base S.  S should be a column of primes possibly with second column precalculated by IndexCalculusPrecalculation.");
+function IndexCalculus (n, b, q, S) = (
+  if not IsPositiveInteger(n) or
+     not IsPositiveInteger(b) or
+     not IsPositiveInteger(q) or
+     q < 2 or b < 2 or
+     not IsMatrix (S) or
+     elements (S) < 2 then
+    (error("IndexCalculus: Bad arguments");bailout);
+
+  if columns(S) == 1 then
+    S = IndexCalculusPrecalculation (b, q, S);
+
+  if columns(S) != 2 then
+    (error("IndexCalculus: Bad arguments");bailout);
+
+  do (
+    k = randint(q-1);
+    f = n*b^k mod q;
+    l = -k;
+    for i = 1 to rows(S) do (
+      do (
+        divf = f / S@(i,1);
+        if IsInteger (divf) then (
+          l = l + S@(i,2);
+          f = divf
+        )
+      ) while f > 1 and IsInteger(divf)
+    )
+  ) while f > 1;
+  l mod q-1
+);
+
+# g is primitive mod p iff g^((g-1)/p) == 1 mod q  for all prime
+# factors p of q-1
+#ref: 
+# Neil Koblitz, A Course in Number Theory and Cryptography, Springer, 1987
+SetHelp("IsPrimitiveModWithPrimeFactors", "number_theory", "Check if g is primitive in F_q, where q is a prime and f is a vector of prime factors of q-1.  If q is not prime results are bogus.");
+function IsPrimitiveModWithPrimeFactors(g,q,f) = (
+  if not IsMatrix(f) or
+     not IsPositiveInteger(g) or
+     not IsPositiveInteger(q) or q < 2 or g < 2 then
+    (error("IsPrimitiveModWithPrimeFactors: Bad arguments");bailout);
+  for p in f do (
+    if g^((q-1)/p) == 1 mod q then return false
+  );
+  true
+)
+
+# g is primitive mod p iff g^((g-1)/p) == 1 mod q  for all prime
+# factors p of q-1
+#ref: 
+# Neil Koblitz, A Course in Number Theory and Cryptography, Springer, 1987
+SetHelp("IsPrimitiveMod", "number_theory", "Check if g is primitive in F_q, where q is a prime.  If q is not prime results are bogus.");
+function IsPrimitiveMod(g,q) = (
+  if not IsPositiveInteger(g) or
+     not IsPositiveInteger(q) or q < 2 or g < 2 then
+    (error("IsPrimitiveMod: Bad arguments");bailout);
+  for p in PrimeFactors (q-1) do (
+    if g^((q-1)/p) == 1 mod q then return false
+  );
+  true
+)
+
+# Find the first primitive element
+SetHelp("FindPrimitiveElementMod", "number_theory", "Find the first primitive element in F_q (q must be a prime)");
+function FindPrimitiveElementMod(q) = (
+  f = PrimeFactors (q-1);
+  if not IsPositiveInteger(q) or q < 2 then
+    (error("FindPrimitiveElementMod: Bad arguments");bailout);
+  g = 2;
+  while not IsPrimitiveModWithPrimeFactors(g,q,f) and g < q do
+    g = g+1;
+
+  if g == q then null else g
+);
+
+# Find a random primitive element
+SetHelp("FindRandomPrimitiveElementMod", "number_theory", "Find a random primitive element in F_q (q must be a prime)");
+function FindRandomPrimitiveElementMod(q) = (
+  f = PrimeFactors (q-1);
+  do
+    g = randint(q)
+  while not IsPrimitiveModWithPrimeFactors(g,q,f)
+);
+
+#ref: 
+# Alfred J. Menezes, Paul C. van Oorschot, Scott A. Vanstone,
+# Handbook of Applied Cryptography, CRC Press, 1997
+# page 100-101
+SetHelp("SqrtModPrime", "number_theory", "Find square root of n mod p (a prime). Null is returned if not a quadratic residue.")
+function SqrtModPrime(n,p) = (
+  if not IsPositiveInteger(n) or
+     not IsPositiveInteger(p) then
+    (error("SqrtModPrime: Bad arguments");bailout);
+  if Legendre(n,p) == -1 then return null;
+  if p%4 == 3 then (
+    r = n^((p+1)/4) mod p;
+    [r,-r] mod p
+  ) else if p%8 == 5 then (
+    d = n^((p-1)/4) mod p;
+    if d == 1 then
+      r = n^((p+3)/8) mod p
+    else # d == p-1 (that is: -1)
+      r = 2*n*(4*n)^((p-5)/8) mod p;
+    [r,-r] mod p
+  ) else (
+    do 
+      b = randint(p-2)+1
+    until Legendre(b,p) == -1;
+
+    # FIXME this can be done more efficently (there are
+    # gmp functions for this since gmp already does things
+    # in binary)
+    # we want s and t such that p-1 = 2^s * t, where t odd
+    s=1; t=(p-1)/2;
+    while IsEven(t) do (
+      t = t/2;
+      increment s
+    );
+
+    nn = n^-1 mod p;
+    c = b^t mod p;
+    r = n^((t+1)/2) mod p;
+
+    # FIXME: this can be done more efficently, this is just direct
+    # copy from the book
+    for i=1 to s-1 do (
+      d = (r^2 * nn)^(2^(s-i-1)) mod p;
+      if d == p-1 then (r = r*c mod p);
+      c = c^2 mod p
+    );
+
+    [r,-r] mod p
+  )
+)

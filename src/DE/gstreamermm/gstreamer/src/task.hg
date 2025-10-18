@@ -1,0 +1,157 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2015 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/object.h>
+#include <glibmm/threads.h>
+#include <memory>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(TaskState, GstTaskState)
+
+class TaskPool;
+
+/** A class representing GStreamer streaming threads.
+ * Gst::Task is used by Gst::Element and Gst::Pad to provide the data passing
+ * threads in a Gst::Pipeline.
+ *
+ * A Gst::Pad will typically start a Gst::Task to push or pull data to/from the
+ * peer pads. Most source elements start a Gst::Task to push data. In some
+ * cases a demuxer element can start a Gst::Task to pull data from a peer
+ * element. This is typically done when the demuxer can perform random access
+ * on the upstream peer element for improved performance.
+ *
+ * Although convenience functions exist on Gst::Pad to start/pause/stop tasks,
+ * it might sometimes be needed to create a Gst::Task manually if it is not
+ * related to a Gst::Pad.
+ *
+ * Before the Gst::Task can be run, it needs a Glib::StaticRecMutex that can be
+ * set with set_lock().
+ *
+ * The task can be started, paused and stopped with start(), pause() and stop()
+ * respectively.
+ *
+ * A Gst::Task will repeadedly call the Gst::Task::SlotTask that was provided
+ * when creating the task with create(). Before calling the function it will
+ * acquire the provided lock.
+ *
+ * Stopping a task with stop() will not immediatly make sure the task is not
+ * running anymore. Use join() to make sure the task is completely stopped and
+ * the thread is stopped.
+ *
+ * Task functions can send a Gst::Message to send out-of-band data to the
+ * application. The application can receive messages from the Gst::Bus in its
+ * mainloop.
+ *
+ * For debugging purposes, the task will configure its object name as the thread
+ * name on Linux. Please note that the object name should be configured before the
+ * task is started; changing the object name after the task has been started, has
+ * no effect on the thread name.
+ *
+ * Last reviewed on 2015-10-14 (1.5.2)
+ */
+class Task : public Object
+{
+  _CLASS_GOBJECT(Task, GstTask, GST_TASK, Object, GstObject)
+
+public:
+  /** For example,
+   * void on_do_task();.
+   */
+  typedef sigc::slot<void> SlotTask;
+
+  /**
+   * Bidirectional slot
+   */
+  typedef sigc::slot<void, const Glib::RefPtr<Gst::Task>&,
+          Glib::Threads::Thread*> TaskThreadSlot;
+  /** For example,
+   * void on_enter(const Glib::RefPtr<Gst::Task>& task, Glib::Threads::Thread&
+   * thread);.
+   * A thread is entered, this slot is called when the new thread enters its
+   * function.
+   */
+   typedef TaskThreadSlot SlotEnter;
+
+  /** For example,
+   * void on_leave(const Glib::RefPtr<Gst::Task>& task, Glib::Threads::Thread&
+   * thread);.
+   * A thread is exiting, this is called when the thread is about to leave its
+   * function.
+   */
+    typedef TaskThreadSlot SlotLeave;
+
+protected:
+  explicit Task(const SlotTask& task_slot);
+
+public:
+  /** Create a new Gst::Task that will repeatedly call the provided slot as a
+   * parameter. Typically the task will run in a new thread.
+   *
+   * The slot cannot be changed after the task has been created. You must
+   * create a new Gst::Task to change the slot.
+   *
+   * @param task_slot The Gst::Task::SlotTask to use.
+   * @return A new Gst::Task. MT safe.
+   */
+  _WRAP_CREATE(const SlotTask& task_slot)
+
+  _WRAP_METHOD(void set_lock(Glib::Threads::RecMutex& mutex), gst_task_set_lock)
+  _WRAP_METHOD(void set_pool(const Glib::RefPtr<Gst::TaskPool>& pool), gst_task_set_pool)
+  _WRAP_METHOD(Glib::RefPtr<Gst::TaskPool> get_pool(), gst_task_get_pool)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::TaskPool> get_pool() const, gst_task_get_pool)
+
+  /** Call enter_slot when the task function of task is entered.
+   *
+   * @param enter_slot
+   */
+  void set_enter_slot(const SlotEnter& enter_slot);
+  _IGNORE(gst_task_set_enter_callback)
+
+  /** Call leave_func when the task function of task is left.
+   *
+   * @param leave_slot
+   */
+  void set_leave_slot(const SlotLeave& leave_slot);
+  _IGNORE(gst_task_set_leave_callback)
+
+  _WRAP_METHOD(TaskState get_state() const, gst_task_get_state)
+  _WRAP_METHOD(void set_state(Gst::TaskState state), gst_task_set_state)
+  _WRAP_METHOD(bool pause(), gst_task_pause)
+  _WRAP_METHOD(bool start(), gst_task_start)
+  _WRAP_METHOD(bool stop(), gst_task_stop)
+  _WRAP_METHOD(bool join(), gst_task_join)
+  _WRAP_METHOD(static void cleanup_all(), gst_task_cleanup_all)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+private:
+  // todo this slot should be moved in move constructor, but for now it's
+  // impossible to provide custom move constructor
+  // (see https://bugzilla.gnome.org/show_bug.cgi?id=756593).
+  // However, task should be managed by RefPtr class, so move constructor
+  // and move assignment operator will never be called.
+  std::unique_ptr<SlotTask> m_slot;
+#endif
+};
+
+} // namespace Gst

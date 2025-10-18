@@ -1,0 +1,232 @@
+/* Copyright (C) 2004 The glibmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_DEFS(glibmm,glib)
+
+#include <glibmm/optionentry.h>
+#include <glibmm/optiongroup.h>
+#include <glibmm/error.h>
+#include <sigc++/signal.h>
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+extern "C" { typedef struct _GOptionContext GOptionContext; }
+#endif
+
+namespace Glib
+{
+/*! @example options/main.cc
+ * An example with Glib::OptionContext, Glib::OptionGroup and Glib::OptionEntry.
+ */
+
+/** Exception class for options.
+ */
+_WRAP_GERROR(OptionError, GOptionError, G_OPTION_ERROR, NO_GTYPE, decl_prefix GLIBMM_API)
+
+/** An %OptionContext defines and parses commandline options, using OptionGroup%s and \link OptionEntry option entries \endlink.
+ *
+ * It supports short and long commandline options, as shown in the following example:
+ *
+ * <tt>testtreemodel -r 1 \--max-size 20 \--rand \--display=:1.0 -vb \-- file1 file2</tt>
+ *
+ * The example demonstrates a number of features of the GOption
+ * commandline parser:
+ * - Options can be single letters, prefixed by a single dash.
+ * - Multiple short options can be grouped behind a single dash.
+ * - Long options are prefixed by two consecutive dashes.
+ * - Options can have an extra argument, which can be a number, a string or
+ *   a filename. For long options, the extra argument can be appended with
+ *   an equals sign after the option name, which is useful if the extra
+ *   argument starts with a dash, which would otherwise cause it to be
+ *   interpreted as another option.
+ * - Non-option arguments are returned to the application as rest arguments.
+ * - An argument consisting solely of two dashes turns off further parsing,
+ *   any remaining arguments (even those starting with a dash) are returned
+ *   to the application as rest arguments.
+ *
+ * The %OptionContext groups options in OptionGroups, which makes it easy to
+ * incorporate options from multiple sources. The intended use for this is
+ * to let applications collect option groups from the libraries it uses,
+ * add them to their %OptionContext, and parse all options by a single call
+ * to parse(). See Gtk::Main::add_gtk_option_group(), for an example.
+ *
+ * Add options by creating OptionEntry instances and appropriately-typed variables,
+ * and adding them to an OptionGroup with OptionGroup::add_entry() or
+ * OptionGroup::add_entry_filename(). The option group should then be added to
+ * the %OptionContext with set_main_group() or add_group().
+ *
+ * You might find it convenient to derive your own class from OptionGroup to
+ * contain these OptionEntry instances and member variables.
+ *
+ * If an option is of type string (see OptionGroup::add_entry()) or filename
+ * (see OptionGroup::add_entry_filename()), %OptionContext takes
+ * care of converting it to the right encoding. strings are returned in
+ * UTF-8 encoding and filenames are returned in the GLib filename encoding.
+ * Note that this only works if setlocale() has been called before
+ * OptionContext::parse().
+ *
+ * %OptionContext can automatically generate nicely formatted help output. Unless it is
+ * explicitly turned off with set_help_enabled(), this will recognize
+ * the \--help, -?, \--help-all and \--help-groupname options
+ * (where groupname is the name of an OptionGroup) and write suitable text to
+ * stdout.
+ */
+class GLIBMM_API OptionContext
+{
+  _CLASS_GENERIC(OptionContext, GOptionContext)
+  _IGNORE(g_option_context_free)
+public:
+
+  /** Creates a new option context.
+   * @param parameter_string A string which is displayed in the first line of \--help output, after programname [OPTION...]
+   */
+  explicit OptionContext(const Glib::ustring& parameter_string = {});
+
+  //Note that, unlike Glib::wrap(), this would create a second C++ instance for the same C instance,
+  //so it should be used carefully. For instance you could not access data in a derived class via this second instance.
+  explicit OptionContext(GOptionContext* castitem, bool take_ownership = false);
+
+  OptionContext(const OptionContext& other) = delete;
+  OptionContext& operator=(const OptionContext& other) = delete;
+
+  OptionContext(OptionContext&& other) noexcept;
+  OptionContext& operator=(OptionContext&& other) noexcept;
+
+  virtual ~OptionContext();
+
+  _WRAP_METHOD(void set_help_enabled(bool help_enabled = true), g_option_context_set_help_enabled)
+  _WRAP_METHOD(bool get_help_enabled() const, g_option_context_get_help_enabled)
+  _WRAP_METHOD(void set_ignore_unknown_options(bool ignore_unknown = true), g_option_context_set_ignore_unknown_options)
+  _WRAP_METHOD(bool get_ignore_unknown_options() const, g_option_context_get_ignore_unknown_options)
+
+  _WRAP_METHOD(void set_strict_posix(bool strict_posix = true), g_option_context_set_strict_posix)
+  _WRAP_METHOD(bool get_strict_posix() const, g_option_context_get_strict_posix)
+
+#m4 _CONVERSION(`char**&',`gchar***',`&($3)')
+  _WRAP_METHOD(bool parse(int& argc, char**& argv), g_option_context_parse, errthrow "Glib::OptionError, Glib::ConvertError")
+
+  /** Parses the command line arguments.
+   *
+   * This function is similar to parse(int& argc, char**& argv) except that it
+   * respects the normal memory rules when dealing with a strv instead of
+   * assuming that the passed-in array is the argv of the main function.
+   * In particular, strings that are removed from the arguments list will
+   * be freed using g_free().
+   *
+   * On Windows, the strings are expected to be in UTF-8. This is in
+   * contrast to parse(int& argc, char**& argv) which expects them to be in the
+   * system codepage, which is how they are passed as @a argv to main().
+   * See g_win32_get_command_line() or Gio::ApplicationCommandLine::get_arguments()
+   * for a solution.
+   *
+   * This function is useful if you are trying to use OptionContext with
+   * Gio::Application.
+   *
+   * @newin{2,50}
+   *
+   * @param[in,out] argv A pointer to the command line arguments
+   *   (which must be in UTF-8 on Windows).
+   * @return <tt>true</tt> if the parsing was successful,
+   *         <tt>false</tt> if an error occurred.
+   * @throw Glib::OptionError
+   * @throw Glib::ConvertError
+   */
+  _WRAP_METHOD(bool parse(char**& argv), g_option_context_parse_strv, errthrow)
+
+  //g_option_context_add_main_entries(), just creates a group internally, adds them to it, and does a set_main_group()
+  //- a group without callbacks seems to do some simple default parsing.
+  _IGNORE(g_option_context_add_main_entries)
+
+  /** Adds an OptionGroup to the context, so that parsing with context will recognize the options in the group.
+   * Note that the group will not be copied, so it should exist for as long as the context exists.
+   *
+   * @param group The group to add.
+   */
+  void add_group(OptionGroup& group);
+  _IGNORE(g_option_context_add_group)
+
+  /** Sets an OptionGroup as the main group of the context. This has the same effect as calling add_group(), the only
+   * difference is that the options in the main group are treated differently when generating \--help output.
+   * Note that the group will not be copied, so it should exist for as long as the context exists.
+   *
+   * @param group The group to add.
+   */
+  void set_main_group(OptionGroup& group);
+  _IGNORE(g_option_context_set_main_group)
+
+  //We don't need this (hopefully), and the memory management would be really awkward.
+  //OptionGroup& get_main_group();
+  //const OptionGroup& get_main_group() const;
+  _IGNORE(g_option_context_get_main_group)
+
+  #m4 _CONVERSION(`const OptionGroup&',`GOptionGroup*',`const_cast<GOptionGroup*>(($3).gobj())')
+  /** Returns a formatted, translated help text for the given context.
+   *
+   * - To obtain the text produced by \--help, call get_help(true).
+   * - To obtain the text produced by \--help-all, call get_help(false).
+   * - To obtain the help text for an option group, call get_help(false, group).
+   *
+   * @param main_help If <tt>true</tt>, only include the main group.
+   * @param group The OptionGroup to create help for.
+   * @result A string containing the help text.
+   */
+  _WRAP_METHOD(Glib::ustring get_help(bool main_help, const OptionGroup& group) const, g_option_context_get_help)
+
+  /** Returns a formatted, translated help text for the given context.
+   *
+   * - To obtain the text produced by \--help, call get_help(true).
+   * - To obtain the text produced by \--help-all, call get_help(false).
+   * - To obtain the help text for an option group, call get_help(false, group).
+   *
+   * @param main_help If <tt>true</tt>, only include the main group.
+   * @result A string containing the help text.
+   */
+  Glib::ustring get_help(bool main_help = true) const;
+
+  GOptionContext*       gobj()       { return gobject_; }
+  const GOptionContext* gobj() const { return gobject_; }
+
+  _WRAP_METHOD(void set_summary(const Glib::ustring& summary), g_option_context_set_summary)
+  _WRAP_METHOD(Glib::ustring get_summary() const, g_option_context_get_summary)
+  _WRAP_METHOD(void set_description(const Glib::ustring& description), g_option_context_set_description)
+  _WRAP_METHOD(Glib::ustring get_description() const, g_option_context_get_description)
+
+  _WRAP_METHOD(void set_translation_domain(const Glib::ustring& domain), g_option_context_set_translation_domain)
+
+  /**
+   * This function is used to translate user-visible strings, for \--help output.
+   * The function takes an untranslated string and returns a translated string
+   */
+  using SlotTranslate = sigc::slot<Glib::ustring(const Glib::ustring&)>;
+
+  /**
+   * Sets the function which is used to translate user-visible
+   * strings, for \--help output.  Different groups can use different functions.
+   *
+   * If you are using gettext(), you only need to set the translation domain,
+   * see set_translation_domain().
+   *
+   * @newin{2,14}
+   */
+  void set_translate_func (const SlotTranslate& slot);
+  _IGNORE(g_option_context_set_translate_func)
+
+protected:
+
+  GOptionContext* gobject_;
+  bool has_ownership_;
+};
+
+} // namespace Glib

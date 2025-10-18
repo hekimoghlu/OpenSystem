@@ -1,0 +1,492 @@
+2009-04-25  Morten Welinder <terra@gnome.org>
+
+	* Release 1.9.6
+
+2009-04-24  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_delete_cols, sheet_delete_rows): If count
+	sends us beyond the end of the sheet, take that as a hint not to
+	make ranges that go to the end of the sheet sticky.
+	(gnm_sheet_resize_main): Supply such a hint.
+
+	* src/expr.h (struct _GnmExprRelocateInfo): Add extra sticky_end
+	field for col/row insert/delete.
+
+	* src/expr.c (reloc_cellrange): Take extra sticky_end argument and
+	only make end-of-sheet stick if that is set.  Fix logic to ignore
+	beginning of such ranges.  All callers changed.
+	(gnm_expr_relocate): Avoid using "default:" for reloc_type.
+
+	* src/ranges.c (range_make_full): Remove.  No longer used.
+
+	* src/validation.c (validation_barf): Ignore the problem if
+	VALIDATION_STYLE_NONE is used.  Fixes #580157.
+
+	* src/expr.c (gnm_expr_as_string): Add defaults for debugging.
+
+	* src/sheet.c (gnm_sheet_resize_main): Restrict the selection to
+	the size of the new sheet.
+
+	* src/sheet-control-gui.c (cb_scg_sheet_resized): For panes and
+	thus cursors to be updated.
+
+	* src/sheet-style.c (sheet_style_resize): Fix off-by-one.
+
+	* configure.in (PANGO_WEIGHT_THIN): Check for this and friends.
+
+2009-04-23  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-gui.c (cb_scg_sheet_resized): New function.
+	(sheet_control_gui_new): Connect cb_scg_sheet_resized to the
+	sheet's "rows" and "columns" properties.
+	(scg_finalize): Disconnect.
+
+	* src/expr-name.c (expr_name_validate): Take sheet argument for
+	checks.  All callers changed.
+
+	* src/sheet.c (gnm_sheet_resize_main): Resize styles too.
+	(gnm_sheet_constructor): Check row count sanity here.
+
+	* src/sheet-style.c (sheet_style_init): Not here.
+	(sheet_style_resize): New function.
+	(sheet_style_init_size): Split from sheet_style_init.
+
+	* src/commands.c (cmd_insert_rows, cmd_insert_cols): Simplify and
+	fix plural.
+	(cmd_ins_del_colrow): Simplify.
+
+	* src/sheet.c (sheet_insert_cols, sheet_insert_rows): Fix
+	array-split check.
+
+2009-04-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnm_load_pango_attributes_into_buffer_filter):
+	  add more supported items
+	(gnm_load_pango_attributes_into_buffer_named_filter): ditto
+	(gnm_load_pango_attributes_into_buffer): ditto
+	(gnm_store_text_tag_attr_in_pango): ditto
+
+2009-04-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnm_load_pango_attributes_into_buffer):
+	  we need to create some labelled tags for off/on styles
+	(gnm_load_pango_attributes_into_buffer_named_filter): new
+	(gnm_store_text_tag_attr_in_pango): handle style attribute
+
+2009-04-22  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_resize_main): Undo to the right size.
+
+	* src/wbc-gtk.c (wbcg_get_scg): Fix warning on exit.
+
+	* src/workbook.c (workbook_sheets): Change result type to GSList*.
+	All callers changed.
+
+	* src/sheet.c (gnm_sheet_resize_main): Change container size too.
+	Unlink, re-link, and recalculate all dependencies.
+	(gnm_sheet_resize_main): Handle errors from attempted splitting of
+	arrays, etc.
+
+2009-04-21  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (gnm_dep_container_new): Calculate the number of
+	buckets here once and for all and store in container.
+	(BUCKET_LAST): Remove.  All users changed to use above.
+
+	* src/sheet.c (sheet_destroy_contents): Use colrow_resize.
+	(gnm_sheet_resize): Initial implementation.
+
+	* src/colrow.c (colrow_resize): New function.
+
+	* src/sheet.c (gnm_sheet_resize): Stub.
+
+	* src/commands.c (cmd_resize_sheets): Undo framework for resizing
+	sheets.
+
+	* src/xml-io.c (xml_read_print_repeat_range): Adapt to print-info
+	changes.
+
+	* src/xml-sax-write.c (xml_write_print_repeat_range): Fix writing
+	repeated ranges.
+
+2009-04-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_object_format): add argument
+	* src/commands.c (cmd_object_format): handle attributes
+	(cmd_object_format_redo): ditto
+	(cmd_object_format_finalize): ditto
+	* src/gnm-so-filled.c (cb_gnm_so_filled_changed): also set
+	  attributes
+	* src/gui-util.h (gnumeric_textbuffer_get_text): new
+	(gnm_load_pango_attributes_into_buffer): new
+	(gnm_get_pango_attributes_from_buffer): new
+	* src/gui-util.c (gnumeric_textbuffer_get_text): new
+	(gnm_load_pango_attributes_into_buffer): new
+	(gnm_get_pango_attributes_from_buffer): new
+	(gnumeric_textview_get_text): use gnumeric_textbuffer_get_text
+	(gnm_load_pango_attributes_into_buffer_filter): new
+	(gnm_store_text_tag_attr_in_pango): new
+
+2009-04-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-so-filled.c (gnm_so_filled_user_config): adjust for 
+	  changed arguments of dialog_so_styled
+	* src/gnm-so-line.c (gnm_so_line_user_config): ditto
+	* src/gnm-so-polygon.c (gnm_so_polygon_user_config): ditto
+
+2009-04-21  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_print_setup_redo): Only reverse the list
+	right after it was created.
+
+	* src/print-info.c (print_info_free): Free here.
+	(print_info_load_defaults): Simply copy as text here.
+	(print_info_dup): Copy here.
+	(print_info_new, print_info_dup): Don't take sheet argument
+	anymore.  All callers changed.
+
+	* src/print-info.h (struct _PrintInformation): Keep repeat_top and
+	repeat_left as strings so they become sheet independent.
+
+	* src/print.c (compute_sheet_pages): Parse repeat_top and
+	repeat_left here.
+
+2009-04-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_object_format): add argument
+	* src/commands.c (cmd_object_format): handle modified text string
+	(cmd_object_format_redo): ditto
+	(cmd_object_format_finalize): ditto
+	* src/gnm-so-filled.c (gnm_so_filled_user_config): just pass an indicator
+	  rather than a string.
+
+2009-04-20  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (wbc_gtk_init_actions): Disable solver
+	action if compiled without the solver.
+
+2009-04-20  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* libspreadsheet.pc.in: use -lspreadsheet-$(VERSION) instead of
+	$(GNUMERIC_API_VER). [#575390]
+
+2009-04-20  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (actions): Get rid of old
+	insert-sized-sheet entry.
+
+	* src/wbc-gtk.c (sheet_menu_label_run): Add new Resize menu entry.
+
+2009-04-20  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: check for gtk_adjustment_configure.
+	* src/commands.c (cmd_so_set_adjustment_adj): add defines for missing gtk
+	functions in gtk+-2.12 and earlier (see #114098).
+
+2009-04-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-so-filled.c (gnm_so_filled_draw_cairo): print text if
+	  available
+
+2009-04-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (so_widget_view_set_bounds): Make sure that the 
+	  bounds are at least 6 wide  [#579152]
+
+2009-04-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_so_set_adjustment): new
+	* src/commands.c (cmd_so_set_adjustment): new
+	(cmd_so_set_adjustment_adj): new
+	(cmd_so_set_adjustment_redo): new
+	(cmd_so_set_adjustment_undo): new
+	(cmd_so_set_adjustment_finalize): new
+	* src/sheet-object-widget.h (sheet_widget_adjustment_get_link): new
+	(sheet_widget_adjustment_set_link): new
+	(sheet_widget_adjustment_get_adjustment): new
+	* src/sheet-object-widget.c (sheet_widget_adjustment_get_link): new
+	(sheet_widget_adjustment_set_link): new
+	(sheet_widget_adjustment_get_adjustment): new
+	(AdjustmentConfigState): new field
+	(cb_adjustment_config_destroy): release label memory
+	(cb_adjustment_config_ok_clicked): call cmd_so_set_adjustment
+	(sheet_widget_adjustment_user_config_impl): previously 
+	  sheet_widget_adjustment_user_config with window title and undo
+	  string handling
+	(sheet_widget_adjustment_user_config): stub to call 
+	  sheet_widget_adjustment_user_config_impl with correct labels.
+	(sheet_widget_scrollbar_user_config) : new
+	(sheet_widget_scrollbar_class_init): hookup sheet_widget_scrollbar_user_config
+	(sheet_widget_spinbutton_user_config) : new
+	(sheet_widget_spinbutton_class_init): hookup sheet_widget_scrollbar_user_config
+	(sheet_widget_slider_user_config) : new
+	(sheet_widget_slider_class_init): hookup sheet_widget_scrollbar_user_config
+
+2009-04-18  Morten Welinder  <terra@gnome.org>
+
+	* */*.c: Use gnm_sheet_get_last_(col|row) where appropriate.
+
+2009-04-17  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (setup_range): Parse in the context of the first
+	sheet.
+
+	* src/parse-util.c (cellref_as_string): Simplify and fix: let
+	gnm_cellpos_init_cellref do the work.
+
+	* src/position.c (gnm_cellref_make_abs): Simplify and fix: Let
+	gnm_cellpos_init_cellref do the work.
+
+	* src/position.c (gnm_cellpos_init_cellref): Take extra base_sheet
+	argument.  All callers changed.
+
+	* src/parse-util.c (cellref_abs_col, cellref_abs_row): Eliminate
+	in favour of gnm_cellpos_init_cellref.
+
+	* src/commands.c (cmd_so_set_frame_label_finalize,
+	cmd_so_set_checkbox_finalize): Don't NULL-check before g_free.
+	Test suite passes again.
+
+	* src/print-info.c (load_range): Take Sheet argument too and
+	supply it to the parser.  All callers changed.
+	(print_info_new): Take Sheet argument too.  All callers changed.
+	(print_info_dup): Constify.  Take extra Sheet argument; all
+	callers changed.  Copy field-by-field.  Free clobbered page
+	breaks.
+	(gnm_page_breaks_free): Handle NULL.
+	(gnm_page_breaks_new): Drop optional argument len.  All callers
+	changed.
+
+	* src/position.c (gnm_cellpos_hash, gnm_cellref_hash,
+	gnm_rangeref_hash): Improve these in light on variable-size
+	sheets.
+	(gnm_rangeref_normalize): : Evaluate sheets early so we can ship them
+	to gnm_cellpos_init_cellref.
+
+2009-04-16  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.c (col_parse, row_parse): Handle MAGIC_MAX_SHEET.
+	(std_sheet_name_quote): Use MAGIC_MAX_SHEET to query any possible
+	sheet.
+	(MAGIC_MAX_SHEET): Define locally.
+
+	* src/sheet-view.c (sv_set_edit_pos): Don't do anything -- not
+	even checks on position -- if the new position is the same as the
+	old one.  If we do change, make sure we have a sheet.
+
+	* src/sheet.c (gnm_sheet_get_max_rows, gnm_sheet_get_max_cols):
+	Complain if sheet is NULL.
+
+	* src/selection.c (sheet_selection_set_internal): If we don't have
+	a sheet yet, don't enable insert/delete.
+
+2009-04-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_so_set_checkbox): new
+	* src/commands.c (cmd_so_set_checkbox): new
+	(cmd_so_set_checkbox_redo): new
+	(cmd_so_set_checkbox_undo): new
+	(cmd_so_set_checkbox_finalize): new
+	* src/sheet-object-widget.h (sheet_widget_checkbox_get_link): new
+	* src/sheet-object-widget.c (sheet_widget_checkbox_get_link): new
+	(cb_checkbox_config_ok_clicked): call cmd_so_set_checkbox
+
+2009-04-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_so_set_frame_label_redo): new
+	(cmd_so_set_frame_label_undo): new
+	(cmd_so_set_frame_label_finalize): new
+	(cmd_so_set_frame_label): new
+	* src/commands.h (cmd_so_set_frame_label): new
+	* src/sheet-object-widget.c (sheet_widget_frame_set_label): new
+	(cb_frame_config_ok_clicked): call cmd_so_set_frame_label
+	(cb_frame_config_cancel_clicked): use sheet_widget_frame_set_label
+	(cb_frame_label_changed): ditto
+	* src/sheet-object-widget.h (sheet_widget_frame_set_label): new
+
+2009-04-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (gboolean cmd_so_set_links): new
+	(CmdSOSetLink): new
+	(cmd_so_set_links_redo): new
+	(cmd_so_set_links_undo): new
+	(cmd_so_set_links_finalize): new
+	* src/commands.h (gboolean cmd_so_set_links): new
+	* src/sheet-object-widget.c (list_content_eval): permit dep->texpr to
+	  be NULL.
+	(sheet_widget_list_base_set_links): empty the list as necessary
+
+2009-04-10  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c: fixed after GogStyle -> GOStyle rename.
+	* src/gnm-so-line.c: ditto.
+	* src/gnm-so-polygon.c: ditto.
+
+2009-04-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+	for:  John Rea
+	
+	* templates/english/calendar.gnumeric: new
+	* templates/english/Makefile.am: added above file
+
+2009-04-06  Emmanuel Pacaud <emmanuel.pacaud@lapp.in2p3.fr>
+
+	Adapt to the naming consistency fix in goffice.
+
+	/\bGO_([A-Z,_)*]_TYPE\b/GO_TYPE_$1/
+	/\bGOG_([A-Z,_)*]_TYPE\b/GOG_TYPE_$1/
+	/\bGo([A-Z])/GO$1/
+	/\bIS_GO_/GO_IS_/
+	/\bIS_GOG_/GOG_IS_/
+
+2009-04-05  Jody Goldberg <jody@gnome.org>
+
+	From: Vivien Malerba <vmalerba@gmail.com>
+	* configure.in : bump to libgda4.
+
+2009-04-04  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric.h : bump GNM_MAX_COLS to accomodate XL2007.
+	* src/sheet-style.c (sheet_style_init) : Use TILE_SIZE_ to init.
+
+2009-04-04  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.c (col_parse, row_parse, cellref_a1_get,
+	r1c1_get_index, cellref_r1c1_get, cellref_parse, cellpos_parse):
+	Take sheet argument.  All callers fixed.
+
+	* src/libgnumeric.c (gnm_sheet_max_cols, gnm_sheet_max_rows):
+	Remove.  All uses were wrong anyway.
+	(libspreadsheet_options): Remove --columns and --rows.
+
+2009-04-03  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_read_workbook_auto_csvtab, stf_read_workbook):
+	Create sheet as big as needed.
+
+	* src/stf-parse.c (stf_parse_sheet): Handle failure without
+	messing up the locale.
+
+	* src/ranges.c (range_make_full, range_ensure_sanity,
+	range_transpose, range_is_full, range_translate): Take sheet
+	argument for size.  All callers changed.
+
+	* src/xml-io.c (xml_node_get_range): Take sheet argument for size.
+	All caller changeds.
+
+2009-04-02  Morten Welinder  <terra@gnome.org>
+
+	* src/ranges.c (range_clip_to_finite): Use the sheet.
+
+	* src/format-template.c (format_template_new): Switch hash key to
+	GnmCellPos so we can handle large sheets.
+
+	* src/workbook.c (workbook_sheet_add): Require a size.  All
+	callers changed.
+	(workbook_sheet_add_size): Remove.  Map all callers to
+	workbook_sheet_add.
+
+	* src/sheet.c (sheet_new): Require a size.  All callers changed.
+	Note: some callers need to be fixed to provide the right size.
+	(sheet_new_with_size): Remove.  All callers mapped to sheet_new.
+
+	* src/print-info.c (render_timestamp_with_format): Renamed form
+	render_value_with_format.  Date convention issues fixed.
+
+	* src/workbook.c (workbook_set_date_conv): New function.
+
+	* src/xml-sax-read.c (xml_sax_calculation): Use
+	workbook_set_date_conv.
+
+	* src/ranges.c (range_init_full_sheet, range_init_cols,
+	range_init_rows): Take a sheet argument.  All callers changed.
+	Fixes #577675.
+
+2009-04-01  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (wbcg_sheet_focus): scg might be NULL 
+	
+2009-04-01  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_append_sheet, wbcg_insert_sheet): Use size
+	of active sheet.
+
+	* src/wbc-gtk.c (wbc_gtk_init): Disabled SheetSizedInsert as
+	appropriately.
+
+	* src/main-application.c (main): Complain if --rows or --columns
+	are disabled.
+
+	* src/sheet-style.c (cb_style_list_add_node): Fix type confusion
+	for user pointer.  Fixes #577561.
+
+	* src/expr-name.c (expr_name_name): New function.
+	* */*.c: don't include str.h unless we have to.
+
+2009-04-01  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_class_init): Install new workbook
+	property.
+	(gnm_sheet_get_max_rows, gnm_sheet_get_max_cols): Complain if
+	called too early in sheet construction.
+	(sheet_set_zoom_factor, sheet_set_display_formulas): Don't call
+	sheet_scale_changed during sheet construction.
+	(gnm_sheet_constructor): Call it here instead.
+
+	* src/xml-sax-read.c (xml_sax_wb_sheetsize): Set the right
+	attribute.
+
+	* src/sheet.c (sheet_new_with_type): Move most of this into a
+	constructor.
+	(gnm_sheet_class_init): Install new property "sheet-type".
+
+2009-03-29  Morten Welinder  <terra@gnome.org>
+
+	* */*.[ch]: Install variable-sheet-size patch from 168875.  (Work
+	of Jean with help from Andreas and me.)  Note: all gui parts of
+	are turned off for now.  Search for GNUMERIC_VARIABLE_SHEET_SIZE.
+
+2009-03-29  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (sheet_menu_label_run): Simplify and add sorted
+	sheet menu too.
+
+2009-03-28  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_row_set_default_size_pixels,
+	sheet_row_set_default_size_pts): Add preconditions like in the
+	_col_ counterparts.  Fixes #577145.
+
+	* src/graph.c: Stop accessing private members of values.  Use
+	value_peek_string instead.
+
+2009-03-27  Morten Welinder  <terra@gnome.org>
+
+	* src/graph.c: Improve handling of date conversions.
+
+2009-03-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-plugin.c (plugin_service_ui_activate): Free layout here.
+
+	* src/application.c (gnm_app_add_extra_ui): constify layout and copy it.
+	(gnm_app_remove_extra_ui): Destroy layout here.
+
+2009-03-25  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (gnm_format_is_time_for_value): Simplify.
+
+	* src/stf-export.c (try_auto_date): Check validity of date.
+	Handle elapsed times.  Sneakily also handle negative date serials
+	if goffice does.
+
+2008-12-10  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_probe) : split out the content test into ...
+	(gsf_xml_probe) : here.  Then generalize it a bit and use the SAX2
+			  startElement routine to handle name spaces.
+	(gnm_xml_probe_element) : handle the .gnumeric specific checks here.
+	    1) root element == Workbook
+	    2) Workbook is in a namespace that contains 'gnumeric'
+
+2009-03-22  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Post-release bump.

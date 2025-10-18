@@ -1,0 +1,53 @@
+/* Copyright (C) 2007 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/error.h>
+#include <glibmm/interface.h>
+
+// There have been issues with other libraries defining HOST_NOT_FOUND (e.g.
+// netdb.h).  As a workaround, we added the alternate name HOST_WAS_NOT_FOUND.
+// Portable code should not use HOST_NOT_FOUND.  Undefining it here (and
+// restoring it below) will allow programs to compile even if they include
+// netdb.h.  See Bug #529496
+#ifdef HOST_NOT_FOUND
+#define GIOMM_SAVED_HOST_NOT_FOUND HOST_NOT_FOUND
+#undef HOST_NOT_FOUND
+#endif // HOST_NOT_FOUND
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+namespace Gio
+{
+
+//Note that GIOErrorEnum is not named GIOError in gio because there is already a GIOError in glib,
+//But we can have both Glib::Error and Gio::Error in C++.
+
+/** Exception class for giomm errors.
+ */
+_WRAP_GERROR(Error, GIOErrorEnum, G_IO_ERROR, NO_GTYPE, decl_prefix GIOMM_API)
+_WRAP_GERROR(ResolverError, GResolverError, G_RESOLVER_ERROR, NO_GTYPE, decl_prefix GIOMM_API)
+_WRAP_GERROR(TlsError, GTlsError, G_TLS_ERROR, NO_GTYPE, s#^EOF$#ENDOFFILE#, decl_prefix GIOMM_API)
+
+} // namespace Gio
+
+#ifdef GIOMM_SAVED_HOST_NOT_FOUND
+// restore the previously-defined HOST_NOT_FOUND macro
+#define HOST_NOT_FOUND GIOMM_SAVED_HOST_NOT_FOUND
+#undef GIOMM_SAVED_HOST_NOT_FOUND
+#endif // GIOMM_SAVED_HOST_NOT_FOUND

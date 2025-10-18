@@ -1,0 +1,334 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/miniobject.h>
+#include <gstreamermm/structure.h>
+
+_DEFS(gstreamermm,gst)
+
+
+namespace Gst
+{
+_WRAP_ENUM(CapsIntersectMode, GstCapsIntersectMode, NO_GTYPE)
+
+_WRAP_ENUM(CapsFlags, GstCapsFlags)
+
+class CapsFeatures;
+
+/** Structure describing sets of media formats.
+ * Caps (capabilities) are lightweight refcounted objects describing media types.
+ *
+ * They are composed of an array of Gst::Structure.
+ *
+ * Caps are exposed on Gst::PadTemplate to describe all possible types a
+ * given pad can handle. They are also stored in the Gst::Registry along with
+ * a description of the Gst::Element.
+ *
+ * Caps are exposed on the element pads using the Gst::Pad::query_caps() pad
+ * method. This function describes the possible types that the pad can
+ * handle or produce at runtime.
+ *
+ * @code
+ * Glib::RefPtr<Gst::Caps> caps = Gst::Caps::create_simple("video/x-raw",
+ *                                 "format", Gst::Fourcc('I', '4', '2', '0'),
+ *                                 "framerate", Gst::Fraction(25, 1),
+ *                                 "pixel-aspect-ratio", Gst::Fraction(1, 1),
+ *                                 "width", 320,
+ *                                 "height", 240);
+ * @endcode
+ *
+ * A Gst::Caps is fixed when it has no properties with ranges or lists. Use
+ * Gst::Caps::is_fixed() to test for fixed caps. Fixed caps can be used in a
+ * caps event to notify downstream elements of the current media type.
+ *
+ * Various methods exist to work with the media types such as subtracting
+ * or intersecting.
+ *
+ * Be aware that the current Gst::Caps / Gst::Structure serialization into string
+ * has limited support for nested Gst::Caps / Gst::Structure fields. It can only
+ * support one level of nesting. Using more levels will lead to unexpected
+ * behavior when using serialization features, such as Gst::Caps::to_string() or
+ * gst_value_serialize() and their counterparts.
+ *
+ * Last reviewed on 2016-05-16 (1.8.0)
+ *
+ */
+class Caps : public MiniObject
+{
+  _CLASS_OPAQUE_REFCOUNTED(Caps, GstCaps, gst_caps_new_empty, gst_caps_ref, gst_caps_unref)
+  _IGNORE(gst_caps_ref, gst_caps_unref)
+
+public:
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  static GType get_type() G_GNUC_CONST;
+#endif
+
+public:
+  /** Creates a new Gst::Caps that contains one Gst::Structure.
+   *
+   * @param media_type The media type of the structure.
+   * @param ...further_data further data to set in format: name, data (data
+   * value can be any supported C++ type).
+   *
+   * @return The new Gst::Caps.
+   */
+  template<class ...DataTypes>
+  static Glib::RefPtr<Gst::Caps> create_simple(const Glib::ustring& media_type, DataTypes... further_data);
+
+  /** Creates a new Gst::Caps and adds the given Gst::Structure.
+   * Use append_structure() to add additional structures.
+   *
+   * @param first_struct The first structure to add.
+   * @return Returns the new Gst::Caps.
+   */
+  static Glib::RefPtr<Gst::Caps> create(const Structure& first_struct);
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Caps> create_from_string(const Glib::ustring& string), gst_caps_from_string)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> copy_nth(guint nth) const, gst_caps_copy_nth)
+
+  _WRAP_METHOD(void append(Glib::RefPtr<Gst::Caps>&& caps), gst_caps_append)
+
+  Glib::RefPtr<Gst::Caps> merge(Glib::RefPtr<Gst::Caps>&& caps);
+  _IGNORE(gst_caps_merge)
+
+  /** Appends a structure to caps.
+   *
+   * @param structure The Gst::Structure to append.
+   */
+  void append_structure(const Structure& structure);
+
+  _WRAP_METHOD(void append_structure(Gst::Structure&& structure), gst_caps_append_structure)
+
+  /** Appends a structure to caps.
+   *
+   * @param structure The Gst::Structure to append.
+   * @param features The Gst::CapsFeatures to append.
+   */
+  void append_structure(const Structure& structure, const CapsFeatures& features);
+  _IGNORE(gst_caps_append_structure_full)
+
+  /** Appends a structure to caps if its not already expressed by caps.
+   *
+   * @param structure The Gst::Structure to merge.
+   */
+  Glib::RefPtr<Gst::Caps> merge_structure(const Structure& structure);
+  _IGNORE(gst_caps_merge_structure)
+
+  /** Appends a structure to caps if its not already expressed by caps.
+   *
+   * @param structure The Gst::Structure to merge.
+   * @param features The Gst::CapsFeatures to merge.
+   */
+  Glib::RefPtr<Gst::Caps> merge_structure(const Structure& structure, const CapsFeatures& features);
+  _IGNORE(gst_caps_merge_structure_full)
+
+#m4 _CONVERSION(`GstStructure*', `const Structure', `Glib::wrap($3, true)')
+  /** Finds the structure in caps that has the index @a idx, and returns it.
+   *
+   * @param idx The index of the structure.
+   * @return The Gst::Structure corresponding to index.
+   */
+  _WRAP_METHOD(const Structure get_structure(guint idx) const, gst_caps_get_structure)
+
+  _WRAP_METHOD(void remove_structure(guint idx), gst_caps_remove_structure)
+  _WRAP_METHOD(guint size() const, gst_caps_get_size)
+
+// There's no need to take an extra reference because we are stealing the
+// structure.
+#m4 _CONVERSION(`GstStructure*', `Structure', `Glib::wrap($3)')
+  _WRAP_METHOD(Structure steal_structure(guint index), gst_caps_steal_structure)
+
+  /** Sets fields in a simple Gst::Caps. A simple Gst::Caps is one that only
+   * has one structure. This method, like the Gst::Structure::set_field()
+   * methods, translates certain GTypes to GStreamer specific GTypes for
+   * functional compatibility.
+   *
+   * @param name Field to set.
+   * @param value The value which the field should be set to.
+   */
+  void set_simple(const Glib::ustring& name, const Glib::ValueBase& value);
+  _IGNORE(gst_caps_set_simple, gst_caps_set_simple_valist)
+
+  /** Sets fields in a simple Gst::Caps. A simple Gst::Caps is one that only
+   * has one structure. This method, like the Gst::Structure::set_field()
+   * methods, translates certain GTypes to GStreamer specific GTypes for
+   * functional compatibility.
+   *
+   * @param name Field to set.
+   * @param data A value which the field should be set to (this can be any
+   * supported C++ type).
+   * @param ...further_data further data to set in format: name, data.
+   */
+  template<class DataType, class ...DataTypes>
+  void set_simple(const Glib::ustring & name, const DataType& data, DataTypes ...further_data);
+
+  /** Sets fields in a simple Gst::Caps. A simple Gst::Caps is one that only
+   * has one structure.
+   *
+   * @param name Field to set.
+   * @param data A C string (const char*) which the field should be set to.
+   */
+  void set_simple(const Glib::ustring& name, const char* data);
+
+  _WRAP_METHOD(void set_value(const Glib::ustring& field, const Glib::ValueBase& value), gst_caps_set_value)
+
+  /** Sets the given @a field on all structures to the given value. This is a
+   * convenience function for calling Gst::Structure::set_value()  on all
+   * structures.
+   *
+   * @param name Field to set.
+   * @param data A value which the field should be set to (this can be any
+   * supported C++ type).
+   */
+  template <class DataType>
+  void set_value(const Glib::ustring& name, const DataType& data);
+
+  _WRAP_METHOD(bool is_any() const, gst_caps_is_any)
+  _WRAP_METHOD(bool empty() const, gst_caps_is_empty)
+  _WRAP_METHOD(bool is_fixed() const, gst_caps_is_fixed)
+  _WRAP_METHOD(bool equals(const Glib::RefPtr<const Gst::Caps>& other_caps) const, gst_caps_is_equal)
+  _WRAP_METHOD(bool equals_fixed(const Glib::RefPtr<const Gst::Caps>& other_caps) const, gst_caps_is_equal_fixed)
+  _WRAP_METHOD(bool is_always_compatible(const Glib::RefPtr<const Gst::Caps>& other_caps) const, gst_caps_is_always_compatible)
+  _WRAP_METHOD(bool is_subset(const Glib::RefPtr<const Gst::Caps>& superset_caps) const, gst_caps_is_subset)
+  _WRAP_METHOD(bool can_intersect(const Glib::RefPtr<const Gst::Caps>& caps2) const, gst_caps_can_intersect)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> fixate() const, gst_caps_fixate)
+  _WRAP_METHOD(bool is_strictly_equal(const Glib::RefPtr<const Gst::Caps>& caps2) const, gst_caps_is_strictly_equal)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> copy() const, gst_caps_copy)
+  _WRAP_METHOD(bool is_subset_structure(const Gst::Structure& structure) const, gst_caps_is_subset_structure)
+  _WRAP_METHOD(bool is_subset_structure(const Gst::Structure& structure, const Gst::CapsFeatures& features) const, gst_caps_is_subset_structure_full)
+
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Caps> create_any(), gst_caps_new_any)
+
+  //This is const (returns a non const) because it always creates a new instance:
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_intersect(const Glib::RefPtr<const Gst::Caps>& other_caps) const, gst_caps_intersect)
+
+  //This is const (returns a non const) because it always creates a new instance:
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_intersect(const Glib::RefPtr<const Gst::Caps>& other_caps, CapsIntersectMode) const, gst_caps_intersect_full)
+
+  //This is const (returns a non const) because it always creates a new instance:
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_normal() const, gst_caps_normalize)
+
+  //This is const (returns a non const) because it always creates a new instance:
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> simplify(), gst_caps_simplify)
+
+  _WRAP_METHOD(Glib::ustring to_string() const, gst_caps_to_string)
+
+  //This is const (returns a non const) because it always creates a new instance:
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_difference(const Glib::RefPtr<const Gst::Caps>& subtrahend_caps) const, gst_caps_subtract)
+
+  /**
+   * Returns a writable copy of @a caps.
+   *
+   * If there is only one reference count on Gst::Caps object , the caller must be
+   * the owner, and so this function will return the caps object unchanged. If on
+   * the other hand there is more than one reference on the object, a new caps object
+   * will be returned.
+   * @return A buffer (possibly the same pointer) that is writable.
+   */
+  Glib::RefPtr<Gst::Caps> create_writable();
+
+  /** Discard all but the first structure from @a caps. Useful when
+   * fixating.
+   * 
+   * @return Truncated caps.
+   */
+  Glib::RefPtr<Gst::Caps> truncate();
+  _IGNORE(gst_caps_truncate)
+
+  /**
+   * Finds the features in caps that has the index index , and returns it.
+   *
+   * @param index the index of the structure.
+   * @return The new Gst::CapsFeatures corresponding to index.
+   */
+  CapsFeatures get_features(guint index) const;
+  _IGNORE(gst_caps_get_features)
+
+  /**
+   * Sets the Gst::CapsFeatures for the structure at index.
+   *
+   * @param index The index of the structure.
+   * @param features The Gst::CapsFeatures to set.
+   */
+  void set_features(guint index, const CapsFeatures& features);
+  _IGNORE(gst_caps_set_features)
+
+private:
+  // This method is used for varadic template recursion
+  void set_simple() {}
+};
+
+/******************************* Gst::Caps *******************************/
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+template<class DataType, class ...DataTypes>
+void Caps::set_simple(const Glib::ustring & name, const DataType& data, DataTypes ...further_data)
+{
+  this->set_value(name, data);
+  this->set_simple(further_data...);
+}
+
+template<class ...DataTypes>
+Glib::RefPtr<Gst::Caps> Caps::create_simple(const Glib::ustring& media_type, DataTypes... data)
+{
+/*
+  This method is implemented because gst_caps_new_simple is a variable argument
+  function and cannot be wrapped.  In addition, because gst_caps_new_simple
+  creates a GstStructure for the GstCaps and will not be called, we must create
+  our own GstStructure here and append it to the GstCaps.
+*/
+  Glib::RefPtr<Gst::Caps> result(reinterpret_cast<Gst::Caps*>(gst_caps_new_empty()));
+  Gst::Structure gst_struct(media_type, data...);
+  result->append_structure(gst_struct);
+  return result;
+}
+
+template <class DataType>
+void Caps::set_value(const Glib::ustring& name, const DataType& data)
+{
+  typedef Glib::Value<DataType> ValueType;
+
+  ValueType value;
+  value.init(ValueType::value_type());
+  value.set(data);
+  this->set_value(name, reinterpret_cast<Glib::ValueBase&>(value));
+}
+
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+} //namespace Gst
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+namespace Glib
+{
+
+template <>
+class Value< Glib::RefPtr<Gst::Caps> > : public ValueBase_Boxed
+{
+public:
+  static GType value_type() { return Gst::Caps::get_type(); }
+  void set(const Glib::RefPtr<Gst::Caps>& caps) { set_boxed(Glib::unwrap(caps)); }
+  Glib::RefPtr<Gst::Caps> get();
+};
+
+}
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */

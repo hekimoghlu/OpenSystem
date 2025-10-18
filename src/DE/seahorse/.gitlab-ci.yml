@@ -1,0 +1,41 @@
+include: 'https://gitlab.gnome.org/GNOME/citemplates/raw/master/flatpak/flatpak_ci_initiative.yml'
+
+variables:
+  BUNDLE: 'seahorse.flatpak'
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+  - review
+  - test
+  - deploy
+
+style-check:
+  stage: review
+  script:
+    - ./.gitlab/ci/style-check.sh
+  artifacts:
+    expire_in: 1 week
+    name: "style-check-junit-report"
+    when: always
+    reports:
+      junit: style-check-junit-report.xml
+    paths:
+      - "style-check-junit-report.xml"
+
+check-potfiles:
+  stage: review
+  script:
+    - ./.gitlab/ci/check-potfiles.sh
+
+flatpak:
+  variables:
+    MANIFEST_PATH: 'build-aux/org.gnome.Seahorse.Devel.json'
+    FLATPAK_MODULE: "seahorse"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.Seahorse.Devel"
+  extends: .flatpak
+
+nightly:
+  extends: '.publish_nightly'
+  dependencies: ['flatpak']
+  needs: ['flatpak']

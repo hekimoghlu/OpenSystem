@@ -1,0 +1,756 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Pitivi video editor
+# Copyright (c) 2016, Thibault Saunier <tsaunier@gnome.org>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, see <http://www.gnu.org/licenses/>.
+# pylint: disable=invalid-name
+import argparse
+import configparser
+import json
+import os
+import platform
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+from urllib.error import URLError
+from urllib.parse import urlparse
+from urllib.request import urlretrieve
+
+# The default branch is master because the script is used most often
+# for development.
+PITIVI_BRANCH = "master"
+MANIFEST_NAME = "org.pitivi.Pitivi.json"
+FLATPAK_REQ = [
+    ("flatpak", "0.10.0"),
+    ("flatpak-builder", "1.2.2"),
+]
+FLATPAK_VERSION = {}
+DEFAULT_GST_BRANCH = 'main'
+ARCH = platform.machine()
+
+
+class Colors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+
+
+class Console:
+
+    quiet = False
+
+    @classmethod
+    def message(cls, str_format, *args):
+        if cls.quiet:
+            return
+
+        if args:
+            print(str_format % args)
+        else:
+            print(str_format)
+
+        # Flush so that messages are printed at the right time
+        # as we use many subprocesses.
+        sys.stdout.flush()
+
+
+def remove_comments(string):
+    pattern = r"(\".*?\"|\'.*?\')|(/\*.*?\*/|//[^\r\n]*$)"
+    # first group captures quoted strings (double or single)
+    # second group captures comments (//single-line or /* multi-line */)
+    regex = re.compile(pattern, re.MULTILINE | re.DOTALL)
+
+    def _replacer(match):
+        # if the 2nd group (capturing comments) is not None,
+        # it means we have captured a non-quoted (real) comment string.
+        if match.group(2) is not None:
+            return ""  # so we will return empty to remove the comment
+
+        return match.group(1)  # captured quoted-string
+    return regex.sub(_replacer, string)
+
+
+def load_manifest(manifest_path):
+    with open(manifest_path, "r", encoding="UTF-8") as mr:
+        contents = mr.read()
+        contents = remove_comments(contents)
+        manifest = json.loads(contents)
+
+    return manifest
+
+
+def expand_manifest(manifest_path, outfile, basedir, gst_version, branchname):
+    """Creates the manifest file."""
+    try:
+        os.remove(outfile)
+    except FileNotFoundError:
+        pass
+
+    template = load_manifest(manifest_path)
+    if branchname == "stable":
+        try:
+            del template["desktop-file-name-prefix"]
+        except KeyError:
+            pass
+    elif branchname == "master":
+        template["desktop-file-name-prefix"] = "(Rolling) "
+    else:
+        template["desktop-file-name-prefix"] = "(%s) " % branchname
+
+    Console.message("-> Generating %s against GStreamer %s",
+                    outfile, gst_version)
+
+    for module in template["modules"]:
+        if isinstance(module, str):
+            # This is the name of a file to be included containing modules.
+            if (module.split("/")[0] == "aarch64" and ARCH != "aarch64") or \
+                    (module.split("/")[0] == "x86_64" and ARCH != "x86_64"):
+                # Delete arch-specific modules if they don't match the current arch.
+                template["modules"].remove(module)
+            continue
+
+        if module["sources"][0]["type"] != "git":
+            continue
+
+        repo = os.path.join(basedir, module["name"])
+        if not os.path.exists(os.path.join(repo, ".git")):
+            Console.message("-> Module: %s using online repo: %s",
+                            module["name"], module["sources"][0]["url"])
+            continue
+
+        branch = subprocess.check_output(
+            r"git branch 2>&1 | grep \*", shell=True,
+            cwd=repo).decode(
+                "utf-8").split(" ")[1].strip("\n")
+
+        repo = "file://" + repo
+        Console.message("-> Module: %s repo: %s branch: %s",
+                        module["name"], repo, branch)
+        module["sources"][0]["url"] = repo
+        module["sources"][0]["branch"] = branch
+
+    with open(outfile, "w", encoding="UTF-8") as of:
+        print(json.dumps(template, indent=4), file=of)
+
+
+def check_flatpak(verbose=True):
+    for app, required_version in FLATPAK_REQ:
+        try:
+            output = subprocess.check_output([app, "--version"])
+        except (subprocess.CalledProcessError, OSError):
+            if verbose:
+                Console.message("\n%sYou need to install %s >= %s"
+                                " to be able to use the '%s' script.\n\n"
+                                "You can find some information about"
+                                " how to install it for your distribution at:\n"
+                                "    * http://flatpak.org/%s\n", Colors.FAIL,
+                                app, required_version, sys.argv[0], Colors.ENDC)
+            return False
+
+        def comparable_version(version):
+            return tuple(map(int, (version.split("."))))
+
+        # For example: "Flatpak 1.15.9", "flatpak-builder-1.4.4"
+        version = output.decode("utf-8").replace("-", " ").rsplit(" ", maxsplit=1)[-1]
+        current = comparable_version(version)
+        FLATPAK_VERSION[app] = current
+        if current < comparable_version(required_version):
+            Console.message("\n%s%s %s required but %s found."
+                            " Please update and try again%s\n", Colors.FAIL,
+                            app, required_version, version, Colors.ENDC)
+            return False
+
+    return True
+
+
+class FlatpakObject:
+
+    def __init__(self, user):
+        self.user = user
+
+    def flatpak(self, command, *args, show_output=False, comment=None):
+        if comment:
+            Console.message(comment)
+
+        command = ["flatpak", command]
+        if self.user:
+            res = subprocess.check_output(command + ["--help"]).decode("utf-8")
+            if "--user" in res:
+                command.append("--user")
+        command.extend(args)
+
+        if comment:
+            Console.message(" ".join(command))
+        if not show_output:
+            return subprocess.check_output(command).decode("utf-8")
+
+        return subprocess.check_call(command)
+
+
+class FlatpakPackages(FlatpakObject):
+
+    def __init__(self, repos, user=True):
+        FlatpakObject.__init__(self, user=user)
+
+        self.repos = repos
+
+        self.runtimes = self.__detect_runtimes()
+        self.apps = self.__detect_apps()
+        self.packages = self.runtimes + self.apps
+
+    def __detect_packages(self, *args):
+        packs = []
+        if FLATPAK_VERSION["flatpak"] < (1, 1, 2):
+            out = self.flatpak("list", "-d", *args)
+            package_defs = [line for line in out.split("\n") if line]
+            for package_def in package_defs:
+                splited_packaged_def = package_def.split()
+                name, arch, branch = splited_packaged_def[0].split("/")
+
+                # If installed from a file, the package is in no repo
+                repo_name = splited_packaged_def[1]
+                repo = self.repos.repos.get(repo_name)
+
+                packs.append(FlatpakPackage(name, branch, repo, arch))
+        else:
+            out = self.flatpak("list", "--columns=application,arch,branch,origin", *args)
+            package_defs = [line for line in out.split("\n") if line]
+            for package_def in package_defs:
+                name, arch, branch, origin = package_def.split("\t")
+
+                # If installed from a file, the package is in no repo
+                repo = self.repos.repos.get(origin)
+
+                packs.append(FlatpakPackage(name, branch, repo, arch))
+
+        return packs
+
+    def __detect_runtimes(self):
+        return self.__detect_packages("--runtime")
+
+    def __detect_apps(self):
+        return self.__detect_packages()
+
+    def __iter__(self):
+        for package in self.packages:
+            yield package
+
+
+class FlatpakRepos(FlatpakObject):
+
+    def __init__(self, user=True):
+        FlatpakObject.__init__(self, user=user)
+        # The remote repositories, name -> FlatpakRepo
+        self.repos = {}
+        self.update()
+
+    def update(self):
+        self.repos = {}
+        if FLATPAK_VERSION["flatpak"] < (1, 1, 2):
+            out = self.flatpak("remote-list", "-d")
+            remotes = [line for line in out.split("\n") if line]
+            for repo in remotes:
+                for components in [repo.split(" "), repo.split("\t")]:
+                    if len(components) == 1:
+                        components = repo.split("\t")
+                    name = components[0]
+                    desc = ""
+                    url = None
+                    for elem in components[1:]:
+                        if not elem:
+                            continue
+                        parsed_url = urlparse(elem)
+                        if parsed_url.scheme:
+                            url = elem
+                            break
+
+                        if desc:
+                            desc += " "
+                        desc += elem
+
+                    if url:
+                        break
+
+                if not url:
+                    Console.message("No valid URI found for: %s", repo)
+                    continue
+
+                self.repos[name] = FlatpakRepo(name, url, desc, repos=self)
+        else:
+            out = self.flatpak("remote-list", "--columns=name,title,url")
+            remotes = [line for line in out.split("\n") if line]
+            for remote in remotes:
+                name, title, url = remote.split("\t")
+                parsed_url = urlparse(url)
+                if not parsed_url.scheme:
+                    Console.message("No valid URI found for: %s", remote)
+                    continue
+
+                self.repos[name] = FlatpakRepo(name, url, title, repos=self)
+
+        self.packages = FlatpakPackages(self)
+
+    def add(self, name, flatpakrepo_url, override=True):
+        try:
+            with tempfile.NamedTemporaryFile(mode="w") as flatpakrepo:
+                urlretrieve(flatpakrepo_url, flatpakrepo.name)
+                repo = configparser.ConfigParser()
+                repo.read(flatpakrepo.name)
+            url = repo["Flatpak Repo"]["Url"]
+        except URLError:
+            url = None
+
+        same_name = None
+        for tmpname, tmprepo in self.repos.items():
+            # If the URL is None (meaning we couldn't retrieve Repo infos)
+            # just check if the repo names match.
+            if url == tmprepo.url or url is None and name == tmpname:
+                return tmprepo
+            if name == tmpname:
+                same_name = tmprepo
+
+        if same_name:
+            Console.message("Flatpak remote with the same name already exists: %s", same_name)
+            if not override:
+                Console.message("%sNote the URL is %s, not %s%s",
+                                Colors.WARNING, same_name.url, url, Colors.ENDC)
+                return None
+
+            Console.message("The URL is different. Overriding.")
+            self.flatpak("remote-modify", name, "--url=" + url,
+                         comment="Setting repo %s URL from %s to %s"
+                         % (name, same_name.url, url))
+            same_name.url = url
+            return same_name
+
+        self.flatpak("remote-add", "--if-not-exists", name,
+                     "--from", flatpakrepo_url,
+                     comment="Adding repo %s" % name)
+        self.update()
+        return self.repos[name]
+
+
+class FlatpakRepo(FlatpakObject):
+
+    def __init__(self, name, url, desc=None, user=True, repos=None):
+        FlatpakObject.__init__(self, user=user)
+
+        self.name = name
+        assert name
+        self.desc = desc
+        self.repos = repos
+        self.url = url
+
+
+class FlatpakPackage(FlatpakObject):
+    """A flatpak app."""
+
+    def __init__(self, name, branch, repo, arch, user=True):
+        FlatpakObject.__init__(self, user=user)
+
+        self.name = name
+        self.branch = branch
+        self.repo = repo
+        self.arch = arch
+
+    def __str__(self):
+        return "%s/%s/%s %s" % (self.name, self.arch, self.branch, self.repo.name)
+
+    def is_installed(self):
+        if not self.repo:
+            # Bundle installed from file
+            return True
+
+        if len(self.name.split(".")) <= 3:
+            self.repo.repos.update()
+            for package in self.repo.repos.packages:
+                if package.name == self.name and \
+                        package.arch == self.arch and \
+                        package.branch == self.branch:
+                    return True
+        else:
+            try:
+                self.flatpak("info", self.name, self.branch)
+                return True
+            except subprocess.CalledProcessError:
+                pass
+
+        return False
+
+    def install(self):
+        if not self.repo:
+            return
+
+        self.flatpak("install", self.repo.name, self.name,
+                     self.branch, "--reinstall", "-y", show_output=True,
+                     comment="Installing %s" % self.name)
+
+    def update(self):
+        if not self.is_installed():
+            self.install()
+            return
+
+        self.flatpak("update", self.name, self.branch, "-y", show_output=True,
+                     comment="Updating %s" % self.name)
+
+    def run_app(self, *args):
+        """Starts the app represented by this instance."""
+        self.flatpak("run", "--branch=" + self.branch, self.name, *args,
+                     show_output=True,
+                     comment="Running %s (%s)" % (self.name, self.branch))
+
+
+class PitiviFlatpak:
+
+    def __init__(self):
+        self.name = "Pitivi"
+        self.sdk_repo = None
+        self.runtime = None
+        self.locale = None
+        self.sdk = None
+
+        self.packs = []
+        self.init = False
+        self.update = False
+        self.json = None
+        self.args = []
+        self.build = False
+        self.scriptdir = os.path.abspath(os.path.dirname(__file__))
+        self.envpath = os.environ.get("FLATPAK_ENVPATH",
+                                      os.path.expanduser("~/%s-flatpak" %
+                                                         self.name.lower()))
+        self.prefix = os.path.join(
+            self.envpath, "%s-prefix" % self.name.lower())
+        self.repodir = os.path.join(
+            self.envpath, "flatpak-repos", self.name.lower())
+        self.local_repos_path = os.path.abspath(os.path.join(
+            self.scriptdir, os.pardir, os.pardir, os.pardir))
+        self.topdir = os.path.abspath(os.path.join(
+            self.scriptdir, os.pardir, os.pardir))
+
+        self.build_name = self.name
+        if os.path.exists(os.path.join(self.topdir, ".git")):
+            with open(os.devnull, encoding="UTF-8") as devnull:
+                try:
+                    branch = subprocess.check_output(
+                        "git rev-parse --abbrev-ref HEAD".split(" "),
+                        stderr=devnull,
+                        cwd=self.topdir).decode("utf-8").strip("\n")
+                    self.build_name = self.name + "." + branch
+                    self.build_name = self.build_name.replace(os.path.sep, "_")
+                except subprocess.CalledProcessError:
+                    pass
+
+        self.coredumpgdb = None
+        self.coredumpctl_matches = ""
+
+    def clean_args(self):
+        Console.quiet = self.quiet
+
+        if not check_flatpak():
+            sys.exit(1)
+
+        repos = FlatpakRepos()
+        self.sdk_repo = repos.add("flathub",
+                                  "https://dl.flathub.org/repo/flathub.flatpakrepo")
+
+        manifest_path = os.path.join(self.scriptdir, MANIFEST_NAME)
+        manifest = load_manifest(manifest_path)
+        if not manifest:
+            return
+
+        sdk_branch = manifest["runtime-version"]
+        self.runtime = FlatpakPackage(
+            "org.gnome.Platform", sdk_branch, self.sdk_repo, ARCH)
+        self.locale = FlatpakPackage(
+            "org.gnome.Platform.Locale", sdk_branch, self.sdk_repo, ARCH)
+        self.sdk = FlatpakPackage(
+            "org.gnome.Sdk", sdk_branch, self.sdk_repo, ARCH)
+        self.packs = [self.runtime, self.locale, self.sdk]
+
+        if self.coredumpgdb is None and "--coredumpgdb" in sys.argv or "-gdb" in sys.argv:
+            self.coredumpgdb = ""
+
+        if self.bundle:
+            self.build = True
+
+        self.json = os.path.join(self.scriptdir, self.build_name + ".json")
+
+        if not self.args:
+            self.args.append(os.path.join(self.scriptdir, "enter-env"))
+
+    def run(self):
+        if self.clean:
+            Console.message("Removing prefix")
+            try:
+                shutil.rmtree(self.prefix)
+            except FileNotFoundError:
+                pass
+
+        missing_prefix = not os.path.exists(self.prefix)
+        if self.init or self.update:
+            self.install_flatpak_runtimes()
+            if missing_prefix or self.update:
+                self.setup_sandbox()
+        else:
+            if missing_prefix:
+                Console.message("%sPrefix missing, create it with: %s --init%s",
+                                Colors.FAIL, __file__, Colors.ENDC)
+                sys.exit(1)
+
+        if self.coredumpgdb is not None:
+            self.run_gdb()
+            return
+
+        if self.check:
+            self.run_in_sandbox("gst-validate-launcher",
+                                os.path.join(
+                                    self.topdir, "tests/ptv_testsuite.py"),
+                                "--xunit-file", "xunit.xml", exit_on_failure=True,
+                                cwd=self.topdir)
+
+        if self.bundle:
+            self.update_bundle()
+
+        if not self.check and not self.init and not self.update and not self.bundle:
+            assert self.args
+            self.run_in_sandbox(*self.args, exit_on_failure=True)
+
+    def update_bundle(self):
+        if not os.path.exists(self.repodir):
+            os.mkdir(self.repodir)
+
+        build_export_args = ["flatpak",
+                             "build-export", self.repodir, self.prefix]
+        if self.gpg_key:
+            build_export_args.append("--gpg-sign=%s" % self.gpg_key)
+        if self.commit_subject:
+            build_export_args.append("--subject=%s" % self.commit_subject)
+        if self.commit_body:
+            build_export_args.append("--body=%s" % self.commit_body)
+
+        build_export_args.append(self.branch)
+
+        Console.message('-> Exporting repo %s %s (--body="%s" --subject="%s")',
+                        self.repodir, self.branch, self.commit_body,
+                        self.commit_subject)
+        try:
+            subprocess.check_call(build_export_args)
+        except subprocess.CalledProcessError:
+            sys.exit(1)
+
+        update_repo_args = ["flatpak", "build-update-repo"]
+
+        if self.generate_static_deltas:
+            update_repo_args.append("--generate-static-deltas")
+
+        update_repo_args.append(self.repodir)
+
+        Console.message("Updating repo: '%s'", "' '".join(update_repo_args))
+        try:
+            subprocess.check_call(update_repo_args)
+        except subprocess.CalledProcessError:
+            sys.exit(1)
+
+    def setup_sandbox(self):
+        """Creates and updates the sandbox."""
+        Console.message("Building Pitivi %s and dependencies in %s",
+                        self.branch, self.prefix)
+
+        manifest_path = os.path.join(self.scriptdir, MANIFEST_NAME)
+        expand_manifest(manifest_path, self.json,
+                        self.local_repos_path, self.gst_version,
+                        self.branch)
+
+        builder_args = ["flatpak-builder", "--force-clean",
+                        "--ccache", self.prefix, self.json]
+        if not self.bundle:
+            builder_args.append("--build-only")
+
+        try:
+            subprocess.check_call(["flatpak-builder", "--version"])
+        except FileNotFoundError:
+            Console.message("\n%sYou need to install flatpak-builder%s\n",
+                            Colors.FAIL, Colors.ENDC)
+            sys.exit(1)
+        subprocess.check_call(builder_args, cwd=self.scriptdir)
+
+        if not os.path.isdir("mesonbuild/"):
+            # Create the build directory.
+            meson_args = ["meson", "mesonbuild/", "--prefix=/app",
+                          "--libdir=lib"]
+            self.run_in_sandbox(*meson_args, exit_on_failure=True,
+                                cwd=self.topdir)
+
+        # Build the buildable parts of Pitivi.
+        ninja_args = ["ninja", "-C", "mesonbuild/"]
+        self.run_in_sandbox(*ninja_args, exit_on_failure=True,
+                            cwd=self.topdir)
+
+    def run_gdb(self):
+        if not shutil.which("coredumpctl"):
+            Console.message("%s'coredumpctl' not present on the system, can't run.%s"
+                            % (Colors.WARNING, Colors.ENDC))
+            sys.exit(1)
+
+        # We need access to the host from the sandbox to run.
+        with tempfile.NamedTemporaryFile() as coredump:
+            with tempfile.NamedTemporaryFile() as stderr:
+                command = ["coredumpctl", "dump"] + shlex.split(self.coredumpctl_matches)
+                subprocess.check_call(command, stdout=coredump, stderr=stderr)
+
+                with open(stderr.name, "r", encoding="UTF-8") as stderrf:
+                    stderr = stderrf.read()
+                executable, = re.findall(".*Executable: (.*)", stderr)
+                if not executable.startswith("/newroot"):
+                    print("Executable %s doesn't seem to be a flatpaked application." % executable,
+                          file=sys.stderr)
+                executable = executable.replace("/newroot", "")
+                args = ["gdb", executable, coredump.name] + shlex.split(self.coredumpgdb)
+
+                self.run_in_sandbox(*args, mount_tmp=True)
+
+    def run_in_sandbox(self, *args, exit_on_failure=False, cwd=None, mount_tmp=False):
+        if not args:
+            return
+
+        flatpak_command = ["flatpak",
+                           "build",
+                           "--device=dri",
+                           "--env=PITIVI_DEVELOPMENT=1",
+                           "--env=PYTHONUSERBASE=/app/",
+                           "--env=CC=ccache gcc",
+                           "--env=CXX=ccache g++",
+                           "--filesystem=xdg-run/gvfsd",
+                           "--filesystem=xdg-run/at-spi/bus",
+                           "--share=network",
+                           "--socket=pulseaudio",
+                           "--socket=session-bus",
+                           "--socket=wayland",
+                           "--socket=x11",
+                           "--talk-name=org.freedesktop.Flatpak"]
+        if mount_tmp:
+            flatpak_command.append("--filesystem=/tmp/")
+
+        # The forwarded environment variables.
+        forwarded = {}
+        for envvar, value in os.environ.items():
+            if envvar.split("_")[0] in ("G", "GDK", "GST", "GTK", "LC", "PITIVI") or \
+                    envvar in ["DISPLAY", "GIT_INDEX_FILE", "LANG", "PYTHONPATH"]:
+                forwarded[envvar] = value
+
+        prefixes = {
+            "GST_ENCODING_TARGET_PATH":
+                "/app/share/gstreamer-1.0/encoding-profiles/:/app/share/pitivi/encoding-profiles/",
+            "GST_PLUGIN_SYSTEM_PATH": "/app/lib/gstreamer-1.0/",
+            "FREI0R_PATH": "/app/lib/frei0r-1/",
+            "GST_PRESET_PATH":
+                "/app/share/gstreamer-1.0/presets/:/app/share/pitivi/gstpresets/",
+        }
+        for envvar, path in prefixes.items():
+            value = forwarded.get(envvar, "")
+            forwarded[envvar] = "%s:%s" % (path, value)
+
+        for envvar, value in forwarded.items():
+            flatpak_command.append("--env=%s=%s" % (envvar, value))
+
+        flatpak_command.append(self.prefix)
+
+        flatpak_command.extend(args)
+
+        Console.message("Running in sandbox: %s", ' '.join(args))
+        Console.message(" ".join(flatpak_command))
+        try:
+            subprocess.check_call(flatpak_command, cwd=cwd)
+        except subprocess.CalledProcessError as e:
+            if exit_on_failure:
+                sys.exit(e.returncode)
+
+    def install_flatpak_runtimes(self):
+        for runtime in self.packs:
+            if not runtime.is_installed():
+                runtime.install()
+            else:
+                # Update only if requested.
+                if self.update:
+                    runtime.update()
+
+
+if __name__ == "__main__":
+    app_flatpak = PitiviFlatpak()
+
+    parser = argparse.ArgumentParser(prog="pitivi-flatpak")
+
+    general = parser.add_argument_group("General")
+    general.add_argument("--init", dest="init",
+                         action="store_true",
+                         help="Initialize the runtime/sdk/app and build the development environment if needed")
+    general.add_argument("--update", dest="update",
+                         action="store_true",
+                         help="Update the runtime/sdk/app and rebuild the development environment")
+    general.add_argument("-q", "--quiet", dest="quiet",
+                         action="store_true",
+                         help="Do not print anything")
+    general.add_argument("args",
+                         nargs=argparse.REMAINDER,
+                         help="The command to run in the sandbox")
+
+    devel = parser.add_argument_group("Development")
+    devel.add_argument("--branch", dest="branch",
+                       help="The flatpak branch to use (stable, master...)",
+                       default="master")
+    devel.add_argument("--gst-version", dest="gst_version",
+                       help="The GStreamer version to build.",
+                       default=DEFAULT_GST_BRANCH)
+    devel.add_argument("--check", dest="check",
+                       help="Run unit tests once the build is done.",
+                       action="store_true")
+    devel.add_argument("-c", "--clean", dest="clean",
+                       action="store_true",
+                       help="Clean previous builds and restart from scratch")
+
+    debug_options = parser.add_argument_group("Debugging")
+    debug_options.add_argument("-gdb", "--coredumpgdb", nargs="?",
+                               help="Activate gdb, passing extra args to it if wanted.")
+    debug_options.add_argument("-m", "--coredumpctl-matches", default="",
+                               help="Arguments to pass to gdb.")
+
+    bundling = parser.add_argument_group("Building bundle for distribution")
+    bundling.add_argument("--bundle", dest="bundle",
+                          action="store_true",
+                          help="Create bundle repository, implies --build")
+    bundling.add_argument(
+        "--repo-commit-subject", dest="commit_subject", default=None,
+        help="The commit subject to be used when updating the ostree repository")
+    bundling.add_argument(
+        "--repo-commit-body", dest="commit_body", default=None,
+        help="The commit body to be used when updating the ostree repository")
+    bundling.add_argument(
+        "--gpg-sign", dest="gpg_key", default=None,
+        help="The GPG key to sign the commit with (work only when --bundle is used)")
+    bundling.add_argument(
+        "--generate-static-deltas", dest="generate_static_deltas",
+        action="store_true",
+        help="Generate static deltas (check 'man flatpak-build-update-repo'"
+        " for more information)")
+
+    parser.parse_args(namespace=app_flatpak)
+    app_flatpak.clean_args()
+    app_flatpak.run()

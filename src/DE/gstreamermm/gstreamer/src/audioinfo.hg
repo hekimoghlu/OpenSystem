@@ -1,0 +1,83 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/audio/audio-info.h>
+#include <gstreamermm/audioformat.h>
+#include <gstreamermm/audioringbuffer.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(AudioFlags, GstAudioFlags)
+_WRAP_ENUM(AudioLayout, GstAudioLayout)
+
+class Caps;
+
+/** Information describing audio properties. This information can be filled
+ * in from Gst::Caps with from_caps() or Gst::AudioInfo() constructor.
+ *
+ * Last reviewed on 2016-04-23 (1.8.0).
+ */
+class AudioInfo
+{
+  _CLASS_BOXEDTYPE(AudioInfo, GstAudioInfo, gst_audio_info_new, gst_audio_info_copy, gst_audio_info_free)
+  _IGNORE(gst_audio_info_copy, gst_audio_info_free)
+public:
+
+  /** Create AudioInfo from @a caps.
+   *
+   * @param caps A Gst::Caps.
+   *
+   * @throw std::runtime_error if @a caps could not be parsed.
+   */
+  AudioInfo(const Glib::RefPtr<const Gst::Caps>& caps);
+
+  _WRAP_METHOD(bool is_equal(const Gst::AudioInfo& other) const, gst_audio_info_is_equal)
+
+  _WRAP_METHOD(void init(), gst_audio_info_init)
+
+  _WRAP_METHOD(bool from_caps(const Glib::RefPtr<const Gst::Caps>& caps), gst_audio_info_from_caps)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> to_caps() const, gst_audio_info_to_caps)
+
+  _WRAP_METHOD(bool convert(Gst::Format fmt, gint64 src_val, Gst::Format dest_fmt, gint64& dest_val) const, gst_audio_info_convert, newin "1,8")
+
+#m4 _CONVERSION(`const Gst::AudioChannelPosition*',`const GstAudioChannelPosition*',`reinterpret_cast<const GstAudioChannelPosition*>($3)')
+  _WRAP_METHOD(void set_format(Gst::AudioFormat format, int rate, int channels, const Gst::AudioChannelPosition *position), gst_audio_info_set_format, newin "1,8")
+
+  _MEMBER_GET(flags, flags, Gst::AudioFlags, GstAudioFlags)
+  _MEMBER_SET(flags, flags, Gst::AudioFlags, GstAudioFlags)
+
+  _MEMBER_GET(layout, layout, Gst::AudioLayout, GstAudioLayout)
+  _MEMBER_SET(layout, layout, Gst::AudioLayout, GstAudioLayout)
+
+  _MEMBER_GET(rate, rate, int, gint)
+  _MEMBER_SET(rate, rate, int, gint)
+
+  _MEMBER_GET(channels, channels, int, gint)
+  _MEMBER_SET(channels, channels, int, gint)
+
+  _MEMBER_GET(bpf, bpf, int, gint)
+  _MEMBER_SET(bpf, bpf, int, gint)
+
+  _MEMBER_GET(finfo, finfo, const Gst::AudioFormatInfo, const GstAudioFormatInfo*)
+};
+
+}

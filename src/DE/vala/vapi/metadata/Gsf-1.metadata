@@ -1,0 +1,63 @@
+Gsf cheader_filename="gsf/gsf.h"
+
+*.free destroys_instance
+
+gsf_off_t name="off_t"
+
+mem_dump.ptr array array_length_idx=1
+vba_inflate array array_length_idx=2 unowned=false
+
+ClipData
+  .peek_real_data.ret_size out
+
+DocMetaData
+  .foreach.func type="GLib.HFunc<string,Gsf.DocProp>"
+
+Infile
+  .child_by_vaname skip=false
+
+InfileMSOle
+  .get_class_id.res out
+
+InfileMSVBA
+  .get_modules type="unowned GLib.HashTable<string,void*>"
+  .steal_modules type="GLib.HashTable<string,void*>"
+
+Input
+  .* skip=false
+
+InputMemory
+  .new_from_iochannel cheader_filename="gsf/gsf-input-iochannel.h"
+
+Outfile
+  .* skip=false
+  .new_child skip
+  .new_child_varg vfunc_name="new_child"
+
+Output
+  .* skip=false
+
+OutputStdio
+  .* skip=false
+  .new_full.err skip
+  .new_full throws="GLib.Error"
+
+XMLIn struct=false
+  .* skip=false
+  .push_state.attrs type="string[]"
+
+XMLInNode struct=false
+  .* skip=false
+  .end type="GLib.Callback"
+  .start type="GLib.Callback"
+
+XMLInUnknownFunc
+  .elem type="string"
+  .attrs type="string[]"
+
+XMLProbeFunc
+  .name type="string"
+  .prefix type="string"
+  .URI type="string"
+  .namespaces array_length_idx=3 type="string[]"
+  .attributes array_length_idx=5 type="string[]"

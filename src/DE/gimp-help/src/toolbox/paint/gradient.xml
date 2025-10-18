@@ -1,0 +1,698 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+    
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-tool-gradient">
+  <title>Gradient</title>
+  <indexterm>
+    <primary>Gradient</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Gradient</primary>
+    <secondary>Tool</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Tools</primary>
+    <secondary>Gradient</secondary>
+  </indexterm>
+
+  <para>
+    This tool fills the selected area with a gradient from the foreground
+    and background colors by default, but there are many options. To make a
+    gradient, drag the cursor in the direction you want the gradient to go and 
+    you release the mouse button when you feel you have the right position 
+    and size of your gradient. The softness of the gradient depends on how far 
+    you drag the cursor. The shorter the drag distance, the sharper it will be.
+  </para>
+  <para>
+    If you click and drag outside the selection, only a part of the gradient 
+    will appear in the selection.
+  </para>
+  <para>
+    There are an astonishing number of things you can do with this tool, and
+    the possibilities may seem a bit overwhelming at first. The two most
+    important options you have are the Gradient and the Shape. Clicking the
+    Gradient button in the tool options brings up a Gradient Select window,
+    allowing you to choose from among a variety of gradients supplied with
+    GIMP; you can also construct and save custom gradients. Further
+    information about gradients can be found in
+    <xref linkend="gimp-concepts-gradients"/> and
+    <xref linkend="gimp-gradient-dialog"/>.
+  </para>
+  <para>
+    For Shape, there are 11 options: Linear, Bilinear, Radial, Square, Conical
+    (symmetric), Conical (asymmetric), Shaped (angular), Shaped (spherical),
+    Shaped (dimpled), Spiral (clockwise), and Spiral (counterclockwise); these
+    are described in detail below. The Shaped options are the most
+    interesting: they cause the gradient to follow the shape of the selection
+    boundary, no matter how twisty it is. Unlike the other shapes, Shaped
+    gradients are not affected by the length or direction of the line you
+    draw: for them as well as every other type of gradient you are required to
+    click inside the selection and move the mouse, but a Shaped appears the
+    same no matter where you click or how you move.
+  </para>
+  <tip>
+    <para>
+      Check out the Difference option in the Mode menu, where doing the same
+      thing (even with full opacity) will result in fantastic swirling
+      patterns, changing and adding every time you drag the cursor.
+    </para>
+  </tip>
+
+  <sect3>
+    <title>Activating the Tool</title>
+    <para>
+      There are different possibilities to activate the tool:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          From the main menu:
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guisubmenu>Paint Tools</guisubmenu>
+            <guimenuitem>Gradient</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By clicking the tool icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-tool-gradient.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          in the Toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By pressing the <keycap>G</keycap> keyboard shortcut.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+  
+  <sect3>
+    <title>Options</title>
+    <figure>
+    <title>Tool Options Dialog</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata format="PNG"
+          fileref="images/toolbox/tool-options-gradient.png"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+    <xi:include href="../about-common-options-display.xml"/>
+
+    <variablelist>
+      <varlistentry>
+        <term>Mode</term>
+        <term>Opacity</term>
+        <listitem>
+          <xi:include href="about-common-paint-options.xml"/>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Gradient</term>
+        <listitem>
+          <para>
+            A variety of gradient patterns can be selected from the drop-down
+            list. The tool causes a shading pattern that transitions from
+            foreground to background color or introduces others colors, in
+            the direction the user determines by drawing a line in the image.
+            For the purposes of drawing the gradient, clicking on the
+            <guibutton>Reverse</guibutton> reverses the gradient direction with 
+            the effect, for instance, of swapping the foreground and background 
+            colors.
+          </para>
+          <para>
+            On the right hand, a button to open the Gradient Editor dialog.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Blend Color Space</term>
+        <listitem>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>Perceptual RGB</guilabel>: When this option is chosen,
+                the Blend Color Space is sRGB. This is the default.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Linear RGB</guilabel>: When this option is chosen,
+                the Blend Color Space is linearized sRGB (defined by the sRGB
+                primaries and a linear tone reproduction curve). This results
+                in gradients that resemble the physical behavior of light.
+                This option should be used if the color, as measured with a
+                colorimeter, should change linearly with the distance from the
+                color stops within the gradient.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>CIE Lab</guilabel>: When this option is chosen, the
+                Blend Color Space is CIE L*a*b*. This perceptionally uniform
+                color space is used to model human perception of color blending.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Shape</term>
+        <listitem>
+          <para>
+            <acronym>GIMP</acronym>
+            provides 11 shapes, which can be selected from the drop-down list.
+            Details on each of the shapes are given below.
+          </para>
+          <figure>
+            <title>Examples of gradient shapes</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/tool-options/gradient-linear.png"/>
+              </imageobject>
+              <caption>
+                <para>Linear</para>
+              </caption>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/tool-options/gradient-bilinear.png"/>
+              </imageobject>
+              <caption>
+                <para>Bi-Linear</para>
+              </caption>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/tool-options/gradient-radial.png"/>
+              </imageobject>
+              <caption>
+                <para>Radial</para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <variablelist>
+            <varlistentry>
+              <term>Linear</term>
+              <listitem>
+                <para>
+                  This gradient begins with the foreground color at the
+                  starting point of the drawn line and transitions linearly to
+                  the background color at the ending point.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Bi-Linear</term>
+              <listitem>
+                <para>
+                  This shape proceeds in both directions from the starting
+                  point, for a distance determined by the length of the drawn
+                  line. It is useful, for example, for giving the appearance
+                  of a cylinder.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Radial</term>
+              <listitem>
+                <para>
+                  This gradient gives a circle, with foreground color at the
+                  center and background color outside the circle. It gives the
+                  appearance of a sphere without directional lighting.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Square</term>
+              <term>Shaped</term>
+              <listitem>
+                <figure>
+                  <title>Square-shaped gradient examples</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/tool-options/gradient-square.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>Square</para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                    fileref="images/tool-options/gradient-ang-shapeburst.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Shaped (angular)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                  fileref="images/tool-options/gradient-spher-shapeburst.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Shaped (spherical)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                    fileref="images/tool-options/gradient-dim-shapeburst.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Shaped (dimpled)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                </figure>
+                <para>
+                  There are four shapes that are some variant on a
+                  square: <guilabel>Square</guilabel>,
+                  <guilabel>Shaped (angular)</guilabel>,
+                  <guilabel>Shaped (spherical)</guilabel>, and
+                  <guilabel>Shaped (dimpled)</guilabel>. They all
+                  put the foreground color at the center of a square,
+                  whose center is at the start of the drawn line, and
+                  whose half-diagonal is the length of the drawn line.
+                  The four options provide a variety in the manner in
+                  which the gradient is calculated; experimentation is
+                  the best means of seeing the differences.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Conical (symmetric)</term>
+              <term>Conical (asymmetric)</term>
+              <listitem>
+                <figure>
+                  <title>Conical gradient examples</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                       fileref="images/tool-options/gradient-sym-conical.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Conical (symmetrical)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                      fileref="images/tool-options/gradient-asym-conical.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Conical (asymmetrical)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                </figure>
+                <para>
+                  The <guilabel>Conical (symmetrical)</guilabel> shape
+                  gives the sensation of looking down at the tip of a
+                  cone, which appears to be illuminated with the
+                  background color from a direction determined by the
+                  direction of the drawn line.
+                </para>
+                <para><guilabel>Conical (asymmetric)</guilabel> is similar to
+                  <guilabel>Conical (symmetric)</guilabel> except that
+                  the "cone" appears to have a ridge where the line is
+                  drawn.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Spiral (clockwise)</term>
+              <term>Spiral (counter-clockwise)</term>
+              <listitem>
+                <figure>
+                  <title>Spiral gradient examples</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                      fileref="images/tool-options/gradient-clock-spiral.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Spiral (clockwise)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                  fileref="images/tool-options/gradient-anticlock-spiral.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Spiral (counterclockwise)
+                      </para>
+                    </caption>
+                  </mediaobject>
+                </figure>
+                <para>
+                  The <guilabel>Spiral</guilabel> shape provide spirals
+                  whose repeat width is determined by the length of
+                  the drawn line.
+                </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Repeat</term>
+        <listitem>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>None (extend)</guilabel> as default.
+              </para>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="PNG"
+              fileref="images/tool-options/gradient-repeat-none.png"/>
+                </imageobject>
+              </mediaobject>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>None (truncate)</guilabel>: areas before and after 
+                endpoints are truncated.
+              </para>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="PNG"
+              fileref="images/tool-options/gradient-repeat-truncate.png"/>
+                </imageobject>
+              </mediaobject>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Sawtooth wave</guilabel>: the Sawtooth pattern is 
+                achieved by beginning with the foreground, transitioning to the 
+                background, then starting over with the foreground.
+              </para>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="PNG"
+              fileref="images/tool-options/gradient-repeat-sawtooth.png"/>
+                </imageobject>
+              </mediaobject>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Triangular wave</guilabel>: starts with the 
+                foreground, transitions to the background, then transitions 
+                back to the foreground.
+              </para>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="PNG"
+              fileref="images/tool-options/gradient-repeat-triangular.png"/>
+                </imageobject>
+              </mediaobject>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Offset</term>
+        <listitem>
+          <para>
+            The <guilabel>Offset</guilabel> value permits to increase the
+            <quote>slope</quote> of the gradient. It determines how far
+            from the clicked starting point the gradient will begin.
+            Shaped forms are not affected by this option.
+          </para>
+          <figure>
+            <title><quote>Blend</quote> tool: Offset example</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/gradient-tool-offset.png"/>
+              </imageobject>
+              <caption>
+                <para>Top, Offset = 0 ; Bottom, Offset = 50%</para>
+              </caption>
+            </mediaobject>
+          </figure>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Dithering</term>
+        <listitem>
+          <para>
+            Dithering is explained in the
+            <link linkend="glossary-dithering">Glossary</link>
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Adaptive Supersampling</term>
+        <listitem>
+          <para>
+            This is a more sophisticated means of smoothing the "jagged" effect
+            of a sharp transition of color along a slanted or curved line.
+            To find out what works best in your case, you will have to test
+            this yourself.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Instant mode</term>
+        <listitem>
+          <warning>
+            <para>
+              The option must be activated (with <keycap>Shift</keycap> also) 
+              before starting drawing gradient.
+            </para>
+          </warning>
+          <para>
+            When this option is checked,
+            the gradient line disappears as soon as you release the mouse 
+            button. You can't edit color stops before applying the gradient 
+            fill.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Modify active gradient</term>
+        <listitem>
+          <para>
+            When this option is checked,
+            the custom gradient is not created automatically and must be 
+            created manually. The option can be activated before starting 
+            drawing gradient or if the active gradient is not the custom 
+            gradient. Allows changing user-writable gradients directly rather 
+            than creating copies of them.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+  <sect3>
+    <title>Editing Gradient</title>
+    <variablelist>
+      <varlistentry>
+        <term>On-canvas editing</term>
+        <listitem>
+          <para>
+            All the Gradient Editor dialog features are available 
+            directly on canvas. You can create and delete color stops, 
+            select and shift them, assign colors to color stops, change 
+            blending and coloring for segments between color stops, 
+            create color stops from midpoints.
+          </para>
+          <para>
+            Select a gradient in the gradient dialog. Click and drag 
+            on canvas. A line is drawn and the gradient is displayed. You 
+            can edit this gradient by moving the mouse pointer 
+            on this line. As soon as you try to edit gradient, <acronym>GIMP</acronym> 
+            creates a custom gradient, which is a copy of the selected 
+            gradient. It becomes the active gradient and will be 
+            preserved across sessions. Here, we use the Abstract3 
+            gradient.
+          </para>
+          <mediaobject>
+            <imageobject>
+              <imagedata format="PNG"
+              fileref="images/toolbox/gradient-endpoint.png"/>
+            </imageobject>
+            <caption>
+              <para>
+                The Abstract3 gradient, with endpoints
+              </para>
+            </caption>
+          </mediaobject>
+          <para>
+            At both ends of the line, you can see a <guilabel>Start 
+            endpoint</guilabel> and an <guilabel>End endpoint</guilabel>. Click 
+            and drag an endpoint (the mouse pointer is accompanied with a moving 
+            cross) to move it where you want on your screen. A small window 
+            appears showing data about the selected endpoint: the position of 
+            the mouse (coordinate origin is the upper left corner of image or 
+            selection), the starting (left) and the ending (right) color of 
+            the gradient.
+          </para>
+          <mediaobject>
+            <imageobject>
+              <imagedata format="PNG"
+              fileref="images/toolbox/gradient-endpoint-move.png"/>
+            </imageobject>
+            <caption>
+              <para>
+                End point moved
+              </para>
+            </caption>
+          </mediaobject>
+          <note>
+            <para>
+              In you only move endpoints, the custom gradient is not created 
+              yet.
+            </para>
+          </note>
+          <para>
+            On the line, you can see several small squares. These are 
+            <guilabel>Stop</guilabel>s that divide gradient into segments. You 
+            can edit segments separately. Click and drag stops to move them 
+            (the active endpoint takes a yellow color). As soon as you move a 
+            stop, the custom gradient is created. The small data window shows a 
+            button that allow you to remove the active stop.
+          </para>
+          <mediaobject>
+            <imageobject>
+              <imagedata format="PNG"
+              fileref="images/toolbox/gradient-stop.png"/>
+            </imageobject>
+            <caption>
+              <para>
+                Stop point moved and data window
+              </para>
+            </caption>
+          </mediaobject>
+          <para>
+            If you move the mouse pointer on the line, a
+            <guilabel>Midpoint</guilabel> shows up. Then, the small data window 
+            has two buttons:
+            <guiicon>
+              <inlinemediaobject>
+                <imageobject>
+                  <imagedata
+                    fileref="images/stock-icons/document-new.svg" contentwidth="16px"/>
+                </imageobject>
+              </inlinemediaobject>
+            </guiicon> to create a new stop at midpoint, and 
+            <guiicon>
+              <inlinemediaobject>
+                <imageobject>
+                  <imagedata
+                    fileref="images/stock-icons/gimp-hcenter.svg" contentwidth="16px"/>
+                </imageobject>
+              </inlinemediaobject>
+            </guiicon> to center midpoint.
+          </para>
+          <mediaobject>
+            <imageobject>
+              <imagedata format="PNG"
+              fileref="images/toolbox/gradient-midpoint.png"/>
+            </imageobject>
+          </mediaobject>
+          <para>
+            For Stops and Midpoints, <guilabel>Position</guilabel> refers to 
+            the gradient line: 0 is start endpoint, 100 is end endpoint.
+          </para>
+          <para>
+            <guilabel>Blending</guilabel>: you can change the blending mode 
+            between two stops, using the drop-down list. 
+            The <guilabel>Step</guilabel> option 
+            creates a hard-edge transition between the two adjacent color 
+            stops at the midpoint.
+            <figure>
+              <title><quote>Step</quote> option example</title>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="JPEG"
+                  fileref="images/toolbox/gradient-step-orig.jpg"/>
+                </imageobject>
+                <caption>
+                  <para>
+                    Original gradient
+                  </para>
+                </caption>
+              </mediaobject>
+              <mediaobject>
+                <imageobject>
+                  <imagedata format="JPEG"
+                  fileref="images/toolbox/gradient-step.jpg"/>
+                </imageobject>
+                <caption>
+                  <para>
+                    Step applied at Midpoint2
+                  </para>
+                </caption>
+              </mediaobject>
+            </figure>
+          </para>
+          <para>
+            <emphasis role="bold">Changing color</emphasis>: in stop and 
+            end data windows, you have color buttons with a drop-down list. The 
+            default option is <guilabel>Fixed</guilabel>; this means that color 
+            choice will be independent from foreground and background colors. 
+            Click on a color button to open a color selector.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Key modifiers</term>
+        <listitem>
+          <para><keycap>Ctrl</keycap> is used to create straight lines that are
+            constrained to 15 degree absolute angles.
+          </para>
+          <para>
+            <keycap>Alt</keycap> or 
+            <keycombo><keycap>Ctrl</keycap><keycap>Alt</keycap></keycombo> to 
+            move the whole line.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>The Gradient Editor</term>
+        <listitem>
+          <para>
+            See <xref linkend="gimp-gradient-editor-dialog"/>.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

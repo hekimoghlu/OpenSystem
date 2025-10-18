@@ -1,0 +1,780 @@
+2011-11-24  Morten Welinder <terra@gnome.org>
+
+	* Release 1.11.0
+
+2011-11-24  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-edit.c (item_edit_draw): preserve cairo state. [#664692]
+
+2011-11-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style.h: fix definition of GNM_ALIGN_H_TYPE and GNM_ALIGN_V_TYPE
+
+2011-11-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell-draw.c: rename enums
+	* src/cellspan.c: rename enums
+	* src/commands.c: rename enums
+	* src/item-edit.c: rename enums
+	* src/mstyle.c: rename enums
+	* src/rendered-value.c: rename enums
+	* src/style.c: rename enums
+	* src/style.h: rename enums
+	* src/validation.c: rename enums
+	* src/validation.h: rename enums
+	* src/wbc-gtk-actions.c: rename enums
+	* src/wbc-gtk-edit.c: rename enums
+	* src/wbc-gtk.c: rename enums
+	* src/workbook-cmd-format.c: rename enums
+	* src/workbook-view.c: rename enums
+	* src/xml-sax-read.c: rename enums
+	* src/xml-sax-write.c: rename enums
+
+2011-11-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/style.c (gnm_align_h_get_type): new
+	(gnm_align_v_get_type): new
+	* src/style.h (gnm_align_h_get_type): new
+	(gnm_align_v_get_type): new
+	* src/validation.c (gnm_validation_type_get_type): new
+	(gnm_validation_style_get_type): new
+	(gnm_validation_op_get_type): new
+	* src/validation.h (gnm_validation_type_get_type): new
+	(gnm_validation_style_get_type): new
+	(gnm_validation_op_get_type): new
+	* src/xml-sax-read.c (xml_sax_style_start): use xml_sax_attr_enum
+	(xml_sax_validation): ditto
+	* src/xml-sax-write.c (xml_write_attribute): change argument
+	type, rename to xml_write_boolean_attribute and  adjust all callers
+	(xml_write_style): use gsf_xml_out_add_enum
+
+2011-11-22  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (gnm_print_range_get_type): Rename enums to match
+	gtype.
+
+2011-11-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_scale_fit_to): remove unsued variables
+	(compute_pages): remove arguments and chnge all callers
+	(gnm_begin_print_cb): just write the settings
+
+2011-11-21  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (gnm_print_sheet): Call gnm_end_print_cb in response
+	to cancel.
+	(gnm_end_print_cb): Ensure this can be called multiple times.
+	Fixes #664447.
+
+2011-11-21 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_end_print_cb): do not free the printing instance
+	(gnm_print_sheet): but free it here
+
+2011-11-21 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_range_get_type): new
+	* src/print.h (gnm_print_range_get_type): new
+	* src/xml-sax-read.c (xml_sax_print_print_range): use
+	xml_sax_attr_enum
+	* src/xml-sax-write.c (xml_write_print_info): use gsf_xml_out_add_enum
+
+2011-11-20 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (gnm_print_comment_placement_get_type): new
+	(gnm_print_errors_get_type): new
+	(GnmPrintCommentPlacementType): new
+	(GnmPrintErrorsType): new
+	(_PrintInformation): use the above
+	* src/print-cell.c (print_cell_gtk): rename print-error and comment-
+	placement constants
+	* src/print-info.c (gnm_print_comment_placement_get_type): new
+	(gnm_print_errors_get_type): new
+	(print_info_new): rename print-error and comment-placement constants
+	* src/xml-sax-read.c (xml_sax_print_comments_start): new
+	(xml_sax_print_comments): rename to xml_sax_print_comments_end, change
+	all callers; rename comment-placement constants
+	(xml_sax_print_errors_start): new
+	(xml_sax_print_errors): rename to xml_sax_print_errors_end, change
+	all callers; rename print-error constants
+	(xml_cellregion_read): remove unused variable
+	* src/xml-sax-write.c (xml_write_print_info): use gsf_xml_out_add_enum
+
+2011-11-20  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gui-clipboard.c (object_write), (x_clipboard_get_cb): add support for
+	embedded objects.
+	* src/sheet-object-component.c (so_component_view_set_bounds),
+	(gnm_soc_get_object_target_list), (gnm_soc_write_object),
+	(gnm_soc_copy), (component_changed_cb), (destroy_cb),
+	(gnm_soc_user_config), (sheet_object_component_set_component): make edition,
+	clipboard and undo/redo work.
+	* src/sheet-object-component.h: ditto.
+	* src/sheet-object.h: typo.
+
+2011-11-18  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* schemas/org.gnome.gnumeric.dialogs.gschema.xml.in.in: fixed paths.
+	[#664243]
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in: ditto.
+	* schemas/org.gnome.gnumeric.plugin.gschema.xml.in.in: ditto.
+
+2011-11-11 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/org.gnome.gnumeric.dialogs.gschema.xml.in.in: fix descriptions
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in: fix descriptions
+	* src/gnumeric-conf.c: update
+
+2011-11-11  Morten Welinder  <terra@gnome.org>
+
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in: Fix the '>' here.
+
+2011-11-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnumeric-conf.c: removed an extra '>' in key descrption, [see #663809]
+	* src/item-bar.c (item_bar_draw_region): add missing tick. [#663802]
+
+2011-11-10  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-bar.c (item_bar_draw_region): fixed rendering of outline
+	levels. [#663663]
+
+2011-11-10 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in
+	(autocomplete-min-chars): new item
+	* src/complete-sheet.c (complete_sheet_search_iteration): use
+	gnm_conf_get_core_gui_editing_autocomplete_min_chars
+	* src/gnumeric-conf.h
+	(gnm_conf_get_core_gui_editing_autocomplete_min_chars_node): new
+	(gnm_conf_get_core_gui_editing_autocomplete_min_chars): new
+	(gnm_conf_set_core_gui_editing_autocomplete_min_chars): new
+	* src/gnumeric-conf.c
+	(gnm_conf_get_core_gui_editing_autocomplete_min_chars_node): new
+	(gnm_conf_get_core_gui_editing_autocomplete_min_chars): new
+	(gnm_conf_set_core_gui_editing_autocomplete_min_chars): new
+	(watch_core_gui_editing_autocomplete_min_chars): new
+
+2011-11-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_close): Avoid FMR.
+
+2011-11-07 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-graph.c (sheet_object_graph_guru): fix warning
+
+2011-11-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-bar.c (item_bar_draw_region): fix crash.
+
+2011-11-06  Marek Černocký <marek@manet.cz>
+
+	* src/sheet-object-graph.c (sheet_object_graph_guru): add context to
+	Columns and Rows
+	* src/sheet.c (gnm_sheet_class_init): add context to Columns and Rows
+
+2011-11-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (pdf_export): export graphs with a tight
+	bounding box if requested
+	(cb_set_pdf_option): store paper=fit option
+
+2011-11-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (cb_auto_expr_cell_changed): new
+	(cb_auto_expr_changed): set new auto-expr properties
+	(cb_select_auto_expr): create new auto-expression menu item
+	* src/workbook-view.c (wb_view_auto_expr_recalc): handle possible
+	cell formula
+	(wb_view_auto_expr_cell): new
+	(wb_view_auto_expr_sheet): new
+	(wb_view_set_property): handle new properties
+	(wb_view_get_property): handle new properties
+	(workbook_view_class_init): install new properties
+	* src/workbook-view.h (_WorkbookView): add new fields
+
+2011-11-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook-view.c (wb_view_auto_expr_attrs): ref -> unref
+
+2011-11-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (print_info_get_page_setup): do not return a ref
+	* src/print.c (gnm_print_sheet): do not unref page-setup
+	(gnm_print_so): ditto
+
+2011-11-03 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (pdf_write_workbook): madify arguments
+	(cb_free_sheets): deleted
+	(pdf_export): new
+	(cb_set_pdf_option): use g_ptr_array_unref and support 'object' option
+	(print_init): use pdf_export instead of pdf_write_workbook
+	* src/print.h (gnm_print_so): modify arguments
+	* src/print.c (gnm_print_so): modify arguments and support output to gsf
+	* src/sheet-object.c (cb_so_print): adjust for modified arguments to
+	gnm_print_so
+	* src/ssconvert.c (convert): do not unref wb twice on error
+
+2011-11-03  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (print_info_load_defaults): Plug leak.
+
+	* src/graph.c (gnm_go_data_vector_get_markup): Maintain a ref to
+	markup.
+
+2011-11-02 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_set_from_pango_attribute): handle super- and
+	subscripts
+	* src/wbc-gtk.c (wbc_gtk_style_feedback_real): reset sub-/superscript action
+
+2011-11-02 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add Format->Text menu
+	* src/GNOME_Gnumeric-gtk.xml.in: add Format->Text menu
+	* src/wbc-gtk-actions.c (permanent_actions): add submenus
+	(font_toggle_actions): fix duplicate menu accel
+
+2011-11-02  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_eval): erase markup list when changed.
+	[#663216]
+
+2011-10-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (gnm_soi_write_image), (soi_cb_save_as): don't
+	crash when the image type is unknown.
+
+2011-10-29  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/gnumeric.c (go_gnm_component_init): fixed build.
+	* src/sheet-object-image.c (gnm_soi_get_target_list),
+	(soi_cb_save_as): avoid a crash with unknown file types.
+
+2011-10-28 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_get_pango_height): check for
+	possible superscripts in the value formatting
+
+2011-10-28  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-conf.c: Rename from src/gnumeric-gconf.c
+
+2011-10-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (sheet_object_image_set_image),
+	(gnm_soi_get_target_list), (content_end), (gnm_soi_draw_cairo): minor
+	GOImage related tweaks.
+
+2011-10-27  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/libgnumeric.c (gnm_init): fixed SVG images size. [#628472]
+	* src/sheet-object-image.c (gnm_soi_get_target_list),
+	(gnm_soi_default_size): ditto.
+
+2011-10-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-edit.c (item_edit_update_bounds): translate sub/superscript
+	attributes
+
+2011-10-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_get_pango_attrs): add args to call of
+	go_pango_attr_*_new
+	* src/wbc-gtk-actions.c (toggle_font_attr): use subscript/superscript
+	attributes
+
+2011-10-27  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (sheet_object_image_set_image),
+	(gnm_soi_finalize), (gnm_soi_new_view), (content_end),
+	(gnm_soi_draw_cairo): add true support for SVG images.
+
+2011-10-26 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_get_pango_attrs): use new go-pango
+	attributes
+
+2011-10-26 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/rendered-value.c (gnm_rendered_value_new): call
+	go_pango_translate_layout
+	* src/workbook-view.c (wb_view_auto_expr_recalc): call
+	go_pango_translate_layout
+
+2011-10-26  Morten Welinder  <terra@gnome.org>
+
+	* schemas/gnumeric-general.schemas.in,
+	schemas/org.gnome.gnumeric.gschema.xml.in.in: Rename keys for
+	toolbars.
+
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in: Fix default for
+	long-format-toolbar's visibility.
+
+2011-10-26  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c (gnm_so_filled_draw_cairo): make things build again
+	after goffice changes.
+	* src/sheet-object-image.c (gnm_soi_draw_cairo): ditto.
+
+2011-10-25  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: cleaned dead-kittens.h.
+	* src/dead-kittens.h: ditto.
+	* src/gui-util.c (gnm_canvas_get_position): ditto.
+	* src/style.c (gnm_pango_context_get): ditto.
+
+2011-10-25  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (so_image_view_set_bounds): fixed after
+	go_pixbuf* rename.
+
+2011-10-24  Morten Welinder  <terra@gnome.org>
+
+	* src/position.h (eval_pos_is_array_context): New macro so we can
+	easier tell who is using the actual context information.
+
+	* src/libgnumeric.c (gnm_init): Don't bother initializing
+	gnome-vfs anymore.
+
+2011-10-22 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/rendered-value.c (rv_adjust_filter): use zoom rather than scale
+	(rv_adjust_attributes): delete debug spew and add argument
+	(gnm_rendered_value_new): adjust call to rv_adjust_attributes
+
+2011-10-22 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_get_pango_attrs): adjust the pango
+	attributes for subscript/superscripts in the case of zoom
+	* src/rendered-value.c (rv_adjust_filter): new
+	(rv_adjust_attributes): new
+	(gnm_rendered_value_new): adjust the pango attributes before
+	rendering to account for font size and zoom
+
+2011-10-22 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_get_pango_attrs): use new goffice
+	defines for super/subscripts
+	* src/wbc-gtk-actions.c (toggle_font_attr): ditto
+
+2011-10-21 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in: updated
+
+2011-10-21 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-general.schemas.in: add
+	/apps/gnumeric/core/gui/cells/function_markers and
+	/apps/gnumeric/core/gui/cells/extension_markers
+	* src/gnumeric-gconf.c: update schema generated code
+	* src/gnumeric-gconf.h: update schema generated code
+	* src/workbook-view.c (workbook_view_new): initialize from
+	above preferences
+
+2011-10-21 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell-draw.h (cell_draw): add argument
+	* src/cell-draw.c (cell_draw_extension_mark_bottom): new
+	(cell_draw_extension_mark_left): new
+	(cell_draw_extension_mark_right): new
+	(cell_draw_h_extension_markers): new
+	(cell_draw_v_extension_markers): new
+	(cell_draw): add argument and call the above
+	* src/item-grid.c (item_grid_draw_merged_range): adjust call to
+	cell_draw
+	(item_grid_draw_region): ditto
+	* src/preview-grid.c (preview_grid_draw_region): adjust call to
+	cell_draw
+	* src/workbook-view.h (_WorkbookView): add field
+	* src/workbook-view.c (wb_view_set_attribute): handle new
+	property
+	(wb_view_set_property): ditto
+	(wb_view_set_attribute): ditto
+	(workbook_view_class_init): install new property
+	(workbook_view_new): initialize new property
+
+2011-10-20 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell-draw.c (cell_draw): fix rounding of h_center
+	transformation
+
+2011-10-20 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell-draw.c (cell_draw): also transform h_center if given
+
+2011-10-20 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cellspan.c (cell_calc_span): we need to stop extending in
+	a direction on the first failure in that direction
+
+2011-10-19 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_paginate_cb): set the total number of pages
+	to be set before using gtk_print_operation_preview_is_selected
+
+2011-10-19 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (PrintingInstance): new field
+	(gnm_paginate_cb): check for too many previewed pages
+	(gnm_ready_preview_cb): new
+	(gnm_begin_print_cb): adjust progress text for preview vs. print
+	(gnm_draw_page_cb): ditto
+	(gnm_print_sheet): set new field of PrintingInstance and connect
+	gnm_ready_preview_cb
+
+2011-10-19 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_draw_page_cb): disconnect handler after cancelling
+
+2011-10-18 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (PrintingInstance): add fields
+	(printing_instance_new): initialize new fields
+	(printing_instance_delete): destroy progress report
+	(cb_progress_response): new
+	(cb_progress_delete): new
+	(gnm_begin_print_cb): create progress dialog
+	(gnm_draw_page_cb): update progress dialog
+	(gnm_print_sheet): tell gtk not to create their buggy
+	progress report
+
+2011-10-18 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_sheet): avoid double free
+
+2011-10-18 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (Printing Instance) remove field
+	(SheetPrintInfo): added fields
+	(sheet_print_info_free): new
+	(printing_instance_delete): use sheet_print_info_free
+	(paginate): change paginationInfo argument to GArray
+	(compute_sheet_pages_add_sheet): initialize new fields
+	(compute_sheet_pages_add_range): deleted
+	(compute_sheet_pages_down_then_across): deleted
+	(compute_sheet_pages_across_then_down): deleted
+	(print_get_sheet): new
+	(print_get_sheet_page_range): new
+	(compute_sheet_pages): use GArray
+	(gnm_paginate_cb): use gnmSheets instead of gnmSheetRanges
+	(gnm_request_page_setup_cb): call print_get_sheet instead of using
+	gnmSheetRanges
+	(gnm_draw_page_cb): call print_get_sheet_page_range instead of using
+	gnmSheetRanges
+
+2011-10-17 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.c (sheet_get_extent): fix this for the case that we have
+	content only in the bottom right 4 cells [#661958]
+
+2011-10-05 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/undo.c (gnm_undo_filter_set_condition_undo): fix error in
+	label text, split label creation and add translator comments
+	* src/item-bar.c (colrow_tip_setlabel): create label attempting to
+	provide correct plurals and add translator comments
+
+2011-09-30 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/collect.c (collect_float_pairs): check whetehr these are
+	in fact references
+
+2011-09-29 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_so): enable pagesetup combos
+
+2011-09-29 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_draw_so_page_cb): new
+	(gnm_print_so): implement
+	* src/sheet-object.c (sheet_object_populate_menu_real): enable print item
+
+2011-09-28 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-pane.c (cb_so_menu_activate): delete
+	(build_so_menu): delete
+	(gnm_pane_display_object_menu): use sheet_object_build_menu instead of
+	build_so_menu
+	* src/print.c (gnm_print_so): new stub
+	* src/print.h (gnm_print_so): new
+	* src/sheet-object-impl.h (SheetObjectAction): add field
+	* src/sheet-object.c (build_so_menu): rename to sheet_object_build_menu
+	(cb_so_print): new
+	(sheet_object_can_prop): new
+	(sheet_object_populate_menu_real): use enabler/disabler
+	(sheet_object_populate_menu): do not recurse infinitely
+	(cb_so_menu_activate): combine with the function of same name from src/gnm-pane.c
+	(sheet_object_view_button_pressed): use sheet_object_build_menu instead of
+	build_so_menu
+	* src/sheet-object.h (sheet_object_build_menu): new
+
+2011-09-28 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/stf-parse.c (stf_parse_options_csv_set_stringindicator): allow \0
+	as stringindicator
+	(stf_parse_options_valid): ditto
+	(stf_parse_csv_cell): ditto
+
+2011-09-27 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-clipboard.c (target_list_to_entries): deleted and
+	replace all calls with gtk_target_table_new_from_list
+	(gnm_x_claim_clipboard): free the targets using gtk_target_table_free
+
+2011-09-27  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-graph-window.c (gnm_graph_window_set_graph): make the graph
+	visible. [#660241]
+
+2011-09-26  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc): Don't show
+	"Internal ERROR!" when we encounter an invalid date value.
+
+	* src/gnm-format.c (hash_fill): Handle NULL str without crash.
+
+	* src/wbc-gtk-actions.c (cb_add_component_from_file): #if 0.
+
+	* src/main-application.c (call_gnome_authentication_manager_init):
+	remove.
+	(gnumeric_arg_parse): Don't call
+	call_gnome_authentication_manager_init.
+
+2011-09-26  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (sheet_widget_frame_create_widget): make
+	frames accept events.
+
+2011-09-25  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (so_widget_view_get_window),
+	(so_widget_view_class_init): fixed sheet widgets stacking order.
+
+2011-09-24  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/wbc-gtk.c (show_gui): make the windows shrink again. [#659246]
+
+2011-09-19  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Fix handling of command context,
+	thus fixing leak.
+
+2011-09-13  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (format_match_datetime): Make sure
+	time_format doesn't get freed underneath us.  See #658982.
+
+2011-09-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/stf.c (stf_open_and_read): do not check for NUL here
+	(clear_stray_NULs): new
+	(stf_read_workbook_auto_csvtab): adjust call to go_guess_encoding and
+	call clear_stray_NULs
+	(csv_tsv_probe): adjust call to go_guess_encoding
+
+2011-09-08  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Switch to AM_MAINTAINER_MODE([enable]).
+
+2011-09-06 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (cb_graph_dim_editor_update):  don't create an infinite
+	signal recursion by using start_sel=FALSE in gnm_expr_entry_parse call.
+
+2011-09-05  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (collect_float_pairs): Set return variables even
+	in the no-data case.  Fixes #658140.
+
+2011-09-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (widget_wbc): fixed after goffice change.
+
+2011-08-29  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_scalar_get_str): fix a critical.
+	* src/wbc-gtk.c (wbc_gtk_set_toggle_action_state): one more.
+
+2011-08-28  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_scalar_get_str): format the string.
+
+2011-08-22  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (sheet_widget_combo_create_widget): fixed combo
+	box properties.
+
+2011-08-21  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-control-gui.c (sheet_object_key_pressed): missing spaces.
+	* src/wbc-gtk-actions.c: fix actions sensitivity for chart sheets. [#645842]
+	* src/wbc-gtk-impl.h: ditto.
+	* src/wbc-gtk.c (wbc_gtk_set_action_sensitivity),
+	(wbc_gtk_set_action_label), (wbcg_update_action_sensitivity),
+	(create_undo_redo), (wbc_gtk_finalize), (wbc_gtk_init): ditto.
+
+2011-08-20  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet.c (cb_max_cell_height): fix row height autofit when zoom
+	level is not 1. [#656418]
+
+2011-08-19 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc): chaeck for NULL
+	attribute list
+
+2011-08-18 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/consolidate.c: add argument to tools engine
+	* src/consolidate.h: add argument to tools engine
+	* src/commands.c (cmd_analysis_tool_*): adjust calls to tools engine
+
+2011-08-17 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/rendered-value.h (_GnmRenderedValue): re-add color field
+	* src/rendered-value.c (gnm_rendered_value_new): store style color
+	in color field
+	(colour_selector_cb): deleted
+	(colour_from_layout): deleted
+	(gnm_rendered_value_get_color): just return color field value
+
+2011-08-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-control-gui.c (sheet_object_key_pressed),
+	(sheet_control_gui_new), (scg_take_focus): make Ctrl-PgUp and Ctrl-PgDn
+	work on chart-only sheets. [#645673]
+
+2011-08-07  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_scalar_get_markup): don't leak a format and
+	don't retrieve a markup from an non markup format.
+
+2011-08-05 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): enable showing of
+	text in progress bar; temporarily disable tab pane magic to avoid
+	increasing window size on sheet addition.
+
+2011-08-05 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (edit_area_button_menu): make sure everything is
+	initially insensitive
+
+2011-08-05  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_finalize), (cb_assign_markup),
+	(gnm_go_data_vector_get_markup), (gnm_go_data_vector_class_init):
+	implement markup for vectors.
+
+2011-08-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (cb_accept_input_menu): check that we are editing
+
+2011-08-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_scalar_get_markup),
+	(gnm_go_data_scalar_class_init): implement rich text in scalar data.
+
+2011-08-04 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_comment_apply): enable aprpopriate actions
+	(cmd_hyperlink_undo): ditto
+	(cmd_hyperlink_redo): ditto
+
+2011-08-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/gnumeric.c: update component.
+	* src/GNOME_Gnumeric-gtk.xml.in: add component support in sheets.
+	* src/Makefile.am: ditto.
+	* src/commands.c: ditto.
+	* src/gnm-pane.c: ditto.
+	* src/libgnumeric.c: ditto.
+	* src/main-application.c: ditto.
+	* src/sheet-control-gui.c: ditto.
+	* src/sheet-object.c: ditto.
+	* src/sheet-object.h: ditto.
+	* src/sheet-object-component.c: ditto.
+	* src/sheet-object-component.h: ditto.
+	* src/wbc-gtk-actions.c: ditto.
+	* src/wbc-gtk.c: ditto.
+	* src/xml-sax-read.c: ditto.
+
+2011-08-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): set the "hexpand" property to
+	TRUE for toolbars. [#655858]
+
+2011-08-02 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): the box is now a GtkHandleBox
+
+2011-08-02 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (wbcg_gnm_cmd_context_init): adjust for changes in
+	structure
+	* src/io-context-gtk.c (icg_gnm_cmd_context_init): ditto
+
+2011-08-01 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: add data import/export menu items
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/application.c (gnm_app_create_opener_filter): distinguish between
+	file history and file-open/import
+	(gnm_app_history_get_list): adjust call to gnm_app_create_opener_filter
+	* src/application.h (gnm_app_create_opener_filter): add argument
+	* src/gui-file.c (gui_file_open): distinguish between "open" and "import"
+	(gui_file_save_as): distinguish between "save as" and "export"
+	* src/gui-file.h (gui_file_open): add argument
+	(gui_file_save_as): add argument
+	* src/stf.c (stf_read_workbook): set save info
+	(stf_read_workbook_auto_csvtab): ditto
+	(stf_init): separate mime types
+	* src/wbc-gtk-actions.c (cb_file_open): adjust call to gui_file_open
+	(cb_data_import_text): ditto
+	(cb_data_import_other): new
+	(cb_data_export): new
+	(cb_data_export_text): new
+	(cb_data_export_csv): new
+	(cb_file_save_as): adjust call to gui_file_save_as
+	(actions): connect the above new actions
+	* src/wbc-gtk-impl.h (_WBCGtk): delete duplicate field
+	* src/wbc-gtk.c (wbc_gtk_init): and do not initialize it
+	* src/workbook-priv.h (_Workbook): new field
+	* src/workbook.c (workbook_get_file_exporter): new
+	(workbook_dispose): finalize file_saver and file_exporter
+	(workbook_set_saveinfo): handle a wider range of savers
+	* src/workbook.h (workbook_get_file_exporter): new
+
+2011-08-01 Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* configure.in: Disable GTK depreciation check
+	* src/cell-draw.c (cell_calc_layout): use gnm_rendered_value_get_color
+	* src/cell.c (gnm_cell_get_render_color): ditto
+	* src/gnm-format.c (gnm_format_layout): drop argument and change all
+	callers
+	(format_value_gstring): ditto
+	(format_value): ditto
+	(format_value_layout): new
+	* src/gnm-format.h (gnm_format_layout): drop argument and change all
+	callers
+	(format_value_gstring): ditto
+	(format_value): ditto
+	(format_value_layout): new
+	* src/rendered-value.c (gnm_rendered_value_new): include foreground
+	color in attributes list
+	(colour_selector_cb): new
+	(colour_from_layout): new
+	* src/widgets/gnm-format-sel.c (cb_generate_preview): use attributes
+	* src/workbook-view.c (wb_view_auto_expr_recalc): use
+	format_value_layout
+
+2011-08-01  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* all: make things build against gtk+-3.0.
+
+2011-07-31  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

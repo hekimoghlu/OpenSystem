@@ -1,0 +1,102 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/orientable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+_PINCLUDE(gtk/gtk.h)
+
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+
+//TODO: Derive from (and implement) AccessibleRange when we can break ABI.
+
+/** A widget which indicates progress visually.
+ *
+ * The Gtk::ProgressBar is typically used to display the progress of a long
+ * running operation. It provides a visual clue that processing is underway.
+ * The Gtk::ProgressBar can be used in two different modes: percentage mode
+ * and activity mode.
+ *
+ * When an application can determine how much work needs to take place (e.g.
+ * read a fixed number of bytes from a file) and can monitor its progress,
+ * it can use the Gtk::ProgressBar in percentage mode and the user sees a
+ * growing bar indicating the percentage of the work that has been
+ * completed. In this mode, the application is required to call
+ * set_fraction() periodically to update the progress bar.
+ *
+ * When an application has no accurate way of knowing the amount of work to
+ * do, it can use the Gtk::ProgressBar in activity mode, which shows
+ * activity by a block moving back and forth within the progress area. In
+ * this mode, the application is required to call pulse() perodically to
+ * update the progress bar.
+ *
+ * There is quite a bit of flexibility provided to control the appearance of
+ * the Gtk::ProgressBar. Functions are provided to control the orientation of
+ * the bar, optional text can be displayed along with the bar, and the step
+ * size used in activity mode can be set.
+ *
+ * The ProgressBar widget looks like this:
+ * @image html progressbar1.png
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API ProgressBar
+ : public Widget,
+   public Orientable
+{
+  _CLASS_GTKOBJECT(ProgressBar,GtkProgressBar,GTK_PROGRESS_BAR,Gtk::Widget,GtkWidget,GtkProgressBar, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Orientable)
+public:
+  _CTOR_DEFAULT()
+
+  _WRAP_METHOD(void pulse(), gtk_progress_bar_pulse)
+
+  _WRAP_METHOD(Glib::ustring get_text() const, gtk_progress_bar_get_text)
+  _WRAP_METHOD(void set_text(const Glib::ustring& text), gtk_progress_bar_set_text)
+
+  _WRAP_METHOD(double get_fraction() const, gtk_progress_bar_get_fraction)
+  _WRAP_METHOD(void set_fraction(double fraction), gtk_progress_bar_set_fraction)
+
+  _WRAP_METHOD(double get_pulse_step() const, gtk_progress_bar_get_pulse_step)
+  _WRAP_METHOD(void set_pulse_step(double fraction), gtk_progress_bar_set_pulse_step)
+
+  _WRAP_METHOD(void set_inverted(bool inverted = true), gtk_progress_bar_set_inverted)
+  _WRAP_METHOD(bool get_inverted() const, gtk_progress_bar_get_inverted )
+
+  _WRAP_METHOD(void set_ellipsize(Pango::EllipsizeMode mode), gtk_progress_bar_set_ellipsize)
+  _WRAP_METHOD(Pango::EllipsizeMode get_ellipsize() const, gtk_progress_bar_get_ellipsize)
+
+  _WRAP_METHOD(void set_show_text(bool show_text = true), gtk_progress_bar_set_show_text)
+  _WRAP_METHOD(bool get_show_text() const, gtk_progress_bar_get_show_text)
+
+  _WRAP_PROPERTY("fraction", double)
+  _WRAP_PROPERTY("pulse-step", double)
+  _WRAP_PROPERTY("text", Glib::ustring)
+  _WRAP_PROPERTY("ellipsize", bool,
+    deprecated "This property has the wrong type. Use set_ellipsize() or get_ellipsize() instead.")
+  //TODO: When we can break API and ABI:
+  //_WRAP_PROPERTY("ellipsize", Pango::EllipsizeMode)
+  _WRAP_PROPERTY("show-text", bool)
+  _WRAP_PROPERTY("inverted", bool)
+};
+
+} // namespace Gtk

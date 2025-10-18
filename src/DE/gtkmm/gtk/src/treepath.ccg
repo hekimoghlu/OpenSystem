@@ -1,0 +1,178 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/treemodel.h>
+#include <glibmm/utility.h>
+#include <gtk/gtk.h>
+
+namespace Gtk
+{
+
+TreePath::TreePath(GtkTreePath* gobject, bool make_a_copy)
+:
+  // For BoxedType wrappers, make_a_copy is true by default.  The static
+  // BoxedType wrappers must always take a copy, thus make_a_copy = true
+  // ensures identical behaviour if the default argument is used.
+  gobject_ (gobject ? (make_a_copy ? gtk_tree_path_copy(gobject) : gobject) : gtk_tree_path_new())
+{}
+
+TreePath::TreePath(TreePath::size_type n, TreePath::value_type value)
+:
+  gobject_(gtk_tree_path_new())
+{
+  for(; n > 0; --n)
+    gtk_tree_path_append_index(gobject_, value);
+}
+
+TreePath::TreePath(const Glib::ustring& path)
+:
+  gobject_ (gtk_tree_path_new_from_string(path.c_str()))
+{
+  if (!gobject_)
+    gobject_ = gtk_tree_path_new();
+}
+
+// helper for the two following constructors
+TreePath::TreePath(const GtkTreeModel* model, const GtkTreeIter* iter)
+:
+  // The GtkTreePath* is always newly created.
+  gobject_(gtk_tree_model_get_path(const_cast<GtkTreeModel*>(model),
+                                   const_cast<GtkTreeIter*>(iter)))
+{
+  if (!gobject_)
+    gobject_ = gtk_tree_path_new();
+}
+
+TreePath::TreePath(const TreeModel::iterator& iter)
+:
+  TreePath(iter.get_model_gobject(), iter.gobj())
+{
+}
+
+TreePath::TreePath(const TreeModel::const_iterator& iter)
+:
+  TreePath(iter.get_model_gobject(), iter.gobj())
+{
+}
+
+// helper for the two following assignment operators
+template <typename Iter>
+static TreePath& assign_(TreePath& self, const Iter& iter)
+{
+  TreePath temp(iter);
+  self.swap(temp);
+  return self;
+}
+
+TreePath& TreePath::operator=(const TreeModel::iterator& iter)
+{
+  return assign_(*this, iter);
+}
+
+TreePath& TreePath::operator=(const TreeModel::const_iterator& iter)
+{
+  return assign_(*this, iter);
+}
+
+void TreePath::clear()
+{
+  TreePath empty_path;
+  swap(empty_path);
+}
+
+TreePath::size_type TreePath::size() const
+{
+  return gtk_tree_path_get_depth(gobject_);
+}
+
+TreePath::operator bool() const
+{
+  return !empty();
+}
+
+bool TreePath::empty() const
+{
+  return (gtk_tree_path_get_depth(gobject_) == 0);
+}
+
+TreePath::reference TreePath::operator[](TreePath::size_type i)
+{
+  int *const indices = gtk_tree_path_get_indices(gobject_);
+  return indices[i];
+}
+
+TreePath::const_reference TreePath::operator[](TreePath::size_type i) const
+{
+  const int *const indices = gtk_tree_path_get_indices(gobject_);
+  return indices[i];
+}
+
+TreePath::iterator TreePath::begin()
+{
+  return gtk_tree_path_get_indices(gobject_);
+}
+
+TreePath::iterator TreePath::end()
+{
+  return gtk_tree_path_get_indices(gobject_) + gtk_tree_path_get_depth(gobject_);
+}
+
+TreePath::const_iterator TreePath::begin() const
+{
+  return gtk_tree_path_get_indices(gobject_);
+}
+
+TreePath::const_iterator TreePath::end() const
+{
+  return gtk_tree_path_get_indices(gobject_) + gtk_tree_path_get_depth(gobject_);
+}
+
+//static
+bool TreePath::get_row_drag_data(const Glib::ValueBase& value, Glib::RefPtr<const TreeModel>& model, TreePath& path)
+{
+  GtkTreeModel* src_model = nullptr;
+  GtkTreePath* src_path = nullptr;
+  gboolean result = gtk_tree_get_row_drag_data(value.gobj(), &src_model, &src_path);
+
+  model = Glib::wrap(src_model, true /* take_copy=true */);
+
+  //gtk_tree_get_row_drag_data gives us ownership of src_path.
+  path = Glib::wrap(src_path, false /* take_copy=false */);
+
+  return result;
+}
+
+//static
+bool TreePath::get_row_drag_data(const Glib::ValueBase& value, TreePath& path)
+{
+  GtkTreePath* src_path = nullptr;
+  gboolean result = gtk_tree_get_row_drag_data(value.gobj(), nullptr, &src_path);
+
+  //gtk_tree_get_row_drag_data gives us ownership of src_path.
+  path = Glib::wrap(src_path, false /* take_copy=false */);
+
+  return result;
+}
+
+Glib::RefPtr<Gdk::ContentProvider> TreePath::create_row_drag_content(
+  const Glib::RefPtr<const TreeModel>& model) const
+{
+  // gtk_tree_create_row_drag_content() creates a new GdkContentProvider.
+  return Glib::wrap(gtk_tree_create_row_drag_content(
+    const_cast<GtkTreeModel*>(model->gobj()), const_cast<GtkTreePath*>(gobj())));
+}
+
+} // namespace Gtk

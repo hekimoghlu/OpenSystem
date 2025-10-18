@@ -1,0 +1,40 @@
+# Inputs: documentsHigh, documentsLow, picturesHigh, picturesLow,
+#   audioHigh, audioLow, videoHigh, videoLow, softwareHigh, softwareLow
+# Outputs: urn, ie, mimeType
+SELECT
+  ?urn
+  ?ie
+  (nie:mimeType(?ie) As ?mimeType)
+{
+  {
+    # Data from high priority graphs
+    {
+      SELECT ?urn ?ie { GRAPH tracker:Documents { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~documentsHigh
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Pictures { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~picturesHigh
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Audio { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~audioHigh
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Video { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~videoHigh
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Software { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~softwareHigh
+    }
+  } UNION {
+    # Data from regular priority graphs
+    {
+      SELECT ?urn ?ie { GRAPH tracker:Documents { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~documentsLow
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Pictures { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~picturesLow
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Audio { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~audioLow
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Video { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~videoLow
+    } UNION {
+      SELECT ?urn ?ie { GRAPH tracker:Software { ?urn a nfo:FileDataObject ; nie:interpretedAs ?ie } } LIMIT ~softwareLow
+    }
+  }
+
+  FILTER (NOT EXISTS {
+    GRAPH tracker:FileSystem { ?urn tracker:extractorHash ?hash }
+  })
+}

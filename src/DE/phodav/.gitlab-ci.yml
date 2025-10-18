@@ -1,0 +1,98 @@
+image: fedora:38
+
+stages:
+  - build
+  - test
+
+variables:
+  DEPENDENCIES:
+    asciidoc
+    avahi-gobject-devel
+    gcc
+    gcc-c++
+    gettext
+    git
+    libsoup3-devel
+    libxml2-devel
+    meson
+    systemd-devel
+    systemd-units
+    xmlto
+
+  WIN_DEPENDENCIES:
+    dos2unix
+    gcc
+    gcc-c++
+    gettext
+    git
+    meson
+    mingw32-libsoup
+    mingw64-libsoup
+    mingw32-readline
+    mingw64-readline
+    msitools
+
+build:
+  stage: build
+  before_script:
+    - dnf update -y --nogpgcheck
+    - dnf install -y --nogpgcheck $DEPENDENCIES
+    - mkdir dev
+  script:
+    - meson build
+    - ninja -C build dist
+    # avahi is not needed to test with litmus, so build without it,
+    # otherwise we would need another image with systemd
+    - meson --prefix=$(pwd)/dev -Davahi=disabled build-no-avahi
+    - ninja -C build-no-avahi install
+  artifacts:
+    paths:
+      - build/meson-logs/*.txt
+      - dev
+      - build-no-avahi/tests/virtual-dir-server
+    expire_in: 1 week
+    when: always
+
+# Temporarily disabled because libsoup 3 is not yet available:
+# https://gitlab.gnome.org/GNOME/phodav/-/merge_requests/27#note_1488522
+#
+#build_win:
+#  stage: build
+#  before_script:
+#    - rm -f /etc/rpm/macros.image-language-conf
+#    - dnf update -y --nogpgcheck
+#    - dnf install -y --nogpgcheck $WIN_DEPENDENCIES
+#  script:
+#    - mkdir w32 && cd w32 && mingw32-meson -Dgtk_doc=disabled && ninja && sh -x data/make-msi.sh
+#    - pwd
+#    - ls
+#    - cd ..
+#    - mkdir w64 && cd w64 && mingw64-meson -Dgtk_doc=disabled && ninja && sh -x data/make-msi.sh
+#  artifacts:
+#    paths:
+#      - w32/*.msi
+#      - w64/*.msi
+#      - w32/meson-logs/*.txt
+#      - w64/meson-logs/*.txt
+#    expire_in: 1 week
+#    when: always
+
+litmus:
+  stage: test
+  dependencies:
+    - build
+  before_script:
+    - dnf install -y litmus libsoup3 nmap-ncat
+  variables:
+    TESTS: basic copymove props locks http
+  script:
+    - export LD_LIBRARY_PATH=$(pwd)/dev/lib64/
+    - ./dev/bin/chezdav &
+    # wait for the port to open
+    - while ! nc -z localhost 8080; do sleep 1s; done
+    - litmus --keep-going dav://localhost:8080/
+    - kill $!
+    # check that virtual root works as well
+    - ./build-no-avahi/tests/virtual-dir-server &
+    - while ! nc -z localhost 8080; do sleep 1s; done
+    - litmus dav://localhost:8080/

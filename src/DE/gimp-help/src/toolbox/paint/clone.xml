@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2018-10-14 j.h: update to v2.10
+  2009-03-16 j.h: reviewed for v2.6. No change.
+  2008-02-05 j.h : updated fr to v2.4 and enhanced align modes
+                   examples for 'en' and 'fr'
+  2008-01-18 ude: enhanced(?) align mode examples
+  2007-05-23 Rebuilt Alignment section by j.h
+  2006-02-05 fr revised; shortcut modified in "en" by j.h
+  2005-12-07 replaced <simplesect> by <sect3> by lexa
+  2005-11-30 replaced informalfigure by figure by lexa
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-tool-clone">
+  <title>Clone</title>
+
+  <indexterm>
+    <primary>Tools</primary>
+    <secondary>Clone</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Clone</primary>
+  </indexterm>
+
+  <para>
+    The Clone tool uses the current brush to copy from an image or pattern.
+    It has many uses: one of the most important is to repair problem areas in
+    digital photos, by <quote>painting over</quote> them with pixel data from
+    other areas. This technique takes a while to learn, but in the hands of a
+    skilled user it is very powerful. Another important use is to draw
+    patterned lines or curves: see
+    <link linkend="gimp-concepts-patterns">Patterns</link> for examples.
+  </para>
+  <para>
+    If you want to clone from an image, instead of a pattern, you must tell
+    GIMP which image you want to copy from. You do this by holding down the
+    <keycap>Ctrl</keycap> key and clicking in the desired source image.
+    Until you have set the source in this way, you will not be able to paint
+    with the Clone tool: the tool cursor tells you this by showing
+    <guiicon>
+      <inlinemediaobject>
+        <imageobject>
+          <imagedata fileref="images/toolbox/cursor-clone-modifier-bad.png"/>
+        </imageobject>
+      </inlinemediaobject>
+    </guiicon>.
+  </para>
+  <para>
+    If you clone from a pattern, the pattern is <emphasis>tiled</emphasis>;
+    that is, when the point you are copying from moves past one of the
+    edges, it jumps to the opposite edge and continues, as though the pattern
+    were repeated side-by-side, indefinitely. When you clone from an image
+    this does not happen: if you go beyond the edges of the source, the Clone
+    tool stops producing any changes.
+  </para>
+  <para>
+    You can clone from any drawable (that is, any layer, layer mask, or
+    channel) to any other drawable. You can even clone to or from the
+    selection mask, by switching to Quick Mask mode. If this means copying
+    colors that the target does not support (for example, cloning from an RGB
+    layer to an Indexed layer or a layer mask), then the colors will be
+    converted to the closest possible approximations.
+  </para>
+
+  <sect3>
+    <title>Activating the Tool</title>
+    <para>
+      There are different possibilities to activate the tool:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          From the main menu:
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guisubmenu>Paint Tools</guisubmenu>
+            <guimenuitem>Clone</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By clicking the tool icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-tool-clone.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          in the Toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By pressing the <keycap>C</keycap> keyboard shortcut.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+
+  <sect3>
+    <title>Key modifiers</title>
+    <para>
+      See the <link linkend="gimp-tools-paint-modifiers">Paint tools key
+      modifiers</link> for a description of key modifiers that have the same
+      effect on all paint tools.
+    </para>
+
+    <variablelist>
+      <varlistentry>
+        <term>
+          <keycap>Ctrl</keycap>
+        </term>
+        <listitem>
+          <para>
+            The <keycap>Ctrl</keycap> key is used to select the source, if
+            you are cloning from an image: it has no effect if you are
+            cloning from a pattern. You can clone from any layer of any
+            image, by clicking on the image display, with the
+            <keycap>Ctrl</keycap> key held down, while the layer is active
+            (as shown in the Layers dialog). If Alignment is set to
+            <guilabel>None</guilabel>, <guilabel>Aligned</guilabel>, or
+            <keycap>Fixed</keycap> in tool options, then the point you
+            click on becomes the origin for cloning: the image data at that
+            point will be used when you first begin painting with the Clone
+            tool. In source-selection mode, the cursor changes to a reticle
+            cross symbol
+            <guiicon>
+              <inlinemediaobject>
+                <imageobject>
+                  <imagedata fileref="images/toolbox/cursor-clone-modifier-select.png"/>
+                </imageobject>
+              </inlinemediaobject>
+            </guiicon>.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title>Tool Options Dialog</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/tool-options-clone.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>
+      Normally, tool options are displayed in a window attached under the
+      Toolbox as soon as you activate a tool. If they are not, you can access
+      them from the main menu through
+      <menuchoice>
+        <guimenu>Windows</guimenu>
+        <guisubmenu>Dockable Windows</guisubmenu>
+        <guimenuitem>Tool Options</guimenuitem>
+      </menuchoice> which opens the option window of the selected tool.
+    </para>
+
+    <variablelist>
+      <varlistentry>
+        <term>Mode</term>
+        <term>Opacity</term>
+        <term>Brush</term>
+        <term>Size</term>
+        <term>Aspect Ratio</term>
+        <term>Angle</term>
+        <term>Spacing</term>
+        <term>Hardness</term>
+        <term>Force</term>
+        <term>Dynamics</term>
+        <term>Dynamics Options</term>
+        <term>Apply Jitter</term>
+        <term>Smooth Stroke</term>
+        <term>Lock brush to view</term>
+        <term>Expand Layers</term>
+        <listitem>
+          <xi:include href="about-common-paint-options.xml"/>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Source</term>
+        <listitem>
+          <indexterm>
+            <primary>Patterns</primary>
+            <secondary>Clone</secondary>
+          </indexterm>
+          <para>
+            The choice you make here determines whether data will be copied
+            from the pattern shown above, or from one of the images you have
+            open.
+          </para>
+          <variablelist>
+            <varlistentry>
+              <term>Image</term>
+              <listitem>
+                <para>
+                  If you choose <guilabel>Image source</guilabel>, you must
+                  tell <acronym>GIMP</acronym> which layer to use as the
+                  source, by <keycap>Ctrl</keycap>-clicking on it, before
+                  you can paint with the tool.
+                </para>
+                <para>
+                  <guilabel>Sample merged</guilabel>:
+                  If you enable this option, sampling is not calculated only
+                  from the values of the active layer, but from all visible layers.
+                </para>
+                <para>
+                  For more information, see the
+                  <link linkend="glossary-samplemerge">Glossary entry</link>.
+                </para>
+                <mediaobject>
+                  <imageobject>
+                    <imagedata format="PNG"
+                      fileref="images/toolbox/clone-ex-sample-merged-example.png"/>
+                  </imageobject>
+                  <caption>
+                    <para>
+                      Example image showing the cloned pixels in the upper left
+                      corner.
+                    </para>
+                  </caption>
+                </mediaobject>
+                <mediaobject>
+                  <imageobject>
+                    <imagedata format="PNG"
+                      fileref="images/toolbox/clone-ex-sample-merged-dialog.png"/>
+                  </imageobject>
+                  <caption>
+                    <para>
+                      Layers dialog showing the new layer with the cloned pixels.
+                    </para>
+                  </caption>
+                </mediaobject>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Pattern</term>
+              <listitem>
+                <para>
+                  Clicking on the pattern symbol brings up the Patterns
+                  dialog, which you can use to select the pattern to paint
+                  with. This option is only relevant if you are cloning from a
+                  Pattern source.
+                </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Alignment</term>
+        <listitem>
+          <para>
+            The Alignment mode defines the relation between the brush
+            position and the source position.
+          </para>
+          <para>
+            In the following examples, we will use a source image where the
+            sample to be cloned will be taken, and a destination image where
+            the sample will be cloned (it could be a layer in the source
+            image)
+          </para>
+          <figure>
+            <title>Original images for clone alignment</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/clone-source.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  We will use the largest brush with the Pencil tool. The
+                  source is represented here with a ringed cross.
+                </para>
+              </caption>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/clone-dest.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  An image with a solid background only. We shall draw three
+                  cloning strokes successively.
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>
+          <variablelist>
+            <varlistentry>
+              <term>None</term>
+              <listitem>
+                <para>
+                  In this mode, each brushstroke is treated separately. For
+                  each stroke, the point where you first click is copied from
+                  the source origin; there is no relationship between one
+                  brush stroke and another. In non-aligned mode, different
+                  brush strokes will usually clash if they intersect each
+                  other.
+                </para>
+                <para>
+                  Example below: At every new brush stroke, the source goes
+                  back to its first position. The same sample is always
+                  cloned.
+                </para>
+                <figure>
+                  <title><quote>None</quote> clone alignment</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/clone-none.png"/>
+                    </imageobject>
+                  </mediaobject>
+                </figure>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Aligned</term>
+              <listitem>
+                <para>
+                  In this mode, the first click you make when painting sets
+                  the offset between the source origin and the cloned result,
+                  and all subsequent brushstrokes use the same offset. Thus,
+                  you can use as many brushstrokes as you like, and they will
+                  all mesh smoothly with one another.
+                </para>
+                <para>
+                  If you want to change the offset, select a new source origin
+                  by clicking with the <keycap>Ctrl</keycap> key pressed.
+                </para>
+                <para>
+                  In the example below, at every new brush stroke, the source
+                  keeps the same offset it had with the previous brush stroke.
+                  So, there is no cloning offset for the first brush stroke.
+                  Here, for the following strokes, the source ends up out of
+                  the source image canvas; hence the truncated aspect.
+                </para>
+                <figure>
+                  <title><quote>Aligned</quote> clone alignment</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/clone-aligned.png"/>
+                    </imageobject>
+                  </mediaobject>
+                </figure>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Registered</term>
+              <listitem>
+                <para>
+                  The <quote>Registered</quote> mode is different from the
+                  other alignment modes. When you copy from an image, a
+                  <keycap>Ctrl</keycap>-click will register a source layer.
+                  Then painting in a target layer will clone each
+                  corresponding pixel (pixel with the same offset) from the
+                  source layer. This is useful when you want to clone parts
+                  of an image from one layer to another layer within the same
+                  image. (But remember that you can also clone from one image
+                  to another image.)
+                </para>
+                <para>
+                  At every brush stroke, the source adopts the position of the
+                  mouse pointer in the destination layer. In the following
+                  example, the destination layer is smaller than the source
+                  layer; so, there is no truncated aspect.
+                </para>
+                <figure>
+                  <title><quote>Registered</quote> clone alignment</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/clone-registered.png"/>
+                    </imageobject>
+                    <caption>
+                    </caption>
+                  </mediaobject>
+                </figure>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Fixed</term>
+              <listitem>
+                <para>
+                  Using this mode you will paint with the source origin,
+                  unlike the modes <guilabel>None</guilabel> or
+                  <guilabel>Aligned</guilabel> even when drawing a line. The
+                  source will not be moved.
+                </para>
+                <para>
+                  See that the source remains fixed. The same small sample is
+                  reproduced identically in a tightened way:
+                </para>
+                <figure>
+                  <title><quote>Fixed</quote> clone alignment</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/clone-fixed.png"/>
+                    </imageobject>
+                  </mediaobject>
+                </figure>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Hard edge</term>
+        <listitem>
+          <para>
+            This option gives a hard contour to the cloned area.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3 id="filter-and-history-brushes">
+    <title>Further Information</title>
+    <variablelist>
+      <varlistentry>
+        <term>Transparency</term>
+        <listitem>
+          <para>
+            The effects of the Clone tool on transparency are a bit
+            complicated. You cannot clone transparency: if you try to clone
+            from a transparent source, nothing happens to the target. If you
+            clone from a partially transparent source, the effect is weighted
+            by the opacity of the source. So, assuming 100% opacity and a hard
+            brush:
+          </para>
+          <itemizedlist>
+            <listitem>
+              <para>
+                Cloning translucent black onto white produces gray.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                Cloning translucent black onto black produces black.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                Cloning translucent white onto white produces white.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                Cloning translucent white onto black produces gray.
+              </para>
+            </listitem>
+          </itemizedlist>
+          <para>
+            Cloning can never increase transparency, but, unless <quote>keep
+            transparency</quote> is turned on for the layer, it can reduce
+            it.
+            Cloning an opaque area onto a translucent area produces an opaque
+            result; cloning a translucent area onto another translucent area
+            causes an increase in opacity.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><quote>Filter</quote> brushes</term>
+        <listitem>
+          <indexterm>
+            <primary>Brushes</primary>
+            <secondary>Filter brush</secondary>
+          </indexterm>
+          <para>
+            There are a few non-obvious ways to use the Clone tool to obtain
+            powerful effects. One thing you can do is to create <quote>Filter
+            brushes</quote>, that is, create the effect of applying a filter
+            with a brush. To do this, duplicate the layer you want to work
+            on, and apply the filter to the copy. Then activate the Clone
+            tool, setting Source to <quote>Image source</quote> and Alignment
+            to <quote>Registered</quote>. <keycap>Ctrl</keycap>-click on the
+            filtered layer to set it as the source, and paint on the original
+            layer: you will then in effect be painting the filtered image
+            data onto the original layer.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>History brush</term>
+        <listitem>
+          <indexterm>
+            <primary>Brushes</primary>
+            <secondary>History brush</secondary>
+          </indexterm>
+          <para>
+            You can use a similar approach to imitate Photoshop's
+            <quote>History brush</quote>, which allows you to selectively
+            undo or redo changes using a brush. To do this, start by
+            duplicating the image; then, in the original, go back to the
+            desired state in the image's history, either by undoing or by
+            using the Undo History dialog. (This must be done in the
+            original, not the copy, because duplicating an image does not
+            duplicate the Undo history.) Now activate the Clone tool,
+            setting Source to <quote>Image source</quote> and Alignment to
+            <quote>Registered</quote>. <keycap>Ctrl</keycap>-click on a layer
+            from one image, and paint on the corresponding layer from the
+            other image. Depending on how you do it, this gives you either
+            an <quote>undo brush</quote> or a <quote>redo brush</quote>.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

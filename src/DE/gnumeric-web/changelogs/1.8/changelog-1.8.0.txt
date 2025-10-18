@@ -1,0 +1,84 @@
+2007-12-21  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.8.0
+
+2007-12-17  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c: Quiet the debug code.
+
+2007-12-15  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c: (sof_default_style),
+	(cb_gnm_so_filled_style_changed): replace 0 and 1 for line styles
+	by GO_LINE_NONE and GO_LINE_SOLID.
+	* src/gnm-so-line.c: (so_line_view_set_bounds),
+	(sol_default_style), (cb_gnm_so_line_changed),
+	(gnm_so_line_draw_cairo): ditto.
+	* src/gnm-so-polygon.c: (sop_default_style),
+	(cb_gnm_so_polygon_style_changed): ditto.
+
+2007-12-15  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (clipboard_paste_region) : A region is not empty if
+	  there are merges or styles. [#503634]
+
+2007-12-13  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_sheet_read) : support grid colour.
+	* src/xml-sax-read.c (xml_sax_sheet_start) : ditto.
+	(xml_sax_sheet_name) : ditto.
+	* src/xml-sax-write.c (xml_write_sheet) : ditto.
+	* gnumeric.xsd : ditto.
+
+2007-12-13  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-cell-comment.c (comment_view_set_bounds) : remove
+	  kludge that altered the anchor.  That makes it impossible to look
+	  the comment up.
+	* src/colrow.c (colrow_set_sizes) : instead, just reposition all
+	  objects when cols resize.
+
+	* src/clipboard.c (paste_object) : Add support for a magic new flag
+	  PASTE_IGNORE_COMMENTS_AT_ORIGIN for use by.
+
+	* src/commands.c (cmd_merge_cells_undo) : Used here so that when we
+	  paste the old content back into the merged region we do not
+	  duplicate a comment that existed in the cell.  [#503392]
+
+2007-12-10  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Fix for #502206
+	* src/sheet.c (sheet_get_nominal_printarea): fix invalid printarea
+
+2007-12-10  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_relocate): Access the right union member.
+	Fixes #502781.
+
+2007-12-01  Morten Welinder  <terra@gnome.org>
+
+	Fixes for #470089.
+	* src/sheet.c (sheet_cell_set_text): Adjust markup if text was
+	quoted.
+
+	* src/commands.c (cmd_set_text): Don't compare markups if we don't
+	extract them.  Map empty markup to no markup.
+	(gnm_pango_attr_list_equal): Take into account that
+	pango_attribute_equal does not compare indices.
+
+	* src/wbc-gtk-edit.c (gnm_pango_attr_list_splice): Export to
+	Goffice.  .  Let caller do the splice.
+	(wbcg_edit_start): Adjust markup if we quoted the string.
+	(wbcg_edit_finish): Free cell_attrs if needed.
+	(wbcg_edit_add_markup): Unset attributes if the desired result
+	matches cell_attrs.
+	(wbcg_edit_init_markup): Initialize cell_attrs.
+
+2007-11-30  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet) : enter_moves_dir == NONE
+	  should not move anywhere.
+
+2007-12-03  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump.  Hopefully last before 1.8

@@ -1,0 +1,288 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or(at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+// This is for including the config header before any code (such as
+// the #ifndef GTKMM_DISABLE_DEPRECATED in deprecated classes) is generated:
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <gtkmm/widget.h>
+#include <gtkmm/scrollable.h>
+#include <gtkmm/textbuffer.h>
+#include <gtkmm/textmark.h>
+#include <giomm/menumodel.h>
+#include <utility> // std::pair
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+_WRAP_ENUM(TextWindowType, GtkTextWindowType, decl_prefix GTKMM_API)
+
+/** @defgroup TextView TextView Classes
+ * These classes are used with the Gtk::TextView widget.
+ */
+
+//TODO: Derive from (and implement) AccessibleText when we can break ABI.
+
+/** Multi-line text editing widget. It displays a Gtk::TextBuffer.
+ *
+ * The TextView widget looks like this:
+ * @image html textview1.png
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ * @ingroup TextView
+ */
+class GTKMM_API TextView
+ : public Widget,
+   public Scrollable
+{
+  _CLASS_GTKOBJECT(TextView, GtkTextView, GTK_TEXT_VIEW, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Scrollable)
+public:
+  _CTOR_DEFAULT()
+  explicit TextView(const Glib::RefPtr<TextBuffer>& buffer);
+
+  _WRAP_METHOD(void set_buffer(const Glib::RefPtr<TextBuffer>& buffer), gtk_text_view_set_buffer)
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer> get_buffer(), gtk_text_view_get_buffer, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const TextBuffer> get_buffer() const, gtk_text_view_get_buffer, refreturn, constversion)
+
+  /** Scrolls the TextView so that @a iter is on the screen, by scrolling the minimal distance to get the mark onscreen,
+   * possibly not scrolling at all. The effective screen for purposes of this function is reduced by a margin of size
+   * @a within_margin.
+   * @note This function uses the currently-computed height of the lines in the text buffer. Note that line heights are computed
+   * in an idle handler; so this function may not have the desired effect if it's called before the height computations. To avoid
+   * oddness, consider using gtk_text_view_scroll_to_mark() which saves a point to be scrolled to after line validation.
+   *
+   * @param iter An iterator pointing to the position that should be made visible by scrolling.
+   * @param within_margin margin as a [0.0,0.5] fraction of screen size.
+   * @result true if scrolling occurred.
+   */
+  bool scroll_to(TextBuffer::iterator& iter, double within_margin = 0);
+
+  /** Scrolls the TextView so that @a iter is on the screen, in the position indicated by xalign and yalign,
+   * possibly not scrolling at all. The effective screen for purposes of this function is reduced by a margin of size
+   * @a within_margin.
+   * @note This function uses the currently-computed height of the lines in the text buffer. Note that line heights are computed
+   * in an idle handler; so this function may not have the desired effect if it's called before the height computations. To avoid
+   * oddness, consider using gtk_text_view_scroll_to_mark() which saves a point to be scrolled to after line validation.
+   *
+   * @param iter An iterator pointing to the position that should be made visible by scrolling.
+   * @param within_margin margin as a [0.0,0.5] fraction of screen size.
+   * @param xalign horizontal alignment of mark within visible area. An alignment of 0.0 indicates left, 1.0 indicates right, 0.5 means center.
+   * @param yalign vertical alignment of mark within visible area. An alignment of 0.0 indicates top, 1.0 indicates bottom, 0.5 means center.
+   * @result true if scrolling occurred.
+   */
+  bool scroll_to(TextBuffer::iterator& iter, double within_margin, double xalign, double yalign);
+  _IGNORE(gtk_text_view_scroll_to_iter)
+
+  /** Scrolls text_view so that @a mark is on the screen, by scrolling the minimal distance to get the mark onscreen,
+   * possibly not scrolling at all. The effective screen for purposes of this function is reduced by a margin of size
+   * @a within_margin.
+   *
+   * @param mark An mark pointing to the position that should be made visible by scrolling.
+   * @param within_margin margin as a [0.0,0.5] fraction of screen size.
+   */
+  void scroll_to(const Glib::RefPtr<TextBuffer::Mark>& mark, double within_margin = 0);
+
+ /** Scrolls the TextView so that @a mark is on the screen, in the position indicated by xalign and yalign,
+   * possibly not scrolling at all. The effective screen for purposes of this function is reduced by a margin of size
+   * @a within_margin.
+   *
+   * @param mark An mark pointing to the position that should be made visible by scrolling.
+   * @param within_margin margin as a [0.0,0.5] fraction of screen size.
+   * @param xalign horizontal alignment of mark within visible area. An alignment of 0.0 indicates left, 1.0 indicates right, 0.5 means center.
+   * @param yalign vertical alignment of mark within visible area. An alignment of 0.0 indicates top, 1.0 indicates bottom, 0.5 means center.
+   */
+  void scroll_to(const Glib::RefPtr<TextBuffer::Mark>& mark, double within_margin, double xalign, double yalign);
+  _IGNORE(gtk_text_view_scroll_to_mark)
+
+  _IGNORE(gtk_text_view_scroll_mark_onscreen) //It does not do anything more than the default scroll_to(mark).
+
+  _WRAP_METHOD(bool move_mark_onscreen(const Glib::RefPtr<TextBuffer::Mark>& mark), gtk_text_view_move_mark_onscreen)
+  _WRAP_METHOD(bool place_cursor_onscreen(), gtk_text_view_place_cursor_onscreen)
+
+  _WRAP_METHOD(void get_visible_rect(Gdk::Rectangle& visible_rect) const, gtk_text_view_get_visible_rect)
+
+  /** Gets the X,Y offset in buffer coordinates of the top-left corner of
+   * the textview's text contents.
+   *
+   * This allows for more-precise positioning than what is provided by
+   * get_visible_rect() as you can discover what
+   * device pixel is being quantized for text positioning.
+   *
+   * You might want this when making ulterior widgets align with quantized
+   * device pixels of the textview contents such as line numbers.
+   *
+   * @newin{4,18}
+   *
+   * @return {x_offset, y_offset} X offset and Y offset.
+   */
+  std::pair<double, double> get_visible_offset() const;
+  _IGNORE(gtk_text_view_get_visible_offset)
+
+  _WRAP_METHOD(void set_cursor_visible(bool setting = true), gtk_text_view_set_cursor_visible)
+  _WRAP_METHOD(bool get_cursor_visible() const, gtk_text_view_get_cursor_visible)
+  _WRAP_METHOD(void reset_cursor_blink(), gtk_text_view_reset_cursor_blink)
+
+  _WRAP_METHOD(void get_cursor_locations(const TextBuffer::const_iterator& iter{?},
+    Gdk::Rectangle& strong, Gdk::Rectangle& weak) const, gtk_text_view_get_cursor_locations)
+
+  _WRAP_METHOD(void get_iter_location(const TextBuffer::const_iterator&  iter, Gdk::Rectangle& location) const, gtk_text_view_get_iter_location)
+  _WRAP_METHOD(bool get_iter_at_location(TextBuffer::iterator& iter, int x, int y), gtk_text_view_get_iter_at_location)
+  _WRAP_METHOD(bool get_iter_at_location(TextBuffer::const_iterator& iter, int x, int y) const, gtk_text_view_get_iter_at_location)
+  _WRAP_METHOD(bool get_iter_at_position(TextBuffer::iterator& iter, int& trailing, int x, int y), gtk_text_view_get_iter_at_position)
+  _WRAP_METHOD(bool get_iter_at_position(TextBuffer::const_iterator& iter, int& trailing, int x, int y) const, gtk_text_view_get_iter_at_position)
+  _WRAP_METHOD(void get_line_yrange(const TextBuffer::const_iterator& iter, int& y, int& height) const, gtk_text_view_get_line_yrange)
+
+  _WRAP_METHOD(void get_line_at_y(TextBuffer::iterator& target_iter, int y, int& line_top), gtk_text_view_get_line_at_y)
+  _WRAP_METHOD(void get_line_at_y(TextBuffer::const_iterator& target_iter, int y, int& line_top) const, gtk_text_view_get_line_at_y)
+
+  _WRAP_METHOD(void buffer_to_window_coords(TextWindowType win,
+                                            int buffer_x, int buffer_y,
+                                            int& window_x, int& window_y) const, gtk_text_view_buffer_to_window_coords)
+  _WRAP_METHOD(void window_to_buffer_coords(TextWindowType win,
+                                            int window_x, int window_y,
+                                            int& buffer_x, int& buffer_y) const, gtk_text_view_window_to_buffer_coords)
+
+  _WRAP_METHOD(bool forward_display_line(TextBuffer::iterator& iter), gtk_text_view_forward_display_line)
+  _WRAP_METHOD(bool backward_display_line(TextBuffer::iterator& iter), gtk_text_view_backward_display_line)
+  _WRAP_METHOD(bool forward_display_line_end(TextBuffer::iterator& iter), gtk_text_view_forward_display_line_end)
+  _WRAP_METHOD(bool backward_display_line_start(TextBuffer::iterator& iter), gtk_text_view_backward_display_line_start)
+  _WRAP_METHOD(bool starts_display_line(const TextBuffer::iterator&  iter), gtk_text_view_starts_display_line)
+  _WRAP_METHOD(bool move_visually(TextBuffer::iterator& iter, int count), gtk_text_view_move_visually)
+
+  _WRAP_METHOD(bool im_context_filter_keypress(const Glib::RefPtr<Gdk::Event>& event), gtk_text_view_im_context_filter_keypress)
+  _WRAP_METHOD(void reset_im_context(), gtk_text_view_reset_im_context)
+
+  _WRAP_METHOD(Widget* get_gutter(TextWindowType win), gtk_text_view_get_gutter)
+  _WRAP_METHOD(const Widget* get_gutter(TextWindowType win) const, gtk_text_view_get_gutter, constversion)
+  _WRAP_METHOD(void set_gutter(TextWindowType win, Widget& widget), gtk_text_view_set_gutter)
+  /** Removes a widget from the gutter specified by @a win.
+   *
+   * @a win must be one of Gtk::TextWindowType::LEFT, Gtk::TextWindowType::RIGHT,
+   * Gtk::TextWindowType::TOP, or Gtk::TextWindowType::BOTTOM.
+   *
+   * @param win A Gtk::TextWindowType.
+   */
+  void unset_gutter(TextWindowType win);
+
+  _WRAP_METHOD(void add_child_at_anchor(Widget& child, const Glib::RefPtr<TextBuffer::ChildAnchor>& anchor), gtk_text_view_add_child_at_anchor)
+
+  _WRAP_METHOD(void add_overlay(Widget& child, int xpos, int ypos), gtk_text_view_add_overlay)
+
+  _WRAP_METHOD(void move_overlay(Widget& child, int xpos, int ypos), gtk_text_view_move_overlay)
+
+  _WRAP_METHOD(void remove(Widget& child), gtk_text_view_remove)
+
+  _WRAP_METHOD(void set_wrap_mode(WrapMode wrap_mode), gtk_text_view_set_wrap_mode)
+  _WRAP_METHOD(WrapMode get_wrap_mode() const, gtk_text_view_get_wrap_mode)
+  _WRAP_METHOD(void set_editable(bool setting = true), gtk_text_view_set_editable)
+  _WRAP_METHOD(bool get_editable() const, gtk_text_view_get_editable)
+  _WRAP_METHOD(void set_pixels_above_lines(int pixels_above_lines), gtk_text_view_set_pixels_above_lines)
+  _WRAP_METHOD(int get_pixels_above_lines() const, gtk_text_view_get_pixels_above_lines)
+  _WRAP_METHOD(void set_pixels_below_lines(int pixels_below_lines), gtk_text_view_set_pixels_below_lines)
+  _WRAP_METHOD(int get_pixels_below_lines() const, gtk_text_view_get_pixels_below_lines)
+  _WRAP_METHOD(void set_pixels_inside_wrap(int pixels_inside_wrap), gtk_text_view_set_pixels_inside_wrap)
+  _WRAP_METHOD(int get_pixels_inside_wrap() const, gtk_text_view_get_pixels_inside_wrap)
+  _WRAP_METHOD(void set_justification(Justification justification), gtk_text_view_set_justification)
+  _WRAP_METHOD(Justification get_justification() const, gtk_text_view_get_justification)
+  _WRAP_METHOD(void set_left_margin(int left_margin), gtk_text_view_set_left_margin)
+  _WRAP_METHOD(int get_left_margin() const, gtk_text_view_get_left_margin)
+  _WRAP_METHOD(void set_right_margin(int right_margin), gtk_text_view_set_right_margin)
+  _WRAP_METHOD(int get_right_margin() const, gtk_text_view_get_right_margin)
+  _WRAP_METHOD(void set_top_margin(int top_margin), gtk_text_view_set_top_margin, newin "3,20")
+  _WRAP_METHOD(int get_top_margin() const, gtk_text_view_get_top_margin, newin "3,20")
+  _WRAP_METHOD(void set_bottom_margin(int bottom_margin), gtk_text_view_set_bottom_margin, newin "3,20")
+  _WRAP_METHOD(int get_bottom_margin() const, gtk_text_view_get_bottom_margin, newin "3,20")
+  _WRAP_METHOD(void set_indent(int indent), gtk_text_view_set_indent)
+  _WRAP_METHOD(int get_indent() const, gtk_text_view_get_indent)
+
+#m4 _CONVERSION(`PangoTabArray*',`Pango::TabArray',`Pango::TabArray(($3), false)')
+  _WRAP_METHOD(void set_tabs(Pango::TabArray& tabs), gtk_text_view_set_tabs)
+  _WRAP_METHOD(Pango::TabArray get_tabs() const, gtk_text_view_get_tabs)
+
+  _WRAP_METHOD(void set_overwrite(bool overwrite = true), gtk_text_view_set_overwrite)
+  _WRAP_METHOD(bool get_overwrite() const, gtk_text_view_get_overwrite)
+
+  _WRAP_METHOD(void set_accepts_tab(bool accepts_tab = true), gtk_text_view_set_accepts_tab)
+  _WRAP_METHOD(bool get_accepts_tab() const, gtk_text_view_get_accepts_tab)
+
+  _WRAP_METHOD(void set_input_purpose(InputPurpose purpose), gtk_text_view_set_input_purpose)
+  _WRAP_METHOD(InputPurpose get_input_purpose() const, gtk_text_view_get_input_purpose)
+
+  _WRAP_METHOD(void set_input_hints(InputHints hints), gtk_text_view_set_input_hints)
+  _WRAP_METHOD(InputHints get_input_hints() const, gtk_text_view_get_input_hints)
+
+  _WRAP_METHOD(void set_monospace(bool monospace = true), gtk_text_view_set_monospace)
+  _WRAP_METHOD(bool get_monospace() const, gtk_text_view_get_monospace)
+
+  _WRAP_METHOD(void set_extra_menu(const Glib::RefPtr<Gio::MenuModel>& model), gtk_text_view_set_extra_menu)
+  _WRAP_METHOD(Glib::RefPtr<Gio::MenuModel> get_extra_menu(), gtk_text_view_get_extra_menu, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::MenuModel> get_extra_menu() const, gtk_text_view_get_extra_menu, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Pango::Context> get_rtl_context(), gtk_text_view_get_rtl_context, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::Context> get_rtl_context() const, gtk_text_view_get_rtl_context, refreturn, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Pango::Context> get_ltr_context(), gtk_text_view_get_ltr_context, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Pango::Context> get_ltr_context() const, gtk_text_view_get_ltr_context, refreturn, constversion)
+
+  _WRAP_SIGNAL(void set_anchor(), "set_anchor")
+
+#m4 _CONVERSION(`const char*',`const Glib::ustring&',__GCHARP_TO_USTRING)
+  _WRAP_SIGNAL(void insert_at_cursor(const Glib::ustring& str), "insert_at_cursor")
+
+  //Keybinding signals:
+  _IGNORE_SIGNAL("move_cursor")
+  _IGNORE_SIGNAL("delete_from_cursor")
+  _IGNORE_SIGNAL("cut_clipboard")
+  _IGNORE_SIGNAL("copy_clipboard")
+  _IGNORE_SIGNAL("paste_clipboard")
+  _IGNORE_SIGNAL("toggle_overwrite")
+  _IGNORE_SIGNAL("move_viewport")
+  _IGNORE_SIGNAL("select_all")
+  _IGNORE_SIGNAL("backspace")
+  _IGNORE_SIGNAL("toggle_cursor_visible")
+  _IGNORE_SIGNAL("preedit-changed")
+  _IGNORE_SIGNAL("extend-selection")
+  _IGNORE_SIGNAL("insert-emoji")
+
+  _WRAP_PROPERTY("pixels-above-lines", int)
+  _WRAP_PROPERTY("pixels-below-lines", int)
+  _WRAP_PROPERTY("pixels-inside-wrap", int)
+  _WRAP_PROPERTY("editable", bool)
+  _WRAP_PROPERTY("wrap-mode", WrapMode)
+  _WRAP_PROPERTY("justification", Justification)
+  _WRAP_PROPERTY("left-margin", int)
+  _WRAP_PROPERTY("right-margin", int)
+  _WRAP_PROPERTY("top-margin", int)
+  _WRAP_PROPERTY("bottom-margin", int)
+  _WRAP_PROPERTY("indent", int)
+  _WRAP_PROPERTY("tabs", Pango::TabArray)
+  _WRAP_PROPERTY("cursor-visible", bool)
+  _WRAP_PROPERTY("buffer", Glib::RefPtr<TextBuffer>)
+  _WRAP_PROPERTY("overwrite", bool)
+  _WRAP_PROPERTY("accepts-tab", bool)
+  _WRAP_PROPERTY("im-module", Glib::ustring)
+  _WRAP_PROPERTY("input-purpose", InputPurpose)
+  _WRAP_PROPERTY("input-hints", InputHints)
+  _WRAP_PROPERTY("monospace", bool)
+  _WRAP_PROPERTY("extra-menu", Glib::RefPtr<Gio::MenuModel>)
+};
+
+} //namespace Gtk

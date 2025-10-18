@@ -1,0 +1,98 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+_PINCLUDE(glibmm/private/object_p.h)
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace
+{
+
+extern "C"
+{
+
+static gboolean Bus_Message_gstreamermm_callback(GstBus* bus, GstMessage* message, void* data)
+{
+  Gst::Bus::SlotMessage* the_slot = static_cast<Gst::Bus::SlotMessage*>(data);
+
+  try
+  {
+    return (*the_slot)(Glib::wrap(bus, true), Glib::wrap(message, true));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false;
+}
+
+static void Bus_Message_gstreamermm_callback_destroy(void* data)
+{
+  delete static_cast<Gst::Bus::SlotMessage*>(data);
+}
+
+static GstBusSyncReply Bus_Message_Sync_gstreamermm_callback(GstBus* bus, GstMessage* message, void* data)
+{
+  Gst::Bus::SlotMessageSync* the_slot = static_cast<Gst::Bus::SlotMessageSync*>(data);
+
+  try
+  {
+    return static_cast<GstBusSyncReply>((*the_slot)(Glib::wrap(bus, true), Glib::wrap(message, true)));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return GST_BUS_PASS;
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+guint Bus::add_watch(const SlotMessage& slot, int priority)
+{
+  //Create a copy of the slot. A pointer to this will be passed through the callback's data parameter.
+  //It will be deleted when Bus_Message_gstreamermm_callback_destroy() is called.
+  SlotMessage* slot_copy = new SlotMessage(slot);
+  return gst_bus_add_watch_full(gobj(), priority,
+    &Bus_Message_gstreamermm_callback, slot_copy,
+    &Bus_Message_gstreamermm_callback_destroy);
+}
+
+bool Bus::remove_watch(guint id)
+{
+  return g_source_remove(id);
+}
+
+void Bus::set_sync_handler(const SlotMessageSync& slot)
+{
+  // Clear a possibly existing sync handler by calling with 0 before setting
+  // a new one (see gst_bus_set_sync_handler docs)
+  gst_bus_set_sync_handler(gobj(), 0, 0, 0);
+
+  SlotMessageSync* slot_copy = new SlotMessageSync(slot);
+  gst_bus_set_sync_handler(gobj(), &Bus_Message_Sync_gstreamermm_callback, slot_copy, &Bus_Message_gstreamermm_callback_destroy);
+}
+
+} //namespace Gst

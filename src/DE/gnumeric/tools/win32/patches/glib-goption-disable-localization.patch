@@ -1,0 +1,103 @@
+--- glib-2.43.2/glib/goption.c.orig	2014-12-14 17:46:52.000000000 -0500
++++ glib-2.43.2/glib/goption.c	2014-12-20 16:55:23.957576969 -0500
+@@ -249,6 +249,7 @@
+   guint            ignore_unknown : 1;
+   guint            strv_mode      : 1;
+   guint            strict_posix   : 1;
++  guint            delocalize     : 1;
+ 
+   GOptionGroup    *main_group;
+ 
+@@ -362,6 +363,7 @@
+   context->strict_posix = FALSE;
+   context->help_enabled = TRUE;
+   context->ignore_unknown = FALSE;
++  context->delocalize = TRUE;
+ 
+   return context;
+ }
+@@ -546,6 +548,23 @@
+   return context->strict_posix;
+ }
+ 
++void
++g_option_context_set_delocalize (GOptionContext *context,
++				 gboolean	 delocalize)
++{
++  g_return_if_fail (context != NULL);
++
++  context->delocalize = delocalize;
++}
++
++gboolean
++g_option_context_get_delocalize (GOptionContext *context)
++{
++  g_return_val_if_fail (context != NULL, FALSE);
++
++  return context->delocalize;
++}
++
+ /**
+  * g_option_context_add_group:
+  * @context: a #GOptionContext
+@@ -1262,7 +1281,7 @@
+         gchar *data;
+ 
+ #ifdef G_OS_WIN32
+-        if (!context->strv_mode)
++        if (!context->strv_mode && context->delocalize)
+           data = g_locale_to_utf8 (value, -1, NULL, NULL, error);
+         else
+           data = g_strdup (value);
+@@ -1288,7 +1307,7 @@
+         gchar *data;
+ 
+ #ifdef G_OS_WIN32
+-        if (!context->strv_mode)
++        if (!context->strv_mode && context->delocalize)
+           data = g_locale_to_utf8 (value, -1, NULL, NULL, error);
+         else
+           data = g_strdup (value);
+@@ -1327,7 +1346,7 @@
+         gchar *data;
+ 
+ #ifdef G_OS_WIN32
+-        if (!context->strv_mode)
++        if (!context->strv_mode && context->delocalize)
+           data = g_locale_to_utf8 (value, -1, NULL, NULL, error);
+         else
+           data = g_strdup (value);
+@@ -1353,7 +1372,7 @@
+         gchar *data;
+ 
+ #ifdef G_OS_WIN32
+-        if (!context->strv_mode)
++        if (!context->strv_mode && context->delocalize)
+           data = g_locale_to_utf8 (value, -1, NULL, NULL, error);
+         else
+           data = g_strdup (value);
+@@ -1413,7 +1432,7 @@
+         else if (entry->flags & G_OPTION_FLAG_FILENAME)
+           {
+ #ifdef G_OS_WIN32
+-            if (!context->strv_mode)
++            if (!context->strv_mode && context->delocalize)
+               data = g_locale_to_utf8 (value, -1, NULL, NULL, error);
+             else
+               data = g_strdup (value);
+diff -c /home/welinder/gnome/gnumeric/tools/win32/release/src/glib-2.43.2/glib/goption.h\~ /home/welinder/gnome/gnumeric/tools/win32/release/src/glib-2.43.2/glib/goption.h
+--- glib-2.43.2/glib/goption.h.orig	2014-12-14 17:46:52.000000000 -0500
++++ glib-2.43.2/glib/goption.h	2014-12-20 16:55:23.957576969 -0500
+@@ -310,6 +310,12 @@
+ GLIB_AVAILABLE_IN_ALL
+ gboolean        g_option_context_get_ignore_unknown_options (GOptionContext *context);
+ 
++GLIB_AVAILABLE_IN_ALL
++void            g_option_context_set_delocalize (GOptionContext *context,
++						 gboolean        ignore_unknown);
++GLIB_AVAILABLE_IN_ALL
++gboolean        g_option_context_get_delocalize (GOptionContext *context);
++
+ GLIB_AVAILABLE_IN_2_44
+ void            g_option_context_set_strict_posix           (GOptionContext *context,
+                                                              gboolean        strict_posix);

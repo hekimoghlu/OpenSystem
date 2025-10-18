@@ -1,0 +1,226 @@
+name: gimp-experimental
+adopt-info: gimp
+grade: devel
+base: core24
+compression: lzo
+confinement: strict
+
+platforms:
+  arm64:
+    build-on: [arm64]
+    build-for: [arm64]
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+apps:
+  gimp:
+    common-id: org.gimp.GIMP
+    command: usr/bin/gimp
+    command-chain: [command-chain/enable-plugins]
+    desktop: usr/share/applications/gimp.desktop
+    environment:
+      HOME: $SNAP_REAL_HOME
+      #Internet connection, Matting Leving support on FG select and NPU hardware support
+      LD_LIBRARY_PATH: $SNAP/gnome-platform/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libproxy:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP/npu-libs:$LD_LIBRARY_PATH
+      #JavaScript plug-ins support
+      GI_TYPELIB_PATH: $SNAP/gnome-platform/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gjs/girepository-1.0:$GI_TYPELIB_PATH
+      #AVIF, HEIC and HEJ2 plug-ins support
+      LIBHEIF_PLUGIN_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libheif/plugins
+      #PostScript plug-in support
+      GS_LIB: $SNAP/usr/share/ghostscript/10.02.1/Resource/Init
+      #Acessibility support
+      GTK_MODULES: ""
+    slots:
+      - dbus-gimp
+    plugs:
+      - cups
+      - home
+      - network
+      - removable-media
+      - intel-npu
+      - npu-libs
+      - gimp-plugins
+    extensions: [gnome]
+
+layout:
+  #FIXME: needed at runtime because babl, gegl and GIMP are not fully relocatable yet
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/babl-0.1:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/babl-0.1
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gegl-0.4:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gegl-0.4
+  /etc/gimp:
+    bind: $SNAP/etc/gimp
+
+slots:
+  dbus-gimp:
+    interface: dbus
+    bus: session
+    name: org.gimp.GIMP.UI
+
+plugs:
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
+  npu-libs:
+    interface: content
+    content: npu-libs-2404
+    target: $SNAP/npu-libs
+  gimp-plugins:
+    interface: content
+    content: gimp-plugins-3
+    target: $SNAP/gimp-plugins
+
+parts:
+  buildenv:
+    plugin: nil
+    build-environment: &SNAP_ENVIRON
+      - CLICOLOR_FORCE: '1'
+      - CFLAGS: -fdiagnostics-color=always
+      - CXXFLAGS: -fdiagnostics-color=always
+      - LD_LIBRARY_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$LD_LIBRARY_PATH
+      - GI_TYPELIB_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/girepository-1.0:$GI_TYPELIB_PATH
+      - LIBHEIF_PLUGIN_PATH: $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libheif/plugins
+      #FIXME: needed to generate splash image because babl and gegl not fully relocatable yet
+      - BABL_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/babl-0.1
+      - GEGL_PATH: $CRAFT_STAGE/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gegl-0.4
+      #FIXME: GNOME SDK is not setting this runtime var required by glib-networking test on gimp build
+      - GIO_MODULE_DIR: /snap/gnome-46-2404-sdk/current/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/gio/modules
+
+  babl:
+    source: https://gitlab.gnome.org/GNOME/babl.git
+    source-depth: 1
+    override-pull: |
+      if [ "$SNAPCRAFT_PROJECT_GRADE" != 'stable' ] && [ "$SNAPCRAFT_PROJECT_NAME" = 'gimp' ]; then
+        printf '\033[31m(ERROR)\033[0m non-tagged source can not be deployed to gimp snap. Please, change grade value to stable\n' 
+        exit 1
+      fi
+      if [ "$SNAPCRAFT_PROJECT_GRADE" != 'stable' ] && [ "$SNAPCRAFT_PROJECT_NAME" != 'gimp' ]; then
+        craftctl default
+      else
+        repo="https://gitlab.gnome.org/GNOME/$CRAFT_PART_NAME.git"
+        tag_branch=$(git ls-remote --exit-code --refs --sort=version:refname "$repo" "refs/tags/$(echo "$CRAFT_PART_NAME" | tr '[:lower:]' '[:upper:]')_[0-9]*_[0-9]*_[0-9]*" | tail -n 1 | sed 's|.*refs/tags/||')
+        git clone --branch "$tag_branch" --depth 1 "$repo" .
+      fi
+    build-environment: *SNAP_ENVIRON
+    plugin: meson
+    meson-parameters:
+      - -Dprefix=/usr
+      - -Dlibdir=lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      - -Dwith-docs=false
+      - -Dgi-docgen=disabled
+
+  gegl:
+    after:
+      - babl
+    source: https://gitlab.gnome.org/GNOME/gegl.git
+    source-depth: 1
+    override-pull: |
+      if [ "$SNAPCRAFT_PROJECT_GRADE" != 'stable' ] && [ "$SNAPCRAFT_PROJECT_NAME" = 'gimp' ]; then
+        printf '\033[31m(ERROR)\033[0m non-tagged source can not be deployed to gimp snap. Please, change grade value to stable\n' 
+        exit 1
+      fi
+      if [ "$SNAPCRAFT_PROJECT_GRADE" != 'stable' ] && [ "$SNAPCRAFT_PROJECT_NAME" != 'gimp' ]; then
+        craftctl default
+      else
+        repo="https://gitlab.gnome.org/GNOME/$CRAFT_PART_NAME.git"
+        tag_branch=$(git ls-remote --exit-code --refs --sort=version:refname "$repo" "refs/tags/$(echo "$CRAFT_PART_NAME" | tr '[:lower:]' '[:upper:]')_[0-9]*_[0-9]*_[0-9]*" | tail -n 1 | sed 's|.*refs/tags/||')
+        git clone --branch "$tag_branch" --depth 1 "$repo" .
+      fi
+    build-environment: *SNAP_ENVIRON
+    plugin: meson
+    meson-parameters:
+      - -Dprefix=/usr
+      - -Dlibdir=lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      - -Ddocs=false
+      - -Dgi-docgen=disabled
+      - -Dworkshop=true
+    build-packages:
+      - libmaxflow-dev
+      - libopenexr-dev #https://github.com/ubuntu/gnome-sdk/issues/321
+      - libsuitesparse-dev
+    stage-packages:
+      - graphviz #https://github.com/ubuntu/gnome-sdk/issues/324
+      - libmaxflow0
+      - libumfpack6
+
+  gimp:
+    after:
+      - babl
+      - gegl
+    source: .
+    source-type: local
+    override-pull: |
+      craftctl default
+      if ! git describe --tags --exact-match >/dev/null 2>&1 && [ "$SNAPCRAFT_PROJECT_NAME" = 'gimp' ]; then
+        printf '\033[31m(ERROR)\033[0m non-tagged source can not be deployed to gimp snap. Please, checkout gimp repo to a tagged commit\n' 
+        exit 1
+      fi
+      craftctl set version="$(awk -F"'" '/version:/ {print $2; exit}' $CRAFT_PART_SRC/meson.build)"
+    build-environment: *SNAP_ENVIRON
+    plugin: meson
+    meson-parameters:
+      - -Dprefix=/usr
+      - -Dlibdir=lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      - -Dgi-docgen=disabled
+      - -Drelocatable-bundle=yes
+      - -Dcheck-update=no
+      - -Denable-default-bin=enabled
+      - -Dbuild-id=org.gimp.GIMP.snapcraft.experimental
+    build-packages:
+      - bison
+      - flex
+      - libaa1-dev #https://github.com/ubuntu/gnome-sdk/issues/322
+      - libarchive-dev #https://github.com/ubuntu/gnome-sdk/issues/318
+      - libcfitsio-dev #https://github.com/ubuntu/gnome-sdk/issues/320
+      - libexpat1-dev #it is on Gnome SDK Snap but inexplicably the linker can't find it
+      - libgexiv2-dev
+      - libgs-dev
+      - libjxl-dev #https://github.com/ubuntu/gnome-sdk/issues/317
+      - libmng-dev
+      - libmypaint-dev
+      - libqoi-dev
+      - libwmf-dev
+      - libxmu-dev
+      - libxpm-dev #https://github.com/ubuntu/gnome-sdk/issues/319
+      - xsltproc
+    stage-packages:
+      - libgexiv2-2
+      - libgs10
+      - libheif-plugin-dav1d
+      - libheif-plugin-aomenc
+      - libheif-plugin-libde265
+      - libheif-plugin-x265
+      - libheif-plugin-j2kdec
+      - libheif-plugin-j2kenc
+      - libmng2
+      - libmypaint-1.5-1
+      - libwmf-0.2-7
+      - libxmu6
+      - mypaint-brushes
+      - poppler-data
+      - xdg-utils
+    override-stage: |
+      # update gimp's plugin search path so it will pick up plugins mounted over snapd's content interface
+      current_path=$(grep "# (plug-in-path" ${CRAFT_PART_INSTALL}/etc/gimp/3.0/gimprc | cut -d '"' -f2)
+      echo "(plug-in-path \"${current_path}:/snap/${SNAPCRAFT_PROJECT_NAME}/current/gimp-plugins\")" >> ${CRAFT_PART_INSTALL}/etc/gimp/3.0/gimprc
+      craftctl default
+    parse-info:
+      - usr/share/metainfo/org.gimp.GIMP.appdata.xml
+    override-prime: |
+      # get gimp icon for proper desktop integration
+      cp $CRAFT_STAGE/usr/share/icons/hicolor/scalable/apps/gimp.svg $CRAFT_PRIME/gimp
+      craftctl default
+      #https://salsa.debian.org/multimedia-team/mypaint-brushes/-/merge_requests/2
+      for myb in $(find "$CRAFT_PRIME/usr/share/mypaint-data/2.0/brushes/Dieterle" -iname "*.myb"); do
+        sed -i -e 's|surfacemap_x|gridmap_x|g' -e 's|surfacemap_y|gridmap_y|g' $myb;
+      done
+
+  command-chain-plugins:
+    plugin: dump
+    source: build/linux/snap/patches/
+    override-pull: |
+      craftctl default
+      chmod +x enable-plugins
+    organize:
+      enable-plugins: command-chain/enable-plugins

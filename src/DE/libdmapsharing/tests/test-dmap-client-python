@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+
+import gi
+import sys
+
+gi.require_version('Dmap', '4.0')
+
+from gi.repository import GObject
+from gi.repository import GLib
+from gi.repository import Dmap
+
+import testpython
+
+class TestDmapClient(GObject.GObject):
+    def __init__(self):
+        super(TestDmapClient, self).__init__()
+
+        self.factory = testpython.PyDaapRecordFactory()
+        self.db      = testpython.PyDmapDb()
+        self.browser = Dmap.MdnsBrowser.new(Dmap.MdnsServiceType.DAAP)
+
+    def start(self):
+        self.browser.connect('service-added', self.service_added_cb, None)
+        self.browser.start()
+
+    def print_record(self, id, record, user_data):
+        print('id:',            id)
+        print('  location:',    record.location)
+        print('  title:',       record.title)
+        print('  songalbum:',   record.songalbum)
+        print('  sort_album:',  record.sort_album)
+        print('  songartist:',  record.songartist)
+        print('  sort_artist:', record.sort_artist)
+        print('  songgenre:',   record.songgenre)
+        print('  format:',      record.format)
+        print('  rating:',      record.rating)
+        print('  filesize:',    record.filesize)
+        print('  duration:',    record.duration)
+        print('  track:',       record.track)
+        print('  year:',        record.year)
+        print('  firstseen:',   record.firstseen)
+        print('  mtime:',       record.mtime)
+        print('  disc:',        record.disc)
+        print('  bitrate:',     record.bitrate)
+        print('  has_video:',   record.has_video)
+        print('  mediakind:',   record.mediakind)
+        print('  songalbumid:', record.songalbumid)
+        print('  hash:',        record.hash)
+
+    def authenticate_cb(self, connection, name, session, msg, auth, retrying):
+        username = connection.get_property('username')
+        print('Require password for %s@%s: ' % (username, name), end='', file=sys.stderr)
+        password = input()
+        connection.authenticate_message(connection, session, msg, auth, password)
+
+    def connected_cb(self, connection, result, reason, user_data):
+        self.db.foreach(self.print_record, None)
+
+    def service_added_cb(self, browser, service, user_data):
+        service_name = service.get_property('service-name')
+        name         = service.get_property('name')
+        host         = service.get_property('host')
+        port         = service.get_property('port')
+
+        connection = Dmap.AvConnection.new(service_name, host, port, self.db, self.factory)
+        connection.connect('authenticate', self.authenticate_cb)
+        connection.start(self.connected_cb, self.db)
+
+client = TestDmapClient ()
+client.start ()
+GLib.MainLoop().run()

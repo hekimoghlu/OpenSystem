@@ -1,0 +1,396 @@
+/*
+  This file is part of Dconf Editor
+
+  Dconf Editor is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  Dconf Editor is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with Dconf Editor.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/*
+  THEMES HACKERS, you've got a ".dconf-editor" CSS target on the window, as all
+  the things could not be solved generically. But don't hesitate to file a bug.
+*/
+
+@import url("base-window.css");
+@import url("large-pathbar.css");
+
+/*\
+* * bookmarks
+\*/
+
+/*                     .bookmarks list > row > grid > button.circular.flat {
+  transition:min-height 0.3s, padding 0.3s, margin 0.3s;
+}
+.small-bookmarks-rows.bookmarks list > row > grid > button.circular.flat {
+  min-height:0;
+  padding-bottom:1px;
+  padding-top:1px;
+  margin-top:-2px;
+  margin-bottom:-2px;
+} */
+
+                      .bookmark          { background-repeat:no-repeat;
+                                           transition:all               0 ease,
+                                                      padding-left      0.3s,   /* small-rows; for ltr */
+                                                      margin-left       0.3s,   /* small-rows; for ltr */
+                                                      padding-right     0.3s,   /* small-rows; for rtl */
+                                                      margin-right      0.3s,   /* small-rows; for rtl */
+                                                      background-size   0.3s,   /* small-rows */
+                                                      min-height        0.3s;   /* small-rows */
+                                           background-size:1.5rem; min-height:2.6rem; }
+.small-bookmarks-rows .bookmark          { background-size:1.1rem; min-height:1.3rem; }
+
+                      .bookmark:dir(ltr) { margin-left :0.6rem; padding-left :2.2rem; margin-right:1rem; background-position:  0  center }
+                      .bookmark:dir(rtl) { margin-right:0.6rem; padding-right:2.2rem; margin-left :1rem; background-position:100% center }
+.small-bookmarks-rows .bookmark:dir(ltr) { margin-left :0.5rem; padding-left :1.7rem; }
+.small-bookmarks-rows .bookmark:dir(rtl) { margin-right:0.5rem; padding-right:1.7rem; }
+
+/* various hacks */
+
+.bookmarks separator {
+  margin-top:0;
+  margin-bottom:0;
+}
+
+/*\
+* * pending change list popover
+\*/
+
+                   .delayed-settings-popover { padding:6px; }
+
+                   .delayed-list .list-row-header { padding:5px; padding-top:10px; }
+
+                   .delayed-list          > scrolledwindow > viewport > list > row        { padding:10px; }
+                   .delayed-list          > scrolledwindow > viewport > list .key-name    { padding-bottom:5px; }
+
+                   .delayed-list:dir(ltr) > scrolledwindow > viewport > list .value-label { padding-right:6px; }
+                   .delayed-list:dir(rtl) > scrolledwindow > viewport > list .value-label { padding-left :6px; }
+
+                   .delayed-list:dir(ltr) > scrolledwindow > viewport > list .diff-bullet { padding-left :20px; padding-right:6px; }
+                   .delayed-list:dir(rtl) > scrolledwindow > viewport > list .diff-bullet { padding-right:20px; padding-left :6px; }
+.extra-thin-window .delayed-list:dir(ltr) > scrolledwindow > viewport > list .diff-bullet { padding-left : 8px; }
+.extra-thin-window .delayed-list:dir(rtl) > scrolledwindow > viewport > list .diff-bullet { padding-right: 8px; }
+
+/*\
+* * lists rows height and icon
+\*/
+
+/* row height */
+                                    .keys-list          > row         { transition:min-height 0.3s,
+                                                                                   margin-left 0.3s, margin-right 0.3s,
+                                                                                   padding-left 0.3s, padding-right 0.3s,
+                                                                                /* margin 0.3s,
+                                                                                   padding 0.3s, cause stuttering in the transition */
+                                                                                   border-radius 0.3s; }
+                                /*  .keys-list          > row:hover,
+                                    .keys-list          > row:selected{ transition:min-height 0.3s,
+                                                                                  margin 0.3s,
+                                                                                  padding 0.3s,
+                                                                                  border-radius 0.3s; } stuttering of a single row is almost bearable */
+
+                                    .keys-list          > .key-row    { min-height:4.2em; }
+                                    .keys-list          > .f-or-s-row { min-height:2.1em; }
+                                    .keys-list          > row         { margin:0;      padding-top:0.25em; padding-bottom:0.25em; }
+.large-window                       .keys-list          > row         { margin:0.25em; padding-top:0;      padding-bottom:0;      }
+
+              .small-keys-list-rows .keys-list          > .key-row    { min-height:2.5em; }
+              .small-keys-list-rows .keys-list          > .f-or-s-row { min-height:1.5em; }
+              .small-keys-list-rows .keys-list          > row         { margin:0; padding-top:0; padding-bottom:0; }
+.large-window .small-keys-list-rows .keys-list          > row         { margin:0; padding-top:0; padding-bottom:0; }
+
+    .hc-theme                       .keys-list          > row         { padding-top:0.5em; padding-bottom:0.5em; }
+    .hc-theme.large-window          .keys-list          > row         { padding-top:calc(0.25em + 1px); padding-bottom:calc(0.25em + 1px); }
+    .hc-theme .small-keys-list-rows .keys-list          > row         { padding-top:0.4em; padding-bottom:0.4em; }
+
+/* round borders for large windows */
+
+.large-window                       .keys-list          > row        { border-radius:0.5em;
+                                                                      -gtk-outline-radius:calc(0.5em - 1px); }
+.large-window .small-keys-list-rows .keys-list          > row        { border-radius:0;
+                                                                      -gtk-outline-radius:2px; /* gtk+ defaults */ }
+
+/* visual padding */
+                                    .keys-list:dir(ltr) > row > .key    > grid { padding-left: 10px; padding-right:20px; } /* cool  8-) */
+                                    .keys-list:dir(rtl) > row > .key    > grid { padding-right:10px; padding-left: 20px; }
+
+window:not(.extra-thin-window)      .keys-list:dir(ltr) > row > .key    > grid > :last-child { margin-left: 4em; }
+window:not(.extra-thin-window)      .keys-list:dir(rtl) > row > .key    > grid > :last-child { margin-right:4em; }
+
+/* technical padding: icon visual padding + icon size + some padding */
+                                    .keys-list          > row > .managed > grid  { transition:padding-left  0.3s,
+                                                                                              padding-right 0.3s; /* warning: ltr/rtl */ }
+
+                                    .keys-list:dir(ltr) > row > .managed > grid  { padding-left:  3rem; }
+              .small-keys-list-rows .keys-list:dir(ltr) > row > .managed > grid  { padding-left:  2.25rem; }
+                                    .keys-list:dir(rtl) > row > .managed > grid  { padding-right: 3rem; }
+              .small-keys-list-rows .keys-list:dir(rtl) > row > .manadeg > grid  { padding-right: 2.25rem; }
+
+/* grid spacing and padding-end */
+                                    .keys-list:dir(ltr) > row > .managed > grid > label { padding-right: 0.5em; }
+                                    .keys-list:dir(rtl) > row > .managed > grid > label { padding-left:  0.5em; }
+
+/* technical labels placing */
+                                    .keys-list          > row                   label.key-name { transition:min-width 0.3s,
+                                                                                                            font-size 0.3s; }
+
+                                    .keys-list          > row > .managed > grid > label.key-name { min-width: 222px; }
+.large-window                       .keys-list          > row > .managed > grid > label.key-name { min-width: 250px; }
+
+/* icons place */
+                                    .keys-list          > row > .managed         { background-repeat:no-repeat;
+                                                                                   transition:background-size     0.3s,
+                                                                                              background-position 0.3s; }
+
+                                    .keys-list          > row > .managed         { background-size:1.5rem; } /* ~22px usually */
+                                    .keys-list:dir(ltr) > row > .managed         { background-position:            0.75rem  center; }
+                                    .keys-list:dir(rtl) > row > .managed         { background-position:calc(100% - 0.75rem) center; }
+
+                                    .keys-list          > row > .managed.small   { background-size:1.1rem; } /* ~16px, icons base size */
+                                    .keys-list:dir(ltr) > row > .managed.small   { background-position:            0.95rem  center; }
+                                    .keys-list:dir(rtl) > row > .managed.small   { background-position:calc(100% - 0.95rem) center; }
+
+              .small-keys-list-rows .keys-list          > row > .managed         { background-size:1.1rem; } /* ~16px, icons base size */
+              .small-keys-list-rows .keys-list:dir(ltr) > row > .managed         { background-position:            0.55rem  center; }
+              .small-keys-list-rows .keys-list:dir(rtl) > row > .managed         { background-position:calc(100% - 0.55rem) center; }
+
+/* icon color */
+
+window:not(.hc-theme)             .bookmarks list > row:not(:selected),
+window:not(.hc-theme)             .keys-list      > row:not(:selected) > * { color:@theme_fg_color; }
+window:not(.hc-theme):backdrop    .bookmarks list > row:not(:selected),
+window:not(.hc-theme):backdrop    .keys-list      > row:not(:selected) > * { color:@theme_unfocused_fg_color; }
+/*                                .bookmarks list > row:selected,                                                    TODO fails
+                                  .keys-list      > row:selected       > * { color:@theme_selected_fg_color; }       to work...
+                     :backdrop    .bookmarks list > row:selected,
+                     :backdrop    .keys-list      > row:selected       > * { color:@theme_unfocused_selected_fg_color; } */
+
+/* icon choice */
+
+             row        >                .folder               { background-image:-gtk-icontheme("folder-symbolic"); }
+             row:active >                .folder               { background-image:-gtk-icontheme("folder-open-symbolic"); }
+             row        >          .erase.folder               { background-image:-gtk-icontheme("action-unavailable-symbolic"); }
+             row >                       .search               { background-image:-gtk-icontheme("edit-find-symbolic"); }
+
+          /* row >                       .config               { background-image:-gtk-icontheme("dialog-information-symbolic"); } */
+             row >                       .return               { background-image:-gtk-icontheme("edit-undo-symbolic"); }
+
+             row >                       .key.delayed,
+             row >             .dconf-key.key.delayed,
+             row >  .edited.gsettings-key.key.delayed          { background-image:-gtk-icontheme("document-open-recent-symbolic"); }
+
+             row >         .gsettings-key.key.delayed.conflict,
+             row >  .edited.gsettings-key.key.delayed.conflict { background-image:-gtk-icontheme("document-open-recent-symbolic"); }
+
+             row >         .gsettings-key.key.conflict,
+             row >  .edited.gsettings-key.key.conflict         { background-image:-gtk-icontheme("dialog-warning-symbolic"); }
+             row >         .gsettings-key.key.hard-conflict,
+             row >  .edited.gsettings-key.key.hard-conflict    { background-image:-gtk-icontheme("dialog-error-symbolic"); }
+
+             row >  .edited.gsettings-key.key                  { background-image:-gtk-icontheme("document-edit-symbolic"); }
+
+             row >             .dconf-key.key                  { background-image:-gtk-icontheme("dialog-question-symbolic"); }
+             row >       .erase.dconf-key.key.delayed          { background-image:-gtk-icontheme("user-trash-symbolic"); }
+             row >       .erase.dconf-key.key                  { background-image:-gtk-icontheme("action-unavailable-symbolic"); }
+
+/* text styling */
+
+.keys-list > row >       .erase.dconf-key.key:not(.delayed) label.key-value { font-style:italic; }
+
+.keys-list > row > :not(.erase).dconf-key.key               label.key-name,
+.keys-list > row >       .erase.dconf-key.key.delayed       label.key-name,
+.keys-list > row >  .edited.gsettings-key.key               label.key-name  { font-weight:bold; }
+
+/*\
+* * lists headers
+\*/
+
+/* .bookmarks > grid > overlay > scrolledwindow > viewport > list > row > grid > button, */
+.bookmarks > grid > overlay > scrolledwindow > viewport > list > row > grid > label,
+.delayed-settings-popover list > row > grid > label,
+.delayed-settings-popover list > row > grid > grid > label,
+.modifications-revealer button {
+  transition:all 0 ease;
+}
+
+.key-summary,
+.key-value,
+.background label {
+  transition:min-height 0.3s,
+             font-size 0.3s,
+             padding 0.3s,
+             margin 0.3s;
+}
+/* .bookmarks > grid > overlay > scrolledwindow > viewport > list > row {
+  transition:min-height 0.3s,
+             font-size 0.3s,
+             padding 0.3s,
+             margin 0.3s;
+} */
+
+.header-label {
+  margin:0.45em 0.75em 0.2em;
+  font-weight:bold;
+  transition:font-size 0.3s,
+             margin 0.3s;
+}
+
+/*\
+* * properties list
+\*/
+
+/* cool list background and padding */
+                list.properties-list {
+  background-color:initial;
+  padding:0.3em 0;
+}
+
+               list.properties-list > row {
+  padding:0;
+}
+
+/* phone mode */
+
+.extra-thin-window .properties-list > row { outline-offset:-5px; }   /* just for the left and right */
+
+                   .property-name-label {
+  margin-left :1rem;
+  margin-right:1rem;
+
+  transition:min-width     0.5s,
+             color         0.5s,
+
+             margin-top    0.3s,
+             margin-bottom 0.3s;
+
+  min-width:13rem;
+
+  margin-top   :0.6rem;
+  margin-bottom:0.6rem;
+}
+
+                               .small-keys-list-rows .property-name-label,
+window:not(.extra-thin-window) .small-keys-list-rows .property-value {
+  margin-top   :0.3rem;
+  margin-bottom:0.3rem;
+}
+
+.extra-thin-window .property-name-label {
+  min-width:0;
+}
+
+  /* see also ".greyed-label" */
+window:not(.hc-theme)                            .property-name-label          { color:@theme_fg_color; }
+  /* TODO report bug: better would be mix(@theme_fg_color,@theme_bg_color,1.5); but that renders white... */
+window:not(.hc-theme).extra-thin-window          .property-name-label          { color:mix(@theme_fg_color,@insensitive_fg_color,0.6); }
+window:not(.hc-theme)                  :backdrop .property-name-label,
+window:not(.hc-theme).extra-thin-window:backdrop .property-name-label          { color:@theme_unfocused_fg_color; }
+window:not(.hc-theme)                            .property-name-label:disabled,
+window:not(.hc-theme).extra-thin-window          .property-name-label:disabled { color:@insensitive_fg_color; }
+window:not(.hc-theme)                  :backdrop .property-name-label:disabled,
+window:not(.hc-theme).extra-thin-window:backdrop .property-name-label:disabled { color:@unfocused_insensitive_color; }
+
+                                         .property-value          { margin-left  : 1.0rem;
+                                                                    margin-right : 1.0rem;
+                                                                    transition:margin-top    0.3s,   /* both */
+                                                                               margin-bottom 0.3s,   /* small-keys-list-rows */
+                                                                               margin-left   0.5s,   /* extra-thin-window */
+                                                                               margin-right  0.5s;   /* extra-thin-window */
+
+                                                                    margin-top   : 0.6rem;
+                                                                    margin-bottom: 0.6rem; }
+
+.extra-thin-window                       .property-value          { margin-top   : 2.2rem; }
+.extra-thin-window .small-keys-list-rows .property-value          { margin-top   : 1.9rem; }
+
+                                         .property-value:dir(ltr) { margin-left  :15.0rem; }
+                                         .property-value:dir(rtl) { margin-right :15.0rem; }
+.extra-thin-window                       .property-value:dir(ltr) { margin-left  : 1.0rem; }
+.extra-thin-window                       .property-value:dir(rtl) { margin-right : 1.0rem; }
+
+                   .properties-list    .property-warning          { padding-top:0.6rem;
+                                                                    transition:margin-left  0.3s, /* for ltr */
+                                                                               margin-right 0.3s; /* for rtl */ }
+                   .properties-list    .property-warning:dir(ltr) { margin-left :-7.5rem; }
+                   .properties-list    .property-warning:dir(rtl) { margin-right:-7.5rem; }
+.extra-thin-window .properties-list    .property-warning:dir(ltr) { margin-left : 0; }
+.extra-thin-window .properties-list    .property-warning:dir(ltr) { margin-right: 0; }
+
+.key-editor-child-array {
+  min-height:10em;
+}
+
+.key-editor-child-array textview.view {
+  padding:0.2em 0.3em;
+}
+
+/*\
+* * search entry
+\*/
+
+.extra-thin-window .search-entry          > image {
+  padding-left :0;
+  padding-right:0;
+  min-width:0;
+}
+
+/* hide search image */
+.extra-thin-window .search-entry:dir(rtl) > image.right,
+.extra-thin-window .search-entry:dir(ltr) > image.left {
+  margin-left :0;
+  margin-right:0;
+}
+
+/* clear-text button: give more place for text */
+.extra-thin-window .search-entry:dir(ltr) > image.right{
+  margin-right:0;
+  margin-left :4px;     /* instead of 6px */
+}
+.extra-thin-window .search-entry:dir(rtl) > image.left {
+  margin-left :0;
+  margin-right:4px;     /* instead of 6px */
+}
+
+/* allows 3px less */
+.extra-thin-window .search-entry:dir(ltr) {
+  padding-left :6px;    /* instead of 8px */
+  padding-right:7px;    /* instead of 8px */
+}
+.extra-thin-window .search-entry:dir(rtl) {
+  padding-right:6px;    /* instead of 8px */
+  padding-left :7px;    /* instead of 8px */
+}
+
+/*\
+* * text formatting
+\*/
+
+.greyed-label {
+  color:@theme_fg_color;
+}
+.greyed-label:backdrop {
+  color:@theme_unfocused_fg_color;
+}
+.greyed-label:disabled {
+  color:@insensitive_fg_color;
+}
+.greyed-label:disabled:backdrop {
+  color:@unfocused_insensitive_color;
+}
+
+.warning-label {
+  margin-right:8em;
+  margin-left:8em;
+}
+
+/*\
+* * the end
+\*/

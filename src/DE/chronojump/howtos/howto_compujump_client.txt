@@ -1,0 +1,101 @@
+----
+2018 february
+- mono 3.2.8 does not work on compujumps by multiple gtk problems. Updated using mono from website. Version: 5.8.0
+- apt-get install mono-devel mono-complete
+- compilation ok, but on autogen there were problems with System.Data.dll 4.0, but it was impossible to fix. So this have been done:
+	https://github.com/aegif/CmisSync/issues/739
+----
+
+Howto run compujump client.
+Instructions for 1.7.0-390.
+Has to be done on this exact order:
+
+0) Have a Linux machine
+1) Assign permissions for Chronopic (changing 'username' for desired username)
+
+# usermod -a -G dialout username
+
+Close the session (reboot?) in order to ensure that the permissions are assigned. Check with:
+
+$groups
+
+2) Install Chronojump from GIT: http://chronojump.org/en/linux-compile/
+3) Connect RFID
+4) Open Chronojump (database will be created) and identify RFID device
+5) Connect Encoder or photocels
+6) Go to Jumps / device and identify device
+7) On encoder clients go to encoder... Select desired encoder configuration (need a user for this!)
+8) Close Chronojump
+
+9) Install sqlite3
+10) delete encoder exercises!!! important to not have conflict with upcoming exercises from server
+
+11) Delete existing test types:
+
+$ sqlite3 .local/share/Chronojump/chronojump.db
+
+11a) if the station will be encoder:
+delete from encoderExercise;
+
+note also there should not be encoder tests captured, if you are unsure:
+
+delete from encoder;
+delete from uploadEncoderDataTemp;
+
+11b) if the station will be runInterval:
+delete runInterval exercises. And Add these:
+
+delete from runIntervalType;
+insert into runIntervalType VALUES(1, "5 m", 5.0, 1, 1, 0, "", "");
+insert into runIntervalType VALUES(2, "10 m", 5.0, 1, 2, 0, "", "");
+insert into runIntervalType VALUES(3, "15 m", 5.0, 1, 3, 0, "", "");
+insert into runIntervalType VALUES(4, "20 m", 5.0, 1, 4, 0, "", "");
+
+note also there should not be run interval tests captured, if you are unsure:
+
+delete from runInterval
+delete from uploadSprintDataTemp;
+
+12) also ensure there are no persons
+
+select * from person77;
+select * from personSession77;
+
+can be deleted with:
+
+delete from person77;
+delete from personSession77;
+
+.quit
+
+13) Copy this chronojump_config.txt on .local/share/Chronojump
+
+#Session modes:
+SessionMode=MONTHLY
+
+#Use Compujump
+Compujump=TRUE
+
+#if is Django uncomment this line:
+CompujumpDjango=TRUE
+
+CompujumpServerURL=http://127.0.0.1:8080
+CompujumpStationID=1
+
+#CompujumpStationMode, modes:
+#RUNSINTERVALLIC, POWERGRAVITATORY, POWERINERTIAL
+#will start on this mode and could not be changed
+CompujumpStationMode=POWERGRAVITATORY
+
+14) Change CompujumpServerURL or CompujumpStationID or CompujumpStationMode.
+    Remember SPACES are NOT allowed immediatelly before or after '='
+15) Open Chronojump
+16) Select preferences (Encoder capture main variable (mean speed?), font size..)
+
+17) Config client backups
+     mkdir /home/chronojump/backups
+     mkdir /home/chronojump/backups/Chronojump
+     crontab -e
+     0 3 * * * rsync -a -r --delete /home/chronojump/.local/share/Chronojump/ /home/chronojump/backups/Chronojump/
+
+18) Config mail sending (config_mail.sh)

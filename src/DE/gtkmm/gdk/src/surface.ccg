@@ -1,0 +1,55 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gdk/gdk.h>
+#include <gdkmm/cairoutils.h>
+#include <gdkmm/contentprovider.h>
+#include <gdkmm/cursor.h>
+#include <gdkmm/device.h>
+#include <gdkmm/cairocontext.h>
+#include <gdkmm/glcontext.h>
+#include <gdkmm/frameclock.h>
+#include <gdkmm/monitor.h>
+#include <gdkmm/dragsurfaceimpl.h>
+#include <gdkmm/popupsurfaceimpl.h>
+#include <gdkmm/toplevelsurfaceimpl.h>
+
+using CairoRegion = cairo_region_t;
+
+namespace Gdk
+{
+
+// Custom wrap_new() because we want to create
+// a DragSurfaceImpl if the underlying C class implements the GdkDragSurface interface,
+// a PopupSurfaceImpl if the underlying C class implements the GdkPopup interface,
+// a ToplevelSurfaceImpl if the underlying C class implements the GdkToplevel interface.
+Glib::ObjectBase* Surface_Class::wrap_new(GObject* object)
+{
+  if (GDK_IS_DRAG_SURFACE(object))
+     return new DragSurfaceImpl((GdkSurface*)object);
+  if (GDK_IS_POPUP(object))
+     return new PopupSurfaceImpl((GdkSurface*)object);
+  if (GDK_IS_TOPLEVEL(object))
+     return new ToplevelSurfaceImpl((GdkSurface*)object);
+  return new Surface((GdkSurface*)object);
+}
+
+void Surface::set_cursor()
+{
+  gdk_surface_set_cursor(gobj(), nullptr);
+}
+
+} // namespace Gdk

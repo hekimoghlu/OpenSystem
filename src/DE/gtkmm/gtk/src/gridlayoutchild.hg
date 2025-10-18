@@ -1,0 +1,78 @@
+/* Copyright (C) 2019 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/layoutchild.h>
+#include <gtk/gtk.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/layoutchild_p.h)
+
+namespace Gtk
+{
+
+/** Layout properties for children of Gtk::GridLayout.
+ *
+ * %Gtk::GridLayoutChild instances are created by Gtk::GridLayout.
+ * To create or get a %Gtk::GridLayoutChild instance, call Gtk::LayoutManager::get_layout_child()
+ * from a Gtk::GridLayout instance.
+ * @code
+ * Glib::RefPtr<Gtk::LayoutChild> layout_child =
+ *   grid_layout->get_layout_child(child);
+ * Glib::RefPtr<Gtk::GridLayoutChild> grid_layout_child =
+ *   std::dynamic_pointer_cast<Gtk::GridLayoutChild>(layout_child);
+ * if (grid_layout_child)
+ *   // Do something with grid_layout_child
+ * @endcode
+ *
+ * @newin{3,96}
+ */
+class GTKMM_API GridLayoutChild : public LayoutChild
+{
+  _CLASS_GOBJECT(GridLayoutChild, GtkGridLayoutChild, GTK_GRID_LAYOUT_CHILD, LayoutChild, GtkLayoutChild, , , GTKMM_API)
+  _DO_NOT_DERIVE_GTYPE dnl// GtkGridLayoutChild is a final type
+  _ABI_AS_WITH_DERIVED_GTYPE dnl// Remove when we can break ABI
+  _STRUCT_NOT_HIDDEN
+
+protected:
+  /** Default constructor.
+   *
+   * There is no create() method that corresponds to this constructor.
+   * To create or get a %Gtk::GridLayoutChild instance, call Gtk::LayoutManager::get_layout_child()
+   * from a Gtk::GridLayout instance.
+   */
+  _CTOR_DEFAULT
+
+public:
+  // No create() method. Use Gtk::LayoutManager::get_layout_child().
+
+  _WRAP_METHOD(void set_row(int row), gtk_grid_layout_child_set_row)
+  _WRAP_METHOD(int get_row() const, gtk_grid_layout_child_get_row)
+  _WRAP_METHOD(void set_column(int column), gtk_grid_layout_child_set_column)
+  _WRAP_METHOD(int get_column() const, gtk_grid_layout_child_get_column)
+  _WRAP_METHOD(void set_column_span(int span), gtk_grid_layout_child_set_column_span)
+  _WRAP_METHOD(int get_column_span() const, gtk_grid_layout_child_get_column_span)
+  _WRAP_METHOD(void set_row_span(int span), gtk_grid_layout_child_set_row_span)
+  _WRAP_METHOD(int get_row_span() const, gtk_grid_layout_child_get_row_span)
+
+  _WRAP_PROPERTY("column", int)
+  _WRAP_PROPERTY("row", int)
+  _WRAP_PROPERTY("column-span", int)
+  _WRAP_PROPERTY("row-span", int)
+
+  // There are no signals or vfuncs.
+};
+
+} // namespace Gtk

@@ -1,0 +1,132 @@
+/* Copyright (C) 2006 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <vector>
+
+#include <giomm/icon.h>
+#include <giomm/appinfo.h>
+#include <glibmm/datetime.h>
+#include <gtk/gtk.h>
+
+_DEFS(gtkmm,gtk)
+
+namespace Gtk
+{
+
+/** Contains information found when looking up an entry of the
+ * recently used files list.
+ *
+ * @ingroup RecentFiles
+ */
+class GTKMM_API RecentInfo final
+{
+  _CLASS_OPAQUE_REFCOUNTED(RecentInfo, GtkRecentInfo, NONE, gtk_recent_info_ref, gtk_recent_info_unref, GTKMM_API)
+  _IGNORE(gtk_recent_info_ref, gtk_recent_info_unref)
+public:
+
+  _WRAP_METHOD(Glib::ustring get_uri() const, gtk_recent_info_get_uri)
+  _WRAP_METHOD(Glib::ustring get_display_name() const, gtk_recent_info_get_display_name)
+  _WRAP_METHOD(Glib::ustring get_description() const, gtk_recent_info_get_description)
+  _WRAP_METHOD(Glib::ustring get_mime_type() const, gtk_recent_info_get_mime_type)
+
+#m4 _CONVERSION(`GDateTime*',`Glib::DateTime',`Glib::wrap($3, true)')
+  _WRAP_METHOD(Glib::DateTime get_added() const, gtk_recent_info_get_added)
+  _WRAP_METHOD(Glib::DateTime get_modified() const, gtk_recent_info_get_modified)
+  _WRAP_METHOD(Glib::DateTime get_visited() const, gtk_recent_info_get_visited)
+
+  _WRAP_METHOD(bool get_private_hint() const, gtk_recent_info_get_private_hint)
+
+  #m4 _CONVERSION(`GAppInfo*',`Glib::RefPtr<Gio::AppInfo>',`Glib::wrap($3)')
+  _WRAP_METHOD(Glib::RefPtr<Gio::AppInfo> create_app_info(const Glib::ustring& app_name), gtk_recent_info_create_app_info, errthrow)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_recent_info_get_application_info)
+  bool get_application_info(const Glib::ustring& app_name, std::string& app_exec,
+                            guint& count, Glib::DateTime& stamp) const;
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_recent_info_get_applications)
+  std::vector<Glib::ustring> get_applications() const;
+
+  _WRAP_METHOD(Glib::ustring last_application() const, gtk_recent_info_last_application)
+  _WRAP_METHOD(bool has_application(const Glib::ustring& app_name) const,
+               gtk_recent_info_has_application)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_recent_info_get_groups)
+  std::vector<Glib::ustring> get_groups() const;
+
+  _WRAP_METHOD(bool has_group(const Glib::ustring& group_name) const, gtk_recent_info_has_group)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::Icon> get_gicon(),
+               gtk_recent_info_get_gicon, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::Icon> get_gicon() const,
+               gtk_recent_info_get_gicon, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::ustring get_short_name() const, gtk_recent_info_get_short_name)
+  _WRAP_METHOD(Glib::ustring get_uri_display() const, gtk_recent_info_get_uri_display)
+
+  _WRAP_METHOD(int get_age() const, gtk_recent_info_get_age)
+  _WRAP_METHOD(bool is_local() const, gtk_recent_info_is_local)
+  _WRAP_METHOD(bool exists() const, gtk_recent_info_exists)
+  _WRAP_METHOD(bool equal(const Glib::RefPtr<const RecentInfo>& info_b) const, gtk_recent_info_match)
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+struct RecentInfoTraits
+{
+  typedef Glib::RefPtr<RecentInfo> CppType;
+  typedef const GtkRecentInfo* CType;
+  typedef GtkRecentInfo* CTypeNonConst;
+
+  static inline CType to_c_type(const CppType& obj) { return Glib::unwrap(obj); }
+  static inline CType to_c_type(const CType& obj) { return obj; }
+  static CppType to_cpp_type(const CType& obj);
+  static inline void release_c_type(const CType& obj)
+    { gtk_recent_info_unref(const_cast<CTypeNonConst>(obj)); }
+};
+#endif /* !DOXYGEN_SHOULD_SKIP_THIS */
+
+/** @relates Gtk::RecentInfo */
+inline bool operator==(const Glib::RefPtr<const RecentInfo>& lhs, const Glib::RefPtr<const RecentInfo>& rhs)
+  { return lhs->equal(rhs); }
+
+/** @relates Gtk::RecentInfo */
+inline bool operator!=(const Glib::RefPtr<const RecentInfo>& lhs, const Glib::RefPtr<const RecentInfo>& rhs)
+  { return !lhs->equal(rhs); }
+
+} // namespace Gtk
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+namespace Glib
+{
+// This is needed so Glib::RefPtr<Gtk::RecentInfo> can be used with
+// Glib::Value and Gtk::TreeModelColumn:
+template <>
+class GTKMM_API Value< Glib::RefPtr<Gtk::RecentInfo> > : public ValueBase_Boxed
+{
+public:
+  typedef Glib::RefPtr<Gtk::RecentInfo> CppType;
+  typedef GtkRecentInfo* CType;
+
+  static GType value_type();
+
+  void set(const CppType& data);
+  CppType get() const;
+};
+
+} // namespace Glib
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */

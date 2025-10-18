@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2009-03-20 ude: fixed parameter description
+  2007-08-20 AntI: added 'es'
+  2007-04-14 KoSt: added 'no'
+  2005-12-07 replaced <simplesect> by <sect3> by lexa
+  2005-09-30 de replaced informalfigure by axel.wernicke
+  2005-08-30 de added by axel.wernicke
+-->
+<sect2 id="plug-in-nl-filter">
+  <title>NL Filter</title>
+
+  <indexterm>
+    <primary>Filters</primary>
+    <secondary>Enhance</secondary>
+    <tertiary>NL filter</tertiary>
+  </indexterm>
+  <indexterm>
+    <primary>NL filter</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Nonlinear filter</primary>
+  </indexterm>
+
+  <sect3>
+    <title>Overview</title>
+    <figure>
+      <title>Example for the NL-Filter</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/taj_orig.jpg"/>
+        </imageobject>
+        <caption>
+          <para>Original image</para>
+        </caption>
+      </mediaobject>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="JPG"
+            fileref="images/filters/examples/enhance-taj-nl-filter.jpg"/>
+        </imageobject>
+        <caption>
+          <para><quote>NL Filter</quote> applied</para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      NL means <quote>Non Linear</quote>. Derived from the Unix
+      <command>pnmnlfilt</command> program, it joins smoothing, despeckle
+      and sharpen enhancement functions. It works on the whole layer, not
+      on the selection.
+    </para>
+    <para>
+      This is something of a swiss army knife filter. It has 3 distinct
+      operating modes. In all of the modes each pixel in the image is examined
+      and processed according to it and its surrounding pixels values. Rather
+      than using 9 pixels in a 3×3 block, it uses a hexagonal block whose
+      size can be set with the Radius option.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Activating the Filter</title>
+    <para>
+      This filter is found in the main menu under
+      <menuchoice>
+        <guimenu>Filters</guimenu>
+        <guisubmenu>Enhance</guisubmenu>
+        <guimenuitem>NL Filter…</guimenuitem>
+      </menuchoice>.
+    </para>
+    <para>
+      The filter does not work if the active layer has an alpha channel. Then
+      the menu entry is disabled.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title><quote>NL Filter</quote> options</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/filters/enhance/nl-filter.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <variablelist>
+      <varlistentry>
+        <term>Preview</term>
+        <listitem>
+          <para>
+            When checked, parameter setting results are interactively
+            displayed in preview.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Filter</term>
+        <listitem>
+          <para>
+            The <link linkend="plug-in-nl-filter-mode">Operating Mode</link>
+            is described below.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Alpha</term>
+        <listitem>
+          <para>
+            Controls the amount of the filter to apply. Valid range is
+            0.00-1.00. The exact meaning of this value depends on the selected
+            operating mode. Note that this parameter is related to but not
+            the same as the <parameter>alpha</parameter> parameter used in the
+            <command>pnmnlfilt</command> program.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Radius</term>
+        <listitem>
+          <para>
+            Controls the size of the effective sampling region around each
+            pixel. The range of this value is 0.33-1.00, where 0.33 means just
+            the pixel itself (and thus the filter will have no effect), and
+            1.00 means all pixels in the 3×3 grid are sampled.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3 id="plug-in-nl-filter-mode">
+    <title>Operating Modes</title>
+    <para>
+      This filter can perform several distinct functions:
+    </para>
+    <variablelist>
+      <varlistentry>
+        <term>Alpha trimmed mean</term>
+        <listitem>
+          <para>
+            The value of the center pixel will be replaced by the mean of
+            the 7 hexagon values, but the 7 values are sorted by size and
+            the top and bottom <parameter>Alpha</parameter> portion of the 7
+            are excluded from the mean. This implies that an
+            <parameter>Alpha</parameter> value of 0.0 gives the same sort of
+            output as a normal convolution (i.e. averaging or smoothing
+            filter), where <parameter>Radius</parameter> will determine the
+            <quote>strength</quote> of the filter. A good value to start from
+            for subtle filtering is
+            <parameter>Alpha</parameter> = 0.0,
+            <parameter>Radius</parameter> = 0.55.
+            For a more blatant effect, try
+            <parameter>Alpha</parameter> = 0.0 and
+            <parameter>Radius</parameter> = 1.0.
+          </para>
+          <para>
+            An <parameter>Alpha</parameter> value of 1.0 will cause the
+            median value of the 7 hexagons to be used to replace the center
+            pixel value. This sort of filter is good for eliminating
+            <quote>pop</quote> or single pixel noise from an image without
+            spreading the noise out or smudging features on the image.
+            Judicious use of the <parameter>Radius</parameter> parameter will
+            fine tune the filtering.
+          </para>
+          <para>
+            Intermediate values of <parameter>Alpha</parameter> give effects
+            somewhere between smoothing and "pop" noise reduction. For subtle
+            filtering try starting with values of
+            <parameter>Alpha</parameter> = 0.8,
+            <parameter>Radius</parameter> = 0.6.
+            For a more blatant effect try
+            <parameter>Alpha</parameter> = 1.0,
+            <parameter>Radius</parameter> = 1.0 .
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Optimal estimation</term>
+        <listitem>
+          <para>
+            This type of filter applies a smoothing filter adaptively over
+            the image. For each pixel the variance of the surrounding
+            hexagon values is calculated, and the amount of smoothing is
+            made inversely proportional to it. The idea is that if the
+            variance is small then it is due to noise in the image, while if
+            the variance is large, it is because of <quote>wanted</quote>
+            image features.
+            As usual the <parameter>Radius</parameter> parameter controls
+            the effective radius, but it probably advisable to leave  the
+            radius between 0.8 and 1.0 for the variance calculation to be
+            meaningful. The <parameter>Alpha</parameter> parameter sets the
+            noise threshold, over which less smoothing will be done. This
+            means that small values of <parameter>Alpha</parameter> will
+            give the most subtle filtering effect, while large values will
+            tend to smooth all parts of the image. You could start with
+            values like
+            <parameter>Alpha</parameter>  = 0.2,
+            <parameter>Radius</parameter> = 1.0,
+            and try increasing or decreasing the
+            <parameter>Alpha</parameter> parameter to  get the desired
+            effect. This type of filter is best for filtering out dithering
+            noise in both bitmap and color images.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Edge enhancement</term>
+        <listitem>
+          <para>
+            This is the opposite type of filter to the smoothing filter. It
+            enhances edges. The <parameter>Alpha</parameter> parameter
+            controls the amount of edge enhancement, from subtle (0.1) to
+            blatant (0.9). The <parameter>Radius</parameter> parameter
+            controls the effective radius as usual, but useful values are
+            between 0.5 and 0.9. Try starting with values of
+            <parameter>Alpha</parameter> = 0.3,
+            <parameter>Radius</parameter> = 0.8.
+        </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+    <simplesect>
+      <title>Combination use</title>
+      <para>
+        The various operating modes can be used one after the other to get the
+        desired result. For instance to turn a monochrome dithered image into
+        grayscale image you could try one or two passes of the smoothing
+        filter, followed by a pass of the optimal estimation filter, then some
+        subtle edge enhancement. Note that using edge enhancement is only
+        likely to be useful after one of the  non-linear filters (alpha
+        trimmed mean or optimal estimation filter), as edge enhancement is the
+        direct opposite of smoothing.
+      </para>
+      <para>
+        For reducing color quantization noise in images (i.e. turning .gif
+        files back into 24 bit files) you could try a pass of the optimal
+        estimation filter (<parameter>Alpha</parameter> = 0.2,
+        <parameter>Radius</parameter> = 1.0), a pass of the median filter
+        (<parameter>Alpha</parameter> = 1.0, <parameter>Radius</parameter> =
+        0.55), and possibly a pass of the edge enhancement filter. Several
+        passes of the optimal estimation filter with declining
+        <parameter>Alpha</parameter> values are more effective than a single
+        pass with a large <parameter>Alpha</parameter> value. As usual, there
+        is a trade-off between filtering effectiveness and losing detail.
+        Experimentation is encouraged.
+      </para>
+    </simplesect>
+  </sect3>
+</sect2>

@@ -1,0 +1,257 @@
+2003-09-10  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.90
+
+2003-09-09  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=121873
+	* src/format.c (style_format_number) : g_string_append (str, str->str)
+          is a bad idea.
+	(style_format_delocalize) : handle "" cleanly.
+	* src/formats.c (cell_format_classify) : ditto.
+
+2003-09-08  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-graph.c (cb_save_as) : Use gsf more extensively.
+	  Use the new SVG renderer.
+
+2003-09-07  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Bump version reqs to at least gnome-2.0 to make
+	  things nice and clear.
+
+2003-09-06  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/sort.c (sort_permute): move comments
+
+2003-09-06  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (dependent_clear_dynamic_deps) : Just remove the
+	  DynamicDep record from the hash that will free it as necessary.
+	(dynamic_dep_free) : free the containing DynDep too, not just content.
+	(invalidate_refs) : Ignore dynamic deps, we could not delete them with
+	  things disconnected.
+	(cb_find_dynamic_deps) : new.
+	(dep_hash_destroy) : split out to cleanly handle dynamic deps
+	(do_deps_destroy) : Collect dyn deps before invalidating, then queue
+	  any of them that are external for recalc.
+
+2003-09-06  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-graph.c (sheet_object_graph_populate_menu):
+	Push "Save as image" down to 2nd place.
+
+2003-09-03  Jody Goldberg <jody@gnome.org>
+
+	* src/format.c (format_value_gstring) : be more expansive about
+	  exactly what constitutes 'General'
+
+	* src/graph.c (gnm_go_data_vector_load_values) : handle empty sheets.
+
+	* src/ranges.c (range_normalize) : minor optimization
+
+2003-09-03  Morten Welinder  <terra@gnome.org>
+
+	* src/stf.c (stf_open_and_read): Fix zero-size check.
+
+	* src/number-match.c (compute_value): Handle negative hh:mm.
+
+2003-09-02  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (function_call_with_list) : always pass something to
+	  optional args with supplied values, even if the supplied value is
+	  empty.
+
+2003-09-01  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_graph_dim_editor_update) : If the
+	  parse fails, popup an error for vectors, and fall back to a string
+	  for scalars.
+
+2003-09-01  Metin Amiroff  <metin@karegen.com>
+
+	configure.in: Added "az" in ALL_LINGUAS.
+
+2003-08-30  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-graph.c (cb_save_as): New. Save graph as image.
+	(sheet_object_graph_populate_menu): New. Add 'Save as image' menu
+	item.
+	(sheet_object_graph_class_init): Use
+	sheet_object_graph_populate_menu.
+
+2003-08-27  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnm_pixbuf_intelligent_scale): use height and 
+	  width arguments
+	* src/gui-util.h (gnm_pixbuf_intelligent_scale): ditto
+	* src/workbook-control-gui.c: add #include
+
+2003-08-27  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_mode_edit) : reset the menu/toolbar.
+	(scg_mode_edit_object) : ditto.
+	(scg_mode_create_object) : ditto.
+
+	* src/workbook-control-gui.c (wbcg_sheet_to_page_index) : handle
+	  invocation before there is a notebook.
+	(wbcg_menu_state_update) : enable and disable clipboard operations
+	  depending on object editing state.
+	(cb_edit_cut) : remove asymetry of deleting during the cut command.
+	(workbook_create_standard_toolbar) : store the clipboard toolbar
+	  widgets for the non-bonobo case.
+	(workbook_control_gui_init) : store the clipboard menu items for the
+	  non-bonobo case.
+
+	* src/dependent.c (dependent_link) : keep a tail pointer and append
+	  new dependents to the list.  This is a slightly better fit to the
+	  common idiom of starting at the top and working down, and papers
+	  over the most common case of ultra deep recursion blowing the stack.
+	  We'll need to solve this more rigorously during 1.3.
+	(dependent_unlink) : ditto.
+	(gnm_dep_container_new) : ditto.
+
+2003-08-27  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnm_pixbuf_intelligent_scale): new
+	* src/gui-util.h (gnm_pixbuf_intelligent_scale): new
+
+2003-08-26  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : remove duplicate call to AM_PROG_LIBTOOL
+
+	* src/expr.c (cellrange_relocate) : don't confuse Sheet:NULL as a 3d
+	  reference.
+
+2003-08-25  Jody Goldberg <jody@gnome.org>
+
+	* schemas/gnumeric-general.schemas.in : Use 'Sans Regular' as the
+	  default default font, jsut Sans confuses gnome-print
+
+2003-08-26  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_dialog_image_file_selection): deleted
+	(selchanged_foreach) : deleted
+	(cb_file_open_selchanged) : deleted
+	* src/gui-util.h (gnumeric_dialog_image_file_selection): deleted
+	* src/workbook-control-gui.c (cb_insert_image):  use 
+	  preview_file_selection_new and not
+	  gnumeric_dialog_image_file_selection
+	
+2003-08-25  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_dialog_file_selection):
+	  watch for NULL wbcg
+	
+2003-08-25  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (selchanged_foreach): new
+	(cb_file_open_selchanged): new
+	(gnumeric_dialog_image_file_selection): new
+	* src/gui-util.h (gnumeric_dialog_image_file_selection): new
+	* src/workbook-control-gui.c (cb_insert_image): use 
+	  gnumeric_dialog_image_file_selection
+
+2003-08-25  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/GNOME_Gnumeric.xml: enable DataImportText
+	* src/gui-file.c (gui_file_open): add format argument
+	(file_opener_find_by_id): new
+	* src/gui-file.h (gui_file_open): add format argument 
+	* src/workbook-control-gui.c: enable DataImportText
+	(cb_file_open): add argument to gui_file_open
+	(cb_data_import_text): enable and implement
+
+2003-08-24  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=120562
+	* src/style.h (DEFAULT_FONT): change to "Sans Regular"
+
+2003-08-24  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/sheet-object-graph.c (cmd_so_graph_config): use
+	  sheet_object_graph_user_config_t
+	(sheet_object_graph_user_config_free_data): new
+	(sheet_object_graph_user_config): use gclosure
+	(sheet_object_graph_guru): ditto
+	* src/sheet-object-graph.h (sheet_object_graph_guru): use gclosure
+	* src/workbook-control-gui.c (cb_launch_chart_guru): use gclosure
+
+2003-08-24  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=120541
+	* src/sheet.c (sheet_delete_cols) : we were only flagging the residual
+	  that moved as having changed, not the source.
+	(sheet_delete_rows) : ditto.
+
+2003-08-24  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_so_graph_config_redo) : no need to diddle with
+	  references.  set_gog adds and unrefs as necessary internally.
+	(cmd_so_graph_config_undo) : all we need to do is watch our
+	  references.
+
+	* src/sheet-object-graph.c (sheet_object_graph_set_gog) : beef this up
+	  a bit to handle connecting and disconnecting the data.  Remove the
+	  'attach_signals' flag.  That exposes more implementation than I'm
+	  comfortable with.
+	(sog_datas_set_sheet) : new.  Split out of new.  Split out of.
+	(sheet_object_graph_set_sheet) : here.
+	(sheet_object_graph_remove_from_sheet) : and here.
+
+2003-08-23  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_so_graph_config_redo): use 
+	  sheet_object_graph_set_gog
+	(cmd_so_graph_config_undo): ditto
+	(cmd_so_graph_config): initialize me->first_time
+	* src/sheet-object-graph.h (sheet_object_graph_reassign_gog):
+	  export sheet_object_graph_set_gog instead
+	(sheet_object_graph_reassign_gog): delete
+	(sheet_object_graph_set_gog): allow this function to be called
+	  even with a second (or later) graph.
+
+2003-08-23  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/commands.c 
+	(cmd_reorganize_sheets_delete_get_this_sheet_info): do not
+	  exclude graphs
+	
+2003-08-23  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_so_graph_config*): new
+	* src/commands.h (cmd_so_graph_config): new
+	* src/sheet-object-graph.c (sheet_object_graph_reassign_gog): new
+	(cb_update_graph): use cmd_so_graph_config
+	(sheet_object_graph_user_config): store wbcg on sheetobject
+	* src/sheet-object-graph.h (sheet_object_graph_reassign_gog): new
+
+2003-08-23  Jody Goldberg <jody@gnome.org>
+
+	* src/formats.c : Use english form of plural, not polish for Zlotys
+
+	* src/workbook-control-gui.c (cb_edit_cut) : if we're goign to delete
+	  an object don't cut the selection too.
+
+2003-08-22  Jody Goldberg <jody@gnome.org>
+
+	* src/graph.c (gnm_go_data_get_dep) : new.
+	  Use it to clear up all sorts of related concepts.
+	(gnm_go_data_dup) : new.
+
+2003-08-22  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet): Support
+	End+Home.
+
+2003-08-21  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=120436
+	* schemas/Makefile.am : simplfy.
+	* gnumeric.spec.in : the other half of the schema installation
+	  delete bogus gal req
+
+2003-08-21  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump to 1.1.90 in prep for beta status
+	  next week.

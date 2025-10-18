@@ -1,0 +1,69 @@
+stages:
+  - build
+  - abi
+
+variables:
+  FEDORA_DEPENDENCIES:
+    gettext-devel
+    gobject-introspection-devel
+    gtk-doc
+    util-linux
+    texinfo-tex
+  FEDORA_DEPENDENCIES_ABI_CHECK:
+    libabigail
+    intltool
+  LAST_ABI_BREAK: "d4ac1eda0752d559db8737773d6894aadc700ce3"
+  UBUNTU_DEPENDENCIES:
+    automake
+    autopoint
+    gettext
+    gtk-doc-tools
+    libgirepository1.0-dev
+    libtool
+    make
+    texinfo
+    texlive
+
+build-fedora:
+  image: fedora:latest
+  stage: build
+  except:
+    - tags
+  before_script:
+    - dnf update -y --nogpgcheck
+    - dnf install -y --nogpgcheck $FEDORA_DEPENDENCIES
+  script:
+    - mkdir _build
+    - cd _build
+    - ../autogen.sh --disable-dependency-tracking
+    - make
+    - make install
+    - make distcheck
+
+abi-fedora:
+  image: fedora:latest
+  stage: abi
+  needs:
+    - build-fedora
+  before_script:
+    - dnf update -y --nogpgcheck
+    - dnf install -y --nogpgcheck $FEDORA_DEPENDENCIES $FEDORA_DEPENDENCIES_ABI_CHECK
+  script:
+    - curl https://gitlab.freedesktop.org/hadess/check-abi/-/raw/main/contrib/check-abi-fedora.sh | bash
+    - check-abi ${LAST_ABI_BREAK} $(git rev-parse HEAD)
+
+build-ubuntu:
+  image: ubuntu:latest
+  stage: build
+  except:
+    - tags
+  before_script:
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y $UBUNTU_DEPENDENCIES
+  script:
+    - mkdir _build
+    - cd _build
+    - ../autogen.sh
+    - make
+    - make install
+    - make distcheck

@@ -1,0 +1,214 @@
+/* Copyright (C) 2003 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <vector>
+
+#include <gtkmm/widget.h>
+#include <gtkmm/filefilter.h>
+#include <giomm/file.h>
+#include <giomm/listmodel.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+//Note that GTK_FILE_SYSTEM_ERROR is not currently public GTK+ API and should
+//never be instantiated by the GTK+ C API.
+
+/** Exception class for Gdk::FileChooser errors.
+ */
+_WRAP_GERROR(FileChooserError,GtkFileChooserError,GTK_FILE_CHOOSER_ERROR, decl_prefix GTKMM_API)
+
+/** File chooser interface used by %Gtk::FileChooserWidget and %Gtk::FileChooserDialog.
+ *
+ * %Gtk::FileChooser is an interface that can be implemented by file selection
+ * widgets. In gtkmm, the main objects that implement this interface are
+ * FileChooserWidget and FileChooserDialog. You do not need to write an
+ * object that implements the %FileChooser interface unless you are trying to
+ * adapt an existing file selector to expose a standard programming interface.
+ *
+ * %Gtk::FileChooser allows for shortcuts to various places in the filesystem.
+ * In the default implementation these are displayed in the left pane. It
+ * may be a bit confusing at first that these shortcuts come from various
+ * sources and in various flavours, so lets explain the terminology here:
+ *
+ * - Bookmarks: are created by the user, by dragging folders from the
+ *   right pane to the left pane, or by using the “Add”. Bookmarks
+ *   can be renamed and deleted by the user.
+ *
+ * - Shortcuts: can be provided by the application. For example, a Paint
+ *   program may want to add a shortcut for a Clipart folder. Shortcuts
+ *   cannot be modified by the user.
+ *
+ * - Volumes: are provided by the underlying filesystem abstraction. They are
+ *   the “roots” of the filesystem.
+ *
+ * @par File Names
+ * When the user is finished selecting files in a %Gtk::FileChooser,
+ * your program can get the selected filenames as Gio::File objects.
+ *
+ * @par Adding Options
+ * You can add extra widgets to a file chooser to provide options
+ * that are not present in the default design, by using
+ * add_choice(). Each choice has an identifier and
+ * a user visible label; additionally, each choice can have multiple
+ * options. If a choice has no option, it will be rendered as a
+ * check button with the given label; if a choice has options, it will
+ * be rendered as a combo box.
+ *
+ * @deprecated 4.10: Use Gtk::FileDialog instead.
+ */
+class GTKMM_API FileChooser : public Glib::Interface
+{
+  _CLASS_INTERFACE(FileChooser, GtkFileChooser, GTK_FILE_CHOOSER, GtkFileChooserClass, , , GTKMM_API)
+public:
+  _WRAP_ENUM(Action, GtkFileChooserAction, decl_prefix GTKMM_API)
+
+  _WRAP_METHOD(void set_action(Action action), gtk_file_chooser_set_action)
+  _WRAP_METHOD(Action get_action() const, gtk_file_chooser_get_action)
+  _WRAP_METHOD(void set_select_multiple(bool select_multiple = true), gtk_file_chooser_set_select_multiple)
+  _WRAP_METHOD(bool get_select_multiple() const, gtk_file_chooser_get_select_multiple)
+
+  _WRAP_METHOD(void set_create_folders(bool create_folders = true), gtk_file_chooser_set_create_folders)
+  _WRAP_METHOD(bool get_create_folders() const, gtk_file_chooser_get_create_folders)
+
+  _WRAP_METHOD(void set_current_name(const Glib::ustring& name), gtk_file_chooser_set_current_name)
+  _WRAP_METHOD(Glib::ustring get_current_name() const, gtk_file_chooser_get_current_name)
+
+  _WRAP_METHOD(bool set_file(const Glib::RefPtr<const Gio::File>& file), gtk_file_chooser_set_file, errthrow)
+
+  //No refreturn is needed here, because the C function provides a reference:
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> get_files(), gtk_file_chooser_get_files,
+    deprecated "Use get_files2() instead.")
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_files() const, gtk_file_chooser_get_files,
+    deprecated "Use get_files2() instead.")
+
+#m4 _CONVERSION(`GListModel*',`std::vector<Glib::RefPtr<Gio::File>>',`listmodel_to_vector<Gio::File>($3)')
+#m4 _CONVERSION(`GListModel*',`std::vector<Glib::RefPtr<const Gio::File>>',`listmodel_to_vector<const Gio::File>($3)')
+  /** Lists all the selected files and subfolders in the current folder
+   * of @a chooser as Gio::File.
+   *
+   * Deprecated: 4.10: Use Gtk::FileDialog instead
+   *
+   * @newin{4,10}
+   *
+   * @return A vector containing a Gio::File for each
+   *         selected file and subfolder in the current folder.
+   */
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Gio::File>> get_files2(),
+    gtk_file_chooser_get_files, newin "4,10")
+
+  /** Lists all the selected files and subfolders in the current folder
+   * of @a chooser as Gio::File.
+   *
+   * Deprecated: 4.10: Use Gtk::FileDialog instead
+   *
+   * @newin{4,10}
+   *
+   * @return A vector containing a Gio::File for each
+   *         selected file and subfolder in the current folder.
+   */
+  _WRAP_METHOD(std::vector<Glib::RefPtr<const Gio::File>> get_files2() const,
+    gtk_file_chooser_get_files, newin "4,10")
+
+  _WRAP_METHOD(bool set_current_folder(const Glib::RefPtr<const Gio::File>& file), gtk_file_chooser_set_current_folder, errthrow)
+
+  //No refreturn is needed here, because the C function provides a reference:
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> get_current_folder(), gtk_file_chooser_get_current_folder)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::File> get_current_folder() const, gtk_file_chooser_get_current_folder, constversion)
+
+  //No refreturn is needed here, because the C function provides a reference:
+  _WRAP_METHOD(Glib::RefPtr<Gio::File> get_file(), gtk_file_chooser_get_file)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::File> get_file() const, gtk_file_chooser_get_file, constversion)
+
+/* List of user selectable filters
+ */
+  _WRAP_METHOD(void add_filter(const Glib::RefPtr<FileFilter>& filter), gtk_file_chooser_add_filter)
+  _WRAP_METHOD(void remove_filter (const Glib::RefPtr<FileFilter>& filter), gtk_file_chooser_remove_filter)
+
+  //No refreturn is needed here, because the C function provides a reference:
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_filters() const, gtk_file_chooser_get_filters)
+
+/* Current filter
+ */
+  _WRAP_METHOD(void set_filter(const Glib::RefPtr<FileFilter>& filter), gtk_file_chooser_set_filter)
+  _WRAP_METHOD(Glib::RefPtr<FileFilter> get_filter(), gtk_file_chooser_get_filter, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const FileFilter> get_filter() const, gtk_file_chooser_get_filter, refreturn, constversion)
+
+/* Per-application shortcut folders */
+
+  _WRAP_METHOD(bool add_shortcut_folder(const Glib::RefPtr<Gio::File>& folder), gtk_file_chooser_add_shortcut_folder, errthrow)
+  _WRAP_METHOD(bool remove_shortcut_folder(const Glib::RefPtr<Gio::File>& folder), gtk_file_chooser_remove_shortcut_folder, errthrow)
+
+  //No refreturn is needed here, because the C function provides a reference:
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_shortcut_folders() const, gtk_file_chooser_get_shortcut_folders,
+    deprecated "Use get_shortcut_folders2() instead.")
+
+  /** Queries the list of shortcut folders in the file chooser.
+   *
+   * You should not modify the returned list model. Future changes to
+   *  @a chooser may or may not affect the returned model.
+   *
+   * Deprecated: 4.10: Use Gtk::FileDialog instead
+   *
+   * @newin{4,10}
+   *
+   * @return A vector of `Gio::File`s.
+   */
+  _WRAP_METHOD(std::vector<Glib::RefPtr<Gio::File>> get_shortcut_folders2(),
+    gtk_file_chooser_get_shortcut_folders, newin "4,10")
+
+#m4 _CONVERSION(`const std::vector<Glib::ustring>&',`const char**',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data ()')
+  _WRAP_METHOD(void add_choice(const Glib::ustring& id, const Glib::ustring& label, const std::vector<Glib::ustring>& options, const std::vector<Glib::ustring>& option_labels), gtk_file_chooser_add_choice)
+
+  /** Adds a boolean 'choice' to the file chooser.
+   * This is typically implemented as a checkbutton. You can select
+   * a value using set_boolean_choice() before the dialog is shown,
+   * and you can obtain the user-selected value in the signal_response() signal handler
+   * using get_choice().
+   *
+   * Compare set_extra_widget().
+   *
+   * @newin{3,22}
+   *
+   * @param id Id for the added choice.
+   * @param label User-visible label for the added choice.
+   */
+  void add_choice(const Glib::ustring& id, const Glib::ustring& label);
+
+  _WRAP_METHOD(void remove_choice(const Glib::ustring& id), gtk_file_chooser_remove_choice)
+  _WRAP_METHOD(void set_choice(const Glib::ustring& id, const Glib::ustring& option), gtk_file_chooser_set_choice)
+  _WRAP_METHOD(Glib::ustring get_choice(const Glib::ustring& id) const, gtk_file_chooser_get_choice)
+
+  _WRAP_PROPERTY("action", Action)
+  _WRAP_PROPERTY("filter", Glib::RefPtr<FileFilter>)
+  _WRAP_PROPERTY("select-multiple", bool)
+  _WRAP_PROPERTY("filters", Glib::RefPtr<Gio::ListModel>)
+  _WRAP_PROPERTY("shortcut-folders", Glib::RefPtr<Gio::ListModel>,
+    deprecated "Use get_shortcut_folders2() instead.")
+  _WRAP_PROPERTY("create-folders", bool)
+};
+
+} // namespace Gtk

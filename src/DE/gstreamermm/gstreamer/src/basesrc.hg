@@ -1,0 +1,310 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/base/gstbasesrc.h>
+#include <gstreamermm/element.h>
+#include <gstreamermm/pad.h>
+#include <gstreamermm/format.h>
+#include <gstreamermm/clock.h>
+#include <gstreamermm/segment.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(BaseSrcFlags, GstBaseSrcFlags, NO_GTYPE)
+
+/** A base class for getrange based source elements.
+ *
+ * This is a generice base class for source elements. The following types of
+ * sources are supported:
+ *
+ * - random access sources like files,
+ * - seekable sources,
+ * - live sources.
+ *
+ * The source can be configured to operate in any Gst::Format with the
+ * set_format() method. The currently set format determines the format of the
+ * internal Gst::Segment and any Gst::EVENT_NEWSEGMENT events. The default
+ * format for Gst::BaseSrc is Gst::FORMAT_BYTES.
+ *
+ * Gst::BaseSrc always supports push mode scheduling. If the following
+ * conditions are met, it also supports pull mode scheduling:
+ *
+ * - The format is set to Gst::FORMAT_BYTES (default).
+ * - Gst::BaseSrc::is_seekable_vfunc() returns TRUE.
+ *
+ * Since GStreamer 0.10.9, any Gst::BaseSrc can enable pull based scheduling at
+ * any time by overriding Gst::BaseSrc::check_get_range_vfunc() so that it
+ * returns TRUE.
+ *
+ * If all the conditions are met for operating in pull mode, Gst::BaseSrc is
+ * automatically seekable in push mode as well. The following conditions must
+ * be met to make the element seekable in push mode when the format is not
+ * Gst::FORMAT_BYTES:
+ *
+ * - Gst::BaseSrc::is_seekable_vfunc() returns TRUE.
+ * - Gst::BaseSrc::query_vfunc() can convert all supported seek formats to
+ * the internal format as set with set_format().
+ * - Gst::BaseSrc::do_seek_vfunc() is implemented, performs the seek and
+ * returns TRUE.
+ *
+ * When the element does not meet the requirements to operate in pull mode, the
+ * offset and length in the Gst::BaseSrc::create_vfunc() method should be
+ * ignored. It is recommended to subclass Gst::PushSrc instead, in this
+ * situation. If the element can operate in pull mode but only with specific
+ * offsets and lengths, it is allowed to generate an error when the wrong
+ * values are passed to the Gst::BaseSrc::create_vfunc() function.
+ *
+ * Gst::BaseSrc has support for live sources. Live sources are sources that
+ * when paused discard data, such as audio or video capture devices. A typical
+ * live source also produces data at a fixed rate and thus provides a clock to
+ * publish this rate. Use set_live() to activate the live source mode.
+ *
+ * A live source does not produce data in the PAUSED state. This means that the
+ * Gst::BaseSrc::create_vfunc() method will not be called in PAUSED but only in
+ * PLAYING. To signal the pipeline that the element will not produce data, the
+ * return value from the READY to PAUSED state will be
+ * Gst::STATE_CHANGE_NO_PREROLL.
+ *
+ * A typical live source will timestamp the buffers it creates with the current
+ * running time of the pipeline. This is one reason why a live source can only
+ * produce data in the PLAYING state, when the clock is actually distributed
+ * and running.
+ *
+ * Live sources that synchronize and block on the clock (an audio source, for
+ * example) can since GStreamer 0.10.12 use wait_playing() when the
+ * create_vfunc() function was interrupted by a state change to PAUSED.
+ *
+ * The Gst::BaseSrc::get_times_vfunc() method can be used to implement
+ * pseudo-live sources. It only makes sense to implement the get_times_vfunc()
+ * function if the source is a live source. The get_times_vfunc() function
+ * should return timestamps starting from 0, as if it were a non-live source.
+ * The base class will make sure that the timestamps are transformed into the
+ * current running_time. The base source will then wait for the calculated
+ * running_time before pushing out the buffer.
+ *
+ * For live sources, the base class will by default report a latency of 0. For
+ * pseudo live sources, the base class will by default measure the difference
+ * between the first buffer timestamp and the start time of get_times_vfunc()
+ * and will report this value as the latency. Subclasses should override the
+ * query_vfunc() function when this behaviour is not acceptable.
+ *
+ * TODO: Edit below paragraph for C++ and include C++ example from C API (if
+ * necessary):
+ *
+ * There is only support in Gst::BaseSrc for exactly one source pad, which
+ * should be named "src". A source implementation (subclass of Gst::BaseSrc)
+ * should install a pad template in its class_init function, like so:
+ * @code
+ * // static
+ * void SampleBaseSrc::base_init(Gst::ElementClass<SampleBaseSrc> *klass)
+ * {
+ *   klass->add_pad_template(Gst::PadTemplate::create(
+ *                                 "src",
+ *                                 Gst::PAD_SRC,
+ *                                 Gst::PAD_ALWAYS,
+ *                                 Gst::Caps::create_from_string("x-application/x-foo1")
+ *   ));
+ *
+ *   klass->set_metadata("Source name", "Source", "My source element", "The author <my.sink@my.email>");
+ * }
+ * @endcode
+ *
+ * <H2>Controlled shutdown of live sources in applications</H2>
+ *
+ * Applications that record from a live source may want to stop recording in a
+ * controlled way, so that the recording is stopped, but the data already in
+ * the pipeline is processed to the end (remember that many live sources would
+ * go on recording forever otherwise). For that to happen the application needs
+ * to make the source stop recording and send an EOS event down the pipeline.
+ * The application would then wait for an EOS message posted on the pipeline's
+ * bus to know when all data has been processed and the pipeline can safely be
+ * stopped.
+ *
+ * Since GStreamer 0.10.16 an application may send an EOS event to a source
+ * element to make it perform the EOS logic (send EOS event downstream or post
+ * a Gst::MESSAGE_SEGMENT_DONE on the bus). This can typically be done with the
+ * Gst::Element::send_event() function on the element or its parent bin.
+ *
+ * After the EOS has been sent to the element, the application should wait for
+ * an EOS message to be posted on the pipeline's bus. Once this EOS message is
+ * received, it may safely shut down the entire pipeline.
+ *
+ * The old behaviour for controlled shutdown introduced since GStreamer 0.10.3
+ * is still available but deprecated as it is dangerous and less flexible.
+ *
+ * Last reviewed on 2016-05-05 (1.8.0).
+ *
+ * @ingroup GstBaseClasses
+ */
+class BaseSrc
+: public Element
+{
+  _CLASS_GOBJECT(BaseSrc, GstBaseSrc, GST_BASE_SRC, Element, GstElement)
+
+public:
+  _WRAP_METHOD(FlowReturn wait_playing(), gst_base_src_wait_playing)
+  _WRAP_METHOD(bool is_live() const, gst_base_src_is_live)
+  _WRAP_METHOD(void set_live(bool live), gst_base_src_set_live)
+  _WRAP_METHOD(void set_format(Format format), gst_base_src_set_format)
+  _WRAP_METHOD(bool query_latency(bool& live, Gst::ClockTime& min_latency, Gst::ClockTime& max_latency) const, gst_base_src_query_latency)
+  _WRAP_METHOD(guint get_blocksize() const, gst_base_src_get_blocksize)
+  _WRAP_METHOD(void set_blocksize(guint blocksize), gst_base_src_set_blocksize)
+  _WRAP_METHOD(bool get_do_timestamp() const, gst_base_src_get_do_timestamp)
+  _WRAP_METHOD(void set_do_timestamp(bool timestamp), gst_base_src_set_do_timestamp)
+  _WRAP_METHOD(bool new_seamless_segment(gint64 start, gint64 stop, gint64 position), gst_base_src_new_seamless_segment)
+  _WRAP_METHOD(bool set_caps(const Glib::RefPtr<Gst::Caps>& caps), gst_base_src_set_caps)
+  _WRAP_METHOD(Gst::FlowReturn start_wait(), gst_base_src_start_wait)
+  _WRAP_METHOD(void set_dynamic_size(bool dynamic_size), gst_base_src_set_dynamic_size)
+  _WRAP_METHOD(void set_async(bool async), gst_base_src_set_async)
+  _WRAP_METHOD(bool is_async() const, gst_base_src_is_async)
+  _WRAP_METHOD(void start_complete(Gst::FlowReturn ret), gst_base_src_start_complete)
+  _WRAP_METHOD(void set_automatic_eos(bool automatic_eos), gst_base_src_set_automatic_eos)
+
+  /** Returns the memory @a allocator used by the base class and its @a params.
+   *
+   * @param params The Gst::AllocationParams of @a allocator.
+   * @return The Gst::Allocator used.
+   */
+  Glib::RefPtr<Gst::Allocator> get_allocator(Gst::AllocationParams& params);
+  _IGNORE(gst_base_src_get_allocator)
+
+  /** Gets the source Gst::Pad object of the element.
+   */
+  _MEMBER_GET_GOBJECT(src_pad, srcpad, Gst::Pad, GstPad*)
+
+  _WRAP_PROPERTY("blocksize", gulong)
+  _WRAP_PROPERTY("do-timestamp", bool)
+  _WRAP_PROPERTY("num-buffers", int)
+  _WRAP_PROPERTY("typefind", bool)
+
+  /** Called to get the caps to report.
+   */
+  _WRAP_VFUNC(Glib::RefPtr<Gst::Caps> get_caps(const Glib::RefPtr<Gst::Caps>& caps) const, "get_caps", refreturn_ctype)
+
+  /** Notify subclass of changed output caps.
+   */
+  _WRAP_VFUNC(bool set_caps(const Glib::RefPtr<Gst::Caps>& caps), "set_caps")
+
+  /** Negotiated the caps with the peer.
+   */
+  _WRAP_VFUNC(bool negotiate(), "negotiate")
+
+  /** Stop processing. Subclasses should use this to close resources.
+   */
+  _WRAP_VFUNC(bool stop(), "stop", return_value true)
+
+  /** Start processing. Subclasses should open resources and prepare to produce
+    * data.
+    */
+  _WRAP_VFUNC(bool start(), "start", return_value true)
+
+#m4 _CONVERSION(`GstBuffer*', `const Glib::RefPtr<Gst::Buffer>&', `Glib::wrap($3, true)')
+#m4 _CONVERSION(`GstClockTime*', `Gst::ClockTime&', `*($3)')
+  /** Given a buffer, return the start and stop time when it should be pushed
+   * out. The base class will sync on the clock using these times.
+   */
+  _WRAP_VFUNC(void get_times(const Glib::RefPtr<Gst::Buffer>& buffer, Gst::ClockTime& start, Gst::ClockTime& end) const, "get_times")
+
+#m4 _CONVERSION(`guint64&', `guint64*', `&($3)')
+#m4 _CONVERSION(`guint64*', `guint64&', `*($3)')
+  /** Return the total size of the resource, in the configured format.
+   */
+  _WRAP_VFUNC(bool get_size(guint64& size) const, "get_size")
+
+  /** Check if the source can seek.
+   */
+  _WRAP_VFUNC(bool is_seekable() const, "is_seekable")
+
+  /** Unlock any pending access to the resource. Subclasses should unblock any
+   * blocked function ASAP.
+   */
+  _WRAP_VFUNC(bool unlock(), "unlock")
+
+#m4 _CONVERSION(`GstEvent*', `const Glib::RefPtr<Gst::Event>&', `Glib::wrap($3, true)')
+  /** Override this to implement custom event handling.
+   */
+  _WRAP_VFUNC(bool event(const Glib::RefPtr<Gst::Event>& event), "event")
+
+  virtual FlowReturn create_vfunc(guint64 offset, guint size, Glib::RefPtr<Gst::Buffer>& buffer);
+
+  /** Perform seeking on the resource to the indicated segment.
+   */
+  virtual bool do_seek_vfunc(Gst::Segment& segment); 
+
+  // Cannot use query_vfunc because the name has been used in the Gst::Element class.
+  // We have to provide custom implementation, because query vfunc expects writable
+  // query object.
+  /** Handle a requested query.
+   */
+  virtual bool base_src_query_vfunc(const Glib::RefPtr<Gst::Query>& query);
+
+  /** Called during negotiation if caps need fixating. Implement instead of
+   * setting a fixate function on the source pad.
+   */
+  _WRAP_VFUNC(Glib::RefPtr<Gst::Caps> fixate(const Glib::RefPtr<Gst::Caps>& caps), "fixate", refreturn_ctype)
+
+  /** Clear the previous unlock request. Subclasses should clear any state they
+   * set during unlock_vfunc(), such as clearing command queues.
+   */
+  _WRAP_VFUNC(bool unlock_stop(), "unlock_stop")
+
+  /** Prepare the Gst::Segment that will be passed to the do_seek_vfunc()
+   * vmethod for executing a seek request. Sub-classes should override this if
+   * they support seeking in formats other than the configured native format.
+   * By default, it tries to convert the seek arguments to the configured
+   * native format and prepare a segment in that format.
+   */
+   virtual bool prepare_seek_segment_vfunc(const Glib::RefPtr<Gst::Event>& seek, Gst::Segment& segment);
+
+#m4 _CONVERSION(`GstQuery*', `const Glib::RefPtr<Gst::Query>&', `Glib::wrap($3, true)')
+  /** Configure the allocation query.
+   */
+  _WRAP_VFUNC(bool decide_allocation(const Glib::RefPtr<Gst::Query>& query), "decide_allocation")
+
+  /** Ask the subclass to allocate a buffer with for offset and size. The default
+   * implementation will create a new buffer from the negotiated allocator.
+   */
+  Gst::FlowReturn alloc_vfunc(guint64 offset, guint size, Glib::RefPtr<Gst::Buffer>& buffer);
+
+  /** Ask the subclass to fill the buffer with data for offset and size. The passed
+   * buffer is guaranteed to hold the requested amount of bytes.
+   */
+  _WRAP_VFUNC(Gst::FlowReturn fill(guint64 offset, guint size, const Glib::RefPtr<Gst::Buffer>& buffer), "fill")
+protected:
+#m4begin
+  _PUSH(SECTION_PCC_CLASS_INIT_VFUNCS)
+  klass->do_seek = &do_seek_vfunc_callback;
+  klass->prepare_seek_segment = &prepare_seek_segment_vfunc_callback;
+  klass->create = &create_vfunc_callback;
+  klass->query = &query_vfunc_callback;
+  klass->alloc = &alloc_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+  static gboolean do_seek_vfunc_callback(GstBaseSrc* self, GstSegment* segment);
+  static gboolean prepare_seek_segment_vfunc_callback(GstBaseSrc* self, GstEvent* seek, GstSegment* segment);
+  static GstFlowReturn create_vfunc_callback(GstBaseSrc* self, guint64 offset, guint size, GstBuffer** buf);
+  static gboolean query_vfunc_callback(GstBaseSrc* self, GstQuery* query);
+  static GstFlowReturn alloc_vfunc_callback(GstBaseSrc* self, guint64 offset, guint size, GstBuffer** buf);
+  _POP()
+#m4end
+};
+
+} //namespace Gst

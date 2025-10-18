@@ -1,0 +1,1254 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# The invoke code is compiled on the app side.
+# The invoke code must assign to each result var
+
+# Note that formerly, a permission was passed to core when getting a gradient.
+# Now, we must check permissions here.
+
+
+# Define string constants for common arg specs
+
+$gradient_arg_spec = { name => 'gradient', type => 'gradient', non_empty => 1,
+  desc => 'The gradient' };
+
+$gradient_seg_arg_spec =
+  { name => 'segment', type => '0 <= int32',
+    desc => 'The index of a segment within the gradient' };
+
+$gradient_start_segment_arg_spec =
+    { name => 'start_segment', type => '0 <= int32',
+      desc => 'Index of the first segment to operate on' };
+
+$gradient_end_segment_arg_spec =
+    { name => 'end_segment', type => 'int32',
+      desc => 'Index of the last segment to operate on. If negative,
+               the range will extend to the end segment.' };
+
+
+sub gradient_new {
+    $blurb = 'Creates a new gradient';
+    $help  = 'Creates a new gradient having no segments.';
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The requested name of the new gradient' }
+    );
+
+    @outargs = (
+      ${gradient_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gradient = (GimpGradient*) gimp_data_factory_data_new (gimp->gradient_factory,
+                                                         context, name);
+
+  if (!gradient)
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_get_by_name {
+    $blurb = "Returns the gradient with the given name.";
+    $help  = <<HELP;
+Returns an existing gradient having the given name.
+Returns %NULL when no gradient exists of that name.
+HELP
+    &mitch_pdb_misc('2023', '3.0');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The name of the gradient' }
+    );
+
+    @outargs = (
+      { name => 'gradient',
+        type => 'gradient',
+        desc => 'The gradient',
+        none_ok => 1 }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gradient = GIMP_GRADIENT (gimp_pdb_get_resource (gimp, GIMP_TYPE_GRADIENT, name,
+                                                   GIMP_PDB_DATA_ACCESS_READ, error));
+
+  /* Ignore "not found" error, just return NULL. */
+  g_clear_error (error);
+}
+CODE
+    );
+}
+
+sub gradient_get_number_of_segments {
+    $blurb = 'Gets the number of segments of the gradient';
+    $help = 'Gets the number of segments of the gradient';
+
+    $author    = 'Lars-Peter Clausen <lars@metafoo.de>';
+    $copyright = 'Lars-Peter Clausen';
+    $date      = '2008';
+    $since     = '2.6';
+
+    @inargs = (
+        ${gradient_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'num_segments', type => 'int32',
+          init => 0, desc => 'Number of segments' }
+    );
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gradient)
+    {
+      for (GimpGradientSegment *seg = gradient->segments; seg; seg = seg->next)
+        num_segments++;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_get_uniform_samples {
+    $blurb = 'Sample the gradient in uniform parts.';
+
+    $help = <<'HELP';
+Samples colors uniformly across the gradient. It returns a list of
+colors for each sample. The minimum number of samples to take is 2, in
+which case the returned colors will correspond to the `{ 0.0, 1.0 }`
+positions in the gradient. For example, if the number of samples is 3,
+the procedure will return the colors at positions `{ 0.0, 0.5, 1.0 }`.
+HELP
+
+    &federico_pdb_misc('1997', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+    	{ name => 'num_samples', type => '2 <= int32',
+    	  desc => 'The number of samples to take' },
+    	{ name => 'reverse', type => 'boolean',
+    	  desc => 'Use the reverse gradient' }
+        );
+
+    @outargs = (
+        { name => 'color_samples', type => 'colorarray',
+	  desc => 'Color samples' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gradient)
+    {
+      GimpGradientSegment *seg   = NULL;
+      gdouble              pos   = 0.0;
+      gdouble              delta = 1.0 / (num_samples - 1);
+      GeglColor          **sample;
+
+      sample = color_samples = g_new0 (GeglColor *, num_samples + 1);
+
+      while (num_samples--)
+        {
+          seg = gimp_gradient_get_color_at (gradient, context, seg,
+                                            pos, reverse,
+                                            GIMP_GRADIENT_BLEND_RGB_PERCEPTUAL,
+                                            sample);
+
+          sample++,
+          pos += delta;
+        }
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_get_custom_samples {
+    $blurb = 'Sample the gradient in custom positions.';
+
+    $help = <<'HELP';
+Samples the color of the gradient at positions from a list.
+The left endpoint of the gradient corresponds
+to position 0.0, and the right endpoint corresponds to 1.0.
+Returns a list of colors, one for each sample.
+HELP
+
+    &federico_pdb_misc('1997', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+      	{ name  => 'positions', type  => 'doublearray',
+      	  desc  => 'The list of positions to sample along the gradient',
+      	  array => { name => 'num_samples', type => '1 <= size',
+      		     desc => 'The number of samples to take' } },
+      	{ name => 'reverse', type => 'boolean',
+      	  desc => 'Use the reverse gradient' }
+    );
+
+    @outargs = (
+        { name => 'color_samples', type => 'colorarray',
+          desc => 'Color samples' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gradient)
+    {
+      GimpGradientSegment  *seg = NULL;
+      GeglColor           **sample;
+
+      sample = color_samples = g_new0 (GeglColor *, num_samples + 1);
+
+      while (num_samples--)
+        {
+          seg = gimp_gradient_get_color_at (gradient, context,
+                                            seg, *positions,
+                                            reverse,
+                                            GIMP_GRADIENT_BLEND_RGB_PERCEPTUAL,
+                                            sample);
+
+          sample++;
+          positions++;
+        }
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_left_color {
+    $blurb = 'Gets the left endpoint color of the segment';
+
+    $help = <<'HELP';
+Gets the left endpoint color of the indexed segment of the gradient.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'color', type => 'geglcolor',
+          desc => 'The return color' },
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg;
+
+  seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    color = g_object_ref (gimp_gradient_segment_get_left_color (gradient, seg));
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_right_color {
+    $blurb = 'Gets the right endpoint color of the segment';
+    $help = <<'HELP';
+Gets the color of the right endpoint color of the segment of the gradient.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'color', type => 'geglcolor',
+          desc => 'The return color' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg;
+
+  seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    color = g_object_ref (gimp_gradient_segment_get_right_color (gradient, seg));
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_set_left_color {
+    $blurb = 'Sets the left endpoint color of a segment';
+    $help = <<'HELP';
+Sets the color of the left endpoint the indexed segment of the gradient. The
+alpha channel of the [class@Gegl.Color] is taken into account.
+
+Returns an error when gradient is not editable or index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec},
+        { name => 'color', type => 'geglcolor', desc => 'The color to set' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+      if (seg)
+        gimp_gradient_segment_set_left_color (gradient, seg, color);
+      else
+        success = FALSE;
+      }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_set_right_color {
+    $blurb = 'Sets the right endpoint color of the segment';
+
+    $help = <<'HELP';
+Sets the right endpoint color of the segment of the gradient. The alpha channel
+of the [class@Gegl.Color] is taken into account.
+
+Returns an error when gradient is not editable or segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec},
+        { name => 'color', type => 'geglcolor', desc => 'The color to set' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+      if (seg)
+        gimp_gradient_segment_set_right_color (gradient, seg, color);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_left_pos {
+    $blurb = 'Gets the left endpoint position of a segment';
+    $help = <<'HELP';
+Gets the position of the left endpoint of the segment of the gradient.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'pos', type => 'double', void_ret => 1,
+          desc => 'The return position' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    pos = gimp_gradient_segment_get_left_pos (gradient, seg);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_right_pos {
+    $blurb = 'Gets the right endpoint position of the segment';
+    $help = <<'HELP';
+Gets the position of the right endpoint of the segment of the gradient.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'pos', type => 'double', void_ret => 1,
+          desc => 'The return position' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    pos = gimp_gradient_segment_get_right_pos (gradient, seg);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_middle_pos {
+    $blurb = 'Gets the midpoint position of the segment';
+    $help = <<'HELP';
+Gets the position of the midpoint of the segment of the gradient.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'pos', type => 'double', void_ret => 1,
+          desc => 'The return position' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    pos = gimp_gradient_segment_get_middle_pos (gradient, seg);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_set_left_pos {
+    $blurb = 'Sets the left endpoint position of the segment';
+    $help = <<'HELP';
+Sets the position of the left endpoint of the segment of the gradient.
+The final position will be the given fraction from
+the midpoint to the left to the midpoint of the current segment.
+
+Returns the final position.
+Returns an error when gradient is not editable or segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec},
+        { name => 'pos', type => '0.0 <= double <= 1.0',
+          desc => 'The position to set the guidepoint to' }
+    );
+
+    @outargs = (
+        { name => 'final_pos', type => 'double', void_ret => 1,
+          desc => 'The return position' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+      if (seg)
+        final_pos = gimp_gradient_segment_set_left_pos (gradient, seg, pos);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_set_right_pos {
+    $blurb = 'Sets the right endpoint position of the segment';
+    $help = <<'HELP';
+Sets the right endpoint position of the segment of the gradient.
+The final position will be the given fraction from
+the midpoint of the current segment to the
+midpoint of the segment to the right.
+
+Returns the final position.
+Returns an error when gradient is not editable or segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec},
+        { name => 'pos', type => '0.0 <= double <= 1.0',
+          desc => 'The position to set the right endpoint to' }
+    );
+
+    @outargs = (
+        { name => 'final_pos', type => 'double', void_ret => 1,
+          desc => 'The return position' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+      if (seg)
+        final_pos = gimp_gradient_segment_set_right_pos (gradient, seg, pos);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_set_middle_pos {
+    $blurb = 'Sets the midpoint position of the segment';
+    $help = <<'HELP';
+Sets the midpoint position of the segment of the gradient.
+The final position will be the given fraction between the two
+endpoints of the segment.
+
+Returns the final position.
+Returns an error when gradient is not editable or segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec},
+        { name => 'pos', type => '0.0 <= double <= 1.0',
+          desc => 'The position to set the guidepoint to' }
+    );
+
+    @outargs = (
+        { name => 'final_pos', type => 'double', void_ret => 1,
+          desc => 'The return position' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+      if (seg)
+        final_pos = gimp_gradient_segment_set_middle_pos (gradient, seg, pos);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_blending_function {
+    $blurb = "Gets the gradient segment's blending function";
+    $help = <<'HELP';
+Gets the blending function of the segment at the index.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'blend_func', type => 'enum GimpGradientSegmentType',
+          void_ret => 1,
+          desc => 'The blending function of the segment' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    blend_func = gimp_gradient_segment_get_blending_function (gradient, seg);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_get_coloring_type {
+    $blurb = "Gets the gradient segment's coloring type";
+    $help = <<'HELP';
+Gets the coloring type of the segment at the index.
+
+Returns an error when the segment index is out of range.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_seg_arg_spec}
+    );
+
+    @outargs = (
+        { name => 'coloring_type', type => 'enum GimpGradientSegmentColor',
+          void_ret => 1,
+	         desc => 'The coloring type of the segment' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpGradientSegment *seg = gimp_gradient_segment_get_nth (gradient->segments, segment);
+
+  if (seg)
+    coloring_type = gimp_gradient_segment_get_coloring_type (gradient, seg);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_set_blending_function {
+    $blurb = 'Sets the blending function of a range of segments';
+    $help = <<'HELP';
+Sets the blending function of a range of segments.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_start_segment_arg_spec},
+        ${gradient_end_segment_arg_spec},
+        { name => 'blending_function', type => 'enum GimpGradientSegmentType',
+          desc => 'The blending function' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_set_blending_function (gradient,
+                                                           start_seg, end_seg,
+                                                           blending_function);
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_set_coloring_type {
+    $blurb = 'Sets the coloring type of a range of segments';
+    $help = <<'HELP';
+Sets the coloring type of a range of segments.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_start_segment_arg_spec},
+        ${gradient_end_segment_arg_spec},
+        { name => 'coloring_type', type => 'enum GimpGradientSegmentColor',
+          desc => 'The coloring type' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_set_coloring_type (gradient,
+                                                       start_seg, end_seg,
+                                                       coloring_type);
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_flip {
+    $blurb = 'Flip the segment range';
+    $help = <<'HELP';
+Reverses the order of segments in a range,
+and swaps the left and right colors in each segment.
+As if the range as a 1D line were rotated in a plane.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+      ${gradient_start_segment_arg_spec},
+      ${gradient_end_segment_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_flip (gradient,
+                                          start_seg, end_seg,
+                                          NULL, NULL);
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_replicate {
+    $blurb = 'Replicate the segment range';
+    $help = <<'HELP';
+Replicates a segment range a given number of times. Instead
+of the original segment range, several smaller scaled copies of it
+will appear in equal widths.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_start_segment_arg_spec},
+        ${gradient_end_segment_arg_spec},
+        { name => 'replicate_times', type => '2 <= int32 <= 20',
+          desc => 'The number of replicas for each segment' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_replicate (gradient,
+                                               start_seg, end_seg,
+                                               replicate_times,
+                                               NULL, NULL);
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_split_midpoint {
+    $blurb = 'Splits each segment in the segment range at midpoint';
+    $help = <<'HELP';
+Splits each segment in the segment range at its midpoint.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_start_segment_arg_spec},
+        ${gradient_end_segment_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_split_midpoint (gradient, context,
+                                                    start_seg, end_seg,
+                                                    GIMP_GRADIENT_BLEND_RGB_PERCEPTUAL,
+                                                    NULL, NULL);
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_split_uniform {
+    $blurb = 'Splits each segment in the segment range uniformly';
+    $help = <<'HELP';
+Splits each segment in the segment range uniformly into to the number of parts given.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+      ${gradient_start_segment_arg_spec},
+      ${gradient_end_segment_arg_spec},
+      { name => 'split_parts', type => '2 <= int32 <= 1024',
+            desc => 'The number of uniform divisions to split each segment to' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_split_uniform (gradient, context,
+                                                   start_seg, end_seg,
+                                                   split_parts,
+                                                   GIMP_GRADIENT_BLEND_RGB_PERCEPTUAL,
+                                                   NULL, NULL);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_delete {
+    $blurb = 'Delete the segment range';
+    $help = <<'HELP';
+Deletes a range of segments.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+Deleting all the segments is undefined behavior.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+      ${gradient_start_segment_arg_spec},
+      ${gradient_end_segment_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_delete (gradient,
+                                            start_seg, end_seg,
+                                            NULL, NULL);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_redistribute_handles {
+    $blurb = "Uniformly redistribute the segment range's handles";
+
+    $help = <<'HELP';
+Redistributes the handles of the segment range of the
+gradient, so they'll be evenly spaced.
+A handle is where two segments meet.
+Segments will then have the same width.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+      ${gradient_start_segment_arg_spec},
+      ${gradient_end_segment_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_redistribute_handles (gradient,
+                                                          start_seg, end_seg);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_blend_colors {
+    $blurb = 'Blend the colors of the segment range.';
+
+    $help = <<'HELP';
+Blends the colors (but not the opacity) of the range of segments.
+The colors' transition will then be uniform across the range.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+      ${gradient_start_segment_arg_spec},
+      ${gradient_end_segment_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_blend (gradient,
+                                           start_seg, end_seg,
+                                           start_seg->left_color,
+                                           end_seg->right_color,
+                                           TRUE, FALSE);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_blend_opacity {
+    $blurb = 'Blend the opacity of the segment range.';
+
+    $help = <<'HELP';
+Blends the opacity (but not the colors) of the range of segments.
+The opacity's transition will then be uniform across the range.
+
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+      ${gradient_arg_spec},
+      ${gradient_start_segment_arg_spec},
+      ${gradient_end_segment_arg_spec}
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        gimp_gradient_segment_range_blend (gradient,
+                                           start_seg, end_seg,
+                                           start_seg->left_color,
+                                           end_seg->right_color,
+                                           FALSE, TRUE);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub gradient_segment_range_move {
+    $blurb = 'Move the position of an entire segment range by a delta.';
+
+    $help = <<'HELP';
+Moves the position of an entire segment range by a delta. The
+actual delta (which is returned) will be limited by the control points of the
+neighboring segments.
+
+Returns the actual delta.
+Returns an error when a segment index is out of range, or gradient is not editable.
+HELP
+
+    &shlomi_pdb_misc('2003', '2.2');
+
+    @inargs = (
+        ${gradient_arg_spec},
+        ${gradient_start_segment_arg_spec},
+        ${gradient_end_segment_arg_spec},
+        { name => 'delta', type => '-1.0 <= double <= 1.0',
+          desc => 'The delta to move the segment range' },
+        { name => 'control_compress', type => 'boolean',
+          desc => 'Whether or not to compress the neighboring segments' }
+    );
+
+    @outargs = (
+        { name => 'final_delta', type => 'double',
+          desc => 'The final delta by which the range moved' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  if (gimp_data_is_writable (GIMP_DATA (gradient)))
+    {
+      GimpGradientSegment *start_seg;
+      GimpGradientSegment *end_seg;
+
+      start_seg = gimp_gradient_segment_get_nth (gradient->segments, start_segment);
+      end_seg   = gimp_gradient_segment_get_nth (gradient->segments, end_segment);
+
+      if (start_seg && end_seg)
+        final_delta = gimp_gradient_segment_range_move (gradient,
+                                                        start_seg, end_seg,
+                                                        delta,
+                                                        control_compress);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+
+
+@headers = qw(<string.h>
+              "core/gimp.h"
+              "core/gimpcontext.h"
+              "core/gimpgradient.h"
+              "core/gimpdatafactory.h"
+              "gimppdb-utils.h");
+
+@procs = qw(gradient_new
+            gradient_get_by_name
+            gradient_get_number_of_segments
+            gradient_get_uniform_samples
+            gradient_get_custom_samples
+            gradient_segment_get_left_color  gradient_segment_set_left_color
+            gradient_segment_get_right_color gradient_segment_set_right_color
+            gradient_segment_get_left_pos    gradient_segment_set_left_pos
+            gradient_segment_get_middle_pos  gradient_segment_set_middle_pos
+            gradient_segment_get_right_pos   gradient_segment_set_right_pos
+            gradient_segment_get_blending_function
+            gradient_segment_get_coloring_type
+            gradient_segment_range_set_blending_function
+            gradient_segment_range_set_coloring_type
+            gradient_segment_range_flip
+            gradient_segment_range_replicate
+            gradient_segment_range_split_midpoint
+            gradient_segment_range_split_uniform
+            gradient_segment_range_delete
+            gradient_segment_range_redistribute_handles
+            gradient_segment_range_blend_colors
+            gradient_segment_range_blend_opacity
+            gradient_segment_range_move);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Gradient';
+$doc_title = 'gimpgradient';
+$doc_short_desc = 'Installable object used by the gradient rendering tool.';
+$doc_long_desc = 'Installable object used by the gradient rendering tool.';
+
+1;

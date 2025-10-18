@@ -1,0 +1,423 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<chapter id="provider-notes">
+  <title>Provider's notes</title>
+  <para>
+    This section lists some notes and recommendations on how to use each database provider.
+  </para>
+  <para>
+    Before opening a connection with a database provider, one needs to specify the connection parameters. These
+    parameters, even though some are shared by many database providers, are specific to each provider and
+    the <link linkend="libgda-sql">gda-sql</link> or the
+    <link linkend="libgda-tools-list-config">gda-list-config</link> tools can be used to obtain a complete list.
+  </para>
+
+  <sect1 id="provider_notes_oracle"><title>For Oracle</title>
+    <para>
+      The following arguments are used to connect to an Oracle database:
+      <table frame="all">
+        <tgroup cols="3" colsep="1" rowsep="1" align="justify">
+	  <colspec colnum="1" colwidth="1.4*"/>
+	  <colspec colnum="2" colwidth="2.8*"/>
+	  <colspec colnum="3" colwidth=".4*"/>
+          <thead>
+	    <row>
+              <entry>Argument name</entry>
+              <entry>Description</entry>
+              <entry>Required</entry>
+	    </row>
+          </thead>
+          <tbody>
+	    <row>
+              <entry>DB_NAME</entry>
+              <entry>Service name: global database name entered during database creation (it combines a database name with a domain name), can be left empty to connect to the default database.</entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>HOST</entry>
+              <entry>Database server: host on which the database server is running</entry>
+              <entry>Yes</entry>
+	    </row>
+	    <row>
+              <entry>PORT</entry>
+              <entry>Port: database server port (leave this field empty for the default 1521 port)</entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>SCHEMA</entry>
+              <entry>Schema: Name of the schema to use. If not specified, the schema defaults to that of the connected user.</entry>
+              <entry>No</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+      Note however all the arguments above can be replaced by a single TNSNAME argument (see
+      the "Oracle Database Net Services Administrator's Guide" for more information about defining
+      connection identifiers).
+    </para>
+    <para>
+      Also refer to the <link linkend="limitations_oracle">Oracle's provider's limitations</link>.
+    </para>
+  </sect1>
+
+<sect1 id="provider_notes_sqlite"><title>For SQLite</title>
+    <para>
+      The following arguments are used to connect to an SQLite database:
+      <table frame="all">
+        <tgroup cols="3" colsep="1" rowsep="1" align="justify">
+	  <colspec colnum="1" colwidth="1.4*"/>
+	  <colspec colnum="2" colwidth="2.8*"/>
+	  <colspec colnum="3" colwidth=".4*"/>
+          <thead>
+	    <row>
+              <entry>Argument name</entry>
+              <entry>Description</entry>
+              <entry>Required</entry>
+	    </row>
+          </thead>
+          <tbody>
+	    <row>
+              <entry>DB_NAME</entry>
+              <entry>Name of the database. This should be the name of the database file without
+	      the ".db" extension. However when opening a database, if a file named after the DB_NAME
+	      value exists then it is used (so beware, for example if DB_NAME is set to "mydb" and a file
+	      named "mydb" exists but is not an SQLite database, then an error will occur).
+	      Using the ":memory:" database name will result in a database residing purely in memory, the database
+	      ceases to exist as soon as the database connection is closed (every memory database is distinct from
+	      every other); refer to
+	      <ulink url="http://www.sqlite.org/inmemorydb.html">SQLite's in memory databases</ulink> for more
+	      information.
+	      </entry>
+              <entry>Yes</entry>
+	    </row>
+	    <row>
+              <entry>APPEND_DB_EXTENSION</entry>
+              <entry>Defines if the '.db' extension need to be appended to the name of the database. Defaults to TRUE if not
+	      specified.</entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>DB_DIR</entry>
+              <entry>The directory where the database file is; if not specified, the current working
+	      directory is used.</entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>EXTRA_FUNCTIONS</entry>
+              <entry>If set to TRUE (or unspecified), then some extra functions defined by &LIBGDA; are added. The functions are:
+	      <function>gda_file_exists()</function>, <function>gda_hex_print()</function>,
+	      <function>gda_hex()</function>, <function>gda_rmdiacr()</function>,
+	      <function>gda_lower()</function> and <function>gda_upper()</function>; see below 
+	      for more information about them.
+	      </entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>EXTRA_COLLATIONS</entry>
+              <entry>If set to TRUE (or unspecified), then some extra collations defined by &LIBGDA; are added.
+	      They are:
+	      <function>LOCALE</function> (the strings are compared taking into account UTF8 sorting and the
+	      current locale) and <function>DCASE</function> (before comparison, all the diacritical
+	      signs (for example accents) are removed from the strings and they are converted to lower case).
+	      </entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>REGEXP</entry>
+              <entry>If set to TRUE (or unspecified), then the <function>regexp()</function> and <function>regexp_match()</function>
+	      functions are defined. The <function>regexp()</function> function is used by SQL statement with a
+	      construct as "x REGEXP y", and the <function>regexp_match()</function> is more general. The default for
+	      this option is TRUE. See below for more information about this function.
+	      </entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>FK</entry>
+              <entry>Defines if foreign keys are enforced, by default, they are.</entry>
+              <entry>No</entry>
+	    </row>
+	    <row>
+              <entry>EXTENSIONS</entry>
+              <entry>Defines if SQLite extensions are allowed to be loaded, using the load_extension() function, default is to
+	      deny loading extensions.</entry>
+              <entry>No</entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+      </table>
+    </para>
+
+    <sect2>
+      <title>The <function>gda_file_exists()</function> function</title>
+      <para>
+	This function accepts a filename as argument, and returns 0 if the file with that filename does not
+	exist, or 1 if it does.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>The <function>gda_hex_print()</function> function</title>
+      <para>
+	This function accepts at most 2 arguments, in that order:
+	<itemizedlist>
+	  <listitem><para>a blob value</para></listitem>
+	  <listitem><para>a length (not mandatory)</para></listitem>
+	</itemizedlist>
+      </para>
+      <para>
+	It returns a string suitable to be printed (where all the non ascii characters are converted to
+	the "\xyz" syntax where "xyz" is the decimal value of the character), limited to the specified
+	length if any. 
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>The <function>gda_hex()</function> function</title>
+      <para>
+	This function accepts at most 2 arguments, in that order:
+	<itemizedlist>
+	  <listitem><para>a blob value</para></listitem>
+	  <listitem><para>a length (not mandatory)</para></listitem>
+	</itemizedlist>
+      </para>
+      <para>
+	It returns a hex dump string of the blob value, limited to the specified length if any.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>The <function>gda_rmdiacr()</function> function</title>
+      <para>
+	This function accepts at most 2 arguments, in that order:
+	<itemizedlist>
+	  <listitem><para>a string value</para></listitem>
+	  <listitem><para>a case conversion to do (not mandatory), as a string which must be
+	  'upper' or 'lower'</para></listitem>
+	</itemizedlist>
+      </para>
+      <para>
+	It returns a string where all the diacritical signs (for example accents) from the input string,
+	and optionally converts the string to upper or lower case if specified. This function takes into
+	account the current locale and is useful to do some text search.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>The <function>gda_upper()</function> and <function>gda_lower()</function> functions</title>
+      <para>
+	These function accept one string argument and convert it to upper or lower case, taking into account
+	the locale (the standard SQLite <function>upper()</function> and <function>lower()</function>
+	functions only operating on ASCII characters).
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>The <function>regexp_match()</function> function</title>
+      <para>
+	This function accepts at most 3 arguments, in that order:
+	<itemizedlist>
+	  <listitem><para>the string on which the regular expression will be applied</para></listitem>
+	  <listitem><para>the regular expression to apply</para></listitem>
+	  <listitem><para>the options (not mandatory)</para></listitem>
+	</itemizedlist>
+      </para>
+      <para>
+	The options are specified as a string where each character corresponds to a boolean flag (the presence of the
+	character meaning the flag is set). They are:
+	<itemizedlist>
+	  <listitem><para>'i': specifies a case insensitive matching</para></listitem>
+	  <listitem><para>'m': specifies that the the "start of line" and "end of line" constructs match immediately
+	  following or immediately before any newline in the string, respectively, as well as at the very start
+	  and end of the string</para></listitem>
+	  <listitem><para>'v': specifies that instead of returning 0 or 1 as a result for matching or non
+	  matching, the function returns the string which actually matches, or NULL if not match was found</para></listitem>
+	</itemizedlist>	
+      </para>
+      <para>
+	This function is implemented using GLib's Perl-compatible regular expressions implementation:
+	<link linkend="GRegex">GRegex</link>, itself based on the <ulink url="http://www.pcre.org/">PCRE</ulink> library.
+      </para>
+    </sect2>
+    <para>
+      Also refer to the <link linkend="limitations_sqlite">SQLite's provider's limitations</link>.
+    </para>
+  </sect1>
+
+  <sect1 id="provider_notes_sqlcipher"><title>For SQLCipher</title>
+  <para>
+    The SQLCipher database provider allows one to connect to a database encrypted using the
+    <ulink url="http://www.zetetic.net/code/sqlcipher">SQLCipher</ulink> adaptations to the SQLite
+    database. This section deals about how to manage the passphrase associated with a database file, please
+    also consult the information <ulink url="http://sqlcipher.net/sqlcipher-api/">provided by SQLCipher</ulink>
+    before attempting to use this database provider.
+  </para>
+  <para>
+    The first noticeable point is that any SQLite database file can be opened using the SQLCipher and
+    will remain useable with the "standard" SQLite provider as long as it's not explicitely encrypted using
+    a passphrase.
+  </para>
+  <sect2>
+    <title>How to create and encrypted database</title>
+    <para>
+      To create an encrypted database, you can use the <application>gda-sql</application> and when prompted
+      enter the requested passphrase, as:
+      <programlisting><![CDATA[prompt> gda-sql-6.0 "SQLCipher://DB_NAME=testcrypt"
+Welcome to the GDA SQL console, version 5.1.0
+
+Type: .copyright to show usage and distribution terms
+      .? for help with internal commands
+      .q (or CTRL-D) to quit
+      (the '.' can be replaced by a '\')
+      or any query terminated by a semicolon
+
+Opening connection 'c0' for: SQLCipher://DB_NAME=testcrypt
+	Password for 'c0':]]></programlisting>
+    </para>
+  </sect2>
+  <sect2>
+    <title>How to encrypt an existing plaintext database to an encrypted database file</title>
+    <para>
+      To encrypt an existing (SQLite) database, connect to the plaintext database using the SQLCipher provider and execute the
+      following SQL commands (replace the passphrase with the requested passphrase):
+      <programlisting>ATTACH DATABASE 'encrypted.db' AS encrypted KEY 'passphrase';
+SELECT sqlcipher_export('encrypted');
+DETACH DATABASE encrypted; </programlisting>
+      This step prevents opening the database file by the "standard" SQLite provider.
+    </para>
+  </sect2>
+
+  <sect2>
+    <title>How to change the passphrase of an encrypted database</title>
+    <para>
+      To change an encrypted database's passphrase, open a connection to the database and enter the following
+      SQL command (replace the passphrase with the requested new passphrase):
+      <programlisting>PRAGMA rekey = 'passphrase';</programlisting>
+    </para>
+  </sect2>
+
+  <sect2>
+    <title>How to decrypt an existing database to a plaintext database</title>
+    <para>
+      To decrypt an existing encrypted database, connect to the database using the SQLCipher provider and execute the
+      following SQL commands (replace the passphrase with the requested passphrase):
+      <programlisting>ATTACH DATABASE 'plaintext.db' AS plaintext KEY '';
+SELECT sqlcipher_export('plaintext');
+DETACH DATABASE plaintext; </programlisting>
+      This step allows opening the database file by the "standard" SQLite provider.
+    </para>
+  </sect2>
+
+  <para>
+    Also refer to the <link linkend="provider_notes_sqlite">SQLite's provider's notes</link>,
+    and <link linkend="limitations_sqlcipher">SQLCipher provider's limitations</link>.
+  </para>
+  </sect1>
+
+  <sect1 id="provider_notes_ldap"><title>For LDAP</title>
+  <sect2>
+    <title>Authentication</title>
+    <para>
+      For the LDAP authentification, one can provide the user name as a valid Distinguished Name (DN), or one
+      can provide a user name which correponds to an entry in the LDAP tree; however the LDAP server usually
+      requires a DN to authenticate. Providing a DN is usually
+      inconvenient and people prefer to remember their user name rather than the associated DN. For this
+      reason, if a user name is not provided, the LDAP provider tries the following:
+      <itemizedlist>
+	<listitem><para>do an anonymous bind</para></listitem>
+	<listitem><para>search a DN from the specified user name</para></listitem>
+	<listitem><para>fetch the DN is it exists and is the only result</para></listitem>
+	<listitem><para>close the anonymous connection</para></listitem>
+	<listitem><para>bind using the found DN</para></listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      However for an Active Directory server, this may fail if the server does not allow anonymous binding or
+      searches, and one can use one of the following username syntaxes instead:
+      <itemizedlist>
+	<listitem><para>username@DOMAIN</para></listitem>
+	<listitem><para>DOMAIN\username</para></listitem>
+      </itemizedlist>
+    </para>
+  </sect2>
+  <sect2>
+    <title>Mapping to GdaDataModel</title>
+    <para>
+      The LDAP provider maps LDAP searches to &LIBGDA;'s data models, with the following design choices:
+      <itemizedlist>
+	<listitem><para>A data model column is created for each attibute the LDAP search returns, plus one
+	column for the DN (Distinguished name), as the 1st column of each search;
+	so if no attribute is requested, the resulting data model
+	will only contain one column for the DN</para></listitem>
+	<listitem><para>If not otherwise specified, the data type of each data model column is determined
+	by the data type of the corresponding column attribute</para></listitem>
+	<listitem><para>Multi valued attributes are by default handled as an invalid data, but it is possible to
+	specify instead to report a NULL value, or an array in a CSV notation.</para></listitem>
+	<listitem><para>For performances reasons, some data is cached (unless the "USE_CACHE" connection
+	variable is set to FALSE). Cache files are in the users's home directory, as per the
+	<ulink url="http://www.freedesktop.org/wiki/Specifications/basedir-spec">XDG Base Directory Specification</ulink></para></listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      For more information, see the <link linkend="GdaDataModelLdap">GdaDataModelLdap</link> and
+      the <link linkend="GdaLdapConnection">GdaLdapConnection</link> objects.
+    </para>
+  </sect2>
+  </sect1>
+
+  <sect1 id="provider_notes_jdbc">
+    <title>For JDBC</title>
+    <sect2>
+      <title>How it works</title>
+      <para>
+	JDBC (Java Database Connectivity) is a Java-based technology to access databases, not unlike ODBC.
+	The JDBC provider runs a Java Virtual Machine in which the installed JDBC drivers are loaded. Connections
+	are established and used through the JDBC driver, making an extensive use of the JNI (Java Native Interface)
+	technology.
+      </para>
+      <para>
+	Any JDBC driver can be used, though only some of them have actually been tested. Some specializations
+	have been made to adapt to some corner cases in the way some JDBC drivers are written or some specificities
+	of some database engines.
+      </para>
+      <para>
+	Note that the JDBC drivers are not provided by Libgda and must be obtained and installed separately.
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>JDBC drivers' location</title>
+      <para>
+	JDBC drivers (".jar" files) are searched for in the following locations:
+	<orderedlist>
+	  <listitem><para>in each directory or JAR file in the <envar>CLASSPATH</envar> environment variable
+	      (if set)</para></listitem>
+	  <listitem><para>in the <filename>$HOME/.local/share/libgda/config</filename> directory (or 
+	      <filename class="directory">$HOME/.libgda</filename> if if exists and
+	      <filename>$HOME/.local/share/libgda/config</filename> if does not)</para></listitem>
+	</orderedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Connection parameters</title>
+      <para>
+	To connect to a database, the expected connection parameters are the ones required by the JDBC driver being
+	used, which varies from driver to driver (for more information, refer to each driver's documentation). Thus
+	&LIBGDA; expects only one argument named "URL" which it passes (without any modification) to the JDBC driver.
+      </para>
+      <para>
+	However, for some widely used servers (such as SqlServer), Libgda also accepts some parameters like
+	for other database providers (like DB_NAME, HOST, ...). In this case one can either provide these parameters
+	or provide the URL parameter (like for any JDBC provider) to specify a connection to open.
+      </para>
+    </sect2>
+
+    <para>
+      Also refer to the <link linkend="limitations_jdbc">JDBC provider's limitations</link>.
+    </para>
+  </sect1>
+  
+</chapter>

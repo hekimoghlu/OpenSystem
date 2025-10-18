@@ -1,0 +1,61 @@
+/* Copyright (C) 2007 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/interface.h>
+#include <giomm/cancellable.h>
+#include <giomm/asyncresult.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+class GIOMM_API SocketAddress;
+
+/** Enumerator type for objects that contain or generate SocketAddresses
+ *
+ * @newin{2,24}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API SocketAddressEnumerator : public Glib::Object
+{
+  _CLASS_GOBJECT(SocketAddressEnumerator, GSocketAddressEnumerator, G_SOCKET_ADDRESS_ENUMERATOR, Glib::Object, GObject, , , GIOMM_API)
+
+public:
+  _WRAP_METHOD(Glib::RefPtr<SocketAddress> next(const Glib::RefPtr<Cancellable>& cancellable{?}), g_socket_address_enumerator_next, errthrow)
+
+  /** Asynchronously retrieves the next SocketAddress from the enumerator and then calls @a slot,
+   * which must call next_finish() to get the result.
+   *
+   * @param cancellable A Cancellable object which can be used to cancel the operation.
+   * @param slot A callback slot to call after the resolution completes.
+   */
+  void next_async(const Glib::RefPtr<Cancellable>& cancellable, const SlotAsyncReady& slot);
+
+  /** Asynchronously retrieves the next SocketAddress from the enumerator and then calls @a slot,
+   * which must call next_finish() to get the result.
+   *
+   * @param slot A callback slot to call after the resolution completes.
+   */
+  void next_async(const SlotAsyncReady& slot);
+  _IGNORE(g_socket_address_enumerator_next_async)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketAddress> next_finish(const Glib::RefPtr<AsyncResult>& result), g_socket_address_enumerator_next_finish, errthrow)
+};
+
+} // namespace Gio
+

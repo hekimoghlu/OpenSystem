@@ -1,0 +1,59 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/element.h>
+
+namespace Gst
+{
+
+Glib::RefPtr<Gst::Element> Parse::launch(const Glib::ustring& pipeline_description)
+{
+  GError* gerror = nullptr;
+  Glib::RefPtr<Gst::Element> retvalue = Glib::wrap(gst_parse_launch(pipeline_description.c_str(), &gerror));
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+Glib::RefPtr<Gst::Element> Parse::launchv(const gchar *argv[])
+{
+  GError* gerror = nullptr;
+  Glib::RefPtr<Gst::Element> retvalue = Glib::wrap(gst_parse_launchv(argv, &gerror));
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+Glib::RefPtr<Gst::Element> Parse::create_bin(const Glib::ustring& bin_description, bool ghost_unconnected_pads)
+{
+  GError* gerror = nullptr;
+  Glib::RefPtr<Gst::Element> retvalue = Glib::wrap(gst_parse_bin_from_description(bin_description.c_str(), ghost_unconnected_pads, &gerror));
+
+  if(gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+} //namespace Gst

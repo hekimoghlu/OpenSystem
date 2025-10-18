@@ -1,0 +1,63 @@
+/* Copyright (C) 2007 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/interface.h>
+#include <giomm/cancellable.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GInitableIface GInitableIface;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gio
+{
+
+/** Failable object initialization interface
+ *
+ * Initable is implemented by objects that can fail during initialization. If
+ * an object implements this interface the init() function must be called as the
+ * first thing after construction. If init() is not called, or if it returns an
+ * error, all further operations on the object should fail, generally with a
+ * G_IO_ERROR_NOT_INITIALIZED error.
+ *
+ * Users of objects implementing this are not intended to use the interface
+ * method directly, instead it will be used automatically in various ways. For C
+ * applications you generally just call g_initable_new() directly, or indirectly
+ * via a foo_thing_new() wrapper. This will call g_initable_init() under the
+ * cover, returning nullptr and setting a GError on failure.
+ *
+ * For bindings in languages where the native constructor supports exceptions
+ * the binding could check for objects implemention GInitable during normal
+ * construction and automatically initialize them, throwing an exception on
+ * failure.
+ *
+ * @newin{2,24}
+ */
+class GIOMM_API Initable : public Glib::Interface
+{
+  _CLASS_INTERFACE(Initable, GInitable, G_INITABLE, GInitableIface, , , GIOMM_API)
+
+protected:
+  _WRAP_METHOD(void init(const Glib::RefPtr<Cancellable>& cancellable{?}),
+    g_initable_init, errthrow)
+
+protected:
+  _WRAP_VFUNC(bool init(const Glib::RefPtr<Cancellable>& cancellable, GError** error), "init")
+};
+
+} // namespace Gio

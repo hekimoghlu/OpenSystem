@@ -1,0 +1,1011 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/miniobject.h>
+#include <gstreamermm/structure.h>
+#include <gstreamermm/format.h>
+#include <gstreamermm/caps.h>
+#include <gstreamermm/pad.h>
+#include <gstreamermm/allocator.h>
+#include <glibmm/arrayhandle.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Glib
+{
+    template<typename T>
+    Glib::RefPtr<T> wrap_query_derived(GstQuery* object, bool take_copy = false)
+    {
+      if(take_copy && object)
+        gst_query_ref(object);
+
+      // See the comment at the top of this file, if you want to know why the cast works.
+      return Glib::RefPtr<T>(reinterpret_cast<T*>(object));
+    }
+}
+
+namespace Gst
+{
+
+#define FLAG(name) GST_QUERY_TYPE_##name
+
+_WRAP_ENUM(BufferingMode, GstBufferingMode)
+_WRAP_ENUM(QueryType, GstQueryType)
+_WRAP_ENUM(QueryTypeFlags, GstQueryTypeFlags)
+_WRAP_ENUM(SchedulingFlags, GstSchedulingFlags)
+
+#undef FLAG
+
+namespace Enums
+{
+
+/** Gets a printable name for the given query type.
+ *
+ * @param type The query type.
+ * @return The name of the query.
+ */
+Glib::ustring get_name(QueryType type);
+_IGNORE(gst_query_type_get_name)
+
+/** Gets the Gst::QueryTypeFlags associated with @a type.
+ *
+ * @param type a Gst::QueryType.
+ * @return a Gst::QueryTypeFlags;
+ */
+Gst::QueryTypeFlags get_flags(QueryType type);
+_IGNORE(gst_query_type_get_flags)
+
+/** Gets the unique quark for the given query type.
+ *
+ * @param type The query type.
+ * @return The quark associated with the query type.
+ */
+Glib::QueryQuark get_quark(QueryType type);
+_IGNORE(gst_query_type_to_quark)
+
+} //namespace Enums
+
+/** A class used to perform queries on pads and elements.
+ *
+ * Queries can be performed on pads (gst_pad_query()) and elements
+ * (gst_element_query()). Please note that some queries might need a running
+ * pipeline to work.
+ *
+ * Queries can be created using the gst_query_new_*() functions.
+ * Query values can be set using gst_query_set_*(), and parsed using
+ * gst_query_parse_*() helpers.
+ *
+ * The following example shows how to query the duration of a pipeline:
+ *
+ * @code
+ * Glib::RefPtr<Gst::Query> query = Gst::QueryDuration::create(Gst::FORMAT_TIME);
+ * bool res = pipeline->query(query);
+ * if(res)
+ * {
+ *  gint64 duration = Glib::RefPtr<Gst::QueryDuration>::cast_dynamic(query)->parse();
+ *  ...
+ * }
+ * @endcode
+ */
+class Query : public MiniObject
+{
+  _CLASS_OPAQUE_REFCOUNTED(Query, GstQuery, NONE, gst_query_ref, gst_query_unref)
+  _IGNORE(gst_query_ref, gst_query_unref)
+
+public:
+   /** Makes a writable query from the given query.
+    * @return A Gst::Query (possibly the same pointer) that is writable.
+    */
+   Glib::RefPtr<Gst::Query> create_writable();
+
+// A copy is taken so that the original is not freed by the wrapper.
+#m4 _CONVERSION(`const GstStructure*',`Gst::Structure',`Glib::wrap(const_cast<GstStructure*>($3), true)')
+   _WRAP_METHOD(Gst::Structure get_structure() const, gst_query_get_structure)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_buffering(Gst::Format format), gst_query_new_buffering)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_allocation(Glib::RefPtr<Gst::Caps> caps, bool need_pool), gst_query_new_allocation)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_uri(), gst_query_new_uri)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_scheduling(), gst_query_new_scheduling)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_drain(), gst_query_new_drain)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_custom(Gst::QueryType type, const Gst::Structure& structure), gst_query_new_custom)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_convert(Gst::Format format, gint64 value, Gst::Format dest_format), gst_query_new_convert)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_position(Gst::Format format), gst_query_new_position)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_duration(Gst::Format format), gst_query_new_duration)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_latency(), gst_query_new_latency)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_seeking(Gst::Format format), gst_query_new_seeking)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_formats(), gst_query_new_formats)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_segment(Gst::Format format), gst_query_new_segment)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_caps(Glib::RefPtr<Gst::Caps> filter), gst_query_new_caps)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Query> create_accept_caps(Glib::RefPtr<Gst::Caps> filter), gst_query_new_accept_caps)
+
+  /** Get the Gst::QueryType of the query.
+   */
+  _MEMBER_GET(query_type, type, QueryType, GstQueryType)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Query> copy(), gst_query_copy)
+
+  _IGNORE(gst_query_set_duration)
+  _IGNORE(gst_query_parse_duration)
+  _IGNORE(gst_query_set_convert)
+  _IGNORE(gst_query_parse_convert)
+  _IGNORE(gst_query_set_seeking)
+  _IGNORE(gst_query_parse_seeking)
+  _IGNORE(gst_query_set_buffering_percent)
+  _IGNORE(gst_query_parse_buffering_percent)
+  _IGNORE(gst_query_set_buffering_stats)
+  _IGNORE(gst_query_parse_buffering_stats)
+  _IGNORE(gst_query_set_buffering_range)
+  _IGNORE(gst_query_parse_buffering_range)
+  _IGNORE(gst_query_set_latency)
+  _IGNORE(gst_query_parse_latency)
+  _IGNORE(gst_query_set_position)
+  _IGNORE(gst_query_parse_position)
+  _IGNORE(gst_query_set_formatsv)
+  _IGNORE(gst_query_parse_segment)
+  _IGNORE(gst_query_set_segment)
+  _IGNORE(gst_query_parse_caps)
+  _IGNORE(gst_query_parse_scheduling)
+  _IGNORE(gst_query_set_scheduling)
+  _IGNORE(gst_query_add_scheduling_mode)
+  _IGNORE(gst_query_get_n_scheduling_modes)
+  _IGNORE(gst_query_parse_nth_scheduling_mode)
+  _IGNORE(gst_query_has_scheduling_mode)
+  _IGNORE(gst_query_has_scheduling_mode_with_flags)
+  _IGNORE(gst_query_parse_allocation)
+  _IGNORE(gst_query_get_n_allocation_pools)
+  _IGNORE(gst_query_remove_nth_allocation_pool)
+  _IGNORE(gst_query_add_allocation_param)
+  _IGNORE(gst_query_get_n_allocation_params)
+  _IGNORE(gst_query_parse_nth_allocation_param)
+  _IGNORE(gst_query_set_nth_allocation_param)
+  _IGNORE(gst_query_remove_nth_allocation_param)
+  _IGNORE(gst_query_add_allocation_meta)
+  _IGNORE(gst_query_get_n_allocation_metas)
+  _IGNORE(gst_query_parse_nth_allocation_meta)
+  _IGNORE(gst_query_remove_nth_allocation_meta)
+  _IGNORE(gst_query_find_allocation_meta)
+  _IGNORE(gst_query_parse_uri)
+  _IGNORE(gst_query_set_uri)
+  _IGNORE(gst_query_set_formatsv)
+  _IGNORE(gst_query_parse_n_formats)
+  _IGNORE(gst_query_parse_nth_format)
+  _IGNORE(gst_query_set_caps_result)
+  _IGNORE(gst_query_parse_caps_result)
+  _IGNORE(gst_query_get_n_buffering_ranges)
+  _IGNORE(gst_query_add_buffering_range)
+  _IGNORE(gst_query_parse_nth_buffering_range)
+  _IGNORE(gst_query_set_uri_redirection)
+  _IGNORE(gst_query_parse_uri_redirection)
+  _IGNORE(gst_query_parse_accept_caps)
+  _IGNORE(gst_query_parse_accept_caps_result)
+  _IGNORE(gst_query_set_accept_caps_result)
+
+protected:
+  // This method is used in the create() methods to convert a wrapped GstQuery
+  // to one of the more specific Gst::Query types.
+  template <class QueryType>
+    static inline Glib::RefPtr<QueryType> wrap(GstQuery* query,
+    bool take_copy = false);
+};
+
+//TODO: Modify create methods of derived Query classes to return
+//Glib::RefPtr<...> to the derived class and not just Gst::Query. Must deal
+//with GstStructure immutability problem (bug #510301) first because casting
+//Glib::RefPtrs references the objects which causes problems when GStreamer API
+//tries to modify the GstStructures of the objects.
+
+/** A custom application query object.  See create() for more details.
+ */
+class QueryApplication : public Query
+{
+public:
+
+  /** Constructs a new custom application query object.  The Gst::Query may be
+   * used by applications in their own way.  Please note that a custom
+   * Gst::QueryType must be used in order for the returned Gst::Query to
+   * actually be a Gst::QueryApplication type.
+   * @param type The query type.
+   * @param structure A structure for the query.
+   * @return The new Gst::QueryApplication.
+   */
+  static Glib::RefPtr<Gst::QueryApplication>
+    create(QueryType type, const Gst::Structure& structure);
+};
+
+/** A convert query object.  See create() for more details.
+ */
+class QueryConvert : public Query
+{
+public:
+
+  /** Constructs a new convert query object.  A convert query is used to ask
+   * for a conversion between one format and another.
+   * @param src_format The source Gst::Format for the new query.
+   * @param value The value to convert.
+   * @param dest_format The target Gst::Format.
+   * @return The new Gst::QueryConvert.
+   */
+  static Glib::RefPtr<Gst::QueryConvert>
+    create(Format src_format, gint64 value, Format dest_format);
+
+  /** Answer a convert query by setting the requested values.
+   * @param src_format The source Gst::Format.
+   * @param src_value The source value.
+   * @param dest_format The destination Gst::Format.
+   * @param dest_value The destination value.
+   */
+  void set(Format src_format, gint64 src_value, Format dest_format, gint64 dest_value);
+
+  /** Parse a convert query answer.  Use the other parse() methods for parsing
+   * individual values.
+   * @param src_format The storage for the Gst::Format of the source value.
+   * @param src_value The storage for the source value.
+   * @param dest_format The storage for the Gst::Format of the destination.
+   * value.
+   * @param dest_value The storage for the destination value.
+   */
+  void parse(Format& src_format, gint64& src_value, Format& dest_format, gint64& dest_value) const;
+
+  /** Parse the destination format and value of a convert query answer.
+   * @param dest_format The storage for the Gst::Format of the destination
+   * value.
+   * @param dest_value The storage for the destination value.
+   */
+  void parse(Format& dest_format, gint64& dest_value) const;
+
+  /** Parse the source format of a convert query answer, returning the format.
+   * @return The Gst::Format of the source value.
+   */
+  Format parse_src_format() const;
+
+  /** Parse the source value of a convert query answer returning, the value.
+   * @return The source value.
+   */
+  gint64 parse_src_value() const;
+
+  /** Parse the destination format of a convert query answer, returning the
+   * format.
+   * @return The Gst::Format of the destination value.
+   */
+  Format parse_dest_format() const;
+
+  /** Parse the destination value of a convert query answer, returning the
+   * value.
+   * @return The destination value.
+   */
+  gint64 parse_dest_value() const;
+};
+
+/** A stream position query object.  See create() for more details.
+ */
+class QueryPosition : public Query
+{
+public:
+
+  /** Constructs a new query stream position query object. A position query is
+   * used to query the current position of playback in the streams, in some
+   * format.
+   * @param format The default Gst::Format for the new query.
+   * @return The new Gst::QueryPosition.
+   */
+  static Glib::RefPtr<Gst::QueryPosition> create(Format format);
+
+  /** Answer a position query by setting the requested value in the given
+   * format.
+  * @param format The requested Gst::Format.
+  * @param position The position to set.
+   */
+  void set(Format format, gint64 position);
+
+  /** Parse a position query, writing the format into format, and the position
+   * into @a position.  Use the other parse() methods for parsing individual
+   * values.
+   * @param format The storage for the Gst::Format of the position values.
+   * @param position The storage for the current position.
+   */
+  void parse(Format& format, gint64& position) const;
+
+  /** Parse the position of a position query, returning the position.
+   * @return The current position of the position query.
+   */
+  gint64 parse() const;
+
+  /** Parse the format of a position query, returning the format.
+   * @return The the Gst::Format of the position values.
+   */
+  Format parse_format() const;
+};
+
+/** A stream duration query object.  See create() for more details.
+ */
+class QueryDuration : public Query
+{
+public:
+
+  /** Constructs a new stream duration query object to query in the given
+   * format. A duration query will give the total length of the stream.
+   * @param format The Gst::Format for this duration query.
+   * @return The new Gst::QueryDuration.
+   */
+  static Glib::RefPtr<Gst::QueryDuration> create(Format format);
+
+  /** Answer a duration query by setting the requested value in the given
+   * format.
+   * @param format The Gst::Format for the duration.
+   * @param duration The duration of the stream.
+   */
+  void set(Format format, gint64 duration);
+
+  /** Parse a duration query answer. Write the format of the duration into
+   * @a format, and the value into @a duration.  Use the other parse() methods
+   * for parsing individual values.
+   * @param format The storage for the Gst::Format of the duration value.
+   * @param duration The storage for the total duration.
+   */
+  void parse(Format& format, gint64& duration) const;
+
+  /** Parse a duration query answer, returning the duration.  
+   * @return The total duration.
+   */
+  gint64 parse() const;
+
+  /** Parse a duration query answer, returning the format of the duration. 
+   * @return The Gst::Format of the duration value.
+   */
+  Format parse_format() const;
+};
+
+/** A latency query object.  See create() for more details.
+ */
+class QueryLatency : public Query
+{
+public:
+
+  /** Constructs a new latency query object. A latency query is usually
+   * performed by sinks to compensate for additional latency introduced by
+   * elements in the pipeline.
+   * @return The new Gst::QueryLatency.
+   */
+  static Glib::RefPtr<Gst::QueryLatency> create();
+
+  /** Answer a latency query by setting the requested values in the given
+   * format.
+   * @param live If there is a live element upstream.
+   * @param min_latency The minimal latency of the live element.
+   * @param max_latency The maximal latency of the live element.
+   */
+  void set(bool live, ClockTime min_latency, ClockTime max_latency);
+
+  /** Parse a latency query answer.  Use the other parse() methods for parsing
+   * individual values.
+   * @param live Storage for live.
+   * @param min_latency The storage for the min latency.
+   * @param max_latency The storage for the max latency.
+   */
+  void parse(bool& live, ClockTime& min_latency, ClockTime& max_latency) const;
+
+  /** Parse a latency query answer, returning the live status.
+   * @return the live satus.
+   */
+  bool parse_live() const;
+
+  /** Parse a latency query answer, returning the minimum latency.
+   * @return The minimum latency.
+   */
+  ClockTime parse_min() const;
+
+  /** Parse a latency query answer, returning the maximum latency.
+   * @return The maximum latency.
+   */
+  ClockTime parse_max() const;
+};
+
+/** A seeking query object.  See create() for more details.
+ */
+class QuerySeeking : public Query
+{
+public:
+
+  /** Constructs a new query object for querying seeking properties of the
+   * stream.
+   * @param format The default Gst::Format for the new query.
+   * @return The new Gst::QuerySeeking.
+   */
+  static Glib::RefPtr<Gst::QuerySeeking> create(Format format);
+
+  /** Set the seeking query result fields in query.
+   * @param format The format to set for @a the segment_start and
+   * @a segment_end values.
+   * @param seekable The seekable flag to set.
+   * @param segment_start The segment_start to set.
+   * @param segment_end The segment_end to set.
+   */
+  void set(Format format, bool seekable, gint64 segment_start, gint64 segment_end);
+
+  /** Parse a seeking query, writing the format into format, and other results
+   * into the passed parameters.  Use the other parse() methods for parsing
+   * individual values.
+   * @param format The storage location for the foramt.
+   * @param seekable The storage location for the seekable flag.
+   * @param segment_start The storage location for the segment start value.
+   * @param segment_end The storage location for the segment end.
+   */
+  void parse(Format& format, bool& seekable, gint64& segment_start, gint64& segment_end) const;
+
+  /** Parse a seeking query, returning the format.
+   * @return The format.
+   */
+  Format parse_format() const;
+
+  /** Parse a seeking query, returning the seekable status.
+   * @return The seekable flag.
+   */
+  bool parse_seekable() const;
+
+  /** Parse a seeking query, returning the segment start value.
+   * @return The segment start.
+   */
+  gint64 parse_start() const;
+
+  /** Parse a seeking query, returning the segment end value.
+   * @return The segment end.
+   */
+  gint64 parse_end() const;
+};
+
+/** A formats query object.  See create() for more details.
+ */
+class QueryFormats : public Query
+{
+public:
+
+  /** Constructs a new query object for querying formats of the stream.
+   * @return The new Gst::QueryFormats.
+   */
+  static Glib::RefPtr<Gst::QueryFormats> create();
+
+  /** Set the formats query result fields. All the formats in the array are
+   * used.
+   * @param formats An array containing Gst::Format values. 
+   */
+  void set(const Glib::ArrayHandle<Format>& formats);
+
+  /** Set the formats query result fields using only @a n_formats from @a
+   * formats. The number of formats passed in the formats array must be
+   * greater than or equal to @a n_formats.
+   * @param n_formats The number of formats to set.
+   * @param formats An array containing at least @a n_formats Gst::Format
+   * values. 
+   */
+  void set(int n_formats, const Glib::ArrayHandle<Format>& formats);
+
+  /** Parse and return the number of formats in the formats query.
+   * @return The number of formats in this query.
+   */
+  guint parse_length() const;
+
+  /** Parse the format query and return the @a nth format from it. If the list
+   * contains less elements than @a nth, Gst::FORMAT_UNDEFINED will be
+   * returned.
+   * @param nth The index of the format to return.
+   * @return the @a nth format or Gst::FORMAT_UNDEFINED.
+   */
+  Format parse(guint nth) const;
+};
+
+/** A new segment query object.  See create() for more details.
+ */
+class QuerySegment : public Query
+{
+public:
+
+  /** Constructs a new segment query object. A segment query is used to
+   * discover information about the currently configured segment for playback.
+   * @param format The Gst::Format for the new query.
+   * @return The new Gst::QuerySegment.
+   */
+  static Glib::RefPtr<Gst::QuerySegment> create(Format format);
+
+  /** Answer a segment query by setting the requested values. The normal
+   * playback segment of a pipeline is 0 to duration at the default rate of
+   * 1.0. If a seek was performed on the pipeline to play a different segment,
+   * this query will return the range specified in the last seek.
+   *
+   * @a start_value and @a stop_value will respectively contain the configured
+   * playback range start and stop values expressed in @a format. The values
+   * are always between 0 and the duration of the media and @a start_value <=
+   * @a stop_value. @a rate will contain the playback rate. For negative
+   * rates, playback will actually happen from @a stop_value to @a start_value.
+   *
+   * @param rate The rate of the segment.
+   * @param format The Gst::Format of the segment values (@a start_value and
+   * @a stop_value).
+   * @param start_value The start value.
+   * @param stop_value The stop value.
+   */
+  void set(double rate, Format format, gint64 start_value, gint64 stop_value);
+
+  /** Parse a segment query answer.  See set() for an explanation of the
+   * function arguments.  Use the other parse() methods to parse individual
+   * values.
+   *
+   * @param rate The storage for the rate of the segment.
+   * @param format The storage for the Gst::Format of the values.
+   * @param start_value The storage for the start value.
+   * @param stop_value The storage for the stop value.
+   */
+  void parse(double& rate, Format& format, gint64& start_value, gint64& stop_value) const;
+
+  /** Parse a segment query answer, returning the rate.  See set() for an
+   * explanation of the function arguments.  
+   * @return The rate of the segment.
+   */
+  double parse_rate() const;
+
+  /** Parse a segment query answer, returning the format.  See set() for an
+   * explanation of the function arguments.
+   * @return The Gst::Format of the start and stop values.
+   */
+  Format parse_format() const;
+
+  /** Parse a segment query answer, returning the start value.  See set() for
+   * an explanation of the function arguments.
+   * @return The start value.
+   */
+  gint64 parse_start() const;
+
+  /** Parse a segment query answer, returning the stop value.  See set() for
+   * an explanation of the function arguments.
+   * @return The stop value.
+   */
+  gint64 parse_stop() const;
+};
+
+/** A new buffering query object.  See create() for more details.
+ */
+class QueryBuffering : public Query
+{
+public:
+
+  /** Constructs a new query object for querying the buffering status of a
+   * stream.
+   * @param format The default Gst::Format for the new query.
+   * @return The new Gst::QueryBuffering.
+   */
+  static Glib::RefPtr<Gst::QueryBuffering> create(Format format);
+
+  /** Set the percentage of buffered data. This is a value between 0 and 100.
+   * The @a busy indicator is true when the buffering is in progress.
+   * @param busy If buffering is busy.
+   * @param percent A buffering percent.
+   */
+  void set(bool busy, int percent);
+
+  /** Get the busy flag and percentage of the buffered data. The percent is a
+   * value between 0 and 100.  The busy indicator is true when the buffering
+   * is in progress.  Use the other parse() methods to parse individual
+   * values.
+   * @param busy The location to store the buffering busy flag.
+   * @param percent The location to store the buffering percent.
+   */
+  void parse(bool& busy, int& percent) const;
+
+  /** Get the busy flag of the buffered data. The busy indicator is true when
+   * the buffering is in progress.
+   * @return The buffering busy flag.
+   */
+  bool parse_busy() const;
+
+  /** Get the percentage of the buffered data. The percent is a value between
+   * 0 and 100.
+   * @return The buffering percent.
+   */
+  int parse_percent() const;
+
+  /** Configures the buffering stats values in query.
+   * @param mode A buffering mode.
+   * @param avg_in The average input rate.
+   * @param avg_out The average output rate.
+   * @param buffering_left Amount of buffering time left.
+   */
+  void set(BufferingMode mode, int avg_in, int avg_out, gint64 buffering_left);
+
+  /** Extracts the buffering stats values from the query.  Use the other
+   * parse() methods to parse individual values.
+   * @param mode The location to store the buffering mode.
+   * @param avg_in The location to store the average input rate.
+   * @param avg_out The location to store the average output rate.
+   * @param buffering_left The location to store the amount of buffering time
+   * left.
+   */
+  void parse(BufferingMode& mode, int& avg_in, int& avg_out, gint64 buffering_left) const;
+
+  /** Extracts the buffering mode from the query.
+   * @return The the buffering mode.
+   */
+  BufferingMode parse_mode() const;
+
+  /** Extracts the average input rate from the query.
+   * @return The average input rate.
+   */
+  int parse_input_rate() const;
+
+  /** Extracts the average output rate from the query.
+   * @return The average output rate.
+   */
+  int parse_output_rate() const;
+
+  /** Extracts the buffering time left from the query.
+   * @return The the amount of buffering time left.
+   */
+  gint64 parse_time_left() const;
+
+  /** Set the available query result fields in query.
+   * @param format The format to set for the start and stop values.
+   * @param start The start to set.
+   * @param stop The stop to set.
+   * @param estimated_total Estimated total amount of download time.
+   */
+  void set(Format format, gint64 start, gint64 stop, gint64 estimated_total);
+
+  /** Parse the query, writing the format into format, and other
+   * results into the passed parameters.  Use the other parse() methods to
+   * parse individual values.
+   * @param format The location to store the format.
+   * @param start The location to store the start.
+   * @param stop The location to store the stop.
+   * @param estimated_total The location to store the estimated total amount
+   * of download time.
+   */
+  void parse(Format& format, gint64& start, gint64& stop, gint64& estimated_total) const;
+
+  /** Parse the query, returning the format.
+   * @return The format.
+   */
+  Format parse_format() const;
+
+  /** Parse the query, returning the start range value.
+   * @return The start value.
+   */
+  gint64 parse_start() const;
+
+  /** Parse the query, returning the stop range value.
+   * @return The stop value.
+   */
+  gint64 parse_stop() const;
+
+  /** Parse the query, returning the estimated total amount of download time.
+   * @return The estimated total amount of download time.
+   */
+  gint64 parse_total_time() const;
+
+  /** Retrieve the number of values currently stored in the
+   * buffered-ranges array of the query's structure.
+   * @return the range array size as a guint.
+   */
+  guint get_n_buffering_ranges() const;
+
+  /** Set the buffering-ranges array field in @a query. The current last
+   * start position of the array should be inferior to @a start.
+   * @param start start position of the range.
+   * @param stop stop position of the range.
+   * @return a bool indicating if the range was added or not.
+   */
+  bool add_buffering_range(gint64 start, gint64 stop);
+
+  /** Parse an available query and get the start and stop values stored
+   * at the @a index of the buffered ranges array.
+   * @param index position in the buffered-ranges array to read.
+   * @param start the start position to set, or NULL.
+   * @param stop the stop position to set, or NULL.
+   * @return a bool indicating if the parsing succeeded.
+   */
+  bool parse_nth_buffering_range(guint index, gint64& start, gint64& stop) const;
+};
+
+/** A new caps query object.  See create() for more details.
+ */
+class QueryCaps : public Query
+{
+public:
+
+  /** Constructs a new query object for querying the caps.
+   *
+   * The CAPS query should return the allowable caps for a pad in the context
+   * of the element's state, its link to other elements, and the devices or files
+   * it has opened. These caps must be a subset of the pad template caps. In the
+   * NULL state with no links, the CAPS query should ideally return the same caps
+   * as the pad template. In rare circumstances, an object property can affect
+   * the caps returned by the CAPS query, but this is discouraged.
+   * For most filters, the caps returned by CAPS query is directly affected by the
+   * allowed caps on other pads. For demuxers and decoders, the caps returned by
+   * the srcpad's getcaps function is directly related to the stream data. Again,
+   * the CAPS query should return the most specific caps it reasonably can, since this
+   * helps with autoplugging.
+   *
+   * The @a filter is used to restrict the result caps, only the caps matching
+   * @a filter should be returned from the CAPS query. Specifying a filter might
+   * greatly reduce the amount of processing an element needs to do.
+   * @param filter a filter.
+   * @return The new Gst::QureyCaps.
+   */
+  static Glib::RefPtr<Gst::QueryCaps>
+    create(const Glib::RefPtr<Gst::Caps>& filter);
+
+  /** Get the filter from the caps @a query. The caps remains valid as long as
+   * @a query remains valid.
+   * @return caps filter.
+   */
+  Glib::RefPtr<Gst::Caps> parse() const;
+
+  /** Get the caps result from @a query. The caps remains valid as long as
+   * @a query remains valid.
+   * @return a pointer to the caps.
+   */
+  Glib::RefPtr<Gst::Caps> parse_caps_result() const;
+
+  /** Set the @a caps result in @a query.
+   * @param caps a pointer to the caps.
+   */
+  void set_caps_result(const Glib::RefPtr<Gst::Caps>& caps);
+};
+
+/** A new scheduling query object.  See create() for more details.
+ */
+class QueryScheduling : public Query
+{
+public:
+
+  /** Constructs a new query object for querying the scheduling properties.
+   * @return A new Gst::QueryScheduling.
+   */
+  static Glib::RefPtr<Gst::QueryScheduling>
+    create();
+
+  /** Set the scheduling properties.
+   * @param flags Gst::SchedulingFlags.
+   * @param minsize the suggested minimum size of pull requests.
+   * @param maxsize the suggested maximum size of pull requests.
+   * @param align the suggested alignment of pull requests.
+   */
+  void parse(Gst::SchedulingFlags& flags, gint& minsize, gint& maxsize, gint& align) const;
+
+  /** Set the scheduling properties.
+   * @param flags Gst::SchedulingFlags.
+   * @param minsize the suggested minimum size of pull requests.
+   * @param maxsize the suggested maximum size of pull requests.
+   * @param align the suggested alignment of pull requests.
+   */
+  void set(Gst::SchedulingFlags flags, gint minsize, gint maxsize, gint align);
+
+  /** Add @a mode as aone of the supported scheduling modes to @a query.
+   *
+   * @param mode A Gst::PadMode.
+   */
+  void add_scheduling_mode(Gst::PadMode mode);
+
+  /** Retrieve the number of values currently stored in the
+   * scheduling mode array of the query's structure.
+   * @return the scheduling mode array size as a guint.
+   */
+  guint get_n_scheduling_modes() const;
+
+  /** Parse an available query and get the scheduling mode
+   * at @a index of the scheduling modes array.
+   * @param index position in the scheduling modes array to read
+   * @return a Gst::PadMode of the scheduling mode at @a index.
+   */
+  Gst::PadMode parse_nth_scheduling_mode(guint index) const;
+
+  /** Check if @a query has scheduling mode set.
+   * @param mode the scheduling mode.
+   * @return true when @a mode is in the list of scheduling modes.
+   */
+  bool has_scheduling_mode(Gst::PadMode mode) const;
+
+  /** Check if @a query has scheduling mode set and @a flags is set in
+   * query scheduling flags.
+   * @param mode the scheduling mode.
+   * @param flags Gst::SchedulingFlags.
+   */
+  bool has_scheduling_mode_with_flags(Gst::PadMode mode, Gst::SchedulingFlags flags) const;
+};
+
+/** A new scheduling query object.  See create() for more details.
+ */
+class QueryAllocation : public Query
+{
+public:
+  /** Constructs a new query object for querying the allocation properties.
+   * @param caps the negotiated caps.
+   * @param need_pool return a pool.
+   * @return a new Gst::Query.
+   */
+  static Glib::RefPtr<Gst::QueryAllocation>
+    create(const Glib::RefPtr<Gst::Caps>& caps, bool need_pool);
+
+  /** Parse an allocation query, writing the requested caps in @a caps and
+   * whether a pool is needed in @a need_pool, if the respective parameters
+   * are non-NULL.
+   * @param caps the Gst::Caps.
+   * @param need_pool whether a Gst::BufferPool is needed.
+   */
+  void parse(Glib::RefPtr<Gst::Caps>& caps, bool& need_pool) const;
+
+  /** Retrieve the number of values currently stored in the
+   * pool array of the query's structure.
+   * @return the pool array size as a guint.
+   */
+  guint get_n_allocation_pools() const;
+
+  /** Remove the allocation pool at @a index of the allocation pool array.
+   * @param index position in the allocation pool array to remove.
+   */
+  void remove_nth_allocation_pool(guint index);
+
+  /** Add @a allocator and its @a params as a supported memory allocator.
+   * @param allocator the memory allocator.
+   * @param params a Gst::AllocationParams.
+   */
+  void add_allocation_param(const Glib::RefPtr<Gst::Allocator>& allocator, const Gst::AllocationParams& params);
+
+  /** Retrieve the number of values currently stored in the
+   * allocator params array of the query's structure.
+   *
+   * If no memory allocator is specified, the downstream element can handle
+   * the default memory allocator. The first memory allocator in the query
+   * should be generic and allow mapping to system memory, all following
+   * allocators should be ordered by preference with the preferred one first.
+   * @return the allocator array size as guint.
+   */
+  guint get_n_allocation_params() const;
+
+  /** Parse an available query and get the alloctor and its params
+   * at @a index of the allocator array.
+   * @param index position in the allocator array to read.
+   * @param allocator variable to hold the result.
+   * @param params parameters for the allocator.
+   */
+  void parse_nth_allocation_param(guint index, Glib::RefPtr<Gst::Allocator>& allocator, Gst::AllocationParams& params) const;
+
+  /** Parse an available query and get the alloctor and its params
+   * at @a index of the allocator array.
+   * @param index position in the allocator array to set.
+   * @param allocator new allocator to set.
+   * @param params parameters for the allocator.
+   */
+  void set_nth_allocation_param(guint index, const Glib::RefPtr<Gst::Allocator>& allocator, const Gst::AllocationParams& params);
+
+  /** Remove the allocation param at @a index of the allocation param array.
+   * @param index position in the allocation param array to remove
+   */
+  void remove_nth_allocation_param(guint index);
+
+  /** Add @a api with @a params as one of the supported metadata API to @a query.
+   * @param api the metadata API.
+   * @param params API specific parameters.
+   */
+  void add_allocation_meta(GType api, const Gst::Structure& params);
+
+  /** Retrieve the number of values currently stored in the
+   * meta API array of the query's structure.
+   * @return the metadata API array size as a guint.
+   */
+  guint get_n_allocation_metas() const;
+
+  /** Parse an available query and get the metadata API
+   * at @a index of the metadata API array.
+   * @param index position in the metadata API array to read.
+   * @param params API specific flags.
+   */
+  GType parse_nth_allocation_meta(guint index, Gst::Structure& params) const;
+
+  /** Remove the metadata API at @a index of the metadata API array.
+   * @param index positon in the metadata API array to remove.
+   */
+  void remove_nth_allocation_meta(guint index);
+
+  /** Check if @a query has metadata @a api set. When this function returns TRUE,
+   * @a index will contain the index where the requested API and the flags can be
+   * found.
+   * @param api the metadata API.
+   * @param index the index
+   * @return true when @a api is in the list of metadata.
+   */
+  bool find_allocation_meta(GType api, guint& index) const;
+};
+
+/** A new uri query object.  See create() for more details.
+ */
+class QueryUri : public Query
+{
+public:
+  /** Constructs a new query URI query object. Use gst_query_unref()
+   * when done with it. An URI query is used to query the current URI
+   * that is used by the source or sink.
+   * @return a new Gst::Query.
+   */
+  static Glib::RefPtr<Gst::QueryUri> create();
+
+  /** Parse an URI query, writing the URI into @a uri as a newly
+   * allocated string, if the respective parameters are non-NULL.
+   * Free the string with g_free() after usage.
+   * @return the storage for the current URI.
+   */
+  Glib::ustring parse() const;
+
+  /** Answer a URI query by setting the requested URI.
+   * @param uri the URI to set.
+   */
+  void set(const Glib::ustring& uri);
+
+  /** Answer a URI query by setting the requested URI redirection.
+   * @param uri the URI to set.
+   */
+  void set_uri_redirection(const Glib::ustring& uri);
+
+  /** Parse an URI query, return URI, if the respective parameters.
+   * @return the storage for the redirect URI (may be empty).
+   */
+  Glib::ustring parse_uri_redirection() const;
+};
+
+/** A new accept caps query object.  See create() for more details.
+ */
+class QueryAcceptCaps : public Query
+{
+public:
+  /** Constructs a new query object for querying if @a caps are accepted.
+   * @return a new Gst::Query.
+   */
+  static Glib::RefPtr<Gst::QueryAcceptCaps> create(const Glib::RefPtr<Gst::Caps>& caps);
+
+  /** Get the caps from @a query. The caps remains valid as long as @a query remains
+    * valid.
+    * @return a caps.
+    */
+  Glib::RefPtr<Gst::Caps> parse_accept_caps() const;
+
+  /** Parse the result from @a query and store in @a result.
+   * @return location for the result.
+   */
+  bool parse_accept_caps_result() const;
+
+  /** Set @a result as the result for the @a query.
+   * @param result the result to set.
+   */
+  void set_accept_caps_result(bool result);
+};
+
+} //namespace Gst

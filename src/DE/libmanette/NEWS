@@ -1,0 +1,205 @@
+==============
+Version 0.2.11
+==============
+
+- Port documentation to gi-docgen
+- Add support for Steam Deck gamepad
+  - Add ManetteDeviceType and manette_device_get_device_type()
+  - Add manette_device_supports_mapping()
+- Deprecate LIBMANETTE_* version check symbols, add MANETTE_* instead
+- Add runtime version check functions
+- Make hat to buttons mapping always emit button release
+  (fixes d-pad getting stuck when quickly flipping right->left etc)
+- Fix paddle keycodes
+- Fix DualSense motion sensor and touchpad being recognized as gamepads
+- Fix half-range axis mappings
+- Build
+  - Depend on hidapi-hidraw
+  - Specify --doc-format for GIR data
+  - Fix build warnings
+
+=============
+Version 0.2.9
+=============
+
+* Update and clean up the game controller mapping database
+* ManetteDevice
+ - add manette_device_get_mapping() and manette_device_get_guid()
+ - Handle keycodes before BTN_MISC as well
+* ManetteMapping
+ - Allow to map paddle1-4, misc1-6 and touchpad buttons
+ - Improve error handling
+* ManetteMappingManager
+ - Check if user mapping file exists
+* Tests
+ - Test default mappings
+
+=============
+Version 0.2.7
+=============
+
+* Allow building as a static library
+* ManetteMappingManager:
+ - Strip leading and trailing spaces from mappings
+* ManetteMonitor
+ - Always use file backend in Flatpak
+ - Skip non-evdev devices
+ - Fix object construction
+* Various cleanups
+
+=============
+Version 0.2.6
+=============
+
+* Project:
+ - Move the project to https://gitlab.gnome.org/GNOME/libmanette.
+ - Update the URLs accordingly.
+ - Give the project a minimal website:
+   https://gnome.pages.gitlab.gnome.org/libmanette/
+ - Update the project's description.
+* Documentation:
+ - Add a documentation.
+ - Fix many documentation annotations.
+ - Document more symbols.
+* Meson:
+ - Require Meson 0.53.0.
+ - Add the demos option.
+ - Add the build-tests and install-tests option.
+ - Various code style cleanups and updates.
+ - Add a build summary.
+* ManetteDevice:
+ - Add a missing precondition check to ensure milliseconds is in the
+   right range in manette_device_rumble().
+ - Throw the full file error code rather than G_FILE_ERROR_FAILED in
+   manette_device_new().
+ - Throw G_FILE_ERROR_FAILED rather than G_FILE_ERROR_NXIO in
+   manette_device_new() if the device isn't a gamepad.
+* ManetteMapping:
+ - Check mapping strings have at least a GUID field and a name field.
+ - Use the debug log level for non-programming mapping parsing errors.
+ - Make some parsing error messages more explicit.
+* ManetteMappingManager:
+ - Use a race-free way to check the mapping file deletion.
+* Code cleanup:
+ - Make license headers have the LGPL footer, not the GPL one.
+ - Use #pragma once instead of manual header guards.
+ - Use g_auto(), g_autoptr() and g_autofree where possible.
+ - Use g_clear_pointer() and g_clear_object() where possible.
+ - Use assertions instead of g_return*_if_fail in static functions.
+ - Add HACKING.md to document the code, documentation, and commit
+   message styles.
+ - Give better names to callback functions.
+ - Give the namespace_object_ prefix to the finalize functions to match
+   the code style.
+ - Clean up and simplify the code in many places.
+ - Drop platform:Linux from the internal gamepad database.
+
+=============
+Version 0.2.5
+=============
+
+* Fix the build with musl by using input_event_sec and input_event_usec.
+
+=============
+Version 0.2.4
+=============
+
+* Build system changes:
+ - Add the 'introspection' and 'vapi' options, allowing to build without
+   producing GObject Introspection or Vala bindings.
+* Support hot-plugging in the fallback backend.
+* Update the game controller mapping database.
+* Various code cleanups.
+
+=============
+Version 0.2.3
+=============
+
+* Build system changes:
+ - Add 'gudev' option, allowing to explicitly build without gudev.
+* Fix build on Fedora 30.
+
+=============
+Version 0.2.2
+=============
+
+* Device:
+ - Handle absolute axes with min > 0.
+ - Handle the axes' flat to support axes to d-pad mapping.
+* Mapping:
+ - Support negative analog axis to button mappings.
+ - Support full-range axis to button mappings.
+
+=============
+Version 0.2.1
+=============
+
+* Defer the emission of input device events by putting them into idle
+  event sources.
+* Update the game controller database.
+
+=============
+Version 0.2.0
+=============
+
+* Device: Add rumble support.
+* Make the devices rumble in manette-test if they support it.
+* Mapping:
+ - Initialize the bindings to 0 before using them, avoiding improper
+   values in non used fields.
+ - Ensures the binding value inversion is disabled by default, avoiding
+   an unexpected state.
+ - Clear errno before using it to avoid string to uint16 convertions to
+   fail on valid inputs.
+ - Silently skip the 'platform' mapping key as it is neither useful nor
+   erroneous.
+* Monitor:
+ - Fix the 'device-disconnected' signal marshaller.
+ - Fix the devices hash table hash and comparison functions.
+* Build system change:
+ - Make manette-test properly depend on libmanette.
+ - Change the package name from libmanette to manette.
+ - Change the soname from liblibmanette.so to libmanette.so.
+ - Fix the soname version.
+* Fix the license header of manette-version.h.in, which was accidentaly
+  not matching the one of the library.
+
+* Bugs fixes:
+ - https://gitlab.gnome.org/aplazas/libmanette/issues/1
+ - https://gitlab.gnome.org/aplazas/libmanette/issues/2
+ - https://gitlab.gnome.org/aplazas/libmanette/issues/3
+ - https://gitlab.gnome.org/aplazas/libmanette/issues/4
+ - https://gitlab.gnome.org/aplazas/libmanette/issues/5
+ - https://gitlab.gnome.org/aplazas/libmanette/issues/6
+
+=============
+Version 0.1.2
+=============
+
+* Build system changes:
+ - Change the package name from manette to libmanette.
+ - Bump meson to 0.43.0.
+ - Enable GObject Introspection.
+ - Generate a VAPI file.
+* Add manette_device_has_input() to let users check the capabilities of
+  a gamepad. If the ManetteDevice has a mapping, it is considered to
+  have the inputs defined in the mapping and only these ones, otherwise
+  it has the ones returned by libevdev.
+* ManetteDevice now has accessors to the user's game controller
+  database, allowing to save and remove mappings for the device.
+* The mapping manager now tracks the user's game controller database and
+  will automatically reload the mappings in case of changes.
+  ManetteMonitor tracks these changes to update the devices' mappings
+  automatically.
+* Add accessors for ManetteEvent's type, time, and the unfiltered or
+  unmapped event values. This allows for example to build a mapping for
+  any device, whether it is mapped or not.
+* Various GTK-Doc fixes.
+* Various precondition fixes.
+
+=============
+Version 0.1.1
+=============
+
+This is the first version of libmanette.
+

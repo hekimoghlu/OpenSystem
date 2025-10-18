@@ -1,0 +1,89 @@
+/* Copyright 1998-1999 The gtkmm Development Team
+ * Copyright 2001      Free Software Foundation
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <pango/pangocairo.h>
+
+namespace Pango
+{
+
+std::vector<Glib::RefPtr<FontFamily>> Context::list_families() const
+{
+  //Get array:
+  PangoFontFamily** pFamilies = nullptr;
+  int n_families = 0;
+  pango_context_list_families(const_cast<PangoContext*>(gobj()), &pFamilies, &n_families);
+  
+  return Glib::ArrayHandler<Glib::RefPtr<FontFamily>>::array_to_vector
+      (pFamilies, n_families, Glib::OWNERSHIP_SHALLOW);
+}
+
+Pango::FontMetrics Context::get_metrics(const FontDescription& desc) const
+{
+  return FontMetrics(pango_context_get_metrics(const_cast<PangoContext*>(gobj()), desc.gobj(), nullptr));
+}
+
+struct ItemTraits
+{
+  typedef Pango::Item       CppType;
+  typedef const PangoItem*  CType;
+  typedef PangoItem*        CTypeNonConst;
+
+  static CType   to_c_type      (const CppType& obj) { return obj.gobj(); }
+  static CType   to_c_type      (CType ptr) { return ptr; }
+  static CppType to_cpp_type    (CType ptr) { return CppType(const_cast<CTypeNonConst>(ptr), true); }
+  static void    release_c_type (CType ptr) { pango_item_free(const_cast<CTypeNonConst>(ptr)); }
+};
+
+using ListHandler_Item = Glib::ListHandler<Item, ItemTraits>;
+
+std::vector<Item> Context::itemize(const Glib::ustring& text, const AttrList& attrs) const
+{
+  return ListHandler_Item::list_to_vector(
+      pango_itemize(const_cast<PangoContext*>(gobj()),
+                    text.c_str(), 0, text.bytes(),
+                    const_cast<PangoAttrList*>(attrs.gobj()), nullptr),
+      Glib::OWNERSHIP_DEEP);
+}
+
+std::vector<Item> Context::itemize(const Glib::ustring& text, int start_index, int length,
+                                 const AttrList& attrs, AttrIter& cached_iter) const
+{
+  return ListHandler_Item::list_to_vector(
+      pango_itemize(const_cast<PangoContext*>(gobj()),
+                    text.c_str(), start_index, length,
+                    const_cast<PangoAttrList*>(attrs.gobj()), cached_iter.gobj()),
+      Glib::OWNERSHIP_DEEP);
+}
+
+void Context::update_from_cairo_context(const Cairo::RefPtr<Cairo::Context>& context)
+{
+  pango_cairo_update_context(context->cobj(), gobj());
+}
+
+Matrix Context::get_matrix() const
+{
+  const auto* matrix = pango_context_get_matrix(const_cast<PangoContext*>(gobj()));
+  if(matrix)
+    return *matrix;
+  else
+  {
+    PangoMatrix identity_transform = PANGO_MATRIX_INIT;
+    return identity_transform;
+  }
+}
+
+} /* namespace Pango */

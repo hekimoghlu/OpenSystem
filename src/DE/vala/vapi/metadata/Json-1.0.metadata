@@ -1,0 +1,29 @@
+// Vala specific
+*.*.cancellable default=null
+Parser.load_from_data.length default=-1
+gobject_from_data.length default=-1
+Array.sized_new name="sized"
+*.get_root nullable
+Builder
+	.new_immutable name="immutable_new"
+Parser
+	.new_immutable name="immutable_new"
+Node
+	.ref skip
+	.unref skip
+
+// Forward Upstream
+boxed_register_serialize_func skip=false
+boxed_register_deserialize_func skip=false
+
+// Floating references
+gvariant_deserialize unowned=false nullable floating
+gvariant_deserialize_data unowned=false nullable floating
+
+Object.add_member replacement="Json.Object.set_member"
+Serializable
+	.*#virtual_method virtual
+	.default_deserialize_property.value out
+	.list_properties virtual
+construct_gobject replacement="Json.gobject_from_data"
+serialize_gobject replacement="Json.gobject_to_data"

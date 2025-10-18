@@ -1,0 +1,244 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/editable.h>
+#include <gtkmm/celleditable.h>
+#include <gtkmm/entrycompletion.h>
+#include <gtkmm/image.h> //For Image::Type.
+#include <gtkmm/border.h>
+#include <gtkmm/entrybuffer.h>
+#include <giomm/menumodel.h>
+#include <pangomm/attrlist.h>
+#include <pangomm/tabarray.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** A single line text entry field.
+ *
+ * The Gtk::Entry widget is a single line text entry widget. A fairly large
+ * set of key bindings are supported by default. If the entered text is
+ * longer than the allocation of the widget, the widget will scroll so that
+ * the cursor position is visible.
+ *
+ * The Entry widget looks like this:
+ * @image html entry1.png
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Entry
+: public Widget,
+  public Editable,
+  public CellEditable
+{
+  _CLASS_GTKOBJECT(Entry,GtkEntry,GTK_ENTRY,Gtk::Widget,GtkWidget,,,GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Editable)
+  _IMPLEMENTS_INTERFACE(CellEditable)
+public:
+  _WRAP_ENUM(IconPosition, GtkEntryIconPosition, decl_prefix GTKMM_API)
+
+  _CTOR_DEFAULT
+  _WRAP_CTOR(Entry(const Glib::RefPtr<EntryBuffer>& buffer), gtk_entry_new_with_buffer)
+
+  _WRAP_METHOD(Glib::RefPtr<EntryBuffer> get_buffer(), gtk_entry_get_buffer, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const EntryBuffer> get_buffer() const, gtk_entry_get_buffer, refreturn, constversion)
+
+  _WRAP_METHOD(void set_buffer(const Glib::RefPtr<EntryBuffer>& buffer), gtk_entry_set_buffer)
+  _WRAP_METHOD(void set_visibility(bool visible = true), gtk_entry_set_visibility)
+  _WRAP_METHOD(bool get_visibility() const, gtk_entry_get_visibility)
+  _WRAP_METHOD(void set_invisible_char(gunichar ch), gtk_entry_set_invisible_char)
+  _WRAP_METHOD(void unset_invisible_char(), gtk_entry_unset_invisible_char)
+  _WRAP_METHOD(gunichar get_invisible_char() const, gtk_entry_get_invisible_char)
+  _WRAP_METHOD(void set_has_frame(bool setting = true), gtk_entry_set_has_frame)
+  _WRAP_METHOD(bool get_has_frame() const, gtk_entry_get_has_frame)
+
+  _WRAP_METHOD(void set_overwrite_mode(bool overwrite = true), gtk_entry_set_overwrite_mode)
+  _WRAP_METHOD(bool get_overwrite_mode() const, gtk_entry_get_overwrite_mode)
+  _WRAP_METHOD(void set_max_length(int max), gtk_entry_set_max_length)
+  _WRAP_METHOD(int get_max_length() const, gtk_entry_get_max_length)
+  _WRAP_METHOD(guint16 get_text_length() const, gtk_entry_get_text_length)
+  _WRAP_METHOD(void set_activates_default(bool setting = true), gtk_entry_set_activates_default)
+  _WRAP_METHOD(gboolean get_activates_default() const, gtk_entry_get_activates_default)
+
+  _WRAP_METHOD(void set_alignment(float xalign), gtk_entry_set_alignment)
+  _WRAP_METHOD(void set_alignment(Align xalign), gtk_entry_set_alignment)
+  _WRAP_METHOD(float get_alignment() const, gtk_entry_get_alignment)
+
+  _WRAP_METHOD(void set_completion(const Glib::RefPtr<EntryCompletion>& completion), gtk_entry_set_completion,
+    deprecated "GtkEntryCompletion will be removed in GTK 5.")
+  _WRAP_METHOD(Glib::RefPtr<EntryCompletion> get_completion(), gtk_entry_get_completion, refreturn,
+    deprecated "GtkEntryCompletion will be removed in GTK 5.")
+  _WRAP_METHOD(Glib::RefPtr<const EntryCompletion> get_completion() const, gtk_entry_get_completion, refreturn, constversion,
+    deprecated "GtkEntryCompletion will be removed in GTK 5.")
+
+  _WRAP_METHOD(void set_progress_fraction(double fraction), gtk_entry_set_progress_fraction)
+  _WRAP_METHOD(double get_progress_fraction() const, gtk_entry_get_progress_fraction)
+  _WRAP_METHOD(void set_progress_pulse_step(double fraction), gtk_entry_set_progress_pulse_step)
+  _WRAP_METHOD(double get_progress_pulse_step(), gtk_entry_get_progress_pulse_step)
+  _WRAP_METHOD(void progress_pulse(), gtk_entry_progress_pulse)
+
+  _WRAP_METHOD(Glib::ustring get_placeholder_text() const, gtk_entry_get_placeholder_text)
+  _WRAP_METHOD(void set_placeholder_text(const Glib::ustring& text), gtk_entry_set_placeholder_text)
+
+  _WRAP_METHOD(void set_icon_from_paintable(const Glib::RefPtr<Gdk::Paintable>& paintable{.}, IconPosition icon_pos{.} = IconPosition::PRIMARY), gtk_entry_set_icon_from_paintable)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_entry_set_icon_from_icon_name)
+  void set_icon_from_icon_name(const Glib::ustring& icon_name, IconPosition icon_pos = IconPosition::PRIMARY);
+  _IGNORE(gtk_entry_set_icon_from_icon_name)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_entry_set_icon_from_gicon)
+  void set_icon_from_gicon(const Glib::RefPtr<Gio::Icon>& icon, IconPosition icon_pos = IconPosition::PRIMARY);
+  _IGNORE(gtk_entry_set_icon_from_gicon)
+
+  /** Do not show any icon in the specified position.
+   * See set_icon_from_paintable(), set_icon_from_icon_name(), and set_icon_from_gicon().
+   *
+   * @param icon_pos The icon position.
+   *
+   * @newin{3,0}
+   */
+  void unset_icon(IconPosition icon_pos = IconPosition::PRIMARY);
+
+  _WRAP_METHOD(Image::Type get_icon_storage_type(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_storage_type)
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Paintable> get_icon_paintable(IconPosition icon_pos = IconPosition::PRIMARY), gtk_entry_get_icon_paintable, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Paintable> get_icon_paintable(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_paintable, refreturn, constversion)
+  _WRAP_METHOD(Glib::ustring get_icon_name(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_name)
+  _WRAP_METHOD(Glib::RefPtr<Gio::Icon> get_icon_gicon(IconPosition icon_pos = IconPosition::PRIMARY), gtk_entry_get_icon_gicon, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::Icon> get_icon_gicon(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_gicon, refreturn, constversion)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_entry_set_icon_activatable)
+  void set_icon_activatable(bool activatable = true, IconPosition icon_pos = IconPosition::PRIMARY);
+  _IGNORE(gtk_entry_set_icon_activatable)
+
+  _WRAP_METHOD(bool get_icon_activatable(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_activatable)
+  _WRAP_METHOD(void set_icon_sensitive(IconPosition icon_pos = IconPosition::PRIMARY, bool sensitive = true), gtk_entry_set_icon_sensitive)
+  _WRAP_METHOD(bool get_icon_sensitive(IconPosition icon_pos = IconPosition::PRIMARY), gtk_entry_get_icon_sensitive)
+  _WRAP_METHOD(int get_icon_at_pos(int x, int y) const, gtk_entry_get_icon_at_pos)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_entry_set_icon_tooltip_text)
+  void set_icon_tooltip_text(const Glib::ustring& tooltip, IconPosition icon_pos = IconPosition::PRIMARY);
+  _IGNORE(gtk_entry_set_icon_tooltip_text)
+
+  _WRAP_METHOD(Glib::ustring get_icon_tooltip_text(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_tooltip_text)
+
+  _WRAP_METHOD_DOCS_ONLY(gtk_entry_set_icon_tooltip_markup)
+  void set_icon_tooltip_markup(const Glib::ustring& tooltip, IconPosition icon_pos = IconPosition::PRIMARY);
+  _IGNORE(gtk_entry_set_icon_tooltip_markup)
+
+  _WRAP_METHOD(Glib::ustring get_icon_tooltip_markup(IconPosition icon_pos = IconPosition::PRIMARY) const, gtk_entry_get_icon_tooltip_markup)
+
+  _WRAP_METHOD(void set_icon_drag_source(const Glib::RefPtr<Gdk::ContentProvider>& provider{.},
+    Gdk::DragAction actions{.} = Gdk::DragAction::COPY,
+    IconPosition icon_pos{.} = IconPosition::PRIMARY), gtk_entry_set_icon_drag_source)
+
+  /** Returns the area where entry's icon at @a icon_pos is drawn.
+   * This function is useful when drawing something to the
+   * entry in a draw callback.
+   *
+   * @param icon_pos Icon position.
+   * @result The location for the icon area.
+   *
+   * @newin{3,0}
+   */
+  Gdk::Rectangle get_icon_area(IconPosition icon_pos = IconPosition::PRIMARY) const;
+  _IGNORE(gtk_entry_get_icon_area)
+
+  _WRAP_METHOD(int get_current_icon_drag_source(), gtk_entry_get_current_icon_drag_source)
+  _WRAP_METHOD(void reset_im_context(), gtk_entry_reset_im_context)
+
+  _WRAP_METHOD(void set_input_purpose(InputPurpose purpose), gtk_entry_set_input_purpose)
+  _WRAP_METHOD(InputPurpose get_input_purpose() const, gtk_entry_get_input_purpose)
+
+  _WRAP_METHOD(void set_input_hints(InputHints hints), gtk_entry_set_input_hints)
+  _WRAP_METHOD(InputHints get_input_hints() const, gtk_entry_get_input_hints)
+
+  _WRAP_METHOD(void set_attributes(Pango::AttrList& attrs), gtk_entry_set_attributes)
+  _WRAP_METHOD(Pango::AttrList get_attributes() const, gtk_entry_get_attributes)
+
+#m4 _CONVERSION(`PangoTabArray*',`Pango::TabArray',`Pango::TabArray(($3))')
+#m4 _CONVERSION(`const Pango::TabArray&',`PangoTabArray*',`const_cast<Pango::TabArray&>($3).gobj()')
+  _WRAP_METHOD(void set_tabs(const Pango::TabArray& tabs), gtk_entry_set_tabs)
+  _WRAP_METHOD(Pango::TabArray get_tabs() const, gtk_entry_get_tabs)
+
+  _WRAP_METHOD(void grab_focus_without_selecting(), gtk_entry_grab_focus_without_selecting)
+
+  _WRAP_METHOD(void set_extra_menu(const Glib::RefPtr<Gio::MenuModel>& model), gtk_entry_set_extra_menu)
+  _WRAP_METHOD(Glib::RefPtr<Gio::MenuModel> get_extra_menu(), gtk_entry_get_extra_menu, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::MenuModel> get_extra_menu() const, gtk_entry_get_extra_menu, refreturn, constversion)
+  _WRAP_METHOD(Glib::ustring get_menu_entry_icon_text(IconPosition icon_pos = IconPosition::PRIMARY) const,
+    gtk_entry_get_menu_entry_icon_text)
+  _WRAP_METHOD(void set_menu_entry_icon_text(const Glib::ustring& text{.},
+    IconPosition icon_pos{.} = IconPosition::PRIMARY), gtk_entry_set_menu_entry_icon_text)
+
+  //TODO: Remove no_default_handler on "activate" when we can break ABI.
+  // "activate" is an action signal. Nevertheless it can be used by applications.
+  // https://gitlab.gnome.org/GNOME/gtk/-/issues/4848
+  // https://gitlab.gnome.org/GNOME/gtkmm/-/issues/100
+  _WRAP_SIGNAL(void activate(), "activate", no_default_handler, newin "4,8")
+
+  // no_default_handler because the wrapped C signals have no default handlers.
+  _WRAP_SIGNAL(void icon_release(IconPosition icon_position), "icon-release", no_default_handler)
+  _WRAP_SIGNAL(void icon_press(IconPosition icon_position), "icon-press", no_default_handler)
+
+  _WRAP_PROPERTY("buffer", Glib::RefPtr<EntryBuffer>)
+  _WRAP_PROPERTY("max-length", int)
+  _WRAP_PROPERTY("visibility", bool)
+  _WRAP_PROPERTY("has-frame", bool)
+  _WRAP_PROPERTY("invisible-char", gunichar)
+  _WRAP_PROPERTY("invisible-char-set", bool)
+  _WRAP_PROPERTY("activates-default", bool)
+  _WRAP_PROPERTY("scroll-offset", int)
+  _WRAP_PROPERTY("truncate-multiline", bool)
+  _WRAP_PROPERTY("overwrite-mode", bool)
+  _WRAP_PROPERTY("text-length", guint)
+  _WRAP_PROPERTY("progress-fraction", double)
+  _WRAP_PROPERTY("progress-pulse-step", double)
+  _WRAP_PROPERTY("primary-icon-paintable", Glib::RefPtr<Gdk::Paintable>)
+  _WRAP_PROPERTY("secondary-icon-paintable", Glib::RefPtr<Gdk::Paintable>)
+  _WRAP_PROPERTY("primary-icon-name", Glib::ustring)
+  _WRAP_PROPERTY("secondary-icon-name", Glib::ustring)
+  _WRAP_PROPERTY("primary-icon-gicon", Glib::RefPtr<Gio::Icon>)
+  _WRAP_PROPERTY("secondary-icon-gicon", Glib::RefPtr<Gio::Icon>)
+  _WRAP_PROPERTY("primary-icon-storage-type", Image::Type)
+  _WRAP_PROPERTY("secondary-icon-storage-type", Image::Type)
+  _WRAP_PROPERTY("primary-icon-activatable", bool)
+  _WRAP_PROPERTY("secondary-icon-activatable", bool)
+  _WRAP_PROPERTY("primary-icon-sensitive", bool)
+  _WRAP_PROPERTY("secondary-icon-sensitive", bool)
+  _WRAP_PROPERTY("primary-icon-tooltip-text", bool)
+  _WRAP_PROPERTY("secondary-icon-tooltip-text", bool)
+  _WRAP_PROPERTY("primary-icon-tooltip-markup", bool)
+  _WRAP_PROPERTY("secondary-icon-tooltip-markup", bool)
+  _WRAP_PROPERTY("im-module", Glib::ustring)
+  _WRAP_PROPERTY("placeholder-text", Glib::ustring)
+  _WRAP_PROPERTY("completion", Glib::RefPtr<EntryCompletion>,
+    deprecated "GtkEntryCompletion will be removed in GTK 5.")
+  _WRAP_PROPERTY("input-purpose", InputPurpose)
+  _WRAP_PROPERTY("input-hints", InputHints)
+  _WRAP_PROPERTY("attributes", Pango::AttrList)
+  _WRAP_PROPERTY("tabs", Pango::TabArray)
+  _WRAP_PROPERTY("extra-menu", Glib::RefPtr<Gio::MenuModel>)
+  _WRAP_PROPERTY("show-emoji-icon", bool)
+  _WRAP_PROPERTY("enable-emoji-completion", bool)
+  _WRAP_PROPERTY("menu-entry-icon-primary-text", Glib::ustring)
+  _WRAP_PROPERTY("menu-entry-icon-secondary-text", Glib::ustring)
+};
+
+} //namespace Gtk

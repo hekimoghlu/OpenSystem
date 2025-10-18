@@ -1,0 +1,93 @@
+# Buildah can't use 'overlay' driver when running inside docker
+variables:
+  STORAGE_DRIVER: "vfs"
+  BUILDAH_FORMAT: "docker"
+  BUILDAH_ISOLATION: "chroot"
+  CI_REGISTRY_IMAGE: quay.io/gnome_infrastructure/gnome-runtime-images
+
+stages:
+  - base
+  - runtimes
+  - manifests
+
+# Expects ${DOCKERIMAGE} which should be the name+tag of the registry image.
+# Expects ${DOCKERFILE} variable which should be the path to the Dockerfile.
+.dockerfile_template:
+  image: "quay.io/buildah/stable:latest"
+  before_script:
+    - buildah login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
+  script:
+    - bash ./scripts/build-image.sh $REGISTRY_TAG
+  after_script:
+    # don't try to use systemd/journald
+    - |
+      cat >> /etc/containers/libpod.conf << END
+      cgroup_manager = "cgroupfs"
+      events_logger = "file"
+      END
+    # - podman run --rm ${DOCKERIMAGE} flatpak list --columns=application,branch,arch,active,size
+    - buildah inspect --format "{{.FromImageID}}" ${DOCKERIMAGE}
+  rules:
+    - when: "manual"
+      allow_failure: true
+
+base:
+  stage: base
+  extends: ".dockerfile_template"
+  variables:
+    ARCH: x86_64
+    DOCKERIMAGE: ${CI_REGISTRY_IMAGE}:${ARCH}-base
+    DOCKERFILE: Dockerfile
+
+base:aarch64:
+  stage: base
+  extends: ".dockerfile_template"
+  tags:
+    - aarch64
+    - gnome-build-meta
+  variables:
+    ARCH: aarch64
+    DOCKERIMAGE: ${CI_REGISTRY_IMAGE}:${ARCH}-base
+    DOCKERFILE: Dockerfile
+
+base-manifest:
+  image: "quay.io/buildah/stable:latest"
+  stage: "manifests"
+  variables:
+    REGISTRY_TAG: "base"
+  before_script:
+    - buildah login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
+  script:
+    - bash ./scripts/make-manifest.sh $REGISTRY_TAG
+  needs:
+    - base
+    - base:aarch64
+
+include:
+  - project: "gnome/citemplates"
+    file: "templates/default-rules.yml"
+  # include the component located in the current project from the current SHA
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/build-image@$CI_COMMIT_SHA
+    inputs:
+      platform-version: "master"
+      fdsdk-version: "25.08"
+      llvm-version-1: "20"
+      llvm-version-2: "21"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/build-image@$CI_COMMIT_SHA
+    inputs:
+      platform-version: "49"
+      fdsdk-version: "25.08"
+      llvm-version-1: "20"
+      llvm-version-2: "21"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/build-image@$CI_COMMIT_SHA
+    inputs:
+      platform-version: "48"
+      fdsdk-version: "24.08"
+      llvm-version-1: "18"
+      llvm-version-2: "20"
+  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/build-image@$CI_COMMIT_SHA
+    inputs:
+      platform-version: "47"
+      fdsdk-version: "24.08"
+      llvm-version-1: "18"
+      llvm-version-2: "20"

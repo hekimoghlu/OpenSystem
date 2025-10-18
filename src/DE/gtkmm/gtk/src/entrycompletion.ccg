@@ -1,0 +1,222 @@
+/* Copyright (C) 2003 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/treeiter.h>
+#include <gtkmm/cellarea.h>
+#include <gtkmm/entry.h>
+#include <gtk/gtk.h>
+
+extern "C"
+{
+static gboolean SignalProxy_Match_gtk_callback(GtkEntryCompletion* completion, const char* key, GtkTreeIter* iter, gpointer user_data)
+{
+  auto the_slot = static_cast<Gtk::EntryCompletion::SlotMatch*>(user_data);
+
+  try
+  {
+    auto tree_model = gtk_entry_completion_get_model(completion);
+    return (*the_slot)(Glib::convert_const_gchar_ptr_to_ustring(key),
+                         Gtk::TreeModel::const_iterator(tree_model, iter)
+                         );
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return false; //An arbitary default, just to avoid the compiler warning.
+}
+
+static void SignalProxy_Match_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::EntryCompletion::SlotMatch*>(data);
+}
+} // extern "C"
+
+namespace Gtk
+{
+
+void EntryCompletion::unset_model()
+{
+  gtk_entry_completion_set_model(gobj(), nullptr);
+}
+
+void EntryCompletion::set_match_func(const SlotMatch& slot)
+{
+  // Create a copy of the slot.  A pointer to this will be passed
+  // through the callback's data parameter.  It will be deleted
+  // when SignalProxy_Match_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotMatch(slot);
+
+  gtk_entry_completion_set_match_func(gobj(),
+      &SignalProxy_Match_gtk_callback, slot_copy,
+      &SignalProxy_Match_gtk_callback_destroy);
+}
+
+} //namespace Gtk
+
+namespace //anonymous
+{
+extern "C"
+{
+static gboolean Widget_signal_match_selected_callback(GtkEntryCompletion* self, GtkTreeModel* c_model, GtkTreeIter* c_iter, void* data)
+{
+  using namespace Gtk;
+  typedef sigc::slot<bool(const TreeModel::iterator&)> SlotType;
+
+  // Do not try to call a signal on a disassociated wrapper.
+  if(Glib::ObjectBase::_get_current_wrapper((GObject*) self))
+  {
+    try
+    {
+      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot(data))
+      {
+        //This conversion is the custom-written part:
+        Gtk::TreeModel::iterator cppIter(c_model, c_iter);
+
+        return static_cast<int>( (*static_cast<SlotType*>(slot))(cppIter) );
+      }
+    }
+    catch(...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+
+  typedef gboolean RType;
+  return RType();
+}
+
+static gboolean Widget_signal_match_selected_notify_callback(GtkEntryCompletion* self, GtkTreeModel* c_model, GtkTreeIter* c_iter, void* data)
+{
+  using namespace Gtk;
+  typedef sigc::slot<void(const TreeModel::iterator&)> SlotType;
+
+  // Do not try to call a signal on a disassociated wrapper.
+  if(Glib::ObjectBase::_get_current_wrapper((GObject*) self))
+  {
+    try
+    {
+      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot(data))
+      {
+        //This conversion is the custom-written part:
+        Gtk::TreeModel::iterator cppIter(c_model, c_iter);
+
+        (*static_cast<SlotType*>(slot))(cppIter);
+      }
+    }
+    catch(...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+
+  typedef gboolean RType;
+  return RType();
+}
+} // extern "C"
+
+const Glib::SignalProxyInfo EntryCompletion_signal_match_selected_info =
+{
+  "match_selected",
+  (GCallback) &Widget_signal_match_selected_callback,
+  (GCallback) &Widget_signal_match_selected_notify_callback
+};
+
+extern "C"
+{
+static gboolean Widget_signal_cursor_on_match_callback(GtkEntryCompletion* self, GtkTreeModel* c_model, GtkTreeIter* c_iter, void* data)
+{
+  using namespace Gtk;
+  typedef sigc::slot<bool(const TreeModel::iterator&)> SlotType;
+
+  // Do not try to call a signal on a disassociated wrapper.
+  if(Glib::ObjectBase::_get_current_wrapper((GObject*) self))
+  {
+    try
+    {
+      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot(data))
+      {
+        //This conversion is the custom-written part:
+        Gtk::TreeModel::iterator cppIter(c_model, c_iter);
+
+        return static_cast<int>( (*static_cast<SlotType*>(slot))(cppIter) );
+      }
+    }
+    catch(...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+
+  typedef gboolean RType;
+  return RType();
+}
+
+static gboolean Widget_signal_cursor_on_match_notify_callback(GtkEntryCompletion* self, GtkTreeModel* c_model, GtkTreeIter* c_iter, void* data)
+{
+  using namespace Gtk;
+  typedef sigc::slot<void(const TreeModel::iterator&)> SlotType;
+
+  // Do not try to call a signal on a disassociated wrapper.
+  if(Glib::ObjectBase::_get_current_wrapper((GObject*) self))
+  {
+    try
+    {
+      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot(data))
+      {
+        //This conversion is the custom-written part:
+        Gtk::TreeModel::iterator cppIter(c_model, c_iter);
+
+        (*static_cast<SlotType*>(slot))(cppIter);
+      }
+    }
+    catch(...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+
+  typedef gboolean RType;
+  return RType();
+}
+} // extern "C"
+
+const Glib::SignalProxyInfo EntryCompletion_signal_cursor_on_match_info =
+{
+  "cursor_on_match",
+  (GCallback) &Widget_signal_cursor_on_match_callback,
+  (GCallback) &Widget_signal_cursor_on_match_notify_callback
+};
+
+} //anonymous namespace
+
+namespace Gtk
+{
+
+//Hand-coded signal wrapping:
+
+Glib::SignalProxy<bool(const TreeModel::iterator&)> EntryCompletion::signal_match_selected()
+{
+  return Glib::SignalProxy<bool(const TreeModel::iterator&)>(this, &EntryCompletion_signal_match_selected_info);
+}
+
+Glib::SignalProxy<bool(const TreeModel::iterator&)> EntryCompletion::signal_cursor_on_match()
+{
+  return Glib::SignalProxy<bool(const TreeModel::iterator&)>(this, &EntryCompletion_signal_cursor_on_match_info);
+}
+
+} // namespace Gtk

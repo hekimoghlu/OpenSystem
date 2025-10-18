@@ -1,0 +1,166 @@
+2002-12-31  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.15
+
+2002-12-31  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_area_set_text_redo) : fix.  It is an error to
+	  pass NULL as the parse text.
+
+2002-12-30  Morten Welinder  <terra@diku.dk>
+
+	* src/format-template.c: Import CC2XML and CXML2C macros from
+	xml-io.c and use them.
+	(xml_read_format_col_row_info): Constify.
+
+	* src/parse-util.h: Delete
+	GNM_EXPR_PARSE_CREATE_PLACEHOLDER_FOR_UNKNOWN_FUNC flag.
+
+	* src/parser.y: Delete create_placeholder_for_unknown_func flag.
+
+2002-12-30  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y (parser_sheet_by_name) : fix allocation handling of
+	  unknown functions.
+
+	* src/print-info.c (render_file) : add FILE
+
+2002-12-30  Jon K Hellan  <hellan@acm.org>
+
+	* src/application.c (gnumeric_application_setup_icons): Add
+	Gnumeric_Protection_Yes_Dialog.
+
+	* src/pixmaps/protection_yes_48.png: Add.
+
+	* src/pixmaps/Makefile.am:  Add protection_yes_48.png.
+
+	* src/workbook-control-gui.c (cb_accept_password): Move to
+	dialogs/dialog-password.c.
+	(wbcg_get_password): Most of it moved to dialog_get_password in 
+	dialogs/dialog-password.c.
+	
+	* src/io-context-gtk.c (icg_get_password): New function which
+	implements CommandContext::get_password.
+	(icg_class_init): Connect icg_get_password.
+
+	* src/command-context.[ch] (cmd_context_get_password): Rename 2nd
+	parameter from 'msg' to 'filename'.
+
+	* src/command-context-priv.h (CommandContextClass.get_password):
+	Ditto.
+
+	* src/command-context-stderr.c (ccs_get_password): Ditto.
+
+	* src/workbook-control-component.c (wbcc_get_password): Ditto.
+
+	* src/io-context.c (ioc_get_password): Ditto.
+
+2002-12-30  Morten Welinder  <terra@diku.dk>
+
+	* src/formats.c (currency_date_format_init): Don't use undefined
+	\? pattern.
+
+	* src/sheet-style.c (cell_tile_style_new): Don't use res
+	uninitialized, even if we compile with no checks.
+
+	* src/gui-util.c (gnumeric_dialog_raise_if_exists): Return NULL on
+	failure, not FALSE.
+	* src/ranges.c (range_init_value): Ditto.
+	* src/sheet-object-widget.c (sheet_widget_scrollbar_get_ref,
+	sheet_widget_checkbox_get_ref): Ditto.
+	* src/value-sheet.c (value_area_foreach): Ditto.
+
+2002-12-29  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=64969
+	* src/sheet-merge.c (sheet_merge_add) : update bounds.
+
+	* src/sheet-control-gui.c (scg_set_panes) : handle freezing already
+	  frozen panes to support adjustments after ins/del col/row.
+
+	* src/sheet-view.c (sv_panes_insdel_colrow) : new.
+
+2002-12-29  Morten Welinder  <terra@diku.dk>
+
+	* src/ranges.c (range_parse): Return NULL on failure, not FALSE.
+
+2002-12-28  Rodrigo Moya <rodrigo@gnome-db.org>
+
+	* configure.in: require libgda >= 0.10, needed for the read-only
+	connections.
+
+2002-12-28  Jody Goldberg <jody@gnome.org>
+
+	* src/format.c (style_format_delocalize) : tweak.
+
+	* src/sheet-filter.c (filter_field_arrow_format) : be less polite to
+	  styles, but at least it will work in the vast majority of cases.
+
+2002-12-27  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.c (cellpos_parse): Change calling convention.
+	All callers changed.
+	(test_cellpos_stuff): New function.
+	(parse_util_init) [TEST]: Call it.
+
+2002-12-27  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (cellpos_parse) : fix.
+
+	* src/workbook-control-gui.c (cb_auto_filter) : do a sheet update.
+
+	* src/sheet.c (sheet_colrow_insert_finish) : relocate filters.
+	(sheet_colrow_delete_finish) : relocate filters.
+
+	* src/sheet-filter.c : Use the sheetobject anchor as the normative
+	  source of the field index to simplify things.
+	(sheet_filter_insdel_colrow) : new.
+	(gnm_filter_add_field) : new split out from.
+	(gnm_filter_new) : here.
+
+2002-12-27  Morten Welinder  <terra@diku.dk>
+
+	* src/commands.c (truncate_undo_info): Handle undo_max_number==0
+	also.
+
+2002-12-26  Morten Welinder  <terra@diku.dk>
+
+	* src/xml-io.c (xml_workbook_read): Don't call textdomain.
+	(xml_workbook_write): Ditto.
+
+2002-12-24  Jody Goldberg <jody@gnome.org>
+
+	* schemas/plot-types.xml.in : fix some typos, and some consistency
+	  improvements
+	* schemas/gnumeric-dialogs.schemas.in : more typos.
+
+	* src/sheet-object-image.c (soi_get_pixbuf) : minor readability
+	  improvement.
+
+2002-12-23  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.c (col_parse, row_parse): Change to return NULL
+	in the failure case.  All callers changed.
+	(test_col_stuff, test_row_stuff): New functions.
+	(parse_util_init) [TEST]: Call them.
+
+2002-12-23  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.c (row_parse): Don't allow sign or initial
+	white-space.  Don't allow numbers starting with '0'.  Fix
+	potential overflow problem on machines wherer long>int.  No need
+	to fiddle with errno.
+	(cellref_as_string): Simplify using col_name_internal and
+	row_name_internal.  (Making it work for larger SHEET_MAX_COLS
+	also.)
+	(cellref_a1_get, cellpos_parse): Simplify greatly using col_parse
+	and row_parse.  (Thus making them work for larger SHEET_MAX_COLS
+	also.)
+
+2002-12-23  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Require libgda >= 0.9 for gda plugin.
+
+2002-12-22  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump

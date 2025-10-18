@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE book [
+  <!ENTITY url_refdocs_base_gtkmm_html "https://gnome.pages.gitlab.gnome.org/gtkmm/">
+  <!ENTITY url_refdocs_base_book_html "https://gnome.pages.gitlab.gnome.org/gtkmm-documentation/">
+  <!ENTITY url_examples_base "https://gitlab.gnome.org/GNOME/gtkmm-documentation/tree/master/examples/book/">
+  <!ENTITY cpp "<phrase xmlns='http://docbook.org/ns/docbook' role='nowrap'>C++</phrase>">
+]>
+<article xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         version="5.0" xml:id="faq">
+<title/>
+<section>
+<title>Frequently Asked Questions</title>
+  <qandaset defaultlabel="none">
+    <qandadiv>
+    <title>gtkmm's place in the world</title>
+      <qandaentry>
+      <question><para>What is GTK?</para></question>
+      <answer><para>GTK is the GUI widget toolkit, written in C, which serves as
+      the foundation for the GNOME project as well as many stand-alone applications.
+      GTK is the foundation on which gtkmm is built.
+      See <link xlink:href="https://www.gtk.org"/>.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Why is it named gtkmm?</para></question>
+      <answer><para>gtkmm was originally named gtk-- because GTK was originally named
+      GTK+ and had a + in the name. However, as -- is not easily indexed by
+      search engines, the package generally went by the name gtkmm, and that's
+      what we stuck with.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Why use gtkmm instead of GTK?</para></question>
+      <answer><para><itemizedlist>
+        <listitem>
+          <para>gtkmm allows you to write code using normal &cpp; techniques such as
+          encapsulation, derivation, and polymorphism. As a &cpp; programmer you probably
+          already realize that this leads to clearer and better organized code.</para>
+        </listitem>
+        <listitem>
+          <para>gtkmm is more type-safe, so the compiler can detect errors that
+          would only be detected at run-time when using C. This use of specific
+         types also makes the API clearer because you can see what types should
+         be used just by looking at a method's declaration.</para>
+        </listitem>
+        <listitem>
+          <para>Inheritance can be used to derive new widgets. The derivation
+          of new widgets in GTK C code is so complicated and error prone that
+          almost no C coders do it. As a &cpp; developer you know that derivation
+          is an essential Object Orientated technique.</para>
+        </listitem>
+        <listitem>
+          <para>Member instances can be used, simplifying memory management.
+          All GTK C widgets are dealt with by use of pointers. As a &cpp; coder
+          you know that pointers should be avoided where possible.</para>
+        </listitem>
+        <listitem>
+          <para>Less code. The GTK C object model uses prefixed function names
+          and cast macros. For instance: <code>gtk_button_set_text(GTK_BUTTON(button), "sometext");</code>
+          gtkmm &cpp; code is shorter and clearer. For instance: <code>button.set_text("sometext");</code></para>
+        </listitem>
+        <listitem>
+          <para>There's no need to worry about GTK's reference-counting policy.</para>
+        </listitem>
+      </itemizedlist></para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Why use libsigc++? Why not use the GTK signal functions?</para></question>
+      <answer><para><itemizedlist>
+        <listitem>
+          <para>GTK signals aren't typesafe. The compiler can't tell you whether
+          your callback has the wrong number or type of arguments or return value.</para>
+        </listitem>
+        <listitem>
+          <para>They can only be used with functions or static methods. With <phrase role="nowrap">libsigc++</phrase>
+          callbacks can also be instance methods, using the member data of a particular object.
+          They can also be virtual methods which you could override in a derived class.</para>
+        </listitem>
+      </itemizedlist></para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Why isn't GTK/GNOME itself written in &cpp;?</para></question>
+      <answer><para><itemizedlist>
+        <listitem>
+          <para>C is a simpler language so more people are familiar with it,
+          particularly on Unix.</para>
+        </listitem>
+        <listitem>
+          <para>C can be wrapped by any other language, making the API available
+          to more developers.</para>
+        </listitem>
+        <listitem>
+          <para>GTK and GNOME have very well organized C code, much more sane than
+          most of the C code that we encounter. This is partly due to its C-based
+          object-orientated structure.</para>
+        </listitem>
+      </itemizedlist></para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Why not use Qt if you like &cpp; so much?</para></question>
+      <answer><para>gtkmm developers tend to prefer gtkmm to Qt because gtkmm does things
+        in a more &cpp; way. Qt originates from a time when &cpp; and the standard library
+        were not standardized or well supported by compilers. It therefore duplicates
+        a lot of stuff that is now in the standard library, such as containers and
+        type information. Most significantly, they modified the &cpp; language to provide
+        signals, so that Qt classes cannot be used easily with non-Qt classes.
+        gtkmm was able to use standard &cpp; to provide signals without changing
+        the &cpp; language.</para>
+        <para>Also, gtkmm and the other *mm modules allow you to build software which
+        works more closely with the GNOME desktop.</para></answer>
+      </qandaentry>
+    </qandadiv>
+    <qandadiv>
+    <title>How good is gtkmm?</title>
+      <qandaentry>
+      <question><para>What systems does it run under?</para></question>
+      <answer><para>gtkmm should run under any UNIX-type system with the proper
+        compilers and libraries installed. The GNU &cpp; compiler (g++, part of gcc)
+        together with the GNU toolset (such as found on Linux and *BSD systems)
+        comprise its default build environment. It can also be built and used
+        on Windows with the mingw build tools or MSVC.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How complete is it?</para></question>
+      <answer><para>gtkmm tries to offer all of the functionality offered by GTK.
+        This means that you should be able to do anything with gtkmm that's supported
+        by GTK, and do it more easily. If something isn't covered then we want to
+        know about it.</para>
+        <para>GLib contains classes with similar functionality as standard &cpp;
+        classes, for instance <classname>GThread</classname> and <classname>GTree</classname>.
+        Such GLib classes are not wrapped in glibmm.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Does gtkmm use Standard &cpp; containers such as <classname>std::string</classname> and <classname>std::vector</classname>?</para></question>
+      <answer><para>Yes, we believe in reusing standard &cpp; code wherever possible.
+      This might not be obvious at first because gtkmm has <classname>Glib::ustring</classname>
+      which has almost the same interface as <classname>std::string</classname>.
+      <classname>Glib::ustring</classname> exists because the &cpp; standard does
+      not support UTF8-encoded strings well.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How does gtkmm compare to Qt?</para></question>
+      <answer><para><itemizedlist>
+        <listitem>
+          <para>gtkmm uses pure &cpp;. Qt requires extensions to &cpp; that are parsed
+          by the moc pre-processor.</para>
+        </listitem>
+        <listitem>
+          <para>gtkmm uses <classname>std::string</classname>, <classname>std::vector</classname>,
+          iterators, etc. Qt has its own Qt-specific containers.</para>
+        </listitem>
+        <listitem>
+          <para>With gtkmm normal &cpp; memory management can be used. Qt demands
+          that all widgets are dealt with as pointers, and that deletion of widgets
+          is delegated to parent widgets.</para>
+        </listitem>
+        <listitem>
+          <para>Arrangement of widgets seems to be easier in gtkmm. In Qt, Containers
+          and Layouts are separate classes, and child widgets must be added to both.</para>
+        </listitem>
+        <listitem>
+          <para>The gtkmm API tends to be more explicit. The behavior of Qt classes
+          is often dependent upon the implicit effects of overridden constructors.</para>
+        </listitem>
+      </itemizedlist></para></answer>
+      </qandaentry>
+    </qandadiv>
+    <qandadiv>
+    <title>Further information</title>
+      <qandaentry>
+      <question><para>Where can gtkmm be discussed?</para></question>
+      <answer><para>See the <link xlink:href="mailinglist.html">Discussion</link> page.
+      </para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>What documentation is there for gtkmm?</para></question>
+      <answer><para>See the <link xlink:href="documentation.html">Documentation</link> page.
+      </para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Where can I find some example code?</para></question>
+      <answer><para>See the <link xlink:href="&url_examples_base;">examples directory</link>
+      in the gtkmm-documentation module. Most of these appear in the gtkmm book.</para></answer>
+      </qandaentry>
+    </qandadiv>
+    <qandadiv>
+    <title>Using gtkmm</title>
+      <qandaentry>
+      <question><para>What compiler arguments should I use to compile a gtkmm program?</para></question>
+      <answer><para>See the <link xlink:href="&url_refdocs_base_gtkmm_html;">reference documentation</link>.
+      </para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How can I get the GTK object from a gtkmm object?</para></question>
+      <answer><para>If you need some GTK functionality which is not supported through gtkmm,
+      you can call the <methodname>gobj()</methodname> method in the relevant class,
+      which will return a pointer to the plain C GTK object. You can then operate
+      directly on this C object as you would in any GTK program.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How can I wrap a GTK widget in a gtkmm instance?</para></question>
+      <answer><para><function>Glib::wrap()</function> will give you a pointer to
+      a gtkmm object. It is an overloaded function, so it will give you an instance
+      of the appropriate class.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Can I use &cpp; exceptions with gtkmm?</para></question>
+      <answer><para>Yes, but there are restrictions. Since plain C doesn't know what
+      a &cpp; exception is, you can use exceptions in your gtkmm code as long as
+      there are no C functions in your call stack between the thrower and the catcher.
+      This means that you have to catch your exception locally.</para>
+      <para>You will be warned at runtime about uncaught exceptions, and you can
+      specify a different handler for uncaught exceptions. Some gtkmm methods use
+      exceptions to report errors. The exception types that might be thrown are
+      listed in the reference documentation of these methods.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How can I use Cambalache or Glade with gtkmm?</para></question>
+      <answer><para>See the <link xlink:href="&url_refdocs_base_book_html;chapter-builder.html">Gtk::Builder</link>
+      chapter in the gtkmm book. <application>Cambalache</application> replaces the
+      <application>Glade</application> application. <application>Glade</application>
+      can't be used with GTK4/gtkmm4.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>What does <function>Gtk::make_managed&lt;T&gt;(args)</function> do?</para></question>
+      <answer><para>This means <quote>The container widget will delete this child widget.</quote>
+      Use it if you don't want to worry about when to delete dynamically allocated
+      widgets.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How can I learn about arranging widgets? I am confused by the packing options.</para></question>
+      <answer><para><application>Cambalache</application> is a great way to see what
+      can be done with GTK and GNOME widgets. Use <application>Cambalache</application>
+      to explore the choice of widgets and to see how they can be put together.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>I'm used to MFC (Microsoft Foundation Class Library). Where is the Document and the View?</para></question>
+      <answer><para>Document/View (which is a version of the Model–View–Controller
+      (MVC) software design pattern) is not supported directly by GTK. However, the
+      <classname>Gtk::TextView</classname> and <classname>Gtk::ListView</classname>
+      classes are split up into model and view.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>How do I load pictures for use with gtkmm?</para></question>
+      <answer><para>Use <classname>Gdk::Pixbuf</classname> and/or <classname>Gtk::Image</classname>.
+      Both are easy to use and support a wide range of image file types.</para></answer>
+      </qandaentry>
+      <qandaentry>
+      <question><para>Is gtkmm thread-safe?</para></question>
+      <answer><para>Neither GTK nor gtkmm are thread-safe. All GUI code must run
+      in the same thread. If your program might benefit from using multiple threads,
+      have a look at the <link xlink:href="&url_refdocs_base_book_html;chapter-multi-threaded-programs.html">
+      Multi-threaded programs</link> chapter in the gtkmm book.</para></answer>
+      </qandaentry>
+    </qandadiv>
+  </qandaset>
+</section>
+</article>

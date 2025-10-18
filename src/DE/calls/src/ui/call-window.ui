@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="CallsCallWindow" parent="GtkApplicationWindow">
+    <property name="title" translatable="yes">Calls</property>
+    <property name="hide-on-close">True</property>
+    <child>
+      <object class="AdwToastOverlay" id="toast_overlay">
+        <property name="child">
+          <object class="GtkStack" id="main_stack">
+            <child>
+              <object class="GtkStackPage">
+                <property name="name">calls</property>
+                <property name="child">
+                  <object class="GtkScrolledWindow">
+                    <property name="hscrollbar_policy">never</property>
+                    <property name="child">
+                      <object class="GtkFlowBox" id="call_selector">
+                        <property name="orientation">vertical</property>
+                        <property name="homogeneous">True</property>
+                        <property name="column_spacing">12</property>
+                        <property name="row_spacing">12</property>
+                        <property name="selection_mode">none</property>
+                        <signal name="child-activated" handler="call_selector_child_activated_cb" swapped="no"/>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkStackPage">
+                <property name="name">active-call</property>
+                <property name="child">
+                  <object class="GtkStack" id="call_stack">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child type="titlebar">
+      <object class="GtkStack" id="header_bar_stack">
+        <property name="visible_child_name" bind-source="main_stack" bind-property="visible_child_name" bind-flags="bidirectional|sync-create"/>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">calls</property>
+            <property name="child">
+              <object class="GtkHeaderBar"/>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">active-call</property>
+            <property name="child">
+              <object class="GtkHeaderBar">
+                <child>
+                  <object class="GtkButton" id="show_calls">
+                    <property name="icon-name">system-switch-user-symbolic</property>
+                    <signal name="clicked" handler="show_calls_clicked_cb" swapped="no"/>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

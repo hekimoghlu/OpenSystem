@@ -1,0 +1,88 @@
+/* Copyright (C) 2020 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+
+/** %Object used to represent items of a list model.
+ *
+ * %Gtk::ListItem is the object that list-handling containers such
+ * as Gtk::ListView use to represent items in a Gio::ListModel. They are
+ * managed by the container and cannot be created by application code.
+ *
+ * %Gtk::ListItems need to be populated by application code. This is done by
+ * calling set_child().
+ *
+ * %Gtk::ListItems exist in 2 stages:
+ *
+ * 1. The unbound stage where the listitem is not currently connected to
+ *    an item in the list. In that case, property_item() is not set.
+ *
+ * 2. The bound stage where the listitem references an item from the list.
+ *    property_item() is set.
+ *
+ * @see Gtk::ListView, Gio::ListModel
+ * @ingroup ListView
+ * @newin{3,98}
+ */
+class GTKMM_API ListItem : public Glib::Object
+{
+  _CLASS_GOBJECT(ListItem, GtkListItem, GTK_LIST_ITEM, Glib::Object, GObject, , , GTKMM_API)
+  _DO_NOT_DERIVE_GTYPE dnl// GtkListItem is an internal type
+  _ABI_AS_WITH_DERIVED_GTYPE dnl// Remove when we can break ABI
+
+public:
+  // Don't use Glib::RefPtr<Glib::Object> Glib::wrap(GObject* object, bool take_copy).
+  // The object may be an interface object, e.g. Gio::AppInfo. Such an object can't be
+  // cast to Glib::Object. https://gitlab.gnome.org/GNOME/glibmm/-/issues/93
+#m4 _CONVERSION(`gpointer',`Glib::RefPtr<Glib::ObjectBase>',`Glib::make_refptr_for_instance<Glib::ObjectBase>(Glib::wrap_auto(G_OBJECT($3)))')
+  _WRAP_METHOD(Glib::RefPtr<Glib::ObjectBase> get_item(), gtk_list_item_get_item, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Glib::ObjectBase> get_item() const, gtk_list_item_get_item, refreturn, constversion)
+  _WRAP_METHOD(guint get_position() const, gtk_list_item_get_position)
+  _WRAP_METHOD(bool get_selected() const, gtk_list_item_get_selected)
+  _WRAP_METHOD(bool get_selectable() const, gtk_list_item_get_selectable)
+  _WRAP_METHOD(void set_selectable(bool selectable = true), gtk_list_item_set_selectable)
+  _WRAP_METHOD(bool get_activatable() const, gtk_list_item_get_activatable)
+  _WRAP_METHOD(void set_activatable(bool activatable = true), gtk_list_item_set_activatable)
+  _WRAP_METHOD(bool get_focusable() const, gtk_list_item_get_focusable)
+  _WRAP_METHOD(void set_focusable(bool focusable = true), gtk_list_item_set_focusable)
+  _WRAP_METHOD(void set_child(Widget& child), gtk_list_item_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_list_item_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_list_item_get_child, constversion)
+
+  _WRAP_METHOD(void gtk_set_accessible_description(const Glib::ustring& description), gtk_list_item_set_accessible_description)
+  _WRAP_METHOD(Glib::ustring get_accessible_description() const, gtk_list_item_get_accessible_description)
+  _WRAP_METHOD(void gtk_set_accessible_label(const Glib::ustring& label), gtk_list_item_set_accessible_label)
+  _WRAP_METHOD(Glib::ustring get_accessible_label() const, gtk_list_item_get_accessible_label)
+
+  _WRAP_PROPERTY("accessible-description", Glib::ustring)
+  _WRAP_PROPERTY("accessible-label", Glib::ustring)
+  _WRAP_PROPERTY("activatable",bool)
+  _WRAP_PROPERTY("child", Widget*)
+  _WRAP_PROPERTY("focusable", bool)
+  _WRAP_PROPERTY("item", Glib::RefPtr<Glib::ObjectBase>)
+  _WRAP_PROPERTY("position", guint)
+  _WRAP_PROPERTY("selectable", bool)
+  _WRAP_PROPERTY("selected", bool)
+};
+
+} // namespace Gtk

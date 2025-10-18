@@ -1,0 +1,209 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/error.h>
+#include <glibmm/exceptionhandler.h>
+#include <giomm/cancellable.h>
+#include <giomm/slot_async.h>
+
+namespace // anonymous
+{
+using AsyncInitable_init_async_vfunc_functype = void (*) (GAsyncInitable* self,
+  int io_priority, GCancellable* cancellable, GAsyncReadyCallback callback,
+  gpointer user_data);
+using AsyncInitable_init_finish_vfunc_functype = gboolean (*) (GAsyncInitable* self,
+  GAsyncResult* res, GError** error);
+
+AsyncInitable_init_async_vfunc_functype AsyncInitable_init_async_vfunc_funcptr;
+AsyncInitable_init_finish_vfunc_functype AsyncInitable_init_finish_vfunc_funcptr;
+
+extern "C"
+{
+static void
+AsyncInitable_init_async_vfunc_c_callback(GAsyncInitable* self, int io_priority,
+  GCancellable* cancellable, GAsyncReadyCallback callback, gpointer user_data)
+{
+  AsyncInitable_init_async_vfunc_funcptr(self, io_priority, cancellable, callback, user_data);
+}
+
+static gboolean
+AsyncInitable_init_finish_vfunc_c_callback(GAsyncInitable* self,
+  GAsyncResult* res, GError** error)
+{
+  return AsyncInitable_init_finish_vfunc_funcptr(self, res, error);
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gio
+{
+
+void
+AsyncInitable::init_async(
+  const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable, int io_priority)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_async_initable_init_async(
+    gobj(), io_priority, Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+AsyncInitable::init_async(const SlotAsyncReady& slot, int io_priority)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_async_initable_init_async(gobj(), io_priority, nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+AsyncInitable_Class::init_async_vfunc_callback(GAsyncInitable* self, int io_priority,
+  GCancellable* cancellable, GAsyncReadyCallback callback, gpointer user_data)
+{
+  const auto obj_base =
+    static_cast<Glib::ObjectBase*>(Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  if (obj_base && obj_base->is_derived_())
+  {
+    const auto obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if (obj) // This can be nullptr during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        // Get the slot.
+        Gio::SlotAsyncReady* the_slot = static_cast<Gio::SlotAsyncReady*>(user_data);
+
+        // Call the virtual member method, which derived classes might override.
+        obj->init_async_vfunc(*the_slot, Glib::wrap(cancellable, true), io_priority);
+        return;
+      }
+      catch (...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+
+  const auto base = static_cast<BaseClassType*>(
+    g_type_interface_peek_parent( // Get the parent interface of the interface (The original
+                                  // underlying C interface).
+      g_type_interface_peek(
+        G_OBJECT_GET_CLASS(self), CppObjectType::get_type()) // Get the interface.
+      ));
+
+  // Call the original underlying C function:
+  if (base && base->init_async)
+    (*base->init_async)(self, io_priority, cancellable, callback, user_data);
+}
+void
+Gio::AsyncInitable::init_async_vfunc(
+  const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable, int io_priority)
+{
+  const auto base = static_cast<BaseClassType*>(
+    g_type_interface_peek_parent( // Get the parent interface of the interface (The original
+                                  // underlying C interface).
+      g_type_interface_peek(
+        G_OBJECT_GET_CLASS(gobject_), CppObjectType::get_type()) // Get the interface.
+      ));
+
+  if (base && base->init_async)
+  {
+    (*base->init_async)(gobj(), io_priority, const_cast<GCancellable*>(Glib::unwrap(cancellable)),
+      &giomm_SignalProxy_async_callback, const_cast<SlotAsyncReady*>(&slot));
+  }
+}
+gboolean
+AsyncInitable_Class::init_finish_vfunc_callback(
+  GAsyncInitable* self, GAsyncResult* res, GError** error)
+{
+  const auto obj_base =
+    static_cast<Glib::ObjectBase*>(Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  if (obj_base && obj_base->is_derived_())
+  {
+    const auto obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if (obj) // This can be nullptr during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        // Call the virtual member method, which derived classes might override.
+        return static_cast<int>(obj->init_finish_vfunc(Glib::wrap(res, true)));
+      }
+      catch (...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+
+  const auto base = static_cast<BaseClassType*>(
+    g_type_interface_peek_parent( // Get the parent interface of the interface (The original
+                                  // underlying C interface).
+      g_type_interface_peek(
+        G_OBJECT_GET_CLASS(self), CppObjectType::get_type()) // Get the interface.
+      ));
+
+  // Call the original underlying C function:
+  if (base && base->init_finish)
+    return (*base->init_finish)(self, res, error);
+
+  using RType = gboolean;
+  return RType();
+}
+bool
+Gio::AsyncInitable::init_finish_vfunc(const Glib::RefPtr<AsyncResult>& res)
+{
+  const auto base = static_cast<BaseClassType*>(
+    g_type_interface_peek_parent( // Get the parent interface of the interface (The original
+                                  // underlying C interface).
+      g_type_interface_peek(
+        G_OBJECT_GET_CLASS(gobject_), CppObjectType::get_type()) // Get the interface.
+      ));
+
+  if (base && base->init_finish)
+  {
+    GError* gerror = nullptr;
+
+    bool const result = (*base->init_finish)(gobj(), Glib::unwrap(res), &gerror);
+
+    if (gerror)
+      ::Glib::Error::throw_exception(gerror);
+
+    return result;
+  }
+
+  using RType = bool;
+  return RType();
+}
+
+} // namespace Gio

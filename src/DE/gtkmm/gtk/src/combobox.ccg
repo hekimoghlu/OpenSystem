@@ -1,0 +1,119 @@
+/* Copyright (C) 2003 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gdkmm/device.h>
+#include <gtkmm/liststore.h>
+#include <gtkmm/treeview_private.h> //For SignalProxy_RowSeparator.
+#include <gtk/gtk.h>
+
+namespace Gtk
+{
+
+ComboBox::ComboBox(bool has_entry)
+:
+  _CONSTRUCT("has-entry", gboolean(has_entry))
+{}
+
+ComboBox::ComboBox(const Glib::RefPtr<TreeModel>& model, bool has_entry)
+:
+  _CONSTRUCT("model", Glib::unwrap(model), "has-entry", gboolean(has_entry))
+{}
+
+void ComboBox::unset_active()
+{
+  gtk_combo_box_set_active(gobj(), -1 /* see GTK+ docs */);
+}
+
+TreeModel::iterator ComboBox::get_active()
+{
+  Gtk::TreeModel::iterator iter;
+
+  auto model = get_model();
+  if(model)
+  {
+    gtk_combo_box_get_active_iter(gobj(), iter.gobj());
+
+    //It must be given the model, because the C++ wrapper has extra information.
+    iter.set_model_gobject(model->gobj());
+  }
+
+  return iter;
+}
+
+TreeModel::const_iterator ComboBox::get_active() const
+{
+  Gtk::TreeModel::const_iterator iter;
+
+  const auto model = get_model();
+  if(model)
+  {
+    gtk_combo_box_get_active_iter(const_cast<GtkComboBox*>(gobj()), iter.gobj());
+
+    //It must be given the model, because the C++ wrapper has extra information.
+    iter.set_model_gobject(const_cast<GtkTreeModel*>(model->gobj()));
+  }
+
+  return iter;
+}
+
+
+void ComboBox::unset_model()
+{
+  gtk_combo_box_set_model(gobj(), nullptr);
+}
+
+
+void ComboBox::set_row_separator_func(const SlotRowSeparator& slot)
+{
+  //Create a copy of the slot. A pointer to this will be passed through the callback's data parameter.
+  //It will be deleted when gtkmm_SignalProxy_RowSeparator_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotRowSeparator(slot);
+
+  gtk_combo_box_set_row_separator_func(gobj(),
+      &TreeView_Private::gtkmm_SignalProxy_RowSeparator_gtk_callback, slot_copy,
+      &TreeView_Private::gtkmm_SignalProxy_RowSeparator_gtk_callback_destroy);
+}
+
+void ComboBox::unset_row_separator_func()
+{
+  gtk_combo_box_set_row_separator_func(gobj(), nullptr, nullptr, nullptr /* See C docs. */);
+}
+
+void ComboBox::unset_child()
+{
+  gtk_combo_box_set_child(gobj(), nullptr);
+}
+
+Entry* ComboBox::get_entry()
+{
+  return dynamic_cast<Gtk::Entry*>(get_child());
+}
+
+const Entry* ComboBox::get_entry() const
+{
+  return dynamic_cast<const Gtk::Entry*>(get_child());
+}
+
+Glib::ustring ComboBox::get_entry_text() const
+{
+  const auto entry = get_entry();
+  if(!entry)
+    return Glib::ustring();
+  else
+    return entry->get_text();
+}
+
+} // namespace Gtk

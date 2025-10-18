@@ -1,0 +1,43 @@
+/* Copyright (C) 2020 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/atcontext.h>
+#include <gtk/gtk.h>
+
+using Role = Gtk::Accessible::Role;
+
+namespace Gtk
+{
+
+void Accessible::update_state(State state, const Glib::ValueBase& value)
+{
+  auto c_state = static_cast<GtkAccessibleState>(state);
+  gtk_accessible_update_state_value(gobj(), 1, &c_state, value.gobj());
+}
+
+void Accessible::update_property(Property property, const Glib::ValueBase& value)
+{
+  auto c_prop = static_cast<GtkAccessibleProperty>(property);
+  gtk_accessible_update_property_value(gobj(), 1, &c_prop, value.gobj());
+}
+
+void Accessible::update_relation(Relation relation, const Glib::ValueBase& value)
+{
+  auto c_rel = static_cast<GtkAccessibleRelation>(relation);
+  gtk_accessible_update_relation_value(gobj(), 1, &c_rel, value.gobj());
+}
+
+} // namespace Gtk

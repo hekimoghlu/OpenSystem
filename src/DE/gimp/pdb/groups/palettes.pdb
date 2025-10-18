@@ -1,0 +1,88 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+sub palettes_refresh {
+    $blurb = 'Refreshes current palettes. This function always succeeds.';
+
+    $help = <<'HELP';
+This procedure retrieves all palettes currently in the user's palette path
+and updates the palette dialogs accordingly.
+HELP
+
+    &adrian_pdb_misc('1998');
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_data_factory_data_refresh (gimp->palette_factory, context);
+}
+CODE
+    );
+}
+
+sub palettes_get_list {
+    $blurb = 'Retrieves a list of all of the available palettes';
+
+    $help = <<'HELP';
+This procedure returns a complete listing of available palettes.
+
+Each palette returned can be used as input to [func@Gimp.context_set_palette].
+HELP
+
+    &rock_pdb_misc('2001');
+
+    @inargs = (
+	{ name => 'filter', type => 'string', none_ok => 1,
+          desc => 'An optional regular expression used to filter the list' }
+    );
+
+    @outargs = (
+        { name => 'palette_list', type => 'palettearray',
+          desc => 'The list of palettes' }
+    );
+
+    %invoke = (
+        headers => [ qw("core/gimpcontainer-filter.h") ],
+        code    => <<'CODE'
+{
+  palette_list = (GimpPalette **) gimp_container_get_filtered_array (gimp_data_factory_get_container (gimp->palette_factory),
+                                                                     filter);
+}
+CODE
+    );
+}
+
+
+@headers = qw(<string.h>
+              "core/gimp.h"
+              "core/gimpcontext.h"
+              "core/gimpdatafactory.h"
+              "core/gimppalette.h"
+              "gimppdb-utils.h");
+
+@procs = qw(palettes_refresh
+            palettes_get_list);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Palettes';
+$doc_title = 'gimppalettes';
+$doc_short_desc = 'Operations related to palettes.';
+$doc_long_desc = 'Operations related to palettes.';
+
+1;

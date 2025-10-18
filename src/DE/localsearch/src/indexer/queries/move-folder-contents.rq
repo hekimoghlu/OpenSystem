@@ -1,0 +1,78 @@
+# Inputs: sourceUri, destUri
+
+# Update nie:isStoredAs in all graphs
+DELETE {
+  GRAPH ?g {
+    ?ie nie:isStoredAs ?f
+  }
+} INSERT {
+  GRAPH ?g {
+    ?ie nie:isStoredAs ?new_url
+  }
+} WHERE {
+  GRAPH ?g {
+    ?f a nfo:FileDataObject .
+    ?ie nie:isStoredAs ?f .
+    BIND (CONCAT (~destUri, "/", SUBSTR (STR (?f), STRLEN (~sourceUri) + 2)) AS ?new_url) .
+    FILTER (STRSTARTS (STR (?f), CONCAT (~sourceUri, "/"))) .
+  }
+};
+
+# Update tracker:FileSystem nfo:FileDataObject information
+WITH tracker:FileSystem
+DELETE {
+  ?f a rdfs:Resource .
+} INSERT {
+  ?new_url a nfo:FileDataObject ;
+       nie:url ?new_url ;
+       nfo:belongsToContainer ?belongsToContainer ;
+       nfo:fileName ?fileName ;
+       nfo:fileSize ?fileSize ;
+       nfo:fileLastModified ?fileLastModified ;
+       nfo:fileLastAccessed ?fileLastAccessed ;
+       nfo:fileCreated ?fileCreated ;
+       nie:dataSource ?dataSource ;
+       nie:interpretedAs ?interpretedAs ;
+       tracker:extractorHash ?extractorHash .
+} WHERE {
+  ?f a nfo:FileDataObject ;
+    nfo:fileSize ?fileSize ;
+    nfo:fileLastModified ?fileLastModified ;
+    nfo:fileLastAccessed ?fileLastAccessed ;
+    nfo:fileName ?fileName .
+
+  OPTIONAL { ?f nfo:fileCreated ?fileCreated } .
+  OPTIONAL { ?f nie:dataSource ?dataSource } .
+  OPTIONAL { ?f nie:interpretedAs ?interpretedAs } .
+  OPTIONAL { ?f tracker:extractorHash ?extractorHash } .
+  OPTIONAL { ?f nfo:belongsToContainer ?belongsToContainer } .
+  BIND (CONCAT (~destUri, "/", SUBSTR (STR (?f), STRLEN (~sourceUri) + 2)) AS ?new_url) .
+  FILTER (STRSTARTS (STR (?f), CONCAT (~sourceUri, "/"))) .
+};
+
+# Update nfo:FileDataObject in data graphs
+DELETE {
+  GRAPH ?g {
+    ?f a rdfs:Resource
+  }
+} INSERT {
+  GRAPH ?g {
+    ?new_url a nfo:FileDataObject ;
+      nfo:fileName ?fileName ;
+      nfo:fileSize ?fileSize ;
+      nfo:fileLastModified ?fileLastModified ;
+      nie:dataSource ?dataSource ;
+      nie:interpretedAs ?interpretedAs .
+  }
+} WHERE {
+  GRAPH ?g {
+    ?f a nfo:FileDataObject ;
+      nfo:fileSize ?fileSize ;
+      nfo:fileLastModified ?fileLastModified ;
+      nfo:fileName ?fileName .
+    OPTIONAL { ?f nie:dataSource ?dataSource } .
+    OPTIONAL { ?f nie:interpretedAs ?interpretedAs } .
+    BIND (CONCAT (~destUri, "/", SUBSTR (STR (?f), STRLEN (~sourceUri) + 2)) AS ?new_url) .
+    FILTER (STRSTARTS (STR (?f), CONCAT (~sourceUri, "/"))) .
+  }
+}

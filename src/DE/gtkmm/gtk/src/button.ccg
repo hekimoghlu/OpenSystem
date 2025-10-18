@@ -1,0 +1,52 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+#include <gtkmm/image.h>
+
+namespace Gtk
+{
+
+Button::Button(const Glib::ustring& label, bool mnemonic)
+:
+  _CONSTRUCT("label", label.c_str(), "use_underline", gboolean(mnemonic))
+{}
+
+void Button::set_image_from_icon_name(const Glib::ustring& icon_name, IconSize size, bool use_fallback)
+{
+  // It would be possible to create a Gtk::Image and add it with Container::add()
+  // instead of calling set_icon_name(), but only set_icon_name() sets style classes
+  // appropriately for a button with an icon.
+
+  set_icon_name(icon_name);
+  if (size == IconSize::INHERIT && !use_fallback)
+    return;
+
+  auto image = dynamic_cast<Image*>(get_child());
+  if (image)
+  {
+    image->set_from_icon_name(icon_name);
+    image->set_icon_size(size);
+    image->property_use_fallback() = use_fallback;
+  }
+}
+
+void Button::unset_child()
+{
+  gtk_button_set_child(gobj(), nullptr);
+}
+
+} // namespace Gtk

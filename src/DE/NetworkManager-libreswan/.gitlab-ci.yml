@@ -1,0 +1,80 @@
+# Quick syntax check:
+# python -c 'import sys, yaml; yaml.dump (yaml.safe_load (sys.stdin), sys.stdout)' <.gitlab-ci.yml
+
+# If things don't seem to work, this can help:
+# https://gitlab.gnome.org/GNOME/NetworkManager-libreswan/-/ci/lint
+
+# Import the necessary stuff for a CI release:
+# https://handbook.gnome.org/maintainers/release-pipeline.html
+include:
+  - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+    inputs:
+      dist-job-name: "release-dist"
+
+
+# Template to install the dependencies for the build
+.fedora_deps: &fedora_deps
+  before_script:
+    - dnf -y install
+      file
+      findutils
+      gcc
+      gettext-devel
+      glib2-devel
+      gtk3-devel
+      gtk4-devel
+      libnma-gtk4-devel
+      libnl3-devel
+      intltool
+      libtool
+      libsecret-devel
+      libnma-devel
+      NetworkManager-libnm-devel
+      pkgconfig
+
+# Roll the distribution tarball
+release-dist:
+  <<: *fedora_deps
+  image: fedora:42
+  stage: build
+  script:
+    - dnf -y install
+      /usr/bin/autopoint
+      autoconf automake make
+    - sh autogen.sh
+    - make -j dist
+    - for f in *.tar.xz; do sha256sum "$f" > "$f".sha256sum; done
+    - mkdir public-dist
+    - mv *.{tar.xz,tar.xz.sha256sum} public-dist
+  artifacts:
+    paths:
+      - public-dist
+
+# Template to test in any version of Fedora
+.test_in_fedora_from_dist: &test_in_fedora_from_dist
+  <<: *fedora_deps
+  stage: test
+  dependencies:
+    - release-dist
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - dnf -y install make
+    - tar xJf public-dist/NetworkManager-libreswan-*.tar.xz
+    # Sometimes the CI builder clocks are skewed.
+    # Make sure the dst files are not from future.
+    - find |xargs touch
+    - cd NetworkManager-libreswan-*/
+    - ./configure
+      --disable-silent-rules
+      --without-libnm-glib
+      --with-gtk4
+    - make -j
+    - make -j check
+    - make -j install
+    - make -j uninstall
+
+# Test on a recent distro
+test_in_fedora_from_dist:
+  <<: *test_in_fedora_from_dist
+  image: fedora:latest

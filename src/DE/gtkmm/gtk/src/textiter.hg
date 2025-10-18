@@ -1,0 +1,487 @@
+/* Copyright(C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <vector>
+#include <pangomm/language.h>
+#include <gtkmm/texttag.h>
+#include <gtk/gtk.h> /* we need the definition of GtkTextIter */
+
+_DEFS(gtkmm,gtk)
+
+namespace Gdk
+{
+class Paintable;
+}
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+_WRAP_ENUM(TextSearchFlags, GtkTextSearchFlags, decl_prefix GTKMM_API)
+
+class GTKMM_API TextBuffer;
+class GTKMM_API TextMark;
+class GTKMM_API TextChildAnchor;
+
+//TODO: Maybe we should have separate iterators for words, lines, and sentences.
+/** Common base class of TextIter and TextConstIter.
+ *
+ * You don't create objects of this base class. Objects shall be either TextIter
+ * or TextConstIter.
+ *
+ * @see TextIter
+ * @ingroup TextView
+ */
+class GTKMM_API TextIterBase
+{
+  _CLASS_BOXEDTYPE_STATIC(TextIterBase, GtkTextIter, GTKMM_API)
+  _IGNORE(gtk_text_iter_copy, gtk_text_iter_free, gtk_text_iter_equal)
+  _IGNORE(gtk_text_iter_assign)
+
+public:
+  using iterator_category = std::bidirectional_iterator_tag;
+  using value_type        = gunichar;
+  using difference_type   = int;
+  using reference         = value_type;
+  using pointer           = void;
+
+  /** Alias for get_char(). */
+  inline value_type operator*() const;
+
+   /** Alias for !is_end().
+   * For instance,
+   * @code
+   * if (textiter)
+   *   do_something();
+   * @endcode
+    *
+    * @newin{3,22}
+    */
+   explicit operator bool() const;
+
+  _WRAP_METHOD(int get_offset() const, gtk_text_iter_get_offset)
+  _WRAP_METHOD(int get_line() const, gtk_text_iter_get_line)
+  _WRAP_METHOD(int get_line_offset() const, gtk_text_iter_get_line_offset)
+  _WRAP_METHOD(int get_line_index() const, gtk_text_iter_get_line_index)
+
+  _WRAP_METHOD(int get_visible_line_offset() const, gtk_text_iter_get_visible_line_offset)
+  _WRAP_METHOD(int get_visible_line_index() const, gtk_text_iter_get_visible_line_index)
+
+  _WRAP_METHOD(gunichar get_char() const, gtk_text_iter_get_char)
+
+#m4 _CONVERSION(`const TextIterBase&', `const GtkTextIter*', __FR2P)
+  _WRAP_METHOD(Glib::ustring get_slice(const TextIterBase& end) const, gtk_text_iter_get_slice)
+  _WRAP_METHOD(Glib::ustring get_text(const TextIterBase& end) const, gtk_text_iter_get_text)
+  _WRAP_METHOD(Glib::ustring get_visible_slice(const TextIterBase& end) const, gtk_text_iter_get_visible_slice)
+  _WRAP_METHOD(Glib::ustring get_visible_text(const TextIterBase& end) const, gtk_text_iter_get_visible_text)
+
+  _WRAP_METHOD(bool starts_tag(const Glib::RefPtr<const TextTag>& tag = {}) const, gtk_text_iter_starts_tag)
+  _WRAP_METHOD(bool ends_tag(const Glib::RefPtr<const TextTag>& tag = {}) const, gtk_text_iter_ends_tag)
+  _WRAP_METHOD(bool toggles_tag(const Glib::RefPtr<const TextTag>& tag = {}) const, gtk_text_iter_toggles_tag)
+  _WRAP_METHOD(bool has_tag(const Glib::RefPtr<const TextTag>& tag) const, gtk_text_iter_has_tag)
+
+  _WRAP_METHOD(bool editable(bool default_setting = true) const, gtk_text_iter_editable)
+  _WRAP_METHOD(bool can_insert(bool default_editability = true) const, gtk_text_iter_can_insert)
+
+  _WRAP_METHOD(bool starts_word() const, gtk_text_iter_starts_word)
+  _WRAP_METHOD(bool ends_word() const, gtk_text_iter_ends_word)
+  _WRAP_METHOD(bool inside_word() const, gtk_text_iter_inside_word)
+  _WRAP_METHOD(bool starts_sentence() const, gtk_text_iter_starts_sentence)
+  _WRAP_METHOD(bool ends_sentence() const, gtk_text_iter_ends_sentence)
+  _WRAP_METHOD(bool inside_sentence() const, gtk_text_iter_inside_sentence)
+  _WRAP_METHOD(bool starts_line() const, gtk_text_iter_starts_line)
+  _WRAP_METHOD(bool ends_line() const, gtk_text_iter_ends_line)
+  _WRAP_METHOD(bool is_cursor_position() const, gtk_text_iter_is_cursor_position)
+
+  _WRAP_METHOD(int get_chars_in_line() const, gtk_text_iter_get_chars_in_line)
+  _WRAP_METHOD(int get_bytes_in_line() const, gtk_text_iter_get_bytes_in_line)
+
+  _WRAP_METHOD(Pango::Language get_language() const, gtk_text_iter_get_language)
+  _WRAP_METHOD(bool is_end() const, gtk_text_iter_is_end)
+  _WRAP_METHOD(bool is_start() const, gtk_text_iter_is_start)
+
+  _WRAP_METHOD(bool forward_char(), gtk_text_iter_forward_char)
+  _WRAP_METHOD(bool backward_char(), gtk_text_iter_backward_char)
+  _WRAP_METHOD(bool forward_chars(int count), gtk_text_iter_forward_chars)
+  _WRAP_METHOD(bool backward_chars(int count), gtk_text_iter_backward_chars)
+  _WRAP_METHOD(bool forward_line(), gtk_text_iter_forward_line)
+  _WRAP_METHOD(bool backward_line(), gtk_text_iter_backward_line)
+  _WRAP_METHOD(bool forward_lines(int count), gtk_text_iter_forward_lines)
+  _WRAP_METHOD(bool backward_lines(int count), gtk_text_iter_backward_lines)
+  _WRAP_METHOD(bool forward_word_end(), gtk_text_iter_forward_word_end)
+  _WRAP_METHOD(bool backward_word_start(), gtk_text_iter_backward_word_start)
+  _WRAP_METHOD(bool forward_word_ends(int count), gtk_text_iter_forward_word_ends)
+  _WRAP_METHOD(bool backward_word_starts(int count), gtk_text_iter_backward_word_starts)
+
+  _WRAP_METHOD(bool forward_visible_line(), gtk_text_iter_forward_visible_line)
+  _WRAP_METHOD(bool backward_visible_line(), gtk_text_iter_backward_visible_line)
+  _WRAP_METHOD(bool forward_visible_lines(int count), gtk_text_iter_forward_visible_lines)
+  _WRAP_METHOD(bool backward_visible_lines(int count), gtk_text_iter_backward_visible_lines)
+
+  //TODO: Now that there are so many *_visible_ versions of the methods, maybe we should
+  //just add a visible=false parameter and therefore halve the number of methods. murrayc
+
+  _WRAP_METHOD(bool forward_visible_word_end(), gtk_text_iter_forward_visible_word_end)
+  _WRAP_METHOD(bool backward_visible_word_start(), gtk_text_iter_backward_visible_word_start)
+  _WRAP_METHOD(bool forward_visible_word_ends(int count), gtk_text_iter_forward_visible_word_ends)
+  _WRAP_METHOD(bool backward_visible_word_starts(int count), gtk_text_iter_backward_visible_word_starts)
+
+  _WRAP_METHOD(bool forward_sentence_end(), gtk_text_iter_forward_sentence_end)
+  _WRAP_METHOD(bool backward_sentence_start(), gtk_text_iter_backward_sentence_start)
+  _WRAP_METHOD(bool forward_sentence_ends(int count), gtk_text_iter_forward_sentence_ends)
+  _WRAP_METHOD(bool backward_sentence_starts(int count), gtk_text_iter_backward_sentence_starts)
+
+  _WRAP_METHOD(bool forward_cursor_position(), gtk_text_iter_forward_cursor_position)
+  _WRAP_METHOD(bool backward_cursor_position(), gtk_text_iter_backward_cursor_position)
+  _WRAP_METHOD(bool forward_cursor_positions(int count), gtk_text_iter_forward_cursor_positions)
+  _WRAP_METHOD(bool backward_cursor_positions(int count), gtk_text_iter_backward_cursor_positions)
+
+  _WRAP_METHOD(bool forward_visible_cursor_position(), gtk_text_iter_forward_visible_cursor_position)
+  _WRAP_METHOD(bool backward_visible_cursor_position(), gtk_text_iter_backward_visible_cursor_position)
+  _WRAP_METHOD(bool forward_visible_cursor_positions(int count), gtk_text_iter_forward_visible_cursor_positions)
+  _WRAP_METHOD(bool backward_visible_cursor_positions(int count), gtk_text_iter_backward_visible_cursor_positions)
+
+  _WRAP_METHOD(void set_offset(int char_offset), gtk_text_iter_set_offset)
+  _WRAP_METHOD(void set_line(int line_number), gtk_text_iter_set_line)
+  _WRAP_METHOD(void set_line_offset(int char_on_line), gtk_text_iter_set_line_offset)
+  _WRAP_METHOD(void set_line_index(int byte_on_line), gtk_text_iter_set_line_index)
+  _WRAP_METHOD(void forward_to_end(), gtk_text_iter_forward_to_end)
+  _WRAP_METHOD(bool forward_to_line_end(), gtk_text_iter_forward_to_line_end)
+
+  _WRAP_METHOD(void set_visible_line_offset(int char_on_line), gtk_text_iter_set_visible_line_offset)
+  _WRAP_METHOD(void set_visible_line_index(int byte_on_line), gtk_text_iter_set_visible_line_index)
+
+  _WRAP_METHOD(bool forward_to_tag_toggle(const Glib::RefPtr<const TextTag>& tag = {}), gtk_text_iter_forward_to_tag_toggle)
+  _WRAP_METHOD(bool backward_to_tag_toggle(const Glib::RefPtr<const TextTag>& tag = {}), gtk_text_iter_backward_to_tag_toggle)
+
+  /** A slot that will be called on each consecutive character.
+   * forward_find_char() and backward_find_char() advance the iterator one
+   * character at a time until the slot returns <tt>true</tt>.
+   *
+   * For instance,
+   * @code
+   * bool on_find_char(gunichar ch);
+   * @endcode
+   *
+   * @newin{3,90}
+   */
+  using SlotFindChar = sigc::slot<bool(gunichar)>;
+
+  // _WRAP_METHOD can't be used here, because user_data is not the last parameter
+  // in the gtk+ functions.
+  //_WRAP_METHOD(bool forward_find_char(const SlotFindChar& slot{pred}, const TextIterBase& limit{.?}),
+  //  gtk_text_iter_forward_find_char, slot_name slot, slot_callback TextIterBase_find_char_callback, no_slot_copy)
+  //_WRAP_METHOD(bool backward_find_char(const SlotFindChar& slot{pred}, const TextIterBase& limit{.?}),
+  //  gtk_text_iter_backward_find_char, slot_name slot, slot_callback TextIterBase_find_char_callback, no_slot_copy)
+  _IGNORE(gtk_text_iter_forward_find_char, gtk_text_iter_backward_find_char)
+
+  /** Advances this iterator, calling @a slot on each character.
+   *
+   * If @a slot returns <tt>true</tt>, %forward_find_char() returns <tt>true</tt>
+   * and stops scanning.
+   * If @a slot never returns <tt>true</tt>, this iterator is set to @a limit.
+   *
+   * @param slot A function to be called on each character.
+   * @param limit Search limit.
+   * @return Whether a match was found.
+   */
+  bool forward_find_char(const SlotFindChar& slot, const TextIterBase& limit);
+
+  /** Advances this iterator, calling @a slot on each character.
+   *
+   * If @a slot returns <tt>true</tt>, %forward_find_char() returns <tt>true</tt>
+   * and stops scanning.
+   * If @a slot never returns <tt>true</tt>, this iterator is set to the end iterator.
+   *
+   * @param slot A function to be called on each character.
+   * @return Whether a match was found.
+   */
+  bool forward_find_char(const SlotFindChar& slot);
+
+  /** Same as forward_find_char(const SlotFindChar& slot, const TextIterBase& limit),
+   * but goes backward.
+   *
+   * @param slot Function to be called on each character.
+   * @param limit Search limit.
+   * @return Whether a match was found.
+   */
+  bool backward_find_char(const SlotFindChar& slot, const TextIterBase& limit);
+
+  /** Same as forward_find_char(const SlotFindChar& slot), but goes backward.
+   *
+   * @param slot Function to be called on each character.
+   * @return Whether a match was found.
+   */
+  bool backward_find_char(const SlotFindChar& slot);
+
+  _WRAP_METHOD(int compare(const TextIterBase& rhs) const, gtk_text_iter_compare)
+  _WRAP_METHOD(bool in_range(const TextIterBase& start, const TextIterBase& end) const, gtk_text_iter_in_range)
+
+  _WRAP_EQUAL_AND_COMPARE(gtk_text_iter_equal, gtk_text_iter_compare, , GTKMM_API)
+
+}; // end TextIterBase
+
+
+/** Typedefed as Gtk::TextBuffer::iterator.
+ *
+ * An iterator represents a position between two characters in the text buffer.
+ * Iterators are not valid indefinitely; whenever the buffer is modified in a way that
+ * affects the number of characters in the buffer, all outstanding iterators become invalid.
+ * (Note that deleting 5 characters and then reinserting 5 still invalidates iterators,
+ * though you end up with the same number of characters you pass through a state with
+ * a different number).
+ *
+ * Because of this, iterators can't be used to preserve positions across buffer modifications.
+ * To preserve a position, the @link Gtk::TextMark Gtk::TextBuffer::Mark@endlink object is ideal.
+ *
+ * You can iterate over characters, words, lines, and sentences,
+ * but operator*() and operator++() deal only in characters.
+ *
+ * @ingroup TextView
+ */
+class GTKMM_API TextIter : public TextIterBase
+{
+  _CLASS_GENERIC(TextIter, GtkTextIter)
+public:
+  /** Alias for forward_char(). */
+  inline TextIter& operator++();
+  inline TextIter  operator++(int);
+
+  /** Alias for backward_char(). */
+  inline TextIter& operator--();
+  inline TextIter  operator--(int);
+
+  _WRAP_METHOD(Glib::RefPtr<TextBuffer> get_buffer() const, gtk_text_iter_get_buffer, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Paintable> get_paintable() const, gtk_text_iter_get_paintable, refreturn)
+
+#m4 _CONVERSION(`GSList*',`std::vector<Glib::RefPtr<TextMark>>',`Glib::SListHandler<Glib::RefPtr<TextMark> >::slist_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<TextMark>> get_marks() const, gtk_text_iter_get_marks)
+
+  _WRAP_METHOD(Glib::RefPtr<TextChildAnchor> get_child_anchor() const, gtk_text_iter_get_child_anchor, refreturn)
+
+#m4 _CONVERSION(`GSList*',`std::vector<Glib::RefPtr<TextTag>>',`Glib::SListHandler<Glib::RefPtr<TextTag> >::slist_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<TextTag>> get_toggled_tags(bool toggled_on = true) const, gtk_text_iter_get_toggled_tags)
+
+  _WRAP_METHOD(std::vector<Glib::RefPtr<TextTag>> get_tags() const, gtk_text_iter_get_tags)
+
+#m4 _CONVERSION(`TextIter&', `GtkTextIter*', __FR2P)
+  _WRAP_METHOD(bool forward_search(const Glib::ustring& str,
+                                   TextSearchFlags flags,
+                                   TextIter& match_start,
+                                   TextIter& match_end,
+                                   const TextIterBase& limit{?}) const, gtk_text_iter_forward_search)
+
+  _WRAP_METHOD(bool backward_search(const Glib::ustring& str,
+                                    TextSearchFlags flags,
+                                    TextIter& match_start,
+                                    TextIter& match_end,
+                                    const TextIterBase& limit{?}) const, gtk_text_iter_backward_search)
+
+  _WRAP_METHOD(void order(TextIter& second), gtk_text_iter_order)
+};
+
+
+/** Typedefed as Gtk::TextBuffer::const_iterator.
+ *
+ * @see TextIter
+ * @ingroup TextView
+ */
+class GTKMM_API TextConstIter : public TextIterBase
+{
+  _CLASS_GENERIC(TextConstIter, GtkTextIter)
+public:
+  inline TextConstIter() noexcept;
+
+  /** A TextIter can be implicitly converted to a TextConstIter.
+   */
+  inline TextConstIter(const TextIter& other) noexcept;
+
+  /** A TextIter can be assigned to a TextConstIter.
+   */
+  inline TextConstIter& operator=(const TextIter& other) noexcept;
+
+  /** Alias for forward_char(). */
+  inline TextConstIter& operator++();
+  inline TextConstIter  operator++(int);
+
+  /** Alias for backward_char(). */
+  inline TextConstIter& operator--();
+  inline TextConstIter  operator--(int);
+
+  _WRAP_METHOD(Glib::RefPtr<const TextBuffer> get_buffer() const, gtk_text_iter_get_buffer, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Paintable> get_paintable() const, gtk_text_iter_get_paintable, refreturn)
+
+#m4 _CONVERSION(`GSList*',`std::vector<Glib::RefPtr<const TextMark>>',`Glib::SListHandler<Glib::RefPtr<const TextMark> >::slist_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<const TextMark>> get_marks() const, gtk_text_iter_get_marks)
+
+  _WRAP_METHOD(Glib::RefPtr<const TextChildAnchor> get_child_anchor() const, gtk_text_iter_get_child_anchor, refreturn)
+
+#m4 _CONVERSION(`GSList*',`std::vector<Glib::RefPtr<const TextTag>>',`Glib::SListHandler<Glib::RefPtr<const TextTag> >::slist_to_vector($3, Glib::OWNERSHIP_SHALLOW)')
+  _WRAP_METHOD(std::vector<Glib::RefPtr<const TextTag>> get_toggled_tags(bool toggled_on = true) const, gtk_text_iter_get_toggled_tags)
+
+  _WRAP_METHOD(std::vector<Glib::RefPtr<const TextTag>> get_tags() const, gtk_text_iter_get_tags)
+
+#m4 _CONVERSION(`TextConstIter&', `GtkTextIter*', __FR2P)
+  _WRAP_METHOD(bool forward_search(const Glib::ustring& str,
+                                   TextSearchFlags flags,
+                                   TextConstIter& match_start,
+                                   TextConstIter& match_end,
+                                   const TextIterBase& limit{?}) const, gtk_text_iter_forward_search)
+
+  _WRAP_METHOD(bool backward_search(const Glib::ustring& str,
+                                    TextSearchFlags flags,
+                                    TextConstIter& match_start,
+                                    TextConstIter& match_end,
+                                    const TextIterBase& limit{?}) const, gtk_text_iter_backward_search)
+
+  _WRAP_METHOD(void order(TextConstIter& second), gtk_text_iter_order)
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+/**** Gtk::TextIterBase *******************************************************/
+
+inline
+TextIterBase::value_type TextIterBase::operator*() const
+{
+  return get_char();
+}
+
+inline
+TextIterBase::operator bool() const
+{
+  return !is_end();
+}
+
+/**** Gtk::TextIter ***********************************************************/
+
+inline
+TextIter& TextIter::operator++()
+{
+  forward_char();
+  return *this;
+}
+
+inline
+TextIter TextIter::operator++(int)
+{
+  const TextIter temp(*this);
+  forward_char();
+  return temp;
+}
+
+inline
+TextIter& TextIter::operator--()
+{
+  backward_char();
+  return *this;
+}
+
+inline
+TextIter TextIter::operator--(int)
+{
+  const TextIter temp(*this);
+  backward_char();
+  return temp;
+}
+
+/**** Gtk::TextConstIter ******************************************************/
+
+TextConstIter::TextConstIter() noexcept
+{
+}
+
+TextConstIter::TextConstIter(const TextIter& other) noexcept
+: TextIterBase(other.gobj())
+{
+}
+
+TextConstIter& TextConstIter::operator=(const TextIter& other) noexcept
+{
+  gobject_ = *other.gobj();
+  return *this;
+}
+
+inline
+TextConstIter& TextConstIter::operator++()
+{
+  forward_char();
+  return *this;
+}
+
+inline
+TextConstIter TextConstIter::operator++(int)
+{
+  const TextConstIter temp(*this);
+  forward_char();
+  return temp;
+}
+
+inline
+TextConstIter& TextConstIter::operator--()
+{
+  backward_char();
+  return *this;
+}
+
+inline
+TextConstIter TextConstIter::operator--(int)
+{
+  const TextConstIter temp(*this);
+  backward_char();
+  return temp;
+}
+
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+} // namespace Gtk
+
+namespace Glib
+{
+// Can't have overloaded functions that differ only in return type.
+// These can't be called Glib::wrap().
+
+/** @relates Gtk::TextIter
+ * @param object The C instance
+ * @result A C++ instance that wraps this C instance.
+ */
+GTKMM_API
+Gtk::TextIter& wrap_iter(GtkTextIter* object);
+
+/** @relates Gtk::TextIter
+ * @param object The C instance
+ * @result A C++ instance that wraps this C instance.
+ */
+GTKMM_API
+const Gtk::TextIter& wrap_iter(const GtkTextIter* object);
+
+/** @relates Gtk::TextConstIter
+ * @param object The C instance
+ * @result A C++ instance that wraps this C instance.
+ */
+GTKMM_API
+Gtk::TextConstIter& wrap_const_iter(GtkTextIter* object);
+
+/** @relates Gtk::TextConstIter
+ * @param object The C instance
+ * @result A C++ instance that wraps this C instance.
+ */
+GTKMM_API
+const Gtk::TextConstIter& wrap_const_iter(const GtkTextIter* object);
+
+} // namespace Glib

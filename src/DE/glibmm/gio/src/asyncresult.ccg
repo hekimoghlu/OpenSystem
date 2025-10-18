@@ -1,0 +1,50 @@
+/* Copyright (C) 2007 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+//#include <gio/gasyncresult.h> //We are not allowed to include individual headers.
+#include <gio/gio.h>
+#include <glibmm/exceptionhandler.h>
+
+namespace Gio
+{
+
+static GObject*
+unwrap_objectbase_custom(const Glib::RefPtr<Glib::ObjectBase>& cpp_instance)
+{
+  return (cpp_instance ? cpp_instance->gobj() : nullptr);
+}
+
+Glib::RefPtr<Glib::ObjectBase>
+AsyncResult::get_source_object_base()
+{
+  // Glib::wrap(cobj) can't be used here. See tests/giomm_asyncresult_sourceobject
+  // for a case where it would fail, and an explanation of why.
+  // In short, the source object is not necessarily a Glib::Object. It may be
+  // a Glib::Interface.
+
+  auto cobj = g_async_result_get_source_object(gobj());
+  auto cppobj = Glib::wrap_auto(cobj); // ObjectBase::_get_current_wrapper(cobj);
+  return Glib::make_refptr_for_instance<Glib::ObjectBase>(
+    cppobj); // g_async_result_get_source_object() gives us a ref, unusually.
+}
+
+Glib::RefPtr<const Glib::ObjectBase>
+AsyncResult::get_source_object_base() const
+{
+  return const_cast<AsyncResult*>(this)->get_source_object_base();
+}
+
+} // namespace Gio

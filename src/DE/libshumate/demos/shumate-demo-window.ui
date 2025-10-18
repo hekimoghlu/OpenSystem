@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="ShumateDemoWindow" parent="GtkApplicationWindow">
+    <property name="title" translatable="yes">Shumate Demo</property>
+    <property name="default_width">800</property>
+    <property name="default_height">600</property>
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+        <child>
+          <object class="GtkDropDown" id="layers_dropdown">
+          </object>
+        </child>
+        <child type="end">
+          <object class="GtkMenuButton">
+            <property name="label" translatable="true">Go To</property>
+            <property name="popover">
+              <object class="GtkPopoverMenu">
+                <property name="menu-model">goto_menu</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ShumateSimpleMap" id="map">
+        <property name="map-source" bind-source="layers_dropdown" bind-property="selected-item" bind-flags="sync-create"/>
+        <signal name="symbol-clicked" handler="on_symbol_clicked" swapped="true"/>
+        <signal name="notify::base-map-layer" handler="on_base_map_layer_changed"/>
+      </object>
+    </child>
+  </template>
+  <menu id="goto_menu">
+    <item>
+      <attribute name="label" translatable="true">Europe</attribute>
+      <attribute name="action">win.goto-europe</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="true">New York City</attribute>
+      <attribute name="action">win.goto-nyc</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="true">Eiffel Tower</attribute>
+      <attribute name="action">win.goto-eiffel-tower</attribute>
+    </item>
+  </menu>
+</interface>

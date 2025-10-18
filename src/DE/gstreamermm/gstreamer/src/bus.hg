@@ -1,0 +1,173 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ - version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/object.h>
+#include <gstreamermm/clock.h>
+#include <gstreamermm/message.h>
+#include <glibmm/priorities.h>
+//#include <glibmm/main.h> //For Glib::Source
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Message;
+
+_WRAP_ENUM(BusFlags, GstBusFlags)
+
+_WRAP_ENUM(BusSyncReply, GstBusSyncReply)
+
+/** A class that encompasses the GStreamer asynchronous message bus subsystem.
+ * The Gst::Bus is an object responsible for delivering Messages in a first-in
+ * first-out way from the streaming threads to the application.
+ *
+ * Since the application typically only wants to deal with delivery of these
+ * messages from one thread, the Gst::Bus will marshall the messages between
+ * different threads. This is important since the actual streaming of media is
+ * done in another thread than the application.
+ *
+ * The Gst::Bus provides support for GSource based notifications. This makes it
+ * possible to handle the delivery in the glib mainloop.
+ *
+ * The GSource callback function gst_bus_async_signal_func() can be used to
+ * convert all bus messages into signal emissions.
+ *
+ * A message is posted on the bus with the post() method. With the peek() and
+ * pop() methods one can look at or retrieve a previously posted message.
+ *
+ * The bus can be polled with the poll() method. This methods blocks up to the
+ * specified timeout value until one of the specified messages types is posted
+ * on the bus. The application can then pop() the messages from the bus to
+ * handle them. Alternatively the application can register an asynchronous bus
+ * function using add_watch(). This function will install a GSource in the
+ * default glib main loop and will deliver messages a short while after they
+ * have been posted. Note that the main loop should be running for the
+ * asynchronous callbacks.
+ *
+ * It is also possible to get messages from the bus without any thread
+ * marshalling with the set_sync_handler() method. This makes it possible to
+ * react to a message in the same thread that posted the message on the bus.
+ * This should only be used if the application is able to deal with messages
+ * from different threads.
+ *
+ * Every Gst::Pipeline has one bus.
+ *
+ * Note that a Gst::Pipeline will set its bus into flushing state when
+ * changing from READY to NULL state.
+ *
+ * Last reviewed on 2016-05-16 (1.8.0)
+ */
+class Bus : public Object
+{
+  _CLASS_GOBJECT(Bus, GstBus, GST_BUS, Object, GstObject)
+
+protected:
+  _CTOR_DEFAULT()
+
+public:
+  /** For example,
+   * bool on_bus_message(const Glib::RefPtr<Gst::Bus>& bus, const
+   * Glib::RefPtr<Gst::Message>& message);.
+   * The message function should return true if it wants to continue to receive
+   * messages, or false otherwise.
+   */
+  typedef sigc::slot< bool, const Glib::RefPtr<Gst::Bus>&, const Glib::RefPtr<Gst::Message>& > SlotMessage;
+
+  /** For example,
+   * BusSyncReply on_bus_sync_message(const Glib::RefPtr<Gst::Bus>& bus, const
+   * Glib::RefPtr<Gst::Message>& message);.
+   */
+  typedef sigc::slot< BusSyncReply, const Glib::RefPtr<Gst::Bus>&, const Glib::RefPtr<Gst::Message>& > SlotMessageSync;
+
+  /** Creates a new Gst::Bus instance.
+   *
+   * @return The new Gst::Bus instance.
+   */
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(bool post(Glib::RefPtr<Gst::Message>&& message), gst_bus_post)
+  _WRAP_METHOD(bool have_pending() const, gst_bus_have_pending)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Message> peek(), gst_bus_peek)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Message> peek() const, gst_bus_peek)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Message> pop(), gst_bus_pop)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Message> pop(MessageType message_type), gst_bus_pop_filtered)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Message> pop(ClockTime timeout), gst_bus_timed_pop)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Message> pop(ClockTime timeout, MessageType message_type), gst_bus_timed_pop_filtered)
+  _WRAP_METHOD(void set_flushing(bool flushing = true), gst_bus_set_flushing)
+
+//TODO Glib::Source has a strange cobject constructor.
+//#m4 _CONVERSION(`GSource*',`Glib::RefPtr<Glib::Source>', `Glib::wrap($3)')
+//  _WRAP_METHOD(Glib::RefPtr<Glib::Source> create_watch(), gst_bus_create_watch)
+
+  /** Adds a bus watch to the default main context with the given priority.
+   * The slot is used to receive asynchronous messages in the main loop.
+   *
+   * The watch can be removed using remove_watch() or by returning false from
+   * slot.
+   *
+   * @param slot The slot to call when a message is received.
+   * @param priority The priority of the watch.
+   * @return The event source id. MT safe.
+   */
+  guint add_watch(const SlotMessage& slot, int priority = Glib::PRIORITY_DEFAULT);
+  _IGNORE(gst_bus_add_watch, gst_bus_add_watch_full)
+
+  /** Removes bus watch with event source id from main context.
+   *
+   * @param watch_id The event source id.
+   * @return true if removal was succesful, false otherwise.
+   */
+  bool remove_watch(guint watch_id);
+  _IGNORE(gst_bus_remove_watch)
+
+  /** Sets the synchronous handler on the bus. The slot will be called every
+   * time a new message is posted on the bus. Note that the function will be
+   * called in the same thread context as the posting object (synchronously).
+   * This function is usually only called by the creator of the bus.
+   * Applications should handle messages asynchronously using the watch and
+   * poll functions or enable the "sync-message" signal emission with
+   * enable_sync_message_emission().
+   *
+   * @param slot The handler slot to install.
+   */
+  void set_sync_handler(const SlotMessageSync& slot);
+  _IGNORE(gst_bus_set_sync_handler, gst_bus_sync_signal_handler)
+  _IGNORE(gst_bus_async_signal_func)
+
+  _WRAP_METHOD(void disable_sync_message_emission(), gst_bus_disable_sync_message_emission)
+  _WRAP_METHOD(void enable_sync_message_emission(), gst_bus_enable_sync_message_emission)
+
+  _WRAP_METHOD(void add_signal_watch(int priority = Glib::PRIORITY_DEFAULT), gst_bus_add_signal_watch_full)
+  _IGNORE(gst_bus_add_signal_watch)
+
+  _WRAP_METHOD(void remove_signal_watch(), gst_bus_remove_signal_watch)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Message> poll(MessageType message_type, ClockTime timeout), gst_bus_poll)
+
+#m4 _CONVERSION(`GstMessage*',`const Glib::RefPtr<Gst::Message>&', `Glib::wrap($3, true)')
+
+  _WRAP_SIGNAL(void message(const Glib::RefPtr<Gst::Message>& message), "message")
+  _WRAP_SIGNAL(void sync_message(const Glib::RefPtr<Gst::Message>& message), "sync-message")
+};
+
+/*! A gstreamermm Gst::Bus example.
+ * @example basics/bus.cc
+ */
+
+} //namespace Gst

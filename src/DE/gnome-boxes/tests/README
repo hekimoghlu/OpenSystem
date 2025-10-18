@@ -1,0 +1,110 @@
+Introduction
+============
+
+Tests for GNOME Boxes application. Tests are written in python using Behave [1]
+and Dogtail [2] frameworks. Tests are divided into several feature files and can
+be executed accordingly.
+
+Warning
+=======
+
+All existing VMs and brokers are deleted prior to execution of test batch and
+are restored after wards.
+
+Do not interrupt running tests as such action may corrupt VM restoration. If
+that happens all data are stored in ~/boxes_backup and have to be imported
+manually. Steps to import can be found in environment.py in after_all()
+function.
+
+Structure
+=========
+
+* Feature Files
+  * general.feature
+    * start/stop
+    * help/credits
+    * download iso
+    * customize machine memory
+    * start box
+    * search boxes
+    * send key combos
+  * import.feature
+    * import local qcow2 and vmdk images
+  * livecd.feature
+    * new box from file/menu
+    * go into box
+    * delete/undo
+    * poweroff/pause/resume
+    * force shutdown
+  * multi-windows.feature
+    * open one/several new windows
+    * poweroff in new window
+  * snapshots.feature
+    * create and revert snapshots
+    * delete snapshot
+  * spice.feature
+    * connect to spice box
+    * restart persistence
+  * system-broker.feature
+    * connect to system broker (SB)
+    * delete/undo machine from SB
+    * reflect delete/addition in SB
+    * pause/resume SB box
+    * force shutdown in SB
+    * restart persistence
+  * vnc.feature
+    * connect to vnc box
+    * restart persistence
+  * express-install.feature
+    * express installation of Fedora 20/21/22
+* Environment file
+  * everything for setting/cleaning up the environment
+* Steps
+  * Dogtail implementation of Behave steps
+* README
+
+Requirements
+============
+
+* for downstream package maintainers
+  * behave (python-behave in Fedora)
+  * dogtail
+  * xdotool
+  * pexpect
+
+* for vnc tests execution
+  * tigervnc-server (or similar)
+
+* for system-broker test execution
+  * virt-install
+  * passwordless access to virtualization to wheel group
+   * run this as root to create the polkit rule:
+    echo "polkit.addRule(function(action, subject) {
+            if(action.id == \"org.libvirt.unix.manage\" && subject.isInGroup(\"wheel\")) {
+                    return polkit.Result.YES;
+            }
+    });" > /etc/polkit-1/rules.d/51-virtmgr.rules
+
+Execution
+=========
+
+* in tests directory run:
+  * behave
+  to run full test set
+
+  * behave -t $test -k
+  to run single test
+
+  * behave -i $category.feature
+  to run whole feature file
+
+Authors
+======
+
+* Vladimir Benes <vbenes@redhat.com>
+
+References
+==========
+
+* [1] http://pythonhosted.org/behave/
+* [2] https://fedorahosted.org/dogtail/

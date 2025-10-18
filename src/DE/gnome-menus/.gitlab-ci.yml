@@ -1,0 +1,143 @@
+include:
+  - project: 'Infrastructure/freedesktop-ci-templates'
+    ref: '707b49ef'
+    file:
+      - 'templates/debian.yml'
+  - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+    inputs:
+      job-stage: "build"
+      dist-job-name: "release-build"
+
+stages:
+  - prepare
+  - check
+  - build
+
+# Common variables
+variables:
+  FDO_UPSTREAM_REPO: GNOME/gnome-menus
+  COMMON_MESON_FLAGS: "-Dwerror=true --prefix /usr"
+  MESON_TEST_TIMEOUT_MULTIPLIER: 3
+
+workflow:
+  rules:
+    # run merge request pipelines
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # do not run branch pipelines if corresponding merge requests exist...
+    # (this avoids duplicate pipelines)
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    # ...but otherwise run branch pipelines
+    - if: $CI_COMMIT_BRANCH
+    # run tag pipelines
+    - if: $CI_COMMIT_TAG
+
+default:
+  retry:
+    max: 2
+    when:
+      - 'runner_system_failure'
+      - 'stuck_or_timeout_failure'
+      - 'scheduler_failure'
+      - 'api_failure'
+  interruptible: true
+
+.container.debian:
+  variables:
+    BASE_TAG: '2025-09-26.3'
+    FDO_DISTRIBUTION_VERSION: 'trixie'
+    FDO_DISTRIBUTION_TAG: "x86_64-${BASE_TAG}"
+    FDO_DISTRIBUTION_PACKAGES:
+      autoconf
+      automake
+      autopoint
+      ca-certificates
+      coreutils
+      gcc
+      gettext
+      git
+      gobject-introspection
+      libgirepository1.0-dev
+      libglib2.0-dev
+      libtool
+      libxml2-utils
+      python3
+      wget
+
+.distribution.debian:
+  extends:
+    - .fdo.distribution-image@debian
+    - .container.debian
+       
+container:debian:
+  extends:
+    - .container.debian
+    - .fdo.container-build@debian@x86_64
+  # DNS issues can cause this to fail
+  retry:
+    max: 2
+    exit_codes: 137
+  stage: prepare
+
+.build-debian-default:
+  extends:
+    - .distribution.debian
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - _ccache/
+
+.build-runner:
+  artifacts:
+    name: "gnome-menus-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/_build"
+
+.dist-runner:
+  artifacts:
+    name: "gnome-menus-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/public-dist"
+
+validate-menu:
+  extends:
+    - .build-debian-default
+  needs: ['container:debian']
+  stage: check
+  # libxml2 doesn't support https yet but the spec is only available via https
+  # https://bugzilla.gnome.org/791220
+  # https://gitlab.freedesktop.org/freedesktop/freedesktop/issues/114
+  # We shouldn't add the dtd to our git repo because it doesn't have
+  # a clearly distributable license
+  script:
+    - wget https://specifications.freedesktop.org/menu-spec/menu-1.0.dtd
+    - xmllint --noblanks --noout --path menu-1.0.dtd layout/gnome-applications.menu
+
+debian-x86_64:
+  extends:
+    - .build-runner
+    - .build-debian-default
+  needs: ['container:debian']
+  stage: build
+  script:
+    - mkdir _build && cd _build
+    - ../autogen.sh --prefix /usr
+    - make && make install
+
+release-build:
+  extends:
+    - .dist-runner
+    - .build-debian-default
+  needs: ['container:debian']
+  stage: build
+  script:
+    - mkdir _install && cd _install
+    - ../autogen.sh --prefix /usr
+    - make && make dist
+    - cd ..
+    - mkdir public-dist
+    - mv _install/gnome-menus-*.tar.xz public-dist/
+    - cd public-dist
+    - for f in *; do sha256sum ${f} > ${f}.sha256sum; done

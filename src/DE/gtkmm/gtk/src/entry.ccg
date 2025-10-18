@@ -1,0 +1,62 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+
+using IconPosition = Gtk::Entry::IconPosition;
+
+namespace Gtk
+{
+
+void Entry::set_icon_from_icon_name(const Glib::ustring& icon_name, IconPosition icon_pos)
+{
+  gtk_entry_set_icon_from_icon_name(gobj(), static_cast<GtkEntryIconPosition>(icon_pos), icon_name.c_str());
+}
+
+void Entry::set_icon_from_gicon(const Glib::RefPtr<Gio::Icon>& icon, IconPosition icon_pos)
+{
+  gtk_entry_set_icon_from_gicon(gobj(), static_cast<GtkEntryIconPosition>(icon_pos), const_cast<GIcon*>(Glib::unwrap<Gio::Icon>(icon)));
+}
+
+void Entry::unset_icon(IconPosition icon_pos)
+{
+  //We could use any one of these set_icon_from_* functions:
+  gtk_entry_set_icon_from_paintable(gobj(), static_cast<GtkEntryIconPosition>(icon_pos), nullptr);
+}
+
+void Entry::set_icon_activatable(bool activatable, IconPosition icon_pos)
+{
+  gtk_entry_set_icon_activatable(gobj(), static_cast<GtkEntryIconPosition>(icon_pos), static_cast<int>(activatable));
+}
+
+void Entry::set_icon_tooltip_text(const Glib::ustring& tooltip, IconPosition icon_pos)
+{
+  gtk_entry_set_icon_tooltip_text(gobj(), static_cast<GtkEntryIconPosition>(icon_pos), tooltip.c_str());
+}
+
+void Entry::set_icon_tooltip_markup(const Glib::ustring& tooltip, IconPosition icon_pos)
+{
+  gtk_entry_set_icon_tooltip_markup(gobj(), static_cast<GtkEntryIconPosition>(icon_pos), tooltip.c_str());
+}
+
+Gdk::Rectangle Entry::get_icon_area(IconPosition icon_pos) const
+{
+  Gdk::Rectangle result;
+  gtk_entry_get_icon_area(const_cast<GtkEntry*>(gobj()), (GtkEntryIconPosition)icon_pos, result.gobj());
+  return result;
+}
+
+} //namespace Gtk

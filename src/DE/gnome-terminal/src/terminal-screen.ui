@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="TerminalScreen" parent="VteTerminal">
+    <property name="pointer-autohide">true</property>
+    <property name="allow-hyperlink">true</property>
+    <property name="scroll-unit-is-pixels">true</property>
+    <property name="enable-fallback-scrolling">false</property>
+    <child>
+      <object class="GtkShortcutController" id="shortcuts">
+        <property name="propagation-phase">capture</property>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;shift&gt;F10</property>
+            <property name="action">action(menu.popup)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">Menu</property>
+            <property name="action">action(menu.popup)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkGestureClick" id="click_capture">
+        <signal name="pressed" handler="terminal_screen_capture_click_pressed_cb" swapped="1" object="TerminalScreen"/>
+        <property name="button">0</property>
+        <property name="propagation-phase">capture</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkGestureClick" id="click_bubble">
+        <signal name="pressed" handler="terminal_screen_bubble_click_pressed_cb" swapped="1" object="TerminalScreen"/>
+        <property name="button">0</property>
+        <property name="propagation-phase">bubble</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkDropTargetAsync" id="drop_target">
+        <signal name="drop" handler="terminal_screen_drop_target_drop" swapped="1" object="TerminalScreen"/>
+        <signal name="drag-enter" handler="terminal_screen_drop_target_drag_enter" swapped="1" object="TerminalScreen"/>
+        <signal name="drag-leave" handler="terminal_screen_drop_target_drag_leave" swapped="1" object="TerminalScreen"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkRevealer" id="size_revealer">
+        <property name="transition-type">crossfade</property>
+        <property name="reveal-child">false</property>
+        <style>
+          <class name="size"/>
+        </style>
+        <property name="halign">end</property>
+        <property name="valign">end</property>
+        <child>
+          <object class="GtkLabel" id="size_label">
+            <attributes>
+              <attribute name="family" value="Sans"/>
+              <attribute name="font-features" value="tnum"/>
+            </attributes>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwBin" id="drop_highlight">
+        <property name="visible">false</property>
+        <style>
+          <class name="drop-highlight"/>
+        </style>
+      </object>
+    </child>
+  </template>
+</interface>

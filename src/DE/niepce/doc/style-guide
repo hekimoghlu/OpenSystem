@@ -1,0 +1,85 @@
+NOTE: at the time of writing, the used style may not match this document.
+Therefor the following rules apply:
+1. try to match the existing file indentation
+2. new symbols should follow the style guide
+3. implementation should follow the style guide. You may adapt functions
+you change to the new style if needed.
+
+INTRODUCTION
+------------
+
+This is the style guide for the Niepce project.
+
+
+C++
+---
+
+### Identation
+
+There is a .clang-format that will do the formatting for you.
+
+Spaces, not tab.
+4 spaces.
+
+Curly braces are mandatory.
+
+Opening brace on the same line as the statement
+-except for functions, classes
+
+Inner block, always indented
+-except namespaces
+
+
+### Symbols
+
+Namespaces:
+-Lower case, short
+
+Classes:
+-Camel case, starting with an uppercase
+
+Methods:
+-snake lowercase
+
+Variables
+-lowercase
+Member variables are prefix with m_ to alleviate shadowing
+
+Constants
+-uppercase
+
+### Headers
+
+Use #pragma once for header guards.
+
+### C++ language
+
+The standard is C++11.
+
+Use of 'override' is mandatory. Anywhere it is missing is a bug.
+Use auto when possible.
+
+Avoid raw pointers. Use unique_ptr<> or shared_ptr<>. You can typedef
+the pointer type by suffixing Ptr to the class name.
+
+If you want an object non-copyable, use the macro
+```NON_COPYABLE(ClassName)``` in the class definition. Macro defined
+in ```fwk/base/util.hpp```. This will delete the default copy
+constructor and assignment operator. You may have to reimplement the
+default constructor. You can just use ```= default```.
+
+
+Rust
+----
+
+### threads
+
+Use `std::thread::Builder()` for creating threads and set a name.
+
+```rust
+std::thread::Builder()
+  .name("thread name".to_string())
+  .spawn(...);
+```
+
+The name will appear for panics.

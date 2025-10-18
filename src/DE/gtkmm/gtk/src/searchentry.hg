@@ -1,0 +1,105 @@
+/* Copyright (C) 2012 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/entry.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/entry_p.h)
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+/** This is a subclass of Gtk::Entry that has
+ * been tailored for use as a search entry.
+ *
+ * It will show an inactive symbolic "find" icon when the
+ * search entry is empty, and a symbolic "clear" icon when
+ * there is text. Clicking on the "clear" icon will empty
+ * the search entry.
+ *
+ * Note that the search/clear icon is shown using a secondary
+ * icon, and thus does not work if you are using the secondary
+ * icon position for some other purpose.
+ *
+ * To make filtering appear more reactive, it is a good idea to
+ * not react to every change in the entry text immediately, but
+ * only after a short delay. To support this, Gtk::SearchEntry
+ * emits the signal_search_changed() signal which can
+ * be used instead of the Gtk::Editable::signal_changed() signal.
+ *
+ * The signal_previous_match(), signal_next_match()
+ * and signal_stop_search() signals can be uesd to implement
+ * moving between search results and ending the search.
+ *
+ * Often, %Gtk::SearchEntry will be fed events by means of being
+ * placed inside a Gtk::SearchBar. If that is not the case,
+ * you can use set_key_capture_widget() to let it
+ * capture key input from another widget.
+ *
+ * @note
+ * This class has the wrong inheritance. It inherits from Gtk::Entry although
+ * the wrapped GtkSearchEntry does not inherit from GtkEntry in gtk4.
+ * Some uses of %Gtk::SearchEntry still succeed, others don't.
+ * It's highly recommended that you use Gtk::Application::wrap_in_search_entry2()
+ * and Gtk::SearchEntry2 instead. Don't use both %Gtk::SearchEntry and
+ * %Gtk::SearchEntry2 in the same application.
+ *
+ * @deprecated 4.14: Use Gtk::SearchEntry2 instead.
+ * @ingroup Widgets
+ * @newin{3,6}
+ */
+class GTKMM_API SearchEntry
+: public Entry
+{
+  _CLASS_GTKOBJECT(SearchEntry, GtkSearchEntry, GTK_SEARCH_ENTRY, Gtk::Entry, GtkEntry, , , GTKMM_API)
+public:
+
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(void set_key_capture_widget(Widget& widget), gtk_search_entry_set_key_capture_widget)
+  _WRAP_METHOD(Widget* get_key_capture_widget(), gtk_search_entry_get_key_capture_widget)
+  _WRAP_METHOD(const Widget* get_key_capture_widget() const, gtk_search_entry_get_key_capture_widget, constversion)
+  void unset_key_capture_widget();
+
+  _WRAP_METHOD(void set_search_delay(unsigned int delay), gtk_search_entry_set_search_delay)
+  _WRAP_METHOD(unsigned int get_search_delay() const, gtk_search_entry_get_search_delay)
+
+  _WRAP_METHOD(void set_placeholder_text(const Glib::ustring& text), gtk_search_entry_set_placeholder_text)
+  _WRAP_METHOD(Glib::ustring get_placeholder_text() const, gtk_search_entry_get_placeholder_text)
+
+  // no_default_handler because GtkSearchEntryClass is private.
+  _IGNORE_SIGNAL("activate")dnl// Action signal
+  _WRAP_SIGNAL(void search_changed(), "search-changed", no_default_handler)
+  // Although next-match, previous-match and stop-search are keybinding signals,
+  // applications shall connect to them.
+  _WRAP_SIGNAL(void next_match(), "next-match", no_default_handler)
+  _WRAP_SIGNAL(void previous_match(), "previous-match", no_default_handler)
+  _WRAP_SIGNAL(void stop_search(), "stop-search", no_default_handler)
+  _WRAP_SIGNAL(void search_started(), "search-started", no_default_handler)
+
+  _WRAP_PROPERTY("placeholder-text", Glib::ustring)
+  _WRAP_PROPERTY("activates-default", bool)
+  _WRAP_PROPERTY("search-delay", unsigned int)
+
+  // Don't add API to this deprecated class. Add it to SearchEntry2.
+  _IGNORE(gtk_search_entry_get_input_purpose, gtk_search_entry_set_input_hints,
+          gtk_search_entry_set_input_purpose, gtk_search_entry_get_input_hints)
+  _IGNORE_PROPERTY("input-purpose", "input-hints")
+};
+
+} /* namespace Gtk */

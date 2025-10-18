@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2021 GNOME Foundation
+#
+# SPDX-License-Identifier: CC0-1.0
+
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "meson-build"
+      tarball-artifact-path: "_build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz"
+
+stages:
+  - build
+  - check
+  - deploy
+
+.pip:
+  image: fedora:latest
+  before_script:
+    - export PATH="$HOME/.local/bin:$PATH"
+    - dnf install -y python3-pip
+
+meson-build:
+  image: fedora:latest
+  stage: build
+  needs: []
+  script:
+    - dnf install -y git meson ninja-build pytest python3-markdown python3-jinja2 python3-packaging python3-pygments python3-typogrify python3-flake8 python3-mypy
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - meson setup _build .
+    - meson test -C _build
+    - meson dist -C _build
+  artifacts:
+    when: always
+    name: "gi-docgen-${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+      - "${CI_PROJECT_DIR}/_build/meson-dist/*.tar.xz"
+
+pip-build:
+  extends: .pip
+  stage: build
+  needs: []
+  script:
+    - python3 -m pip install --user -e .
+
+pytest:
+  stage: check
+  needs: []
+  image: fedora:latest
+  script:
+    - dnf install -y pytest python3-markdown python3-jinja2 python3-packaging python3-pygments python3-typogrify
+    - pytest --verbose
+
+flake8:
+  stage: check
+  needs: []
+  image: fedora:latest
+  script:
+    - dnf install -y python3-flake8
+    - flake8 --ignore E501,E402,F405,W503 --show-source gidocgen
+
+mypy:
+  stage: check
+  needs: []
+  image: fedora:latest
+  script:
+    - dnf install -y python3-mypy
+    - mypy --ignore-missing-imports --disallow-incomplete-defs gidocgen
+  allow_failure: true
+
+reuse:
+  extends: .pip
+  stage: check
+  needs: []
+  script:
+    - pip install --user reuse
+    - reuse lint
+
+pages:
+  extends: .pip
+  stage: deploy
+  needs: []
+  script:
+    - pip install --user sphinx sphinx_rtd_theme
+    - cd docs
+    - python3 -m sphinx  -b html . _build
+    - mv _build ../public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

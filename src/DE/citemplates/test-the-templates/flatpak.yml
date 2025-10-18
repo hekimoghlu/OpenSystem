@@ -1,0 +1,98 @@
+include:
+  # Testing the local templates
+  - local: "flatpak/flatpak_ci_initiative.yml"
+
+# FIXME: font-viewer compiles very fast, however:
+#   - We are missing tests for manifests with modules
+#     - Since we treat the last module differently, we need to
+#       test both with and without added modules in the manifest
+#     - It doesn't use any SDK extensions
+# FIXME 2: It's also possible to build runtime extensions using the
+# template, see vala-nightly
+.flatpak-test-setup:
+  stage: "Flatpak app"
+  variables:
+    # This is different than the Upstream yaml, as it has the gnome-font-viewer subdir added in the path
+    MANIFEST_PATH: "gnome-font-viewer/build-aux/flatpak/org.gnome.font-viewerDevel.json"
+    FLATPAK_MODULE: "gnome-font-viewer"
+    RUNTIME_REPO: "https://sdk.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.font-viewerDevel"
+    BUNDLE: "org.gnome.font-viewerDevel.flatpak"
+  before_script:
+    - git clone --depth=1 https://gitlab.gnome.org/gnome/gnome-font-viewer/
+
+# Copy from the font-viewer ci yaml
+.flatpak-common:
+  extends: [".flatpak@x86_64", ".flatpak-test-setup"]
+
+.flatpak-common@aarch64:
+  extends: [".flatpak@aarch64", ".flatpak-test-setup"]
+
+flatpak-with-dist:
+  extends: [".flatpak-common"]
+  variables:
+    MESON_DIST: "1"
+
+flatpak-with-dist@aarch64:
+  extends: [".flatpak-common@aarch64"]
+  variables:
+    MESON_DIST: "1"
+
+# Manually clone and manually cd into the directory
+# This is to make sure relative paths and all work
+# It's expected that artifacts will throw warnings and
+# not extract in this job, as they are in a subdirectory
+flatpak-from-root-kinda:
+  extends: [".flatpak-common"]
+  variables:
+    MESON_DIST: "1"
+    MANIFEST_PATH: "build-aux/flatpak/org.gnome.font-viewerDevel.json"
+  script:
+    - cd gnome-font-viewer
+    - !reference [".flatpak", "script"]
+
+flatpak-no-dist:
+  extends: [".flatpak-common"]
+  variables:
+    MESON_DIST: "0"
+
+flatpak-no-dist-no-tests:
+  extends: [".flatpak-common"]
+  variables:
+    MESON_DIST: "0"
+    RUN_TESTS: "0"
+
+flatpak-shell-extension-app:
+  stage: "Flatpak app"
+  extends: [ ".flatpak@x86_64" ]
+  variables:
+    # Since its a subproject, it causes an edge case where
+    # the flatpak-builddir path is not the one we were expecting
+    # but rather in a sub-directory matching the subproject
+    # https://gitlab.gnome.org/GNOME/citemplates/-/issues/32
+    SUBPROJECT: "subprojects/extensions-app"
+    MANIFEST_PATH: "$SUBPROJECT/build-aux/flatpak/org.gnome.Extensions.json"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    FLATPAK_MODULE: "gnome-extensions-app"
+    APP_ID: "org.gnome.Extensions.Devel"
+    BUNDLE: "extensions-git.flatpak"
+  before_script:
+    - git clone --depth=1 https://gitlab.gnome.org/gnome/gnome-shell.git
+  script:
+    - cd gnome-shell
+    - !reference [".flatpak", "script"]
+
+flatpak-nautilus:
+  stage: "Flatpak app"
+  extends: [ ".flatpak@x86_64" ]
+  variables:
+    MANIFEST_PATH: "build-aux/flatpak/org.gnome.Nautilus.json"
+    FLATPAK_MODULE: "nautilus"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.Nautilus.Devel"
+    BUNDLE: "nautilus-dev.flatpak"
+  before_script:
+    - git clone --depth=1 https://gitlab.gnome.org/gnome/nautilus.git
+  script:
+    - cd nautilus
+    - !reference [".flatpak", "script"]

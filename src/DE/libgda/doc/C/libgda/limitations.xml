@@ -1,0 +1,223 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<chapter id="limitations">
+  <title>Limitations</title>
+
+  <sect1 id="limitations_global"><title>Global limitations</title>
+    <para>
+      &LIBGDA;'s global limitations are:
+      <sect2 id="threads"><title>Multi threaded environment</title>
+	<para>&LIBGDA; is not thread safe, however it supports working with threads as long as any object 
+	  (except otherwise stated) created by the API is used by one single thread (that is there is no
+	  situation when two threads try to access the same object at the same time). Exceptions are:
+	  <itemizedlist>
+	    <listitem><para>&LIBGDA;'s <link linkend="init_config">configuration</link> can be accessed from any thread</para></listitem>
+	    <listitem><para>Any object which implements the <link linkend="GdaLockable">GdaLockable</link> interface 
+		can be accessed from any thread. However 
+		one can use the <link linkend="gda-lockable-lock">gda_lockable_lock()</link> method to specifically 
+		lock an object's usage (especially when getting and
+		setting properties before or after calling methods).</para></listitem>
+	    <listitem><para>Any <link linkend="GdaConnection">GdaConnection</link> object can be accessed from any thread 
+	        (that object implements the <link linkend="GdaLockable">GdaLockable</link> interface). Specifically
+	        &LIBGDA; removes the limits imposed by some database provider's API regarding threads.</para></listitem>
+	    <listitem><para>Any <link linkend="GdaAttributesManager">GdaAttributesManager</link> can safely be accessed from
+		any thread.</para></listitem>
+	  </itemizedlist>
+	</para>
+      </sect2>
+    </para>
+  </sect1>
+
+  <sect1 id="limitations_mysql"><title>For MySQL</title>
+    <sect2><title>Statements execution</title>
+      <para>
+	<itemizedlist>
+	  <listitem><para>It is not possible to execute a SELECT statement with invalid parameters and
+	      with the GDA_STATEMENT_MODEL_ALLOW_NOPARAM flag as this feature is currently not implemented.
+	      </para></listitem>
+	</itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Timezone information</title>
+      <para>
+	Timezone information associated with time and timestamp data types is not stored by MySQL, so when executing
+	statements all the variables containing a time or timestamp information are converted to GMT (timezone 0) before
+	the execution happens. The consequence is that for example if a variable holds the "11:23:55+2" time (11 hours,
+	23 minutes and 55 seconds, at GMT + 2), then the actual time stored in the database will be "09:23:55", the same
+	time but GMT.
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="limitations_oracle"><title>For Oracle</title>
+    <para>
+      The following limitations apply to Oracle databases accessed via Libgda:
+      <itemizedlist>
+	<listitem><para>At the moment tables' fields schema information retrieval is very slow, so as a work around, use a dictionary
+	to store the database schema and do incremental updates on modified/created tables.</para></listitem>
+      </itemizedlist>
+    </para>
+  </sect1>
+
+  <sect1 id="limitations_postgres"><title>For PostgreSQL</title>
+    <para>
+      The following limitations apply to PostgreSQL databases accessed via Libgda:
+    </para>
+    <sect2><title>BLOB handling</title>
+      <para>
+	<itemizedlist>
+	  <listitem><para>Postgres uses the "Oid" data type to internally store BLOBs, but this type is also used
+	      to store other information within the database. Libgda assumes that any column of type "Oid" represents a
+	      blob. If this is not the case, then you must cast it to the correct data type within your SQL query (for example
+	      as "SELECT oid::varchar FROM...")</para></listitem>
+	  <listitem><para>&LIBGDA; does not try to avoid orphaned BLOBs, to solve the problem of orphaned BLOBs, set up
+	      the "lo" extension from PostgreSQL's contrib, and/or use the "vacuumlo" also from the contrib.</para>
+	  <para>Note that in the future the PostgreSQL's provider will have an option to ensure that there are no
+	    orphaned BLOBs itself.</para></listitem>
+	  <listitem><para>BLOB manipulations can only occur within a transaction, 
+	      so you should start a transaction before any operation
+	      on BLOBs, otherwise Libgda will automatically start one</para></listitem>
+	</itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2><title>Last inserted row's values</title>
+      <para>
+	The <link linkend="gda-connection-statement-execute-non-select">gda_connection_statement_execute_non_select()</link>'s
+	last_insert_row parameter will return a new <link linkend="GdaSet">GdaSet</link> object only if the table has OIDs
+	(to ensure this, the "WITH OIDS" option should be added at the end of a CREATE TABLE query).
+      </para>
+    </sect2>
+
+    <sect2><title>Statements execution</title>
+      <para>
+	<itemizedlist>
+	  <listitem><para>It is not possible to execute a SELECT statement with invalid parameters and
+	      with the GDA_STATEMENT_MODEL_ALLOW_NOPARAM flag if the GDA_STATEMENT_MODEL_CURSOR_FORWARD
+	      flag is also specified</para></listitem>
+	</itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Timezone information</title>
+      <para>
+	Timezone information associated with time and timestamp data types is not stored by PostgreSQL, so when executing
+	statements all the variables containing a time or timestamp information are converted to GMT (timezone 0) before
+	the execution happens. The consequence is that for example if a variable holds the "11:23:55+2" time (11 hours,
+	23 minutes and 55 seconds, at GMT + 2), then the actual time stored in the database will be "09:23:55", the same
+	time but GMT.
+      </para>
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="limitations_sqlite"><title>For SQLite</title>
+    <para>
+      The following limitations apply to SQLite databases accessed via Libgda:
+    </para>
+    <sect2><title>Last inserted row's values</title>
+      <para>
+	The <link linkend="gda-connection-statement-execute-non-select">gda_connection_statement_execute_non_select()</link>'s last_insert_row attribute uses the hidden "_ROWID_" column for each table, but it may fail if the table has a column with the same name, or if the table is defined with the <ulink url="https://www.sqlite.org/withoutrowid.html">WITHOUT ROWID</ulink> Optimization.
+      </para>
+    </sect2>
+
+    <sect2><title>Date and time</title>
+      <para>
+	As SQLite stores dates and times as strings, &LIBGDA; only handles dates in the format recommended by SQLite,
+	which is "YYYY-MM-DD" for dates, "HH:MM:SS" for times and "YYYY-MM-DD HH:MM:SS" for timestamps (see 
+	<ulink url="http://www.sqlite.org/cvstrac/wiki?p=DateAndTimeFunctions">SQLite's documentation</ulink>).
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Timezone information</title>
+      <para>
+	Timezone information associated with time and timestamp data types is not stored by PostgreSQL, so when executing
+	statements all the variables containing a time or timestamp information are converted to GMT (timezone 0) before
+	the execution happens. The consequence is that for example if a variable holds the "11:23:55+2" time (11 hours,
+	23 minutes and 55 seconds, at GMT + 2), then the actual time stored in the database will be "09:23:55", the same
+	time but GMT.
+      </para>
+    </sect2>
+
+    <sect2><title>Error reporting</title>
+      <para>
+	If there is not enough free space on the disk which stores an SQLite database, you may have some
+	"Disk I/O error" errors. This is also true for meta data connections which are by default
+	created in a temporary location.
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="limitations_sqlcipher"><title>For SQLCipher</title>
+    <para>
+      The following limitations apply to SQLite database accessed through the SQLCipher database
+      provider. The SQLCipher database provider allows one to connect to a database encrypted using the
+      <ulink url="http://www.zetetic.net/code/sqlcipher">SQLCipher</ulink> adaptations to the SQLite
+      database.
+    </para>
+    <para>
+      The <link linkend="limitations_sqlite">SQLite provider's limitations</link> also apply in this context
+      and it is also currently not possible to uncrypt an encrypted database.
+    </para>
+  </sect1>
+
+  <sect1 id="limitations_ldap">
+    <title>For LDAP</title>
+    <sect2>
+      <title>User name</title>
+      <para>
+	LDAP requires a Distinguished Name (DN) to bind a connection. Libgda also accepts a user name which is
+	not a DN; in this case it will first connect anonymously to the server, search for the DN corresponding
+	to the user name, and then bind again using the found DN. The search is done on the "uid" attribute matching
+	the username, and the object class being "inetOrgPerson" (the LDAP filter
+	is "(&amp;(uid=?)(objectclass=inetOrgPerson))" where the question mark is replaced by the username).
+      </para>
+    </sect2>
+    <sect2>
+      <title>SSL/TLS certificate validation</title>
+      <para>
+	The TLS_REQCERT and TLS_CACERT options are taken into account by the LDAP provider, and
+	passed to the OpenLDAP library which is actually used. These options are global and set
+	by the first opened LDAP connection (i.e. all other LDAP connections share the same
+	settings, regardless of their TLS_REQCERT and TLS_CACERT options).
+      </para>
+      <para>
+	The TLS_REQCERT and TLS_CACERT options have a higher priority compared to the
+	options set in the <filename>$HOME/.ldaprc</filename>.
+      </para>
+      <para>
+	If the server certificate can't he checked (i.e. the certification chain established and
+	verified) when it is required that it be, then the connection will not he established and the
+	returned error will be "Can't contact LDAP server".
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="limitations_jdbc"><title>For JDBC based providers</title>
+    <para>
+      The following limitations apply to databases accessed via Libgda through a JDBC driver. When loading
+      the database providers, &LIBGDA; creates a JDBC provider per JDBC driver found (to work at all it
+      needs to load the Java Virtual Machine (JVM) runtime first).
+    </para>
+
+    <para>
+      The JDBC provider is a bit specific since it needs to be installed to be used, but it also requires external
+      JDBC drivers (usually published by the database's editor). As a result, actual JDBC drivers will be useable
+      only when the two conditions are met.
+    </para>
+
+    <sect2><title>Last inserted row's values</title>
+      <para>
+	Not yet supported.
+      </para>
+    </sect2>
+  </sect1>
+  
+</chapter>

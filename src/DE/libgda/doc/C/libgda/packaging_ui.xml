@@ -1,0 +1,174 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd"[
+<!ENTITY LIBGDA          "<application>Libgda</application>">
+]>
+<chapter id="libgdaui-packaging">
+  <title>Packaging &LIBGDA; UI extension</title>
+  <para>
+    &LIBGDA; UI extension builds on top of &LIBGDA; and GTK+ to provide some graphical
+    widgets, a control center (to manage DSN and list installed providers) and a
+    browser program to analyze the contents of a database.
+  </para>
+  <sect1>
+    <title>Overview of the components</title>
+    <para>
+      &LIBGDA; UI's components are:
+      <itemizedlist>
+	<listitem>
+	  <para>the runtime files (shared library)
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>the GObject introspection files (to be used by the GObject introspection framework)
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>the tools, which require the runtime component
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>the development files (the includes to compile C programs)
+	  </para>
+	</listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      Please note:
+      <itemizedlist>
+	<listitem>
+	  <para>the documentation and localization files are mixed with &LIBGDA;'s ones
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>the tools have been described here as a separate component but it is highly
+	    <emphasis>recomended</emphasis> to bundle the tools with the runtime as they provide
+	    essential tools to the end user.
+	  </para>
+	</listitem>
+      </itemizedlist>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Runtime component</title>
+    <para>
+      This component is the base component for Libgda UI, required by any application which uses &LIBGDA;' UI,
+      extension, it contains the following files (located under the installation directory):
+      <programlisting>
+.
+|-- lib
+|   |-- libgda-6.0
+|   |   |-- plugins
+|   |   |   |-- gdaui-entry-filesel-spec.xml
+|   |   |   |-- gdaui-entry-password.xml
+|   |   |   |-- gdaui-entry-pict-spec.xml
+|   |   |   |-- gdaui-entry-pict-spec_string.xml
+|   |   |   |-- gdaui-entry-text-spec.xml
+|   |   |   `-- libgdaui-plugins.so
+|   |-- libgda-ui-6.0.so -> libgda-ui-6.0.so.4.1.0
+|   |-- libgda-ui-6.0.so.4 -> libgda-ui-6.0.so.4.1.0
+|   `-- libgda-ui-6.0.so.4.1.0
+`-- share
+    `-- libgda-6.0
+        |-- language-specs
+        |   `-- gda-sql.lang
+        |-- server_operation.glade
+        `-- ui
+            |-- gdaui-entry-string-number.xml
+            `-- gdaui-entry-string-string.xml
+      </programlisting>
+    </para>
+    <para>
+      This component should be made dependent on the &LIBGDA;'s runtime component.
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>GObject introspection</title>
+    <para>
+      If GObject introspection has been compiled, &LIBGDA;'s UI extension's introspection files are:
+      <programlisting>
+|-- share
+|   `-- gir-1.0
+|       `-- Gdaui-6.0.gir
+`-- lib
+    `-- girepository-1.0
+        `-- Gdaui-6.0.typelib
+      </programlisting>
+    </para>
+  </sect1>
+
+  <sect1>
+    <title>Tools</title>
+    <sect2>
+      <title>Control center</title>
+      <para>
+	The control center's files are:
+	<programlisting>
+.
+|-- bin
+|   `-- gda-control-center-6.0
+`-- share
+    |-- applications
+    |   `-- gda-control-center-6.0.desktop
+    `-- libgda-6.0
+        `-- pixmaps
+            `-- gdaui-generic.png
+	</programlisting>
+      </para>
+    </sect2>
+
+<sect2>
+      <title>Gda browser</title>
+      <para>
+	The <link linkend="libgda-tools-gdabrowser">GdaBrowser</link> can be packaged separately, but it depends on
+	the runtime component and the UI extension runtime component.
+	<programlisting>
+.
+|-- bin
+|   `-- gda-browser-6.0
+`-- share
+    |-- applications
+    |   `-- gda-browser-6.0.desktop
+    |-- gnome
+    |   `-- help
+    |       `-- gda-browser
+    |           |-- C
+    |           `[···]
+    `-- pixmaps
+        |-- gda-browser-auth-big.png
+        |[···]
+        `-- gda-browser.png
+	</programlisting>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1>
+    <title>Development files</title>
+    <para>
+      The development files are the include files needed to compile C programs, the PKG-CONFIG .pc files,
+      the static libraries and a demo program (like <application>gtk-demo</application>)
+      <programlisting>
+.
+|-- bin
+|   `-- gdaui-demo-6.0
+|-- include
+|   `-- libgda-6.0
+|       `-- libgdaui
+|           [...]
+`-- lib
+|   |-- libgda-ui-6.0.a
+|   |-- libgda-ui-6.0.la
+|   `-- pkgconfig
+|       `-- libgdaui-6.0.pc
+`-- share
+    `-- libgda-6.0
+        `-- demo
+            [...]
+      </programlisting>
+    </para>
+  </sect1>
+</chapter>
+

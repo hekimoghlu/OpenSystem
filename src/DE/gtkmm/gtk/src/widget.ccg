@@ -1,0 +1,541 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+#include <giomm/listmodel.h>
+
+#include <gdkmm/frameclock.h>
+#include <gdkmm/paintable.h>
+#include <gtkmm/adjustment.h>
+#include <gtkmm/window.h>
+#include <gtkmm/root.h>
+#include <gtkmm/native.h>
+#include <gtkmm/settings.h>
+#include <gtkmm/eventcontroller.h>
+#include <gtkmm/tooltip.h>
+#include <gtkmm/snapshot.h>
+#include <gtkmm/layoutmanager.h>
+#include <gtk/gtk.h>
+#include <graphene.h>
+#include <memory> // std::unique_ptr
+
+namespace //anonymous
+{
+using Widget_dispose_vfunc_functype = void (*)(GObject* self);
+
+Widget_dispose_vfunc_functype Widget_dispose_vfunc_funcptr;
+
+extern "C"
+{
+static void Widget_dispose_vfunc_c_callback(GObject* self)
+{
+  Widget_dispose_vfunc_funcptr(self);
+}
+
+// This signal callback is custom implemented, so that we can refrain from calling
+// the signal handler if the C++ wrapper is being deleted.
+// https://bugzilla.gnome.org/show_bug.cgi?id=605728#c5
+static void Widget_signal_hide_callback(GObject* self, void* data)
+{
+  const auto obj = Glib::ObjectBase::_get_current_wrapper(self);
+
+  // Do not try to call a signal on a disassociated wrapper.
+  // This function might be invoked recursively if the signal_hide() handler
+  // deletes the object.
+  // Therefore we have to test for cpp_destruction_in_progress_ at this point.
+  if(obj && !obj->_cpp_destruction_is_in_progress())
+  {
+    try
+    {
+      if(sigc::slot_base *const slot = Glib::SignalProxyNormal::data_to_slot(data))
+        (*static_cast<sigc::slot<void()>*>(slot))();
+    }
+    catch(...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+}
+
+static gboolean SlotTick_gtk_callback(GtkWidget* self, GdkFrameClock* frame_clock, void* data)
+{
+  // Do not try to call a signal on a disassociated wrapper.
+  if (Glib::ObjectBase::_get_current_wrapper((GObject*)self))
+  {
+    auto the_slot = static_cast<Gtk::Widget::SlotTick*>(data);
+    try
+    {
+      return (*the_slot)(Glib::wrap(frame_clock, true));
+    }
+    catch (...)
+    {
+      Glib::exception_handlers_invoke();
+    }
+  }
+  return false;
+}
+
+static void SlotTick_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::Widget::SlotTick*>(data);
+}
+} // extern "C"
+} //anonymous
+
+namespace Gtk
+{
+
+// This default handler callback is custom implemented, so that we can refrain
+// from calling an on_hide() override, if the C++ wrapper is being deleted.
+void Widget_Class::hide_callback(GtkWidget* self)
+{
+  const auto obj_base = static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  // This function might be invoked recursively if an on_hide() override
+  // deletes the object.
+  // Therefore we test for cpp_destruction_in_progress_ at this point.
+  // (Not sure if it's necessary, but it feels safer. Perhaps the following
+  // dynamic_cast catches all dangerous cases. /Kjell Ahlstedt)
+  if(obj_base && obj_base->is_derived_() && !obj_base->_cpp_destruction_is_in_progress())
+  {
+    const auto obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if(obj) // This can be NULL during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        // Call the virtual member method, which derived classes might override.
+        obj->on_hide();
+        return;
+      }
+      catch(...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+
+  const auto base = static_cast<BaseClassType*>(
+        g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)) // Get the parent class of the object class (The original underlying C class).
+    );
+
+  // Call the original underlying C function:
+  if(base && base->hide)
+    (*base->hide)(self);
+}
+
+// This vfunc callback is custom implemented because we want the output
+// arguments of the C++ vfunc to be int& (not int*), and the vfunc_callback
+// function may be called from gtk+ with NULL pointers.
+void Widget_Class::measure_vfunc_callback(GtkWidget* self, GtkOrientation orientation, int for_size,
+  int* minimum, int* natural, int* minimum_baseline, int* natural_baseline)
+{
+  const auto obj_base = static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  if(obj_base && obj_base->is_derived_())
+  {
+    const auto obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if(obj) // This can be NULL during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        // Call the virtual member method, which derived classes might override.
+        int no_minimum = 0;
+        int no_natural = 0;
+        int no_minimum_baseline = 0;
+        int no_natural_baseline = 0;
+        obj->measure_vfunc((Orientation)orientation, for_size,
+          (minimum ? *minimum : no_minimum),
+          (natural ? *natural : no_natural),
+          (minimum_baseline ? *minimum_baseline : no_minimum_baseline),
+          (natural_baseline ? *natural_baseline : no_natural_baseline));
+        return;
+      }
+      catch(...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+
+  BaseClassType *const base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  // Call the original underlying C function:
+  if(base && base->measure)
+    (*base->measure)(self, orientation, for_size, minimum, natural, minimum_baseline, natural_baseline);
+}
+
+// This vfunc callback and the corresponding vfunc are custom implemented because we want
+// the output arguments of the C++ vfunc to be bool& (not gboolean* or gboolean&).
+void Widget_Class::compute_expand_vfunc_callback(GtkWidget* self, gboolean* hexpand_p, gboolean* vexpand_p)
+{
+  const auto obj_base = static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)self));
+
+  // Non-gtkmmproc-generated custom classes implicitly call the default
+  // Glib::ObjectBase constructor, which sets is_derived_. But gtkmmproc-
+  // generated classes can use this optimisation, which avoids the unnecessary
+  // parameter conversions if there is no possibility of the virtual function
+  // being overridden:
+  if(obj_base && obj_base->is_derived_())
+  {
+    const auto obj = dynamic_cast<CppObjectType* const>(obj_base);
+    if(obj) // This can be NULL during destruction.
+    {
+      try // Trap C++ exceptions which would normally be lost because this is a C callback.
+      {
+        // Call the virtual member method, which derived classes might override.
+        bool hexpand_pcxx = hexpand_p ? *hexpand_p : false;
+        bool vexpand_pcxx = vexpand_p ? *vexpand_p : false;
+        obj->compute_expand_vfunc(hexpand_pcxx, vexpand_pcxx);
+        if (hexpand_p)
+          *hexpand_p = hexpand_pcxx;
+        if (vexpand_p)
+          *vexpand_p = vexpand_pcxx;
+        return;
+      }
+      catch(...)
+      {
+        Glib::exception_handlers_invoke();
+      }
+    }
+  }
+
+  BaseClassType *const base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  // Call the original underlying C function:
+  if(base && base->compute_expand)
+    (*base->compute_expand)(self, hexpand_p, vexpand_p);
+}
+
+void Gtk::Widget::compute_expand_vfunc(bool& hexpand_p, bool& vexpand_p)
+{
+  const auto base = static_cast<BaseClassType*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(gobject_)) // Get the parent class of the object class (The original underlying C class).
+  );
+
+  if(base && base->compute_expand)
+  {
+    gboolean hexpand_pc = hexpand_p;
+    gboolean vexpand_pc = vexpand_p;
+    (*base->compute_expand)(gobj(), &hexpand_pc, &vexpand_pc);
+    hexpand_p = hexpand_pc;
+    vexpand_p = vexpand_pc;
+  }
+}
+
+
+Widget::~Widget() noexcept
+{}
+
+Glib::RefPtr<ConstraintTarget> Widget::make_refptr_constrainttarget()
+{
+  auto refcnt_constrainttarget =
+    Glib::make_refptr_for_instance(static_cast<ConstraintTarget*>(this));
+  refcnt_constrainttarget->reference();
+  return refcnt_constrainttarget;
+}
+
+Glib::RefPtr<const ConstraintTarget> Widget::make_refptr_constrainttarget() const
+{
+  return const_cast<Widget*>(this)->make_refptr_constrainttarget();
+}
+
+void Widget::set_layout_manager(const Glib::RefPtr<LayoutManager>& layout_manager)
+{
+  // gtk_widget_set_layout_manager() does not take a ref.
+  if (layout_manager)
+    layout_manager->reference();
+  gtk_widget_set_layout_manager(gobj(), Glib::unwrap(layout_manager));
+}
+
+void Widget::unset_layout_manager()
+{
+  gtk_widget_set_layout_manager(gobj(), nullptr);
+}
+
+void Widget::unset_name()
+{
+  gtk_widget_set_name(gobj(), nullptr);
+}
+
+void Widget::realize_if_needed()
+{
+  if(!get_realized())
+    realize();
+}
+
+void Widget::unset_focus_child()
+{
+  gtk_widget_set_focus_child(gobj(), nullptr);
+}
+
+_DEPRECATE_IFDEF_START
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+Allocation Widget::get_allocation() const
+{
+  Allocation allocation;
+  gtk_widget_get_allocation(const_cast<GtkWidget*>(gobj()), allocation.gobj());
+  return allocation;
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+_DEPRECATE_IFDEF_END
+
+std::optional<Gdk::Graphene::Rect> Widget::compute_bounds(const Widget& target) const
+{
+  std::unique_ptr<graphene_rect_t, decltype(&graphene_rect_free)>
+    out_bounds(graphene_rect_alloc(), &graphene_rect_free); 
+  const gboolean result = gtk_widget_compute_bounds(const_cast<GtkWidget*>(gobj()),
+    const_cast<GtkWidget*>(target.gobj()), out_bounds.get());
+  if (result)
+    return Gdk::Graphene::Rect(out_bounds.release(), false);
+  else
+    return {};
+}
+
+std::optional<Gdk::Graphene::Point> Widget::compute_point(
+  const Widget& target, const Gdk::Graphene::Point& point) const
+{
+  std::unique_ptr<graphene_point_t, decltype(&graphene_point_free)>
+    out_point(graphene_point_alloc(), &graphene_point_free); 
+  const gboolean result = gtk_widget_compute_point(const_cast<GtkWidget*>(gobj()),
+    const_cast<GtkWidget*>(target.gobj()), point.gobj(), out_point.get());
+  if (result)
+    return Gdk::Graphene::Point(out_point.release(), false);
+  else
+    return {};
+}
+
+void Widget_Class::dispose_vfunc_callback(GObject* self)
+{
+  //Avoid disposal. See also Window_Class::dispose_vfunc_callback().
+
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Widget_Class::dispose_vfunc_callback(): gobject_: %p\n", (void*)self);
+  //if(self)
+   //g_warning("  gtypename: %s\n", G_OBJECT_TYPE_NAME(self));
+  #endif
+
+  const auto obj = dynamic_cast<Widget*>(
+      Glib::ObjectBase::_get_current_wrapper(self));
+
+  // This function might be invoked recursively because we're triggering
+  // several signal emissions, particularly signal_hide().  Therefore we
+  // have to test for cpp_destruction_in_progress_ at this point.
+
+  if(obj && !obj->_cpp_destruction_is_in_progress()) //When it should really be destroyed, we zero gobj_.
+  {
+    const auto pWidget = obj->gobj();
+    g_return_if_fail(pWidget == GTK_WIDGET(self));
+
+    // Abort dispose if the widget isn't managed, in order to prevent
+    // the nasty self-destroying behaviour of GTK+.  This applies to
+    // any widget inside a container on gtk_container_destroy()
+    // See also Window_Class::dispose_vfunc_callback().
+
+    if(obj->referenced_) //Not managed
+    {
+      // GTKMM_LIFECYCLE
+      // Remove the widget from its parent container so that it
+      // won't be destroyed later by gtk_container_destroy().
+      GtkWidget* parent = gtk_widget_get_parent(pWidget);
+      if(parent)
+      {
+        // Normally, we would have to ref the child widget because
+        // gtk_widget_unparent() unrefs it.  But since we only remove
+        // non-managed objects here, the container just releases the
+        // reference it has acquired before in gtk_widget_set_parent().
+
+        #ifdef GLIBMM_DEBUG_REFCOUNTING
+        g_warning("Widget_Class::dispose_vfunc_callback(): removing gobject_: %p from parent: %p", (void*)self, (void*)parent);
+        #endif
+
+        gtk_widget_unparent(pWidget);
+
+        #ifdef GLIBMM_DEBUG_REFCOUNTING
+        g_warning("Widget_Class::dispose_vfunc_callback(): after removing from parent.");
+        #endif
+      }
+
+      #ifdef GLIBMM_DEBUG_REFCOUNTING
+      g_warning("Widget_Class::dispose_vfunc_callback(): before gtk_widget_set_visible(pWidget, false).");
+      #endif
+
+      // Now hide the widget.  The C++ object must _not_ be accessed anymore
+      // after this call, because a signal_hide() handler might delete it.
+      gtk_widget_set_visible(pWidget, false);
+
+      #ifdef GLIBMM_DEBUG_REFCOUNTING
+      g_warning("Widget_Class::dispose_vfunc_callback(): after gtk_widget_set_visible(pWidget, false).");
+      #endif
+
+      // GTKMM_LIFECYCLE
+      return; // Prevent calling of normal C dispose vfunc (see below)
+    }
+
+    #ifdef GLIBMM_DEBUG_REFCOUNTING
+    g_warning("Widget_Class::dispose_vfunc_callback(): unreferenced: before gtk_widget_set_visible(pWidget, false).");
+    #endif
+
+    // Always hide widgets on object destruction, regardless of whether
+    // the widget is managed or not.  This is done for consistency so that
+    // connecting to signal_hide() is guaranteed to work.
+    gtk_widget_set_visible(pWidget, false);
+
+    #ifdef GLIBMM_DEBUG_REFCOUNTING
+    g_warning("Widget_Class::dispose_vfunc_callback(): unreferenced:  after gtk_widget_set_visible(pWidget, false).");
+    #endif
+  }
+
+  const auto base = static_cast<GObjectClass*>(
+      g_type_class_peek_parent(G_OBJECT_GET_CLASS(self)));
+
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Widget_Class::dispose_vfunc_callback(): before calling base->dispose.");
+  #endif
+
+  if(base->dispose)
+    (*base->dispose)(self);
+
+  #ifdef GLIBMM_DEBUG_REFCOUNTING
+  g_warning("Widget_Class::dispose_vfunc_callback(): after calling base->dispose.");
+  #endif
+}
+
+_DEPRECATE_IFDEF_START
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+void Widget::unset_font_options()
+{
+  gtk_widget_set_font_options(gobj(), nullptr);
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+_DEPRECATE_IFDEF_END
+
+void Widget::remove_action_group(const Glib::ustring& name)
+{
+  gtk_widget_insert_action_group(gobj(), name.c_str(), nullptr /* see C docs */);
+}
+
+void Widget::set_margin(int margin)
+{
+  set_margin_start(margin);
+  set_margin_end(margin);
+  set_margin_top(margin);
+  set_margin_bottom(margin);
+}
+
+void Widget::set_expand(bool expand)
+{
+  set_hexpand(expand);
+  set_vexpand(expand);
+}
+
+void Widget::add_controller(const Glib::RefPtr<EventController>& controller)
+{
+  // gtk_widget_add_controller() does not take a ref.
+  if (controller)
+    controller->reference();
+  gtk_widget_add_controller(gobj(), Glib::unwrap(controller));
+}
+
+guint Widget::add_tick_callback(const SlotTick& slot)
+{
+  // Create a copy of the slot object. A pointer to this will be passed
+  // through the callback's data parameter. It will be deleted
+  // when SlotTick_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotTick(slot);
+
+  return gtk_widget_add_tick_callback(gobj(), &SlotTick_gtk_callback, slot_copy,
+    &SlotTick_gtk_callback_destroy);
+}
+
+void Widget::insert_at_start(Widget& parent)
+{
+  gtk_widget_insert_after(gobj(), parent.gobj(), nullptr);
+}
+
+void Widget::insert_at_end(Widget& parent)
+{
+  gtk_widget_insert_before(gobj(), parent.gobj(), nullptr);
+}
+
+Gdk::RGBA Widget::get_color() const
+{
+  GdkRGBA crgba;
+  gtk_widget_get_color(const_cast<GtkWidget*>(gobj()), &crgba);
+  return Gdk::RGBA(&crgba, true);
+}
+
+template <typename WidgetMaybeConst>
+static std::vector<WidgetMaybeConst*> get_children_(WidgetMaybeConst &widget)
+{
+  std::vector<WidgetMaybeConst*> children;
+  for (auto child = widget.get_first_child();
+       child; child = child->get_next_sibling())
+  {
+    children.push_back(child);
+  }
+  return children;
+}
+
+std::vector<Widget*> Widget::get_children()
+{
+  return get_children_(*this);
+}
+
+std::vector<const Widget*> Widget::get_children() const
+{
+  return get_children_(*this);
+}
+
+Widget::Measurements Widget::measure(Orientation orientation, int for_size) const
+{
+  Measurements result;
+  measure(orientation, for_size,
+    result.sizes.minimum, result.sizes.natural, result.baselines.minimum, result.baselines.natural);
+  return result;
+}
+
+Widget::PreferredSize Widget::get_preferred_size() const
+{
+  PreferredSize result;
+  get_preferred_size(result.minimum, result.natural);
+  return result;
+}
+
+Requisition Widget::get_size_request() const
+{
+  int width, height;
+  get_size_request(width, height);
+  return {width, height};
+}
+
+} // namespace Gtk

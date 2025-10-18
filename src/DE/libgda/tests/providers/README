@@ -1,0 +1,70 @@
+USAGE
+-----
+
+Run "make check" in this directory to test database providers.
+
+To be tested, each provider needs to be compiled in these sources, and some environment
+variables need to be set for each provider. If no variable is set, then the corresponding
+provider will not be actually tested and the test will report a success.
+
+For each provider, the environment variables to set are:
+- If the <provider_name>_DBCREATE_PARAMS (such as for example SQLITE_DBCREATE_PARAMS or 
+  POSTGRESQL_DBCREATE_PARAMS) is set, then the test will attempt to create a database
+  named "gda_check_db" before actually running the test (and will fail if it can't be created).
+  That variable must be a string composed of key=value pairs separated by a semi-colon (";")
+  The keys and their meanings are specific to each provider and are listed in the
+  providers/<provider_name>/<provider_name>_specs_create_db.xml.in file in the section "SERVER_CNX_P"
+
+- If the <provider_name>_DONT_REMOVE_DB (such as for example SQLITE_DONT_REMOVE_DB) environment
+  variable is set, and if a test database was created for the test, then that database is not 
+  destroyed when the tests for the specified provider ends
+
+- If the <provider_name>_CNC_PARAMS (such as for example SQLITE_CNC_PARAMS or 
+  POSTGRESQL_CNC_PARAMS) is set, then those parameters will be used to open the connection to
+  an existing database. __BEWARE__: in this case some data in the database _will_ be modified/destroyed
+  so don't use it on a database with "real" data. The contents of this variable has a similar layout
+  as the <provider_name>_DBCREATE_PARAMS variable, the keys are listed in the
+  providers/<provider_name>/<provider_name>_specs_dsn.xml.in file. Notice that parameters which are
+  already named in the <provider_name>_DBCREATE_PARAMS variable (if set) will be overriden by the
+  values in that variable, so it's useless to repeat them there.
+
+- The <provider_name>_USER and <provider_name>_PASS variables (which are optional) respectively 
+  enable a username and a password to be specified. The username and password can also be set as part
+  of the <provider_name>_CNC_PARAMS string as "USERNAME=<username>;PASSWORD=<pass>"
+
+If the database was created during the test, then it will also be destroyed at the end of the
+test.
+
+The list of parameter which can be specified to create a database, which depends on the database provider,
+can be obtained using the 'gda-list-server-op' tool, for example for PostgreSQL (removed extra info for
+clarity):
+$ gda-list-server-op -t -o CREATE_DB -p PostgreSQL | grep SERVER_CNX_P/
+|-- [id=/SERVER_CNX_P/USE_SSL] [name=Require SSL] [descr=Whether to require SSL or not when connecting]
+|-- [id=/SERVER_CNX_P/ADM_PASSWORD] [name=Administrator password]
+|-- [id=/SERVER_CNX_P/ADM_LOGIN] [name=Administrator login] [descr=Login name (which has the rights to create databases)]
+|-- [id=/SERVER_CNX_P/OPTIONS] [name=Options] [descr=Extra connection options]
+|-- [id=/SERVER_CNX_P/PORT] [name=Port] [descr=Database server port (for servers running on unix domain sockets, enter the socket's file name extension (usually 5432), or leave this field empty)]
+|-- [id=/SERVER_CNX_P/HOST] [name=Database server] [descr=Host on which the database server is running (for servers running on unix domain sockets, enter the socket's path (usually /tmp), or leave this field empty)]
+
+
+
+EXAMPLES
+--------
+
+Here are some examples of the environment variables for the various providers:
+
+export MYSQL_DBCREATE_PARAMS="HOST=localhost"
+export MYSQL_DBCREATE_PARAMS="HOST=gdatester;ADM_LOGIN=gdauser;ADM_PASSWORD=GdaUser"
+export MYSQL_CNC_PARAMS="HOST=gdatester;USERNAME=gdauser;PASSWORD=GdaUser"
+
+export POSTGRESQL_DBCREATE_PARAMS="HOST=gdatester;PORT=5432;ADM_LOGIN=gdauser;ADM_PASSWORD=GdaUser"
+export POSTGRESQL_CNC_PARAMS="HOST=gdatester;PORT=5432;USERNAME=gdauser;PASSWORD=GdaUser"
+
+export SQLITE_DBCREATE_PARAMS="DB_DIR=."
+
+export BERKELEY_DB_CNC_PARAMS="DB_NAME=gda_check_bdb.db"
+
+The MDB provider does not allow database creation, so use the gda_check_db.mdb file in this directory
+export MSACCESS_CNC_PARAMS="DB_DIR=/home/me/libgda/tests/providers;DB_NAME=gda_check_db"
+
+export ORACLE_CNC_PARAMS="TNSNAME=//127.0.0.1"

@@ -1,0 +1,706 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="Adw" version="1.0"/>
+  <template class="SysprofGreeter" parent="AdwWindow">
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <child>
+      <object class="GtkShortcutController">
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">Escape</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;control&gt;w</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;control&gt;q</property>
+            <property name="action">action(app.quit)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;control&gt;o</property>
+            <property name="action">action(win.select-file)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">F1</property>
+            <property name="action">action(app.help)</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">&lt;ctrl&gt;question</property>
+            <property name="action">action(app.show-help-overlay)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <property name="content">
+      <object class="AdwToolbarView">
+        <property name="bottom-bar-style">raised</property>
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <property name="title-widget">
+              <object class="AdwViewSwitcher">
+                <property name="stack">view_stack</property>
+              </object>
+            </property>
+            <child type="end">
+              <object class="GtkMenuButton">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="primary">true</property>
+                <property name="menu-model">primary_menu</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <property name="content">
+          <object class="GtkBox">
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="hscrollbar-policy">never</property>
+                <property name="visible">false</property>
+                <child>
+                  <object class="GtkListBox" id="sidebar_list_box">
+                    <style>
+                      <class name="navigation-sidebar"/>
+                    </style>
+                    <signal name="row-activated" handler="sidebar_row_activated_cb" swapped="true"/>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwViewStack" id="view_stack">
+                <property name="vexpand">true</property>
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="icon-name">org.gnome.Sysprof-symbolic</property>
+                    <property name="title" translatable="yes">Profiler</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage" id="record_page">
+                        <property name="vexpand">true</property>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Sampling</property>
+                            <child>
+                              <object class="AdwSwitchRow" id="sample_native_stacks">
+                                <property name="title" translatable="yes">Sample Native Stacks</property>
+                                <property name="subtitle" translatable="yes">Record native stack traces using a sampling profiler</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="native-stacks"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwExpanderRow" id="user_stacks">
+                                <property name="title" translatable="yes">Unwind Stacks in User Space</property>
+                                <property name="subtitle" translatable="yes">Copy stack contents and registers for unwinding in user-space</property>
+                                <property name="expanded" bind-source="sample_user_stack" bind-property="active" bind-flags="sync-create|bidirectional"/>
+                                <child type="action">
+                                  <object class="GtkSwitch" id="sample_user_stack">
+                                    <property name="halign">end</property>
+                                    <property name="valign">center</property>
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="user-stacks"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="AdwComboRow" id="sample_user_stack_size">
+                                    <property name="title" translatable="yes">Stack Size</property>
+                                    <property name="subtitle" translatable="yes">The number of bytes to copy from the stack</property>
+                                    <property name="model">stack_sizes</property>
+                                    <property name="expression">
+                                      <lookup name="label" type="SysprofStackSize"/>
+                                    </property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="user_stacks_caption">
+                                <property name="label" translatable="yes">Unwinding in user-space has considerable overhead but may help in situations where frame-pointers are unavailable.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwSwitchRow" id="sample_javascript_stacks">
+                                <property name="title" translatable="yes">Sample JavaScript Stacks</property>
+                                <property name="subtitle" translatable="yes">Record JavaScript stack traces using a sampling profiler</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="javascript-stacks"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Sysprof must launch your application to record JavaScript stacks using GJS.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwSwitchRow" id="include_scheduler_details">
+                                <property name="title" translatable="yes">Record Scheduler Details</property>
+                                <property name="subtitle" translatable="yes">Track when processes are scheduled per CPU</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="scheduler-details"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Tracing</property>
+                            <child>
+                              <object class="AdwSwitchRow" id="trace_malloc">
+                                <property name="title" translatable="yes">Trace Memory Allocations</property>
+                                <property name="subtitle" translatable="yes">Record a stack trace when malloc or similar functions are used</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="memory-allocations"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Sysprof must launch your application to record memory allocations.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="icon-name">application-x-executable-symbolic</property>
+                    <property name="title" translatable="yes">Application</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Application</property>
+                            <child>
+                              <object class="AdwEntryRow" id="app_command_line">
+                                <property name="title" translatable="yes">Command Line</property>
+                                <property name="text" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="command-line"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwEntryRow" id="app_working_directory">
+                                <property name="title" translatable="yes">Working directory</property>
+                                <property name="text" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="cwd"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">The application will be run as a subprocess of Sysprof.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Environment</property>
+                            <child>
+                              <object class="AdwSwitchRow" id="clear_environment">
+                                <property name="title" translatable="yes">Clear Environment</property>
+                                <property name="subtitle" translatable="yes">Clear the environment before launching application</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="clear-environ"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkListBox" id="app_environment">
+                                <property name="margin-top">12</property>
+                                <property name="selection-mode">none</property>
+                                <property name="visible">false</property>
+                                <style>
+                                  <class name="boxed-list"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuButton">
+                                <property name="direction">left</property>
+                                <property name="margin-top">12</property>
+                                <property name="halign">end</property>
+                                <property name="child">
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Add _Variable</property>
+                                    <property name="use-underline">true</property>
+                                  </object>
+                                </property>
+                                <property name="popover">
+                                  <object class="SysprofEntryPopover">
+                                    <property name="title" translatable="yes">Add Variable</property>
+                                    <property name="button-text" translatable="yes">_Add</property>
+                                    <property name="width-request">400</property>
+                                    <signal name="changed" handler="on_env_entry_changed_cb" swapped="true" object="SysprofGreeter"/>
+                                    <signal name="activate" handler="on_env_entry_activate_cb" swapped="true" object="SysprofGreeter"/>
+                                  </object>
+                                </property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="icon-name">mark-chart-symbolic</property>
+                    <property name="title" translatable="yes">Counters</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Counters</property>
+                            <child>
+                              <object class="AdwSwitchRow" id="record_cpu_usage">
+                                <property name="title" translatable="yes">CPU Usage</property>
+                                <property name="subtitle" translatable="yes">Record coarse-grained counters about CPU usage and frequency</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="cpu-usage"/>
+                              </object>
+                            </child>
+                            <child>
+                             <object class="AdwSwitchRow" id="record_memory_counters">
+                              <property name="title" translatable="yes">Memory Usage</property>
+                              <property name="subtitle" translatable="yes">Record coarse-grained counters about system memory usage</property>
+                              <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="memory-usage"/>
+                             </object>
+                            </child>
+                            <child>
+                              <object class="AdwSwitchRow" id="record_disk_usage">
+                                <property name="title" translatable="yes">Disk Usage</property>
+                                <property name="subtitle" translatable="yes">Record coarse-grained counters about storage throughput</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="disk-usage"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwSwitchRow" id="record_network_usage">
+                                <property name="title" translatable="yes">Network Usage</property>
+                                <property name="subtitle" translatable="yes">Record coarse-grained counters about network traffic</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="network-usage"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwSwitchRow" id="record_energy_usage">
+                                <property name="title" translatable="yes">Energy Usage</property>
+                                <property name="subtitle" translatable="yes">Record coarse-grained counters about energy usage in Watts</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="energy-usage"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="AdwSwitchRow" id="record_battery_charge">
+                                <property name="title" translatable="yes">Battery Charge</property>
+                                <property name="subtitle" translatable="yes">Record coarse-grained counters about battery charge or discharge rates</property>
+                                <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="battery-charge"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="icon-name">dbus-symbolic</property>
+                    <property name="title" translatable="yes">D-Bus</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">D-Bus</property>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">record_system_bus</property>
+                                <property name="title" translatable="yes">Record System Bus</property>
+                                <property name="subtitle" translatable="yes">Record messages on the D-Bus system bus</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="record_system_bus">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="system-bus"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">record_session_bus</property>
+                                <property name="title" translatable="yes">Record Session Bus</property>
+                                <property name="subtitle" translatable="yes">Record messages on the D-Bus user session bus</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="record_session_bus">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="session-bus"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">The session bus may contain sensitive information such as keyboard usage and passwords.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="icon-name">graphics-symbolic</property>
+                    <property name="title" translatable="yes">Graphics</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Timings</property>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">record_compositor</property>
+                                <property name="title" translatable="yes">Compositor Frame Timings</property>
+                                <property name="subtitle" translatable="yes">Record frame-timing information from the GNOME Shell compositor</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="record_compositor">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="frame-timings"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Applications launched by Sysprof will automatically collect GTK frame timing information.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!--child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">detect_hangs</property>
+                                <property name="title" translatable="yes">Detect Application Hangs</property>
+                                <property name="subtitle" translatable="yes">Detect hangs in the application main loop</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="detect_hangs">
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Hang detection is only supported when launching a GTK-based application.</property>
+                                <property name="xalign">0</property>
+                                <property name="margin-top">8</property>
+                                <style>
+                                  <class name="caption"/>
+                                  <class name="dim-label"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child-->
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Devices</property>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">record_graphics_info</property>
+                                <property name="title" translatable="yes">Include GPU Information</property>
+                                <property name="subtitle" translatable="yes">Records information about graphics hardware and drivers</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="record_graphics_info">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="graphics-info"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwViewStackPage">
+                    <property name="icon-name">computer-symbolic</property>
+                    <property name="title" translatable="yes">System</property>
+                    <property name="child">
+                      <object class="AdwPreferencesPage">
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Power Profile</property>
+                            <child>
+                              <object class="AdwComboRow" id="power_combo">
+                                <property name="title" translatable="yes">Record with Power Profile</property>
+                                <property name="subtitle" translatable="yes">Switch to power profile while recording</property>
+                                <property name="expression">
+                                  <closure type="gchararray" function="translate_power_profile"/>
+                                </property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Details</property>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">record_system_logs</property>
+                                <property name="title" translatable="yes">Record System Log</property>
+                                <property name="subtitle" translatable="yes">Watch the system log for new messages and record them</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="record_system_logs">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="system-log"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">record_hardware_info</property>
+                                <property name="title" translatable="yes">Include Hardware Information</property>
+                                <property name="subtitle" translatable="yes">Records information about PCI and USB devices</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="record_hardware_info">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="hardware-info"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Symbols</property>
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">bundle_symbols</property>
+                                <property name="title" translatable="yes">Bundle Symbols</property>
+                                <property name="subtitle" translatable="yes">Make recording shareable by symbolizing stack traces after recording</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="bundle_symbols">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="bundle-symbols"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <child>
+                              <object class="AdwActionRow">
+                                <property name="activatable-widget">debuginfod</property>
+                                <property name="title" translatable="yes">Debuginfod</property>
+                                <property name="subtitle" translatable="yes">Enable Debuginfod to automatically fetch debug symbols</property>
+                                <child type="suffix">
+                                  <object class="GtkSwitch" id="debuginfod">
+                                    <property name="active" bind-source="recording_template" bind-flags="bidirectional|sync-create" bind-property="debuginfod"/>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwPreferencesGroup">
+                            <property name="title" translatable="yes">Debug File Directories</property>
+                            <property name="description" translatable="yes">Directories to search for debug files</property>
+                            <child>
+                              <object class="GtkListBox" id="debug_directories">
+                                <property name="margin-top">12</property>
+                                <property name="selection-mode">none</property>
+                                <property name="visible">false</property>
+                                <style>
+                                  <class name="boxed-list"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton">
+                                <style>
+                                  <class name="large-button"/>
+                                  <class name="pill"/>
+                                </style>
+                                <property name="margin-top">12</property>
+                                <property name="halign">center</property>
+                                <property name="label" translatable="yes">Add _Directory</property>
+                                <property name="use-underline">true</property>
+                                <property name="action-name">system.select-debug-directory</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+        <child type="bottom">
+          <object class="GtkBox">
+            <property name="homogeneous">true</property>
+            <property name="margin-top">3</property>
+            <property name="margin-bottom">3</property>
+            <property name="margin-start">3</property>
+            <property name="margin-end">3</property>
+            <property name="spacing">3</property>
+            <style>
+              <class name="toolbar"/>
+            </style>
+            <child>
+              <object class="GtkButton">
+                <property name="action-name">win.select-file</property>
+                <property name="label" translatable="yes">_Open File…</property>
+                <property name="use-underline">true</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="action-name">win.record-to-file</property>
+                <property name="label" translatable="yes">Record to _File…</property>
+                <property name="use-underline">true</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="record_to_memory">
+                <property name="action-name">win.record-to-memory</property>
+                <property name="label" translatable="yes">Record to _Memory</property>
+                <property name="use-underline">true</property>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </property>
+    <child internal-child="template">
+      <object class="SysprofRecordingTemplate" id="recording_template">
+      </object>
+    </child>
+  </template>
+  <menu id="primary_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+        <attribute name="action">app.show-help-overlay</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Help</attribute>
+        <attribute name="action">app.help</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">About Sysprof</attribute>
+        <attribute name="action">app.about</attribute>
+      </item>
+    </section>
+  </menu>
+  <object class="GtkStringList" id="envvars">
+  </object>
+  <object class="GtkStringList" id="debugdirs">
+  </object>
+  <object class="GListStore" id="stack_sizes">
+    <child>
+      <object class="SysprofStackSize">
+        <property name="label">8 KB</property>
+        <property name="size">8192</property>
+      </object>
+    </child>
+    <child>
+      <object class="SysprofStackSize">
+        <property name="label">16 KB</property>
+        <property name="size">16384</property>
+      </object>
+    </child>
+    <child>
+      <object class="SysprofStackSize">
+        <property name="label">24 KB</property>
+        <property name="size">24576</property>
+      </object>
+    </child>
+    <child>
+      <object class="SysprofStackSize">
+        <property name="label">32 KB</property>
+        <property name="size">32768</property>
+      </object>
+    </child>
+    <child>
+      <object class="SysprofStackSize">
+        <property name="label">64 KB</property>
+        <property name="size">65536</property>
+      </object>
+    </child>
+  </object>
+</interface>

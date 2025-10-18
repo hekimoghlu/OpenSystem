@@ -1,0 +1,55 @@
+include:
+  - project: 'gnome/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - project: 'gnome/citemplates'
+    file: 'templates/default-rules.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+
+stages:
+  - check
+  - test
+  - deploy
+
+variables:
+  BUNDLE: "org.gnome.GtranslatorDevel.flatpak"
+  # Replace with your application name, as written in the manifest
+  FLATPAK_MODULE: "gtranslator"
+
+flatpak:
+  extends: .flatpak
+  stage: check
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+
+    # Replace with your manifest path
+    MANIFEST_PATH: "build-aux/flatpak/org.gnome.Gtranslator.json"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.GtranslatorDevel"
+
+nightly:
+  extends: '.publish_nightly'
+  dependencies:
+    - 'flatpak'
+
+# Lint the code
+clang-format:
+  stage: check
+  image: fedora:latest
+  allow_failure: true
+  script:
+    - dnf install --quiet -y git-clang-format git-core
+    - git fetch --depth 50 origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME:$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - git-clang-format $CI_MERGE_REQUEST_TARGET_BRANCH_NAME --style GNU --diff
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH || $CI_PROJECT_NAMESPACE != "GNOME"
+
+check-potfiles:
+  image: fedora:latest
+  stage: check
+  script:
+    - dnf install --quiet -y gettext python3
+    - curl --proto '=https' --tlsv1.2 -sSf -O
+        https://gitlab.gnome.org/msandova/check-potfiles/-/raw/master/check_potfiles.py
+    - python3 check_potfiles.py --directory src --directory data

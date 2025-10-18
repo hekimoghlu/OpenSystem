@@ -1,0 +1,194 @@
+A = 1;
+function f(x) = (
+	A=2;
+	A
+);
+if f(0) != 2 then (error("simple local lookup failed");exit());
+
+A = 1;
+function f(x) = (
+	A
+);
+if f(0) != 1 then (error("simple global lookup failed");exit());
+
+A = 1;
+function f(x) = (
+	A = 8;
+	function g(y) = A+5;
+	g(x)
+);
+if f(0) != 8+5 then (error("intermediate global lookup failed");exit());
+
+A = 1;
+function f(x) = (
+	A = 8;
+	function g(y) = A+5;
+	g
+);
+h = f(0);
+if h(0) != 8+5 then (error("single subst lookup failed");exit());
+
+A = 1;
+function f(x) = (
+	local A;
+	A = 8;
+	function g(y) = A+5;
+	g(x)
+);
+if f(0) != 1+5 then (error("global lookup over local failed");exit());
+
+A = 1;
+function f(x) = (
+	local *;
+	A = 8;
+	function g(y) = A+5;
+	g(x)
+);
+if f(0) != 1+5 then (error("global lookup over all local failed");exit());
+
+A = 1;
+x = 9;
+function f(x) = (
+	local *;
+	A = 8;
+	function g(y) = A+5+x;
+	g(x)
+);
+if f(0) != 1+5+9 then (error("global lookup over all local (2) failed");exit());
+
+function g(x) = 545;
+function f(x) = (
+	local g;
+	function g(y) = 11;
+	function h(x) = g(6);
+	h(x)
+);
+if f(0) != 545 then (error("global function lookup over local failed");exit());
+
+function g(x) = -987;
+function f(x) = (
+	local *;
+	function g(y) = 11;
+	function h(x) = g(6);
+	h(x)
+);
+if f(0) != -987 then (error("global function lookup over all local failed");exit());
+
+A = 1;
+function f(x) = (
+	A = 8;
+	function g(y) = A+5;
+	g
+);
+h = f(0);
+function f2(g) = (
+	A=-9;
+	g(0)
+);
+if f2(h) != 8+5 then (error("subst pass up 1 failed");exit());
+
+A = 1;
+function f(x) = (
+	A = 8;
+	function g(y) = A+5;
+	g
+);
+h = f(0);
+function f2(g) = (
+	A=-9;
+	g(5);
+	g
+);
+h2=f2(h);
+if h2(0) != 8+5 then (error("subst pass up 2 failed");exit());
+
+function f(x) = (
+	local *;
+	function g(y) = 5;
+	g
+);
+h = f(0);
+function f2(x) = (
+	h(9)
+);
+if f2(0) != 5 then (error("ret of local failed");exit());
+
+function f(x) = (
+	local g;
+	function g(y) = 19;
+	g
+);
+h = f(0);
+function f2(x) = (
+	h(9)
+);
+if f2(0) != 19 then (error("ret of local 2 failed");exit());
+
+
+function ff() = (
+  function f(x) = (
+	local g;
+	function g(y) = 999;
+	g
+  );
+  h = f(0);
+  function f2(x) = (
+	h(9)
+  );
+  if f2(0) != 999 then (error("ret of local failed");exit());
+);
+ff();
+
+A = 1;
+function f(x) = (
+	A = 8;
+	function g(y)[A] = A+5;
+	g
+);
+h = f(0);
+if h(0) != 8+5 then (error("single explicit subst lookup failed");exit());
+
+A = 1;
+function f(x) = (
+	A = 8;
+	function g(y)[] = A+5;
+	g
+);
+h = f(0);
+if h(0) != 1+5 then (error("single explicit non-subst lookup failed");exit());
+
+v = [1,2,3];
+function f() = (
+	v@(3) = 99;
+	v
+);
+w = f();
+if [v;w] != [1,2,3;1,2,99] then (error("set vector element in function failed");exit());
+
+v = [1,2,3];
+function f() = (
+	v@(1) swapwith v@(3);
+	v
+);
+w = f();
+if [v;w] != [1,2,3;3,2,1] then (error("swapwith on vectors in function failed");exit());
+
+A = 1;
+B = 2;
+function f() = (
+	A swapwith B;
+	B
+);
+C=f();
+if [A,B,C] != [1,2,1] then (error("swapwith on variables in function failed");exit());
+
+A = 1;
+function f() = (
+	increment A;
+	A
+);
+B = f();
+if [A,B] != [1,2] then (error("increment on variable in function failed");exit());
+
+
+print("true");

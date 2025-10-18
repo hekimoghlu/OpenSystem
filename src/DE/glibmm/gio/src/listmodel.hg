@@ -1,0 +1,204 @@
+/* Copyright (C) 2016 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/interface.h>
+#include <gio/gio.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+_PINCLUDE(gio/gio.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GListModelInterface GListModelInterface;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+
+namespace Gio
+{
+
+/** A dynamic list of objects.
+ *
+ * A ListModel represents a mutable list of
+ * Glib::Objects. Its main intention is as a model for various widgets in
+ * user interfaces, such as list views, but it can also be used as a
+ * convenient method of returning lists of data, with support for
+ * updates.
+ *
+ * Each object in the list may also report changes in itself via some
+ * mechanism (normally the Glib::PropertyProxy<>::signal_changed() signal
+ * of one or more of the object's properties). Taken together
+ * with the signal_items_changed() signal, this provides for a list
+ * that can change its membership, and in which the members can change
+ * their individual properties.
+ *
+ * A good example would be the list of visible wireless network access
+ * points, where each access point can report dynamic properties such as
+ * signal strength.
+ *
+ * It is important to note that the ListModel itself does not report
+ * changes to the individual items.  It only reports changes to the list
+ * membership.  If you want to observe changes to the objects themselves
+ * then you need to connect signals to the objects that you are
+ * interested in.
+ *
+ * All items in a ListModel are of (or derived from) the same type.
+ * get_item_type() returns that type.  The type may be an
+ * interface, in which case all objects in the list must implement it.
+ *
+ * The semantics are close to that of an array:
+ * get_n_items() returns the number of items in the list and
+ * get_object() returns an item at a (0-based) position. In
+ * order to allow implementations to calculate the list length lazily,
+ * you can also iterate over items: starting from 0, repeatedly call
+ * get_object() until it returns nullptr.
+ *
+ * This interface is intended only to be used from a single thread.  The
+ * thread in which it is appropriate to use it depends on the particular
+ * implementation, but typically it will be from the thread that owns
+ * the thread-default main context
+ * in effect at the time that the model was created.
+ *
+ * @newin{2,50}
+ */
+class GIOMM_API ListModel : public Glib::Interface
+{
+  _CLASS_INTERFACE(ListModel, GListModel, G_LIST_MODEL, GListModelInterface, , , GIOMM_API)
+
+protected:
+  _WRAP_METHOD(void items_changed(guint position, guint removed, guint added), g_list_model_items_changed, newin "2,50")
+
+public:
+  _WRAP_METHOD(GType get_item_type() const, g_list_model_get_item_type, newin "2,50")
+  _WRAP_METHOD(guint get_n_items() const, g_list_model_get_n_items, newin "2,50")
+
+  //g_list_model_get_item is useless as long as we have g_list_model_get_object().
+  //It doesn't do anything differently.
+  _IGNORE(g_list_model_get_item)
+
+  // Don't use Glib::RefPtr<Glib::Object> Glib::wrap(GObject* object, bool take_copy).
+  // The object may be an interface object, e.g. Gio::File. Such an object can't be
+  // cast to Glib::Object. https://gitlab.gnome.org/GNOME/glibmm/-/issues/93
+#m4 _CONVERSION(`GObject*',`Glib::RefPtr<Glib::ObjectBase>',`Glib::make_refptr_for_instance<Glib::ObjectBase>(Glib::wrap_auto($3))')
+  _WRAP_METHOD(Glib::RefPtr<Glib::ObjectBase> get_object(guint position), g_list_model_get_object, newin "2,50")
+  _WRAP_METHOD(Glib::RefPtr<const Glib::ObjectBase> get_object(guint position) const, g_list_model_get_object, constversion, newin "2,50")
+
+  /** Get the item at @a position.
+   *
+   * If @a position is greater than the number of items in @a list,
+   * an empty RefPtr is returned.
+   *
+   * @code
+   * Glib::RefPtr<T_item> item = list_model->get_typed_object<T_item>(position);
+   * @endcode
+   * is often equivalent to
+   * @code
+   * Glib::RefPtr<T_item> item = std::dynamic_pointer_cast<T_item>(list_model->get_object(position));
+   * @endcode
+   *
+   * If T_item is an interface, and the underlying C object is an instance of
+   * a C class that implements that interface, but there is no corresponding
+   * C++ class, %get_typed_object() may manage to fetch the item even if
+   * %get_object() fails and returns an empty RefPtr.
+   *
+   * @see get_n_items() and get_object()
+   *
+   * @newin{2,76}
+   *
+   * @tparam T_item The item to fetch must be of type T_item or a type derived
+   *                from T_item, otherwise an empty RefPtr is returned. T_item must
+   *                be Glib::ObjectBase or a type derived from Glib::ObjectBase.
+   *
+   * @param position The position of the item to fetch.
+   * @return The object at @a position.
+   */
+  template <typename T_item>
+  Glib::RefPtr<T_item> get_typed_object(guint position);
+
+  /** Get the item at @a position.
+   *
+   * See the non-const version.
+   *
+   * @newin{2,76}
+   *
+   * @tparam T_item The item to fetch must be of type T_item or a type derived
+   *                from T_item, otherwise an empty RefPtr is returned. T_item must
+   *                be Glib::ObjectBase or a type derived from Glib::ObjectBase.
+   *
+   * @param position The position of the item to fetch.
+   * @return The object at @a position.
+   */
+  template <typename T_item>
+  Glib::RefPtr<const T_item> get_typed_object(guint position) const;
+
+  _WRAP_SIGNAL(void items_changed(guint position, guint removed, guint added), "items-changed", no_default_handler, newin "2,50")
+
+protected:
+  _WRAP_VFUNC(GType get_item_type(), "get_item_type")
+  _WRAP_VFUNC(guint get_n_items(), "get_n_items")
+  _WRAP_VFUNC(gpointer get_item(guint position), "get_item")
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+template <typename T_item>
+Glib::RefPtr<T_item> ListModel::get_typed_object(guint position)
+{
+  static_assert(std::is_base_of_v<Glib::ObjectBase, T_item>,
+    "T_item must be Glib::ObjectBase or derived from Glib::ObjectBase.");
+
+  // g_list_model_get_object() gives us a reference.
+  GObject* c_item = g_list_model_get_object(gobj(), position);
+  if (!c_item)
+    return {};
+  T_item* cpp_item = nullptr;
+
+  // If the C item is an object of a type that is not wrapped in C++ code,
+  // a call to Glib::wrap_auto() will fail. Glib::wrap_auto_interface<T_item>()
+  // succeeds, if T_item is an interface.
+  if constexpr (std::is_base_of_v<Glib::Interface, T_item> &&
+               !std::is_base_of_v<Glib::Object, T_item>)
+  {
+    // Call wrap_auto_interface() only if c_item implements T_item::get_base_type().
+    // wrap_auto_interface() can create a C++ wrapper of type T_item even if
+    // the object does not implement that interface.
+    if (g_type_is_a(G_OBJECT_TYPE(c_item), T_item::get_base_type()))
+      cpp_item = Glib::wrap_auto_interface<T_item>(c_item);
+    else
+      g_warning("Type %s does not implement the %s interface.",
+        G_OBJECT_TYPE_NAME(c_item), g_type_name(T_item::get_base_type()));
+  }
+  else
+    cpp_item = dynamic_cast<T_item*>(Glib::wrap_auto(c_item));
+
+  if (!cpp_item)
+    g_object_unref(c_item);
+  return Glib::make_refptr_for_instance<T_item>(cpp_item);
+}
+
+template <typename T_item>
+Glib::RefPtr<const T_item> ListModel::get_typed_object(guint position) const
+{
+  static_assert(std::is_base_of_v<Glib::ObjectBase, T_item>,
+    "T_item must be Glib::ObjectBase or derived from Glib::ObjectBase.");
+
+  return const_cast<ListModel*>(this)->get_typed_object<T_item>(position);
+}
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+} // namespace Gio

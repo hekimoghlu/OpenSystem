@@ -1,0 +1,157 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/pad.h>
+#include <gstreamermm/pluginfeature.h>
+#include <gstreamermm/urihandler.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+enum ElementFactoryListType
+{
+  ELEMENT_FACTORY_TYPE_ANY,
+  ELEMENT_FACTORY_TYPE_AUDIOVIDEO_SINKS,
+  ELEMENT_FACTORY_TYPE_AUDIO_ENCODER,
+  ELEMENT_FACTORY_TYPE_DECODABLE,
+  ELEMENT_FACTORY_TYPE_DECODER,
+  ELEMENT_FACTORY_TYPE_DEMUXER,
+  ELEMENT_FACTORY_TYPE_DEPAYLOADER,
+  ELEMENT_FACTORY_TYPE_ENCODER,
+  ELEMENT_FACTORY_TYPE_FORMATTER,
+  ELEMENT_FACTORY_TYPE_MAX_ELEMENTS,
+  ELEMENT_FACTORY_TYPE_MEDIA_AUDIO,
+  ELEMENT_FACTORY_TYPE_MEDIA_IMAGE,
+  ELEMENT_FACTORY_TYPE_MEDIA_METADATA,
+  ELEMENT_FACTORY_TYPE_MEDIA_SUBTITLE,
+  ELEMENT_FACTORY_TYPE_MEDIA_VIDEO,
+  ELEMENT_FACTORY_TYPE_MEDIA_ANY,
+  ELEMENT_FACTORY_TYPE_MUXER,
+  ELEMENT_FACTORY_TYPE_PARSER,
+  ELEMENT_FACTORY_TYPE_PAYLOADER,
+  ELEMENT_FACTORY_TYPE_SINK,
+  ELEMENT_FACTORY_TYPE_SRC,
+  ELEMENT_FACTORY_TYPE_VIDEO_ENCODER
+};
+
+class ArrayHandler;
+class Caps;
+class Element;
+class StaticPadTemplate;
+struct StaticPadTemplateTraits;
+class Plugin;
+
+/** Create Gst::Element 's from a factory
+ *
+ * Gst::ElementFactory is used to create instances of elements. A
+ * Gst::ElementFactory can be added to a Gst::Plugin as it is also a
+ * Gst::PluginFeature.
+ *
+ * Use the find() and create()
+ * functions to create element instances or use create_element() as a
+ * convenient shortcut.
+ *
+ * The following code example shows you how to create a 'filesrc' element.
+ *
+ * @code
+ *  #include <gstreamermm.h>
+ *  #include <iostream>
+ *
+ *  int main (int argc, char *argc[])
+ *  {
+ *    Glib::RefPtr<Gst::Element> src;
+ *    Glib::RefPtr<Gst::ElementFactory> srcfactory;
+ *
+ *    Gst::init(&argc,&argv);
+ *
+ *    srcfactory = Gst::ElementFactory::find("filesrc");
+ *
+ *    if(!srcfactory)
+ *    {
+ *      std::cout << "Could not find factory 'filesrc'" << std::endl;
+ *      exit(1);
+ *    }
+ *
+ *    src = srcfactory->create("src");
+ *
+ *    if(!src)
+ *    {
+ *      std::cout << "Could not create element 'src'" << std::endl;
+ *      exit(1);
+ *    }
+ *    ...
+ *  }
+ * @endcode
+ *
+ * Last reviewed on 2016-05-21 (1.8.0).
+ *
+ */
+class ElementFactory : public PluginFeature
+{
+  _CLASS_GOBJECT(ElementFactory, GstElementFactory, GST_ELEMENT_FACTORY, PluginFeature, GstPluginFeature)
+
+public:
+  _WRAP_METHOD(static bool register_element(const Glib::RefPtr<Gst::Plugin>& plugin, const Glib::ustring& name, guint rank, GType type), gst_element_register)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::ElementFactory> find(const Glib::ustring& name), gst_element_factory_find)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Element> create(const Glib::ustring& name{?}), gst_element_factory_create)
+
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Element> create_element(const Glib::ustring& factory_name, const Glib::ustring& name{?}), gst_element_factory_make)
+
+  _WRAP_METHOD(bool can_sink_all_caps(const Glib::RefPtr<const Gst::Caps>& caps) const, gst_element_factory_can_sink_all_caps)
+  _WRAP_METHOD(bool can_src_all_caps(const Glib::RefPtr<const Gst::Caps>& caps) const, gst_element_factory_can_src_all_caps)
+  _WRAP_METHOD(bool can_sink_any_caps(const Glib::RefPtr<const Gst::Caps>& caps) const, gst_element_factory_can_sink_any_caps)
+  _WRAP_METHOD(bool can_src_any_caps(const Glib::RefPtr<const Gst::Caps>& caps) const, gst_element_factory_can_src_any_caps)
+
+  _WRAP_METHOD(GType get_element_type() const, gst_element_factory_get_element_type)
+
+  #m4 _CONVERSION(`gchar**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_metadata_keys() const, gst_element_factory_get_metadata_keys)
+  _WRAP_METHOD(Glib::ustring get_metadata(const Glib::ustring& key) const, gst_element_factory_get_metadata)
+
+  _WRAP_METHOD(guint get_num_pad_templates() const, gst_element_factory_get_num_pad_templates)
+  _WRAP_METHOD(URIType get_uri_type() const, gst_element_factory_get_uri_type)
+
+#m4 _CONVERSION(`const gchar* const*',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_uri_protocols() const, gst_element_factory_get_uri_protocols)
+
+  _WRAP_METHOD(bool has_interface(const Glib::ustring& name) const, gst_element_factory_has_interface)
+
+#m4 _CONVERSION(`const GList*', `std::vector< Gst::StaticPadTemplate >', `Glib::ListHandler< Gst::StaticPadTemplate, StaticPadTemplateTraits >::list_to_vector(const_cast<GList*>($3), Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector< Gst::StaticPadTemplate > get_static_pad_templates() const, gst_element_factory_get_static_pad_templates)
+
+#m4 _CONVERSION(`GList*', `std::vector< Glib::RefPtr<Gst::ElementFactory> >', `Glib::ListHandler< Glib::RefPtr<Gst::ElementFactory> >::list_to_vector($3, Glib::OWNERSHIP_DEEP)')
+#m4 _CONVERSION(`const std::vector< Glib::RefPtr<Gst::ElementFactory> >&', `GList*', `Glib::ListHandler< Glib::RefPtr<Gst::ElementFactory> >::vector_to_list($3).data()')
+  _WRAP_METHOD(static std::vector< Glib::RefPtr<Gst::ElementFactory> > filter(const std::vector< Glib::RefPtr<Gst::ElementFactory> >& list, const Glib::RefPtr<const Gst::Caps>& caps, PadDirection direction, bool subsetonly), gst_element_factory_list_filter)
+
+#m4 _CONVERSION(`ElementFactoryListType', `GstElementFactoryListType', `_list_types[$3]')
+
+  _WRAP_METHOD(static std::vector< Glib::RefPtr<Gst::ElementFactory> > get_elements(ElementFactoryListType type, Rank minrank), gst_element_factory_list_get_elements)
+  _WRAP_METHOD(bool is_type(ElementFactoryListType type) const, gst_element_factory_list_is_type)
+};
+
+/*! A gstreamermm Gst::ElementFactory example.
+ * @example basics/element_factory.cc
+ */
+
+} // namespace Gst

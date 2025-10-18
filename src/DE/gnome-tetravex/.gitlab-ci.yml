@@ -1,0 +1,42 @@
+include:
+  - project: 'gnome/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: 'flatpak@x86_64'
+
+variables:
+    APP_ID: 'org.gnome.Tetravex.Devel'
+    BUNDLE: 'org.gnome.Tetravex.Devel.flatpak'
+    RUNTIME_REPO: 'https://nightly.gnome.org/gnome-nightly.flatpakrepo'
+    MANIFEST_PATH: 'build-aux/flatpak/org.gnome.Tetravex.Devel.json'
+    FLATPAK_MODULE: 'gnome-tetravex'
+
+stages:
+  - lint
+  - build
+  - deploy
+
+vala-lint:
+  image: valalang/lint:latest
+  stage: lint
+  script:
+    - io.elementary.vala-lint
+
+flatpak@x86_64:
+    extends: '.flatpak@x86_64'
+    stage: build
+
+flatpak@aarch64:
+    extends: '.flatpak@aarch64'
+    stage: build
+
+nightly@x86_64:
+    extends: '.publish_nightly'
+    stage: deploy
+    needs: ['flatpak@x86_64']
+
+nightly@aarch64:
+    extends: '.publish_nightly'
+    stage: deploy
+    needs: ['flatpak@aarch64']

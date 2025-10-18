@@ -1,0 +1,54 @@
+{
+    "app-id" : "org.example.TrackerSearchApp",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "/app/bin/example-app",
+    "tags" : [
+        "nightly"
+    ],
+    "finish-args" : [
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Audio",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Documents",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:FileSystem",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Pictures",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Music",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Software",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Video"
+    ],
+    "modules" : [
+        {
+            "name": "tracker-miners",
+            "cleanup": [ "/bin", "/etc" ],
+            "buildsystem": "meson",
+            "config-opts" : [
+                "-Dman=false",
+                "-Dminer_fs=true",
+                "-Dsystemd_user_services=false",
+                "-Dwriteback=false",
+                "-Ddomain_prefix=org.example.TrackerSearchApp",
+                "-Dminer_fs_cache_location=$XDG_CACHE_HOME/org.example.TrackerSearchApp/miner/files"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/localsearch.git"
+                }
+            ]
+        },
+        {
+            "name": "tracker-search-app",
+            "buildsystem": "simple",
+            "sources": [
+                {
+                    "type": "file",
+                    "path": "./example-app.py"
+                }
+            ],
+            "build-commands": [
+                "mkdir /app/bin",
+                "install -m 755 ./example-app.py /app/bin/example-app"
+            ]
+        }
+    ]
+}

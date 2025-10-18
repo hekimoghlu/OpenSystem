@@ -1,0 +1,93 @@
+# Quick syntax check:
+# python -c 'import sys, yaml; yaml.dump (yaml.load (sys.stdin), sys.stdout)' <.gitlab-ci.yml
+
+# If things don't seem to work, this can help:
+# https://gitlab.gnome.org/GNOME/NetworkManager-openconnect/-/ci/lint
+
+.fedora_deps: &fedora_deps
+  - dnf -y install
+    file
+    findutils
+    gcc
+    gcr-devel
+    gcr3-devel
+    gettext-devel
+    glib2-devel
+    gtk4-devel
+    intltool
+    libtool
+    libsecret-devel
+    libnma-devel
+    NetworkManager-libnm-devel
+    pkgconfig
+    libxml2-devel
+    openconnect-devel
+    webkit2gtk3-devel
+    webkit2gtk4.1-devel
+
+.fedora_from_dist: &fedora_from_dist
+  - dnf -y install make
+  - tar xJf NetworkManager-openconnect-*.tar.xz
+  # Sometimes the CI builder clocks are skewed.
+  # Make sure the dst files are not from future.
+  - find |xargs touch
+  - cd NetworkManager-openconnect-*/
+  - ./configure
+    --disable-silent-rules
+    --without-libnm-glib
+  - make -j
+  - make -j check
+  - make -j install
+  - make -j uninstall
+
+# Disable fetching Git, run after the tarball is rolled
+.dist: &dist
+  stage: test
+  dependencies:
+    - fedora37_dist
+  variables:
+    GIT_STRATEGY: none
+
+# Roll the distribution tarball
+fedora37_dist:
+  image: fedora:37
+  stage: build
+  before_script:
+    - *fedora_deps
+  script:
+    - dnf -y install
+      /usr/bin/autopoint
+      autoconf automake make
+      libnma-devel
+    - sh autogen.sh
+    - touch gtk4/nm-openconnect-dialog.ui
+    - make -j dist
+  artifacts:
+    paths:
+      - "*.xz"
+
+fedora37_from_dist:
+  image: fedora:37
+  <<: *dist
+  before_script:
+    - *fedora_deps
+  script:
+    - *fedora_from_dist
+
+fedora_from_dist:
+  image: fedora:latest
+  <<: *dist
+  before_script:
+    - *fedora_deps
+  script:
+    - *fedora_from_dist
+
+latest_from_dist:
+  image: fedora:latest
+  <<: *dist
+  before_script:
+    - dnf -y install 'dnf-command(copr)'
+    - dnf -y copr enable dwmw2/openconnect
+    - *fedora_deps
+  script:
+    - *fedora_from_dist

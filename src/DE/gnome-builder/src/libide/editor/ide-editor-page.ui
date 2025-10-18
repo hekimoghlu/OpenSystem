@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="IdeEditorPage" parent="IdePage">
+    <property name="can-maximize">true</property>
+    <child type="content">
+      <object class="IdeEditorInfoBar" id="info_bar">
+        <binding name="buffer">
+          <lookup name="buffer">IdeEditorPage</lookup>
+        </binding>
+      </object>
+    </child>
+    <child type="content">
+      <object class="IdeScrubberRevealer" id="scrubber_revealer">
+        <property name="hexpand">true</property>
+        <property name="vexpand">true</property>
+        <property name="content">
+          <object class="GtkOverlay">
+            <child>
+              <object class="GtkScrolledWindow" id="scroller">
+                <property name="vscrollbar-policy">external</property>
+                <style>
+                  <class name="editor-scrolledview"/>
+                </style>
+                <child>
+                  <object class="IdeSourceView" id="view">
+                    <property name="monospace">true</property>
+                    <property name="hexpand">true</property>
+                    <property name="vexpand">true</property>
+                    <property name="show-line-numbers">false</property>
+                    <property name="left-margin">0</property>
+                    <property name="top-margin">12</property>
+                    <child>
+                      <object class="GtkEventControllerFocus">
+                        <signal name="enter" handler="ide_editor_page_focus_enter_cb" swapped="true" object="IdeEditorPage"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="overlay">
+              <object class="IdeScrollbar" id="scrollbar">
+                <property name="view">view</property>
+                <property name="halign">end</property>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="scrubber">
+          <object class="IdeSourceMap" id="map">
+            <property name="view">view</property>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child type="content">
+      <object class="GtkRevealer" id="search_revealer">
+        <property name="reveal-child">false</property>
+        <property name="transition-type">slide-up</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+              </object>
+            </child>
+            <child>
+              <object class="IdeEditorSearchBar" id="search_bar">
+                <property name="halign">center</property>
+                <property name="margin-top">6</property>
+                <property name="margin-bottom">6</property>
+                <property name="margin-start">6</property>
+                <property name="margin-end">6</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

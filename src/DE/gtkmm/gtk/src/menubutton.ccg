@@ -1,0 +1,81 @@
+/* Copyright (C) 2012 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+
+namespace
+{
+extern "C"
+{
+static void SignalProxy_MenuButton_create_popup_callback(
+  GtkMenuButton* /* menu_button */, gpointer user_data)
+{
+  auto the_slot = static_cast<Gtk::MenuButton::SlotCreatePopup*>(user_data);
+
+  try
+  {
+    (*the_slot)();
+  }
+  catch (...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+  return;
+}
+
+static void SignalProxy_MenuButton_create_popup_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::MenuButton::SlotCreatePopup*>(data);
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gtk
+{
+
+void MenuButton::unset_popover()
+{
+  gtk_menu_button_set_popover(gobj(), nullptr);
+}
+
+void MenuButton::unset_menu_model()
+{
+  gtk_menu_button_set_menu_model(gobj(), nullptr);
+}
+
+void MenuButton::set_create_popup_func(const SlotCreatePopup& slot)
+{
+  // Create a copy of the slot object. A pointer to this will be passed
+  // through the callback's user_data parameter. It will be deleted
+  // when SignalProxy_MenuButton_create_popup_callback_destroy() is called.
+  auto slot_copy = new SlotCreatePopup(slot);
+
+  gtk_menu_button_set_create_popup_func(gobj(),
+    &SignalProxy_MenuButton_create_popup_callback, slot_copy,
+    &SignalProxy_MenuButton_create_popup_callback_destroy);
+}
+
+void MenuButton::unset_create_popup_func()
+{
+  gtk_menu_button_set_create_popup_func(gobj(), nullptr, nullptr, nullptr);
+}
+
+void MenuButton::unset_child()
+{
+  gtk_menu_button_set_child(gobj(), nullptr);
+}
+
+} //namespace Gtk

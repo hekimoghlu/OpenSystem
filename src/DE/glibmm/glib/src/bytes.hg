@@ -1,0 +1,85 @@
+/* Copyright (C) 2012 The glibmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_DEFS(glibmm,glib)
+
+#include <glibmmconfig.h>
+#include <glibmm/refptr.h>
+#include <glibmm/ustring.h>
+#include <glibmm/error.h>
+#include <glibmm/value.h>
+#include <glib.h>
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GBytes GBytes;
+#endif
+
+namespace Glib
+{
+//Note: The documentation is a reduced version of the C documentation,
+//because this class is only really useful with other C types that we don't bother to wrap.
+//We only wrap it because it is used in the InputStream, OutputStream and Resource APIs.
+
+/** A simple refcounted data type representing an immutable byte sequence
+ * from an unspecified origin.
+ *
+ * The purpose of the Bytes class is to keep the memory region that it holds
+ * alive for as long as anyone holds a reference to the bytes.  When
+ * the last reference count is dropped, the memory is released. Multiple
+ * unrelated callers can use byte data in the Bytes object without coordinating
+ * their activities, resting assured that the byte data will not change or
+ * move while they hold a reference.
+ *
+ * A Bytes object can come from many different origins that may have
+ * different procedures for freeing the memory region.  Examples are
+ * memory from g_malloc(), from memory slices, from a GMappedFile or
+ * memory from other allocators.
+ *
+ * @newin{2,34}
+ */
+class GLIBMM_API Bytes final
+{
+  _CLASS_OPAQUE_REFCOUNTED(Bytes, GBytes, NONE, g_bytes_ref, g_bytes_unref, GLIBMM_API)
+  _IGNORE(g_bytes_ref, g_bytes_unref)
+public:
+
+  static Glib::RefPtr<Glib::Bytes> create(gconstpointer data, gsize size);
+  _IGNORE(g_bytes_new_from_bytes, g_bytes_unref_to_data, g_bytes_unref_to_array)
+
+  _WRAP_METHOD(gconstpointer get_data(gsize& size) const, g_bytes_get_data)
+  _WRAP_METHOD(gsize get_size() const,  g_bytes_get_size)
+
+  _WRAP_METHOD(static guint hash(gconstpointer bytes), g_bytes_hash)
+  _WRAP_METHOD(static bool equal(gconstpointer bytes1, gconstpointer bytes2), g_bytes_equal)
+  _WRAP_METHOD(static gint compare(gconstpointer bytes1, gconstpointer   bytes2), g_bytes_compare)
+};
+
+// This is needed so Glib::RefPtr<Glib::Bytes> can be used with
+// Glib::Value and _WRAP_PROPERTY in Gio::BytesIcon.
+template <>
+class GLIBMM_API Value<Glib::RefPtr<Glib::Bytes>> : public ValueBase_Boxed
+{
+public:
+  using CppType = Glib::RefPtr<Glib::Bytes>;
+  using CType = GBytes*;
+
+  static GType value_type();
+
+  void set(const CppType& data);
+  CppType get() const;
+};
+
+} // namespace Glib

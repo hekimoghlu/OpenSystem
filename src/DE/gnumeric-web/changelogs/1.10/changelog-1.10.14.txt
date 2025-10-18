@@ -1,0 +1,166 @@
+2011-03-24  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.14
+
+2011-03-22  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (resolve_template): New function.
+	(convert): Simplify code.  Treat output filename as template when
+	ssconvert_one_file_per_sheet is set.
+
+2011-03-21  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dependent_set_expr): Make sure we clear dynamic
+	deps, even if not linked.  Fixes #645209.
+	(dependents_dump): New function extracted from...
+	* src/wbc-gtk.c (cb_workbook_debug_info): ...here.
+
+2011-03-18  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y: Apply ugly patch for xlsx global names.  See bug
+	643873 for discussions.
+
+	* src/print.c (gnm_print_sheet): Punt and use ShellExecute.
+
+2011-03-17  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (gnm_print_sheet): Improve error handling.
+
+2011-03-16  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (gnm_print_sheet): On WIN32, do previews as
+	export-to-pdf plus show-url.  Hopefully works around #533795.
+
+2011-03-12  Morten Welinder  <terra@gnome.org>
+
+	* src/dead-kittens.h (gtk_adjustment_get_upper): Macro had wrong
+	name.
+	(gtk_dialog_get_content_area): We only need one of these.
+
+2011-03-11  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_insert_meta_date): Use GsfTimestamp.
+
+2011-03-10  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.c (colrow_new, colrow_free): New functions.
+
+	* src/sheet.c (cell_new, cell_free): Use slice allocator, not
+	g_new.
+	(sheet_row_new, sheet_col_new): Use colrow_new.
+
+2011-03-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.c: formulas -> formulæ
+	* src/wbc-gtk-actions.c: formulas -> formulæ
+
+2011-03-08  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_insert_meta_date): Use GsfTimestamp, not
+	string.
+
+	* src/stf-parse.c (stf_parse_sheet): Delete lines as we are done
+	with them.
+	(stf_parse_general_free): Handle freed lines.
+
+2011-03-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (scg_cursor_move): check one row at a time.
+
+2011-03-04  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.c (std_external_wb): New function.
+	(gnm_conventions_new_full): Always set input.external_wb.
+	(wbref_parse): Use that.
+
+2011-03-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/org.gnome.gnumeric.dialogs.gschema.xml.in.in: fix schema
+
+2011-03-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: add gschema files.
+	* schemas/Makefile.am: ditto.
+	* schemas/org.gnome.gnumeric.dialogs.gschema.xml.in.in: ditto.
+	* schemas/org.gnome.gnumeric.gschema.xml.in.in: ditto.
+	* schemas/org.gnome.gnumeric.plugin.gschema.xml.in.in: ditto.
+
+2011-03-03  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (value_new_string_str): Add precondition.
+
+	* src/expr.c (gnm_expr_new_constant): Add precondition.
+
+2011-03-01  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c (get_node): Handle absolute keys, assuming
+	goffice handles them.
+
+2011-02-26  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (value_new_cellrange_parsepos_str): Constify.
+
+2011-02-24  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_set_toolbar_position): Only actually set
+	toolbar position when the item is active.  (We now get extra signals.)
+
+2011-02-23  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/undo.c (gnm_undo_colrow_*_group_finalize): chain to parent
+
+2011-02-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-clipboard.c (text_is_single_cell): new
+	(text_to_cell_region): use text_is_single_cell
+
+2011-02-21  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (trim_spaces_inplace): Don't use strcpy for
+	overlapping areas.  Hopefully fixes #642477.
+
+	* src/wbc-gtk.c (wbc_gtk_finalize): Cancel template loader handler
+	if necessary.
+	(wbc_gtk_create_notebook_area): Hold a ref to bnotebook so it
+	cannot disappear underneath us.
+
+2011-02-17  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_finalize): Remove custum UIs.
+
+	* src/stf.c (stf_shutdown): Unregister stf_csv too.
+
+2011-02-16  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric.h (GnmExprEvalFlags): Add new want-ref flag.
+
+	* src/expr.c (gnm_expr_eval): clear the want-ref flag for
+	arguments to operands.  If the flag is set, return a ref for the
+	cellref case.
+
+	* src/func.c (function_call_with_exprs): Evaluate 'r' arguments
+	with want-ref flag.  Fixes #613273.
+
+2011-02-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/validation-combo.h (IS_GNM_VALIDATION_COMBO): new
+
+2011-02-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in
+	(/apps/gnumeric/stf/export/terminator): use escape
+	* src/stf-export.c (gnm_stf_get_stfe): do not leave the terminator
+	as "" (this could happen due to gconf bug #641807)
+
+2011-02-07  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-edit.c (item_edit_button_pressed), (item_edit_motion): fix
+	cursor position inside a cell edited in a zoomed sheet. [#641709]
+
+2011-02-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* libspreadsheet.pc.in: removed libglade-2.0 from requirements.
+
+2011-02-02  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

@@ -1,0 +1,138 @@
+/* Copyright (C) 2007 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/interface.h>
+#include <glibmm/object.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GAsyncResultIface GAsyncResultIface;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gio
+{
+
+class GIOMM_API AsyncResult;
+
+/** A function that will be called when an asynchronous operation within GIO has been completed.
+ * @param result The asynchronous function's results.
+ *
+ * For instance,
+ * @code
+ * void on_async_ready(Glib::RefPtr<Gio::AsyncResult>& result);
+ * @endcode
+ *
+ * @newin{2,16}
+ * @relates Gio::AsyncResult
+ */
+using SlotAsyncReady = sigc::slot<void(Glib::RefPtr<AsyncResult>&)>;
+
+/** Provides a base class for implementing asynchronous function results.
+ *
+ * Asynchronous operations are broken up into two separate operations which are chained together by a SlotAsyncReady.
+ * To begin an asynchronous operation, provide a SlotAsyncReady to the asynchronous function. This callback will be triggered
+ * when the operation has completed, and will be passed an %AsyncResult instance
+ * (an instance of a class that implements the %AsyncResult interface)
+ * filled with the details of the operation's success or failure,
+ * the object the asynchronous function was started for and any error codes returned. The asynchronous callback function is then
+ * expected to call the corresponding "_finish()" function of the object the async function was called for, with the %AsyncResult instance.
+ *
+ * The purpose of the "_finish()" function is to take the generic result of type %AsyncResult and return the specific result that the operation
+ * in question yields (e.g. a FileEnumerator for an "enumerate children" operation). If the result or error status of the operation is not needed,
+ * there is no need to call the "_finish()" function and GIO will take care of cleaning up the result and error information after the
+ * SlotAsyncReady returns. You may also store the %AsyncResult and call "_finish()" later.
+ * However, the "_finish()" function may be called at most once.
+ *
+ * Example of a typical asynchronous operation flow:
+ * @code
+ * class Theoretical : public Glib::Object
+ * {
+ * public:
+ *   Glib::RefPtr<Theoretical> create();
+ *
+ *   void frobnitz_async(const Gio::SlotAsyncReady& slot);
+ *   Glib::ustring frobnitz_finish(const Glib::RefPtr<Gio::AsyncResult>& result);
+ * // ...
+ * };
+ *
+ * // ...
+ *
+ * namespace
+ * {
+ * Glib::RefPtr<Theoretical> theoretical;
+ *
+ * void on_frobnitz_ready(Glib::RefPtr<Gio::AsyncResult>& result)
+ * {
+ *   try
+ *   {
+ *     Glib::ustring s = theoretical->frobnitz_finish(result);
+ *     std::cout << s << std::endl;
+ *   }
+ *   catch (const Glib::Error& err)
+ *   {
+ *     std::cerr << err.what() << std::endl;
+ *   }
+ *   // ...
+ * }
+ * } // anonymous namespace
+ *
+ * int main(int argc, void* argv[])
+ * {
+ *   // ...
+ *   theoretical = Theoretical::create();
+ *   theoretical->frobnitz_async(sigc::ptr_fun(&on_frobnitz_ready));
+ *   // ...
+ * }
+ * @endcode
+ *
+ * The async function could also take an optional Gio::Cancellable object, allowing the calling function to cancel the asynchronous operation.
+ *
+ * The callback for an asynchronous operation is called only once, and is always called, even in the case of a cancelled operation.
+ * On cancellation the "_finish()" function will throw a Gio::Error exception with a <tt>Gio::Error::CANCELLED</tt> error code.
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API AsyncResult : public Glib::Interface
+{
+  _CLASS_INTERFACE(AsyncResult, GAsyncResult, G_ASYNC_RESULT, GAsyncResultIface, , , GIOMM_API)
+
+public:
+  _IGNORE(g_async_result_get_user_data)
+  _IGNORE(g_async_result_get_source_object)
+
+  //Note that this returns a reference, unlike most GTK+ get_*() functions,
+  //so we don't need to use refreturn.
+  Glib::RefPtr<Glib::ObjectBase> get_source_object_base();
+  Glib::RefPtr<const Glib::ObjectBase> get_source_object_base() const;
+
+  _IGNORE(g_async_result_legacy_propagate_error)dnl// Shall not be used in new code
+
+  _WRAP_METHOD(bool is_tagged(gpointer source_tag) const, g_async_result_is_tagged)
+
+protected:
+  // The compiler cannot find an unwrap() for ObjectBase, because
+  // ObjectBase::BaseObjectType is not declared.
+  //#m4 _CONVERSION(`Glib::RefPtr<Glib::ObjectBase>',`GObject*',__CONVERT_REFPTR_TO_P)
+#m4 _CONVERSION(`Glib::RefPtr<Glib::ObjectBase>',`GObject*',`unwrap_objectbase_custom($3)')
+  _WRAP_VFUNC(Glib::RefPtr<Glib::ObjectBase> get_source_object(), "get_source_object")
+  _WRAP_VFUNC(bool is_tagged(gpointer source_tag), "is_tagged")
+};
+
+} // namespace Gio

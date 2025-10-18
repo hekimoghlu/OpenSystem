@@ -1,0 +1,55 @@
+/* Copyright (C) 2012 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gdkmmconfig.h)
+
+#include <giomm/appinfo.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(giomm/private/applaunchcontext_p.h)
+
+namespace Gdk
+{
+class GDKMM_API Display;
+
+/** This is an implementation of Gio::AppLaunchContext that
+ * handles launching an application in a graphical context. It provides
+ * startup notification and allows to launch applications on a specific
+ * screen or workspace.
+ *
+ * @newin{3,4}
+ */
+class GDKMM_API AppLaunchContext : public Gio::AppLaunchContext
+{
+  _CLASS_GOBJECT(AppLaunchContext, GdkAppLaunchContext, GDK_APP_LAUNCH_CONTEXT, Gio::AppLaunchContext, GAppLaunchContext, , , GDKMM_API)
+
+protected:
+  _CTOR_DEFAULT()
+
+public:
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(Glib::RefPtr<Display> get_display(), gdk_app_launch_context_get_display, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Display> get_display() const, gdk_app_launch_context_get_display, refreturn, constversion)
+  _WRAP_METHOD(void set_desktop(int desktop), gdk_app_launch_context_set_desktop)
+  _WRAP_METHOD(void set_timestamp(guint32  timestamp), gdk_app_launch_context_set_timestamp)
+  _WRAP_METHOD(void set_icon(const Glib::RefPtr<Gio::Icon>& icon), gdk_app_launch_context_set_icon)
+  _WRAP_METHOD(void set_icon_name(const Glib::ustring& icon_name), gdk_app_launch_context_set_icon_name)
+
+  _WRAP_PROPERTY("display", Glib::RefPtr<Display>)
+};
+
+} //namespace Gdk

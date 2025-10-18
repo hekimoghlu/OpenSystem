@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2019-04-12 j.h: update to v-2.10
+     -->
+<sect2 
+xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-tool-foreground-select">
+  <title>Foreground Select</title>
+
+  <indexterm>
+    <primary>Tools</primary>
+    <secondary>Foreground Select</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Selection</primary>
+    <secondary>Foreground Select</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Foreground Select</primary>
+  </indexterm>
+
+  <para>
+    This tool lets you extract the foreground from the active layer or from a
+    selection. After the selection is made, with its
+    <link linkend="glossary-marching-ants">marching ants</link>, you can
+    copy-paste or click-and-drag it to another image used as background, and,
+    inverting the selection, you can make changes in background.
+  </para>
+
+  
+  <sect3>
+    <title>Activating the Tool</title>
+    <para>
+      There are different possibilities to activate the tool:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          From the main menu:
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guisubmenu>Selection Tools</guisubmenu>
+            <guimenuitem>Foreground Select</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By clicking the tool icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-tool-foreground-select.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          in the Toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          This tool has no shortcut, but you can set one using
+          <menuchoice>
+            <guimenu>Edit</guimenu>
+            <guimenuitem>Keyboard Shortcuts</guimenuitem>
+          </menuchoice>, open the <guilabel>Tools</guilabel> group on the left,
+          select <guilabel>Foreground Select</guilabel> and then press the
+          keys you want to use as shortcut.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+
+   <sect3 id="tool-fg-select-usage">
+    <title>Directions for use</title>
+    <para>
+      Let us start with an object that is easy to distinguish from the
+      background and doesn't need to be refined.
+    </para>
+    <warning>
+      <para>
+        The foreground select tool needs a lot of memory for its processing,
+        depending on the size of the image. It is known to crash or slow down
+        when using larger images.
+      </para>
+      <para>
+        One way to improve this is to use <guilabel>Matting Global</guilabel>
+        instead of <guilabel>Matting Levin</guilabel>. The slow processing
+        speed can be improved by increasing the number of downsampled
+        <guilabel>Levels</guilabel>, at the cost of using more memory. Both of
+        these options also come with the disadvantage of being less accurate.
+      </para>
+    </warning>
+    <procedure>
+      <step>
+        <para>
+          The way it works is similar to the
+          <link linkend="gimp-tool-free-select">Free Select tool</link>.
+          Roughly select the object you want to extract, with a little bit of
+          background around it.
+          To get a more accurate outline, keep the mouse button pressed while
+          moving. To use straight lines for parts of your selection, click
+          and release the button between the start and end points of the
+          straight section.
+        </para>
+        <para>
+          As soon you click to start drawing the selection, a small window pops
+          up:
+          <mediaobject>
+            <imageobject>
+              <imagedata format="PNG"
+                fileref="images/toolbox/FG-select-pop-up.png"/>
+            </imageobject>
+          </mediaobject>
+          Before the selection is finished, only the button to close the dialog
+          is active, allowing you to cancel and return to the original image
+          (this can also be done by pressing the <keycap>Esc</keycap> key).
+        </para>
+        <para>
+          To finish the initial selection, it needs to be closed. When the mouse
+          cursor hovers over the dot where you started the selection, it turns
+          yellow. Click this to close the selection. Instead of doing that,
+          you can also double-click to close the selection.
+        </para>
+        <mediaobject>
+          <imageobject>
+            <imagedata format="PNG"
+              fileref="images/toolbox/FG-select-select.png"/>
+          </imageobject>
+          <caption>
+            <para>
+              The selection is closed.
+            </para>
+          </caption>
+         </mediaobject>
+      </step>
+      <step>
+        <para>
+          To create the mask from your selection, press <keycap>Enter</keycap>,
+          or double-click inside the selection:
+          <mediaobject>
+            <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/FG-select-mask.png"/>
+            </imageobject>
+          </mediaobject>
+        </para>
+        <para>
+          The mouse pointer now changes into a Paintbrush icon with a circle.
+          The dark blue area (this color can be changed) shows the background.
+          The lighter area covers the zone you have selected as foreground and
+          a small part of background.
+          Outside the selected area, the dark blue area is called the
+          <quote>Unknown pixels area</quote>.
+        </para>
+        <para>
+          The options in the small window on top of the image become active:
+          <itemizedlist>
+            <listitem>
+              <para>
+                A <guilabel>Preview mask</guilabel> checkbox that toggles
+                displaying a preview of the foreground extraction status.
+                The same can also be done by pressing the
+                <keycap>Enter</keycap> key.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                A <guibutton>Select</guibutton> button that will be used to 
+                create the extraction after marking the foreground.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </para>
+      </step>
+      <step>
+        <para>
+          Now we start the actual foreground extraction process: draw a line
+          through the foreground. The size of the brush can be changed in the
+          Tool Options area. Draw a continuous line over the selected foreground
+          area moving over colors which will be kept for the extraction. The
+          color used to draw the line is not important, but not using the same
+          color as the foreground makes it easier to see. Be careful not to
+          paint background pixels.
+        </para>
+        <para>
+          With this one-color object, that is easy to distinguish from the
+          background, a few strokes are enough:
+          <mediaobject>
+            <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/FG-select-draw.png"/>
+            </imageobject>
+          </mediaobject>
+        </para>
+      </step>
+      <step>
+        <para>
+          <emphasis>Toggle the preview</emphasis> button, or press
+          <keycap>Enter</keycap> to verify the result.
+          <mediaobject>
+            <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/FG-select-result.png"/>
+            </imageobject>
+          </mediaobject>
+        </para>
+        <note>
+          <para>
+            You can draw directly on this <guilabel>Preview mask</guilabel> and
+            see the result immediately.
+          </para>
+        </note>
+      </step>
+      <step>
+        <para>
+          When you are satisfied with the result, click the
+          <guibutton>Select</guibutton> button, or press <keycap>Enter</keycap>
+          to finalize the selection and finish the foreground selection
+          operation. You can cancel the operation by pressing
+          <keycap>Esc</keycap>.
+        </para>
+      </step>
+    </procedure>
+  </sect3>
+          
+  <sect3>
+    <title>Options</title>
+    <figure>
+      <title>Tool Options Dialog</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/tool-options-foreground-select.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <xi:include href="../about-common-options-display.xml"/>
+
+    <variablelist>
+      <varlistentry>
+        <term>Mode</term>
+        <term>Feather edges</term>
+        <listitem>
+          <xi:include href="about-common-select-options.xml"/>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Draw mode</term>
+        <listitem>
+          <para>
+            <guilabel>Draw foreground</guilabel>: when selecting with a brush,
+            what you draw will be considered part of the foreground, i.e.
+            included in the selection.
+          </para>
+          <para>
+            <guilabel>Draw background</guilabel>: when selecting with a brush,
+            what you draw will be considered part of the background, i.e. it
+            will be excluded from the selection.
+          </para>
+          <para>
+            <guilabel>Draw unknown</guilabel>: When drawing on the background,
+            outside the initial selection, it marks the drawn pixels as
+            belonging to the foreground.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Stroke width</term>
+        <listitem>
+          <para>
+           The size of the brush to select with.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Preview mode</term>
+        <listitem>
+          <itemizedlist>
+            <listitem>
+              <para>
+                <guilabel>Color</guilabel> (default): the color of the selection
+                preview mask; the current color is shown in the color swatch.
+                You can change the color by clicking on it.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                <guilabel>Grayscale</guilabel>: allows you to see the resulting
+                mask in black and white. This preview is similar to a layer
+                mask. It can be useful in images where foreground and background
+                color are similar and difficult to distinguish.
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry> 
+      <varlistentry>
+        <term>Engine</term>
+        <listitem>
+          <para>
+            This is the method that will be used to select the foreground.
+            The default is <guilabel>Matting Levin</guilabel>, which usually
+            gives the best results, but you can also try
+            <guilabel>Matting global</guilabel>, especially if processing is
+            slow and you are using larger images.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Levels (Matting Levin only)</term>
+        <listitem>
+          <para>
+            The number of downsampled levels to use. Higher numbers can
+            improve processing speed at the cost of using more memory.
+            The default is 2 levels.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Active levels (Matting Levin only)</term>
+        <listitem>
+          <para>
+            The number of levels to perform solving. Higher numbers can increase
+            the selection a bit at the cost of slowing down processing. Setting
+            this number higher than <guilabel>Levels</guilabel> has no effect.
+            The default is 2 active levels.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Iterations (Matting Global only)</term>
+        <listitem>
+          <para>
+            Higher values may improve the result at the cost of being slower.
+            The default is 2 iterations.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3>
+    <title>Refining Foreground Extraction</title>
+    <para>
+      In a lot of images, distinguishing what is foreground or background can be
+      difficult. Refining the selection allows you to extract these foregrounds.
+      The procedure steps are the same as above, but, while drawing the
+      foreground, you will often toggle Preview, use Zoom (<keycap>+</keycap>
+      key), switch to <guilabel>Draw background</guilabel> to delete unwanted
+      background areas, and switch between <guilabel>Grayscale</guilabel> and
+      <guilabel>Color</guilabel> preview mode.
+    </para>
+    <figure>
+      <title><quote>Draw background</quote> Example</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/FG-select-draw-bg.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            On the left: drawing foreground by mistake went over the background
+            area: a part of the background will be included in the foreground
+            selection!
+          </para>
+          <para>
+            In the middle: <guilabel>Draw background</guilabel> option is
+            checked: draw on the unwanted background pixels.
+          </para>
+          <para>
+            On the right: unwanted selected pixels in the background are no
+            longer in the foreground selection.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <figure>
+      <title><quote>Draw unknown</quote> Example</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/FG-select-unknown.png"/>
+        </imageobject>
+        <caption>
+          <para>
+            On the left: the selection left a small part of the foreground
+            unselected, in the unknown pixels area.
+          </para>
+          <para>
+            On the right: with <guilabel>Draw unknown</guilabel> option
+            checked, draw on the unselected pixels to select them. This shows
+            that they are now selected.
+          </para>
+        </caption>
+      </mediaobject>
+    </figure>
+  </sect3>
+</sect2>

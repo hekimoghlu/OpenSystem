@@ -1,0 +1,260 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.Window import_dialog {
+  accessible-role: dialog;
+
+  content: Box {
+    orientation: vertical;
+
+    HeaderBar {
+      show-title-buttons: false;
+
+      title-widget: Label {
+        label: _("Import images");
+      };
+
+      [start]
+      DropDown import_source_combo {}
+
+      [end]
+      Button import_button {
+        focusable: true;
+        label: _("_Import");
+        margin-bottom: 3;
+        margin-end: 3;
+        margin-start: 3;
+        margin-top: 3;
+        receives-default: true;
+        styles [
+          "suggested-action"
+        ]
+        use-underline: true;
+      }
+
+      [end]
+      Button cancel_button {
+        focusable: true;
+        label: _("Cancel");
+        margin-bottom: 3;
+        margin-end: 3;
+        margin-start: 3;
+        margin-top: 3;
+      }
+    }
+
+    Box {
+      hexpand: true;
+      orientation: vertical;
+      spacing: 6;
+
+      Box {
+        margin-bottom: 12;
+        margin-end: 12;
+        margin-start: 12;
+        margin-top: 12;
+        spacing: 6;
+        vexpand: true;
+
+        Box source_box {
+          margin-end: 12;
+          hexpand: true;
+          orientation: vertical;
+          spacing: 6;
+
+          Stack importer_ui_stack {
+            margin-bottom: 12;
+            margin-end: 12;
+            margin-start: 12;
+            margin-top: 12;
+          }
+
+          Box {
+            Label image_count {
+              halign: start;
+              hexpand: true;
+              use-underline: true;
+              valign: center;
+            }
+
+            Spinner preview_spinner {
+            }
+          }
+
+          ScrolledWindow images_list_scrolled {
+            focusable: true;
+            hscrollbar-policy: never;
+            vexpand: true;
+            hexpand: true;
+          }
+        }
+
+        Box {
+          margin-start: 12;
+          orientation: vertical;
+          spacing: 6;
+
+          Label {
+            label: _("Destination _Folder:");
+            mnemonic-widget: destination_folders;
+            use-underline: true;
+            xalign: 0;
+          }
+
+          ScrolledWindow {
+            focusable: true;
+            hscrollbar-policy: never;
+            vexpand: true;
+
+            ListView destination_folders {
+              focusable: true;
+              vexpand: true;
+            }
+          }
+
+          Label destination_help {
+            margin-bottom: 6;
+            margin-end: 6;
+            margin-start: 6;
+            margin-top: 6;
+            xalign: 0;
+            wrap: true;
+            hexpand: false;
+          }
+
+          Expander {
+            expanded: true;
+            focusable: true;
+
+            Box {
+              margin-bottom: 6;
+              margin-end: 6;
+              margin-start: 18;
+              margin-top: 6;
+              orientation: vertical;
+              spacing: 6;
+
+              Box {
+                homogeneous: true;
+                spacing: 6;
+
+                Label {
+                  label: _("_Date Sorting:");
+                  mnemonic-widget: date_sorting_combo;
+                  use-underline: true;
+                  xalign: 0.0;
+                }
+
+                DropDown date_sorting_combo {}
+              }
+            }
+
+            [label]
+            Label {
+              label: _("_Options");
+              use-underline: true;
+            }
+          }
+
+          Expander {
+            expanded: true;
+            focusable: true;
+
+            Box {
+              margin-bottom: 6;
+              margin-end: 6;
+              margin-start: 18;
+              margin-top: 6;
+              orientation: vertical;
+              spacing: 6;
+
+              Frame preset_frame {
+                child: DropDown preset_combo {
+                  margin-start: 6;
+                  margin-end: 6;
+                  margin-top: 6;
+                  margin-bottom: 6;
+                };
+
+                margin-bottom: 6;
+                margin-top: 6;
+
+                [label]
+                Label {
+                  label: _("Presets:");
+                  margin-start: 6;
+                  margin-top: 6;
+                  mnemonic-widget: preset_combo;
+                }
+              }
+
+              Frame date_frame {
+                child: Box {
+                  orientation: vertical;
+                  spacing: 4;
+
+                  DropDown date_tz_combo {
+                    margin-start: 6;
+                    margin-end: 6;
+                    margin-top: 6;
+                  }
+
+                  Label label5 {
+                    label: _("You can still change this after importing the pictures.");
+                    margin-bottom: 4;
+                    margin-end: 4;
+                    margin-start: 4;
+                    margin-top: 4;
+                    xalign: 0;
+                    styles [
+                      "dim-label"
+                    ]
+                    wrap: true;
+                  }
+                };
+
+                margin-bottom: 6;
+                margin-top: 6;
+
+                [label]
+                Label {
+                  label: _("Date:");
+                  margin-start: 6;
+                  margin-top: 6;
+                  mnemonic-widget: date_tz_combo;
+                }
+              }
+
+              Frame attributes_frame {
+                child: ScrolledWindow attributes_scrolled {
+                  focusable: true;
+                  hscrollbar-policy: never;
+                  margin-bottom: 6;
+                  margin-start: 6;
+                  margin-top: 6;
+                  vexpand: true;
+                };
+
+                margin-bottom: 6;
+                margin-top: 6;
+                vexpand: true;
+
+                [label]
+                Label {
+                  label: _("Attributes:");
+                  margin-start: 6;
+                  margin-top: 6;
+                }
+              }
+            }
+
+            [label]
+            Label {
+              label: _("Metadata");
+            }
+          }
+        }
+      }
+    }
+  };
+}

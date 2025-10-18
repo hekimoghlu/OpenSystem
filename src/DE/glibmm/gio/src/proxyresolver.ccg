@@ -1,0 +1,64 @@
+/* Copyright (C) 2010 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <utility>
+#include <glibmm/error.h>
+#include <glibmm/exceptionhandler.h>
+#include <glibmm/vectorutils.h>
+#include <giomm/slot_async.h>
+
+namespace Gio
+{
+
+std::vector<Glib::ustring>
+ProxyResolver::lookup(const Glib::ustring& uri)
+{
+  GError* gerror = nullptr;
+  auto retvalue = Glib::ArrayHandler<Glib::ustring>::array_to_vector(
+    g_proxy_resolver_lookup(gobj(), uri.c_str(), nullptr, &(gerror)), Glib::OWNERSHIP_DEEP);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+
+  return retvalue;
+}
+
+void
+ProxyResolver::lookup_async(const Glib::ustring& uri, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_proxy_resolver_lookup_async(
+    gobj(), uri.c_str(), Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+ProxyResolver::lookup_async(const Glib::ustring& uri, const SlotAsyncReady& slot)
+{
+  // Create a copy of the slot.
+  // A pointer to it will be passed through the callback's data parameter
+  // and deleted in the callback.
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_proxy_resolver_lookup_async(
+    gobj(), uri.c_str(), nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+} // namespace Gio

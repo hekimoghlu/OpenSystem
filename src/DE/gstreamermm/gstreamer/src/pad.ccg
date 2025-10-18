@@ -1,0 +1,445 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/buffer.h>
+#include <gstreamermm/caps.h>
+#include <gstreamermm/element.h>
+#include <gstreamermm/event.h>
+#include <gstreamermm/padtemplate.h>
+#include <gstreamermm/iterator.h>
+#include <gstreamermm/message.h>
+#include <gstreamermm/bus.h>
+
+_PINCLUDE(glibmm/private/object_p.h)
+_PINCLUDE(gstreamermm/private/object_p.h)
+
+namespace
+{
+
+extern "C"
+{
+static GstPadProbeReturn Pad_Probe_gstreamermm_callback(GstPad* pad, GstPadProbeInfo* probe_info, void* data)
+{
+  Gst::Pad::SlotProbe* the_slot = static_cast<Gst::Pad::SlotProbe*>(data);
+  Glib::RefPtr<Gst::Pad> pad_wrapper = Glib::wrap(pad, true);
+  try
+  {
+      return static_cast<GstPadProbeReturn>((*the_slot)(pad_wrapper, Glib::wrap(probe_info, true)));
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return GST_PAD_PROBE_DROP;
+}
+
+static void Pad_Probe_gstreamermm_callback_disconnect(void* data)
+{
+  Gst::Pad::SlotProbe* the_slot = static_cast<Gst::Pad::SlotProbe*>(data);
+
+  if(the_slot)
+    delete the_slot;
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+Pad::Pad(PadDirection dir)
+  : _CONSTRUCT("name", nullptr, "direction", dir)
+{}
+
+Pad::Pad(const Glib::RefPtr<const Gst::PadTemplate>& templ,
+  const Glib::ustring& name)
+  : _CONSTRUCT("name", (name.empty() ? nullptr : name.c_str()),
+    "direction", (templ ? static_cast<GstPadDirection>(templ->get_direction())
+      : GST_PAD_UNKNOWN),
+    "template", Glib::unwrap(templ))
+{
+  if(!templ)
+    gstreamermm_handle_error(
+      "Gst::Pad::Pad(const Glib::RefPtr<Gst::PadTemplate>&, "
+      "const Glib::ustring&): Failed to construct pad (name = " + name + ") "
+      "from null template.");
+}
+
+Pad::Pad(const Glib::RefPtr<const Gst::PadTemplate>& templ)
+  : _CONSTRUCT("name", nullptr,
+    "direction", (templ ? static_cast<GstPadDirection>(templ->get_direction())
+      : GST_PAD_UNKNOWN),
+    "template", Glib::unwrap(templ))
+{
+  if(!templ)
+    gstreamermm_handle_error(
+      "Gst::Pad::Pad(const Glib::RefPtr<Gst::PadTemplate>&): Failed to "
+      "construct pad from null template.");
+}
+
+void Pad::exception_handler()
+{
+  Glib::RefPtr<Element> parent = parent.cast_dynamic(get_parent());
+  
+  if (!parent)
+  {
+    Glib::exception_handlers_invoke();
+    return;
+  }
+
+  Glib::RefPtr<Message> error_msg;
+
+  try
+  {
+    throw;
+  }
+  catch(const Glib::Error& error)
+  {
+    Glib::Error err = error;
+    error_msg = MessageError::create(parent, err, "glibmm exception");
+  }
+  catch(const std::exception& ex)
+  {
+    Glib::Error err(GST_CORE_ERROR, GST_CORE_ERROR_FAILED, ex.what());
+    error_msg = MessageError::create(parent, err, "standard exception");
+  }
+  catch(...)
+  {
+    Glib::Error err(GST_CORE_ERROR, GST_CORE_ERROR_FAILED, "");
+    error_msg = MessageError::create(parent, err, "unknown error type");
+  }
+
+  parent->post_message(std::move(error_msg));
+}
+
+gulong Pad::add_probe(PadProbeType mask, const SlotProbe& slot)
+{
+    SlotProbe* slot_copy = new SlotProbe(slot);
+    return gst_pad_add_probe(gobj(), static_cast<GstPadProbeType>(mask), &Pad_Probe_gstreamermm_callback, slot_copy, &Pad_Probe_gstreamermm_callback_disconnect);
+}
+
+FlowReturn Pad::get_range(guint64 offset, guint size, Glib::RefPtr<Gst::Buffer>& buffer)
+{
+  GstBuffer* c_buffer = nullptr;
+  GstFlowReturn result = gst_pad_get_range(gobj(), offset, size, &c_buffer);
+  buffer = Glib::wrap(c_buffer, false);
+  return FlowReturn(result);
+}
+
+FlowReturn Pad::pull_range(guint64 offset, guint size, Glib::RefPtr<Gst::Buffer>& buffer)
+{
+  GstBuffer* c_buffer = nullptr;
+  GstFlowReturn result = gst_pad_pull_range(gobj(), offset, size, &c_buffer);
+  buffer = Glib::wrap(c_buffer, false);
+  return FlowReturn(result);
+}
+
+bool Pad::query_position(Format& format) const
+{
+  return gst_pad_query_position(const_cast<GstPad*>(gobj()), (GstFormat)format, nullptr);
+}
+
+bool Pad::query_duration(Format& format) const
+{
+  return gst_pad_query_duration(const_cast<GstPad*>(gobj()), (GstFormat)format, nullptr);
+}
+
+GstFlowReturn Pad::Pad_Chain_gstreamermm_callback(GstPad* pad, GstObject*, GstBuffer *buffer)
+{
+  //FIXME: It's made like vfunc wrappers, but why there is no reffing of pad?
+  Gst::Pad *pad_wrapper = dynamic_cast<Gst::Pad*>
+    (static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)pad)
+      )
+    );
+  g_assert(pad);
+
+  try
+  {
+    Glib::RefPtr<Buffer> buffer_wrapped = Glib::wrap(buffer, false);  //manage object
+
+    return static_cast<GstFlowReturn>(
+      pad_wrapper->slot_chain(Glib::wrap(pad, true),  //take copy
+                              buffer_wrapped
+                           ));
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return GST_FLOW_ERROR;
+}
+
+gboolean Pad::Pad_Query_gstreamermm_callback(GstPad* pad, GstObject*, GstQuery* query)
+{
+  Gst::Pad *pad_wrapper = dynamic_cast<Gst::Pad*>
+    (static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)pad)
+      )
+    );
+  g_assert(pad);
+
+  try
+  {
+    //We cannot make copy of query, since some elements fail to answer the query if it's refcount>1 (is not writtable)
+    Glib::RefPtr<Query> query_wrapped = Glib::wrap(query, false);
+
+    gboolean res = pad_wrapper->slot_query(Glib::wrap(pad, true), query_wrapped);
+    
+    //we have to increase refcount, since freeing RefPtr will decrease it which would be inaccurate here, since the
+    //caller is responsible for managing the object (see "transfer none" on this parameter)
+    query_wrapped->reference();
+    return res;
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return false;
+}
+
+gboolean Pad::Pad_Event_gstreamermm_callback(GstPad* pad, GstObject*, GstEvent* event)
+{
+  Gst::Pad *pad_wrapper = dynamic_cast<Gst::Pad*>
+    (static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)pad)
+      )
+    );
+  g_assert(pad);
+
+  try
+  {
+    //we don't make copy, since ownership is transfered to the callee ("transfer full")
+    Glib::RefPtr<Event> event_wrapped = Glib::wrap(event, false);
+
+    return pad_wrapper->slot_event(Glib::wrap(pad, true), event_wrapped);
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return false;
+}
+
+gboolean Pad::Pad_Activate_gstreamermm_callback(GstPad* pad, GstObject*)
+{
+  Gst::Pad *pad_wrapper = dynamic_cast<Gst::Pad*>
+    (static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)pad)
+      )
+    );
+  g_assert(pad);
+
+  try
+  {
+    return pad_wrapper->slot_activate(Glib::wrap(pad, true));
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return false;
+}
+
+gboolean Pad::Pad_Activatemode_gstreamermm_callback(GstPad* pad, GstObject*, GstPadMode mode, gboolean active)
+{
+  Gst::Pad *pad_wrapper = dynamic_cast<Gst::Pad*>
+    (static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)pad)
+      )
+    );
+  g_assert(pad);
+
+  try
+  {
+    return pad_wrapper->slot_activatemode(Glib::wrap(pad, true), static_cast<PadMode>(mode), active);
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return false;
+}
+
+GstFlowReturn Pad::Pad_Getrange_gstreamermm_callback(GstPad* pad, GstObject*, guint64 offset, guint length, GstBuffer **buffer)
+{
+  Gst::Pad *pad_wrapper = dynamic_cast<Gst::Pad*>
+    (static_cast<Glib::ObjectBase*>(
+      Glib::ObjectBase::_get_current_wrapper((GObject*)pad)
+      )
+    );
+  g_assert(pad);
+  Glib::RefPtr<Buffer> buf = Glib::wrap(*buffer, false);
+  try
+  {
+    return static_cast<GstFlowReturn>(
+    		pad_wrapper->slot_getrange(Glib::wrap(pad, true), offset, length, buf)
+    		);
+  }
+  catch(...)
+  {
+    pad_wrapper->exception_handler();
+  }
+
+  return GST_FLOW_ERROR;
+}
+
+void Pad::set_chain_function(const SlotChain& slot)
+{
+  slot_chain = slot;
+  gst_pad_set_chain_function(GST_PAD(gobj()), &Pad_Chain_gstreamermm_callback);
+}
+
+void Pad::set_query_function(const SlotQuery& slot)
+{
+	slot_query = slot;
+	gst_pad_set_query_function(GST_PAD(gobj()), &Pad_Query_gstreamermm_callback);
+}
+
+void Pad::set_event_function(const SlotEvent& slot)
+{
+	slot_event = slot;
+	gst_pad_set_event_function(GST_PAD(gobj()), &Pad_Event_gstreamermm_callback);
+}
+
+bool Pad::push_event(const Glib::RefPtr<Gst::Event>& event)
+{
+  event->reference();
+  return gst_pad_push_event(gobj(), event->gobj());
+}
+
+void Pad::set_activate_function(const SlotActivate& slot)
+{
+  slot_activate = slot;
+  gst_pad_set_activate_function(GST_PAD(gobj()), &Pad_Activate_gstreamermm_callback);
+}
+
+void Pad::set_activatemode_function(const SlotActivatemode& slot)
+{
+  slot_activatemode= slot;
+  gst_pad_set_activatemode_function(GST_PAD(gobj()), &Pad_Activatemode_gstreamermm_callback);
+}
+
+void Pad::set_getrange_function(const SlotGetrange& slot)
+{
+  slot_getrange = slot;
+  gst_pad_set_getrange_function(GST_PAD(gobj()), &Pad_Getrange_gstreamermm_callback);
+}
+
+bool Pad::is_ghost_pad() const
+{
+	return GST_IS_GHOST_PAD(gobj());
+}
+
+bool Pad::is_proxy_pad() const
+{
+	return GST_IS_PROXY_PAD(gobj());
+}
+
+bool Pad::send_event(const Glib::RefPtr<Gst::Event>& event)
+{
+  event->reference();
+  return gst_pad_send_event(gobj(), event->gobj());
+}
+
+
+
+PadProbeInfo::PadProbeInfo()
+: gobj_(g_try_new(GstPadProbeInfo, 1)),
+  take_ownership(true)
+{
+  // Handle possible memory allocation failure.
+  if(!gobj_)
+  {
+    gstreamermm_handle_error(
+      "Failed to allocate a new Gst::PadProbeInfo.");
+  }
+}
+
+PadProbeInfo::PadProbeInfo(GstPadProbeInfo& castitem, bool take_ownership)
+: gobj_(&castitem),
+  take_ownership(take_ownership)
+{
+}
+
+PadProbeInfo::PadProbeInfo(GstPadProbeInfo* castitem, bool take_copy)
+: take_ownership(take_copy)
+{
+  if(take_copy)
+  {
+    gobj_ = (g_try_new(GstPadProbeInfo, 1));
+
+    if(!gobj_)
+    {
+        gstreamermm_handle_error(
+              "Failed to allocate a new Gst::PadProbeInfo.");
+        return;
+    }
+
+    if(castitem)
+      *gobj_ = *castitem;
+  }
+  else
+  {
+    gobj_ = castitem;
+  }
+}
+
+PadProbeInfo::PadProbeInfo(const PadProbeInfo& other)
+: gobj_(g_try_new(GstPadProbeInfo, 1)),
+  take_ownership(true)
+{
+  if(!gobj_)
+  {
+    gstreamermm_handle_error("Failed to allocate a new Gst::PadProbeInfo.");
+    return;
+  }
+
+  // I can do it, because there is no dynamic allocated memory in pad
+  *gobj_ = *other.gobj_;
+}
+
+PadProbeInfo::~PadProbeInfo()
+{
+  if(take_ownership)
+    g_free(gobj_);
+}
+
+PadProbeType PadProbeInfo::get_type() const
+{
+  return static_cast<PadProbeType>(GST_PAD_PROBE_INFO_TYPE(gobj()));
+}
+
+} //namespace Gst
+
+namespace Glib
+{
+Gst::PadProbeInfo wrap(GstPadProbeInfo* probe_info, bool take_copy)
+{
+  return Gst::PadProbeInfo(probe_info, take_copy);
+}
+}

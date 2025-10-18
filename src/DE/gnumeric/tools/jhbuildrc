@@ -1,0 +1,26 @@
+# -*- mode: python -*-
+
+# A list of the modules to build.  Defaults to the Gnome Desktop and
+# developer platform.
+#moduleset = '/gnome/src/gnumeric/tools/moduleset'
+moduleset = 'http://svn.gnome.org/svn/gnumeric/trunk/tools/moduleset'
+modules = [ 'gnumeric' ]
+
+# the prefix to configure/install modules to (must have write access)
+prefix		= os.path.expanduser('~/gnome/build')
+checkoutroot	= os.path.expanduser('~/gnome/src')
+
+# if you do not want to use system-installed libraries for your builds, comment
+# out the lines below
+addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', 'lib', 'pkgconfig'))
+addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', 'share', 'pkgconfig'))
+
+# On SMP systems you may use something like this to improve compilation time:
+# be aware that not all modules compile correctly with make -j2
+#make_args = '-j2'
+
+autogenargs += ' --prefix='+prefix 
+# disable gnome-vfs, it is not required for basic builds
+module_autogenargs['libgsf']	= autogenargs + """ --without-gnome-vfs --without-bonobo"""
+# We disabled gnome-vfs in gsf, disable gnome to match
+module_autogenargs['gnumeric']	= autogenargs + """ --without-gnome"""

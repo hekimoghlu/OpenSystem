@@ -1,0 +1,440 @@
+Gio name="GLib"
+* cheader_filename="gio/gio.h"
+*.cancellable#parameter nullable default=null
+*.io_priority#parameter default=GLib.Priority.DEFAULT
+*.*.cancellable#parameter nullable default=null
+*.*.io_priority#parameter default=GLib.Priority.DEFAULT
+
+// Needs to be in gio-unix-2.0
+DesktopAppInfo* skip
+DesktopAppLaunchCallback skip
+FileDescriptorBased* skip
+Unix* skip
+UnixSocketAddressType skip=false
+UnixFDList skip=false cheader_filename="gio/gunixfdlist.h"
+unix_* skip
+// UnixSocketAddress.abstract#property skip
+DBusConnection
+	.call_with_unix_fd_list*.fd_list default=null
+	.call_with_unix_fd_list*.out_fd_list nullable default=null
+DBusProxy
+	.call_with_unix_fd*.*fd_list nullable default=null
+
+// Move constants around
+FILE_ATTRIBUTE_* parent="GLib.FileAttribute" name="FILE_ATTRIBUTE_(.*)"
+*_EXTENSION_POINT_NAME parent="GLib.IOExtensionPoint" name="(.*)_EXTENSION_POINT_NAME"
+TLS_DATABASE_* parent="GLib.TlsDatabase" name="TLS_DATABASE_(.*)"
+VOLUME_IDENTIFIER_KIND_* parent="GLib.VolumeIdentifier" name="VOLUME_IDENTIFIER_KIND_(.*)"
+MENU_* parent="GLib.Menu" name="MENU_(.*)"
+
+content_type_* parent="GLib.ContentType" name="content_type_(.*)"
+
+bus_* parent="GLib.Bus" name="bus_(.*)"
+bus_get skip
+bus_get_sync skip
+bus_get_finish skip
+bus_own_name skip
+bus_own_name_with_closures name="own_name"
+  .bus_acquired_closure type="owned GLib.BusAcquiredCallback?" default=null
+  .name_acquired_closure type="owned GLib.BusNameAcquiredCallback?" default=null
+  .name_lost_closure type="owned GLib.BusNameLostCallback?" default=null
+bus_own_name_on_connection skip
+bus_own_name_on_connection_with_closures name="own_name_on_connection"
+  .name_acquired_closure type="owned GLib.BusNameAcquiredCallback?" default=null
+  .name_lost_closure type="owned GLib.BusNameLostCallback?" default=null
+bus_watch_name_on_connection skip
+bus_watch_name_on_connection_with_closures name="watch_name_on_connection"
+  .name_appeared_closure type="owned GLib.BusNameAppearedCallback?" default=null
+  .name_vanished_closure type="owned GLib.BusNameVanishedCallback?" default=null
+bus_watch_name skip
+bus_watch_name_with_closures name="watch_name"
+  .name_appeared_closure type="owned GLib.BusNameAppearedCallback?" default=null
+  .name_vanished_closure type="owned GLib.BusNameVanishedCallback?" default=null
+
+dbus_* parent="GLib.DBus" name="dbus_(.*)"
+dbus_address_get_for_bus_sync parent="GLib.BusType" name="get_address_sync"
+
+*_settings_backend_new parent="GLib.SettingsBackend" cheader_filename="gio/gsettingsbackend.h" feature_test_macro="G_SETTINGS_ENABLE_BACKEND"
+SETTINGS_BACKEND_EXTENSION_POINT_NAME cheader_filename="gio/gsettingsbackend.h" feature_test_macro="G_SETTINGS_ENABLE_BACKEND"
+SettingsBackend
+  .* cheader_filename="gio/gsettingsbackend.h" feature_test_macro="G_SETTINGS_ENABLE_BACKEND"
+  .changed_tree.tree type="GLib.Tree<string,GLib.Variant>"
+  .flatten_tree.tree type="GLib.Tree<string,GLib.Variant>"
+  .get_permission unowned=false skip=false
+  .write_tree.tree type="GLib.Tree<string,GLib.Variant>"
+
+Action
+  .parameter_type nullable
+  .state nullable
+  .state_type nullable
+PropertyAction
+  .state nullable
+ActionEntry
+  .*#field skip
+ActionGroup
+  .get_action_*#virtual_method virtual
+  .has_action#virtual_method virtual
+  .query_action#virtual_method virtual
+Application
+  .local_command_line.arguments unowned
+Application.run.argv default=null
+ApplicationCommandLine
+  .print skip=false printf_format
+  .printerr skip=false printf_format
+BufferedInputStream
+  .peek.offset default=0
+Cancellable
+  .connect.callback type="owned GLib.Func<GLib.Cancellable>"
+  .set_error_if_cancelled throws="GLib.IOError"
+  .source_new skip=false parent="GLib.CancellableSource" symbol_type="constructor" name="new"
+Credentials
+  .get_native skip=false
+DatagramBased
+  .condition_check#virtual_method virtual name="datagram_condition_check" no_wrapper
+  .condition_wait#virtual_method virtual name="datagram_condition_wait" no_wrapper
+  .create_source#method type="GLib.DatagramBasedSource"
+  .create_source#virtual_method virtual name="datagram_create_source" type="GLib.DatagramBasedSource" no_wrapper
+  .receive_messages#virtual_method virtual name="datagram_receive_messages" no_wrapper
+  .send_messages#virtual_method virtual name="datagram_send_messages" no_wrapper
+DataInputStream
+  .read_* throws="GLib.IOError"
+  .read_line_finish_utf8 skip
+  .read_line_utf8.length default=null
+DataOutputStream
+  .put_* throws="GLib.IOError"
+DBusAuthObserver.authorize_authenticated_peer virtual
+DBusConnection
+  .*.observer#parameter default=null
+  .send_message_with_reply*.out_serial default=null
+  .send_message_with_reply_finish throws="GLib.IOError"
+  .send_message_with_reply_sync throws="GLib.IOError"
+DBusInterfaceSkeleton
+  .get_vtable skip=false nullable unowned=false
+DBusMessage
+  .new_* skip=false symbol_type="constructor"
+  .new_method_error printf_format
+  .get_header_fields type="uchar[]"
+  .print.indent default=0
+DBus*Info
+  .*#field unowned=false
+DBus*VTable
+  .*#field delegate_target=false
+DBusInterface
+  .get_object skip=false
+DBusMethodInvocation
+  .get_user_data skip=false
+  .return_error skip=false
+  .return_error_valist skip=false
+  .take_error skip=false
+  .take_error.error owned
+DBusObjectManagerClient
+  .get_name_owner nullable
+  .name_owner nullable
+DBusServer
+  .new_sync.observer default=null
+Drive
+  .get_sort_key#virtual_method virtual
+File
+  .load_bytes.etag_out default=null
+  .load_contents.cancellable#parameter default=()
+  .monitor_dir* throws="GLib.IOError"
+  .monitor_file throws="GLib.IOError"
+  .replace_contents.contents ctype="const char*"
+  .replace_contents_async.contents ctype="const char*"
+  .replace_contents_bytes_async finish_name="g_file_replace_contents_finish"
+IOExtension
+  .ref_class skip=false
+IOModuleScope
+  .new skip=false symbol_type="constructor"
+io_error_from_errno type="int" name="io_error__from_errno"
+IOStream
+  .close virtual vfunc_name="close_fn" throws="GLib.IOError"
+  .close_finish throws="GLib.IOError"
+  .input_stream abstract
+  .output_stream abstract
+  .closed skip=false
+InetAddress
+  .to_bytes type="unowned uint8[]" skip=false
+InputStream
+  .close abstract vfunc_name="close_fn" throws="GLib.IOError"
+  .close_finish throws="GLib.IOError"
+  .read abstract vfunc_name="read_fn" throws="GLib.IOError"
+  .read.buffer out=false
+  .read_all throws="GLib.IOError"
+  .read_all.buffer out=false
+  .read_all_async.buffer out=false
+  .read_all_async.io_priority default=()
+  .read_all_async.cancellable default=()
+  .read_async.buffer out=false
+  .read_finish throws="GLib.IOError"
+  .skip throws="GLib.IOError"
+  .skip_finish throws="GLib.IOError"
+ListModel
+  .get_item#virtual_method skip
+  .get_item#method skip=false abstract type="GLib.Object?"
+ListStore
+  .find_with_equal_func.equal_func type_arguments="GLib.Object"
+  .find_with_equal_func_full.equal_func type_arguments="GLib.Object"
+  .insert_sorted.compare_func type_arguments="GLib.Object"
+  .sort.compare_func type_arguments="GLib.Object"
+MemoryInputStream
+  .add_data.destroy default=GLib.g_free
+MemoryInputStream
+  .new_from_data.destroy default=GLib.g_free
+MemoryOutputStream
+  .get_data type="unowned uint8[]"
+  .steal_data type="uint8[]"
+  .destroy_function skip=false type="GLib.DestroyNotify?"
+  .realloc_function skip=false type="GLib.ReallocFunc?"
+MenuItem
+  .get_attribute skip=false
+  .set_action_and_target skip=false
+  .set_attribute skip=false
+MenuModel
+  .get_item_attribute skip=false
+  .get_item_attributes.attributes out type="GLib.HashTable<string,GLib.Variant>?"
+Mount
+  .get_sort_key#virtual_method virtual
+Notification
+  .add_button_with_target skip=false
+  .set_default_action_and_target skip=false
+OutputStream
+  .close abstract vfunc_name="close_fn" throws="GLib.IOError"
+  .close_finish throws="GLib.IOError"
+  .splice throws="GLib.IOError"
+  .splice_finish throws="GLib.IOError"
+  .write abstract vfunc_name="write_fn" throws="GLib.IOError"
+  .write_fn skip
+  .write_finish throws="GLib.IOError"
+  .write_all throws="GLib.IOError"
+  .write_all_async.io_priority default=()
+  .write_all_async.cancellable default=()
+PropertyAction
+  .name skip
+  .parameter_type skip
+  .state_type skip
+Resolver
+  .lookup_service#virtual_method skip=false name="lookup_service_fn" type="GLib.List<GLib.SrvTarget>"
+  .lookup_service_async#virtual_method skip=false name="lookup_service_fn_async" finish_name="g_resolver_lookup_service_finish"
+Settings
+  .get skip=false sentinel=""
+  .set skip=false sentinel=""
+SettingsSchemaSource
+  .lookup nullable
+SimpleAction
+  .enabled skip
+  .name skip
+  .parameter_type skip
+  .state skip
+  .state_type skip
+SimpleAsyncResult
+  .get_source_tag skip=false
+  .run_in_thread skip=false
+  .set_error skip=false printf_format
+  .set_error_va skip=false
+  .take_error skip=false
+  .new skip
+  .new_error skip
+  .new_from_error skip
+SimpleProxyResolver
+  .new symbol_type="constructor"
+Socket
+  .condition_wait throws="GLib.IOError"
+  .connection_factory_create_connection parent="GLib.SocketConnection" name="factory_create_connection" symbol_type="function"
+  .create_source skip=false type="GLib.SocketSource"
+  .receive.buffer out=false ctype="gchar*"
+  .receive_from.buffer out=false ctype="gchar*"
+  .receive_with_blocking.buffer out=false ctype="gchar*"
+  .send.buffer ctype="const gchar*"
+  .send_to.buffer ctype="const gchar*"
+  .send_with_blocking.buffer ctype="const gchar*"
+SocketControlMessage
+  .serialize.data type="uint8[]"
+SocketListener
+  .accept*.source_object#parameter default=null
+srv_target_list_sort type_arguments="GLib.SrvTarget" skip=false
+srv_target_list_sort.targets type_arguments="GLib.SrvTarget" owned
+Subprocess
+  .new skip=false throws="GLib.Error"
+  .new.error skip
+  .new.argv0 skip
+  .communicate*.cancellable#parameter default=()
+SubprocessLauncher
+  .set_child_setup skip=false
+Task
+  .attach_source skip=false
+  .attach_source.callback type="TaskSourceFunc"
+  .new skip
+  .run_in_thread* skip=false
+  .report_error skip
+  .report_new_error skip
+  .return_new_error skip=false printf_format
+TlsPassword
+  .set_value#virtual_method.value owned
+  .set_value#virtual_method.destroy default=GLib.free
+Vfs
+  .deserialize_icon skip=false unowned=false
+  // TODO: should probably be a simple generic
+  .local_file_add_info.extra_data default=null
+  .local_file_add_info.free_extra_data nullable default=null
+Volume
+  .get_activation_root nullable
+  .get_sort_key#virtual_method virtual
+  .mount_fn finish_vfunc_name="mount_finish"
+ZlibCompressor
+  .new.level default=-1
+Converter
+  .convert.outbuf nullable=false
+File
+  // FIXME: gir-parser gets confused by async *and* notified callbacks at the same time
+  .copy_async skip
+  .copy_finish skip
+  .copy*.progress_callback default=null
+  .load_partial_contents_async skip
+  .load_partial_contents_finish skip
+  .move.progress_callback default=null
+Icon
+  .new_for_string nullable
+  .to_tokens skip
+Initable
+  .new* skip=false throws="GLib.Error"
+  .new throws="GLib.Error"
+  .new.error skip
+  .newv skip=false type="GLib.Object"
+PollableInputStream
+  .create_source type="GLib.PollableSource"
+  .read_nonblocking.buffer type="uint8[]" array_length_idx=1 out=false
+  .read_nonblocking#virtual_method name="read_nonblocking_fn" no_wrapper
+PollableOutputStream
+  .create_source type="GLib.PollableSource"
+  .write_nonblocking#virtual_method name="write_nonblocking_fn" no_wrapper
+  .writev_nonblocking#virtual_method name="writev_nonblocking_fn" no_wrapper
+TlsClientConnection
+  .new nullable
+  .accepted_cas type="GLib.List<GLib.ByteArray>"
+TlsFileDatabase
+  .new nullable
+TlsServerConnection
+  .new nullable
+InputMessage
+  .address type="GLib.SocketAddress**"
+  .control_messages type="GLib.SocketControlMessage**"
+  .num_control_messages type="uint*"
+OutputMessage
+  .vectors array
+  .control_messages nullable
+DBusError errordomain
+DBusSubtreeEnumerateFunc unowned=false skip=false
+pollable_source_new parent="GLib.PollableSource" symbol_type="constructor" name="new"
+pollable_source_new_full parent="GLib.PollableSource" symbol_type="constructor" name="new_full"
+  .child_source default=null
+pollable_stream_read
+  .buffer type="uint8[]" array_length_idx=2
+
+
+content_types_get_registered parent="GLib.ContentType" name="list_registered"
+io_modules_* parent="GLib.IOModule" name="io_modules_(.*)"
+io_scheduler_cancel_all_jobs parent="GLib.IOSchedulerJob" name="cancel_all"
+io_scheduler_push_job parent="GLib.IOSchedulerJob" name="push"
+network_monitor_get_default skip
+proxy_get_default_for_protocol skip
+proxy_resolver_get_default skip
+simple_async_report_gerror_in_idle parent="GLib.SimpleAsyncResult" name="report_gerror_in_idle"
+tls_* skip
+
+AsyncInitable
+  .new* skip
+  .init_async#virtual_method virtual
+
+// Bug #684358: GDBusConnection `closed` signal conficts with property
+DBusConnection
+  .closed#signal name="on_closed"
+
+// Bug #666797: No support for generic methods in GIR parser
+DBusConnection
+  .register_object skip
+
+// Bug #: out + allow-none parameters missing ? in vapi
+LoadableIcon
+  .load.type nullable
+
+// Issue #728: Support non-default error parameter position
+DBusInterfaceGetPropertyFunc.error out unowned=false
+DBusInterfaceSetPropertyFunc.error out unowned=false
+
+// Bug #666799: symbols with moved-to annotations should be deprecated at the old locations
+app_info*#function skip
+async_initable_newv_async skip
+file_* skip
+icon_* skip
+initable_* skip
+
+// Structs incorrectly returned by value
+FileAttributeInfoList
+  .lookup nullable
+
+// Bug #: virtual vs. abstract
+Icon
+  .serialize#virtual_method virtual
+File
+  .*_async#virtual_method virtual
+  .measure_disk_usage#virtual_method virtual
+
+// Back compat
+ApplicationCommandLine
+  .print_literal no_wrapper since=()
+  .printerr_literal no_wrapper since=()
+TlsCertificate abstract=false
+DataInputStream
+  .read_line type="string?"
+  .read_line_finish type="string?"
+  .read_line_finish.length default=null
+  .read_line.length default=null
+
+// delegates with target
+AsyncReadyCallback instance_idx=2
+CancellableSourceFunc instance_idx=1
+DBusProxyTypeFunc instance_idx=3
+DatagramBasedSourceFunc instance_idx=2
+FileMeasureProgressCallback instance_idx=4
+FileProgressCallback instance_idx=2
+FileReadMoreCallback instance_idx=2
+IOSchedulerJobFunc instance_idx=2
+PollableSourceFunc instance_idx=1
+SocketSourceFunc instance_idx=2
+
+// Forward upstream
+*.ref unowned
+ActionGroup
+  .get_action* nullable
+  .get_action_enabled nullable=false
+Application
+  .set_default symbol_type="function"
+Converter
+  .convert.inbuf nullable=false
+DBusSubtreeVTable.enumerate skip=false
+DtlsConnection
+  .get_channel_binding_data#method virtual vfunc_name="get_binding_data" throws="GLib.TlsChannelBindingError"
+File
+  .measure_disk_usage* skip=false
+  .measure_disk_usage*.* default=()
+FileAttributeInfoList
+  .infos array array_length_field="n_infos" unowned=false
+LoadableIcon
+  .load_finish.type nullable default=null
+Socket
+  .receive_message.address nullable
+SocketAddress
+	// Factory method
+	.new_from_native symbol_type="function" name="from_native" nullable
+Task
+  .get_source_object name="get_unowned_source_object" nullable
+TlsBackend
+  .get_certificate_type abstract
+  .get_client_connection_type abstract
+  .get_file_database_type abstract
+  .get_server_connection_type abstract
+TlsConnection
+  .get_channel_binding_data#method virtual vfunc_name="get_binding_data" throws="GLib.TlsChannelBindingError"
+IOStream
+  .splice_async finish_instance=false

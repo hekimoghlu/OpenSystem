@@ -1,0 +1,54 @@
+set(sources
+	e-cal-config-m365.c
+	e-cal-config-m365.h
+	e-book-config-m365.c
+	e-book-config-m365.h
+	e-m365-comp-editor-extension.c
+	e-m365-comp-editor-extension.h
+	e-m365-config-ui-extension.c
+	e-m365-config-ui-extension.h
+	e-m365-edit-calendar-permissions.c
+	e-m365-edit-calendar-permissions.h
+	e-m365-ooo-notificator.c
+	e-m365-ooo-notificator.h
+	e-mail-config-m365-backend.c
+	e-mail-config-m365-backend.h
+	e-mail-config-m365-notebook.c
+	e-mail-config-m365-notebook.h
+	e-mail-config-m365-ooo-page.c
+	e-mail-config-m365-ooo-page.h
+	module-m365-configuration.c
+)
+set(extra_deps camelmicrosoft365-priv)
+set(extra_defines)
+set(extra_cflags
+	${EVOLUTION_CALENDAR_CFLAGS}
+	${EVOLUTION_MAIL_CFLAGS}
+	${EVOLUTION_SHELL_CFLAGS}
+	${LIBECAL_CFLAGS}
+	${LIBEBOOK_CFLAGS}
+)
+set(extra_incdirs
+	${EVOLUTION_CALENDAR_INCLUDE_DIRS}
+	${EVOLUTION_MAIL_INCLUDE_DIRS}
+	${EVOLUTION_SHELL_INCLUDE_DIRS}
+	${LIBECAL_INCLUDE_DIRS}
+	${LIBEBOOK_INCLUDE_DIRS}
+)
+set(extra_ldflags
+	${EVOLUTION_CALENDAR_LDFLAGS}
+	${EVOLUTION_MAIL_LDFLAGS}
+	${EVOLUTION_SHELL_LDFLAGS}
+	${LIBECAL_LDFLAGS}
+	${LIBEBOOK_LDFLAGS}
+)
+
+add_simple_module_m365(module-microsoft365-configuration
+	sources
+	extra_deps
+	extra_defines
+	extra_cflags
+	extra_incdirs
+	extra_ldflags
+	"${evo_moduledir}"
+)

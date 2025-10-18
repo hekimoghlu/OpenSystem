@@ -1,0 +1,3706 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+sub pdb_misc {
+   $author = 'Michael Natterer <mitch@gimp.org> & Sven Neumann <sven@gimp.org>';
+   $copyright = 'Michael Natterer & Sven Neumann';
+   $date = '2004';
+   $since = '2.2';
+}
+
+sub context_push {
+    $blurb = 'Pushes a context onto the top of the plug-in\'s context stack.';
+
+    $help = <<'HELP';
+Creates a new context by copying the current context.
+The copy becomes the new current context for the calling plug-in until it is
+popped again using gimp_context_pop().
+HELP
+
+    &pdb_misc;
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in && plug_in->open)
+    success = gimp_plug_in_context_push (plug_in);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_pop {
+    $blurb = 'Pops the topmost context from the plug-in\'s context stack.';
+
+    $help = <<'HELP';
+Removes the topmost context from the plug-in's context stack.
+The next context on the stack becomes the new current context of the plug-in,
+that is, the context that was active before the corresponding call to gimp_context_push()
+HELP
+
+    &pdb_misc;
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in && plug_in->open)
+    success = gimp_plug_in_context_pop (plug_in);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_defaults {
+    $blurb = 'Reset context settings to their default values.';
+
+    $help = <<'HELP';
+Resets context settings used by various procedures to their
+default value. You should usually call this after a context push
+so that a script which calls procedures affected by context settings will
+not be affected by changes in the global context.
+HELP
+
+    $author = 'Kevin Cozens <kcozens@svn.gnome.org>';
+    $copyright = 'Kevin Cozens';
+    $date = '2011';
+    $since = '2.8';
+
+    %invoke = (
+	code => <<'CODE'
+{
+    gimp_config_reset (GIMP_CONFIG (context));
+}
+CODE
+    );
+}
+
+sub context_list_paint_methods {
+    $blurb = 'Lists the available paint methods.';
+
+    $help = <<'HELP';
+Lists the names of the available paint methods.
+Any of the names can be used for gimp_context_set_paint_method().
+HELP
+
+    &simon_pdb_misc('2007', '2.4');
+
+    @outargs = (
+        { name => 'paint_methods', type => 'strv', void_ret => 1,
+          desc => 'The names of the available paint methods' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  paint_methods = gimp_container_get_name_array (gimp->paint_info_list);
+}
+CODE
+    );
+}
+
+sub context_get_paint_method {
+    $blurb = 'Get the currently active paint method.';
+
+    $help = <<'HELP';
+Returns the name of the currently active paint method.
+HELP
+
+    &mitch_pdb_misc('2005', '2.4');
+
+    @outargs = (
+	{ name  => 'name', type  => 'string',
+	  desc  => 'The name of the active paint method' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintInfo *paint_info = gimp_context_get_paint_info (context);
+
+  if (paint_info)
+    name = g_strdup (gimp_object_get_name (paint_info));
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_paint_method {
+    $blurb = 'Set the active paint method.';
+
+    $help = <<'HELP';
+Sets the active paint method to the named paint method.
+The paint method will be used in all subsequent paint operations.
+The name should be a name of an available paint method.
+Returns an error if no matching paint method is found.
+HELP
+
+    &mitch_pdb_misc('2005', '2.4');
+
+    @inargs = (
+        { name => 'name', type => 'string', non_empty => 1,
+          desc => 'The name of the paint method' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintInfo *paint_info = gimp_pdb_get_paint_info (gimp, name, error);
+
+  if (paint_info)
+    gimp_context_set_paint_info (context, paint_info);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_get_stroke_method {
+    $blurb = 'Get the currently active stroke method.';
+
+    $help = <<'HELP';
+Returns the currently active stroke method.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+	{ name  => 'stroke_method', type  => 'enum GimpStrokeMethod',
+	  desc  => 'The active stroke method' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "method", &stroke_method,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_set_stroke_method {
+    $blurb = 'Set the active stroke method.';
+
+    $help = <<'HELP';
+Sets the active stroke method.
+The method will be used in all subsequent stroke operations.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'stroke_method', type => 'enum GimpStrokeMethod',
+          desc => 'The new stroke method' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "method", stroke_method,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_get_foreground {
+    $blurb = "Get the current GIMP foreground color.";
+
+    $help = <<'HELP';
+Returns the current GIMP foreground color. The foreground
+color is used in a variety of tools such as paint tools, blending, and bucket
+fill.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+        { name => 'foreground', type => 'geglcolor',
+          desc => 'The foreground color' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  foreground = gegl_color_duplicate (gimp_context_get_foreground (context));
+  gimp_color_set_alpha (foreground, 1.0);
+}
+CODE
+    );
+}
+
+sub context_set_foreground {
+    $blurb = "Set the current GIMP foreground color.";
+
+    $help = <<'HELP';
+Sets the current GIMP foreground color. After this is set,
+operations which use foreground such as paint tools, blending, and bucket fill
+will use the new value.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+        { name => 'foreground', type => 'geglcolor', void_ret => 1,
+          desc => 'The foreground color' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_color_set_alpha (foreground, 1.0);
+  gimp_context_set_foreground (context, foreground);
+}
+CODE
+    );
+}
+
+sub context_get_background {
+    $blurb = "Get the current GIMP background color.";
+
+    $help = <<'HELP';
+Returns the current GIMP background color. The background
+color is used in a variety of tools such as blending, erasing (with non-alpha
+images), and image filling.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+        { name => 'background', type => 'geglcolor',
+          desc => 'The background color' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  background = gegl_color_duplicate (gimp_context_get_background (context));
+  gimp_color_set_alpha (background, 1.0);
+}
+CODE
+    );
+}
+
+sub context_set_background {
+    $blurb = "Set the current GIMP background color.";
+
+    $help = <<'HELP';
+Sets the current GIMP background color. After this is set,
+operations which use background such as blending, filling images, clearing,
+and erasing (in non-alpha images) will use the new value.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+        { name => 'background', type => 'geglcolor', void_ret => 1,
+          desc => 'The background color' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_color_set_alpha (background, 1.0);
+  gimp_context_set_background (context, background);
+}
+CODE
+    );
+}
+
+sub context_set_default_colors {
+    $blurb = <<'BLURB';
+Set the current GIMP foreground and background colors to black and white.
+BLURB
+
+    $help = <<'HELP';
+Sets the current GIMP foreground and background colors to their
+initial default values, black and white.
+HELP
+
+    &pdb_misc;
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_context_set_default_colors (context);
+}
+CODE
+    );
+}
+
+sub context_swap_colors {
+    $blurb = 'Swap the current GIMP foreground and background colors.';
+
+    $help = <<'HELP';
+Swaps the current GIMP foreground and background colors, so that
+the new foreground color becomes the old background color and vice versa.
+HELP
+
+    &pdb_misc;
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_context_swap_colors (context);
+}
+CODE
+    );
+}
+
+sub context_get_opacity {
+    $blurb = 'Get the opacity.';
+
+    $help = <<'HELP';
+Returns the opacity setting. The return
+value is a floating point number between 0 and 100.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+        { name => 'opacity', type => '0 <= double <= 100',
+          desc => 'The opacity' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  opacity = gimp_context_get_opacity (context) * 100.0;
+}
+CODE
+    );
+}
+
+sub context_set_opacity {
+    $blurb = 'Set the opacity.';
+
+    $help = <<'HELP';
+Modifies the opacity setting. The value
+should be a floating point number between 0 and 100.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+        { name => 'opacity', type => '0 <= double <= 100',
+          desc => 'The opacity' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_context_set_opacity (context, opacity / 100.0);
+}
+CODE
+    );
+}
+
+sub context_get_paint_mode {
+    $blurb = 'Get the paint mode.';
+
+    $help = <<'HELP';
+Returns the paint-mode setting. The return value
+is an integer which corresponds to the values listed in the argument
+description.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+        { name => 'paint_mode', type => 'enum GimpLayerMode',
+          default => 'GIMP_LAYER_MODE_NORMAL',
+          desc => 'The paint mode' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  paint_mode = gimp_context_get_paint_mode (context);
+}
+CODE
+    );
+}
+
+sub context_set_paint_mode {
+    $blurb = 'Set the paint mode.';
+
+    $help = <<'HELP';
+Modifies the paint_mode setting.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+        { name => 'paint_mode', type => 'enum GimpLayerMode',
+          default => 'GIMP_LAYER_MODE_NORMAL',
+          desc => 'The paint mode' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (paint_mode == GIMP_LAYER_MODE_OVERLAY_LEGACY)
+    paint_mode = GIMP_LAYER_MODE_SOFTLIGHT_LEGACY;
+
+  gimp_context_set_paint_mode (context, paint_mode);
+}
+CODE
+    );
+}
+
+sub context_get_line_width {
+    $blurb = 'Get the line width setting.';
+
+    $help = <<'HELP';
+Returns the line width setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'line_width', type => '0.0 <= double <= 2000.0',
+          desc => 'The line width setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "width", &line_width,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_line_width {
+    $blurb = 'Set the line width setting.';
+
+    $help = <<'HELP';
+Modifies the line width setting for stroking lines.
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'line_width', type => '0.0 <= double <= 2000.0',
+          desc => 'The line width setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "width", line_width,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_line_width_unit {
+    $blurb = 'Get the line width unit setting.';
+
+    $help = <<'HELP';
+Returns the line width unit setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'line_width_unit', type => 'unit',
+          desc => 'The line width unit setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "unit", &line_width_unit,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_line_width_unit {
+    $blurb = 'Set the line width unit setting.';
+
+    $help = <<'HELP';
+Modifies the line width unit setting for stroking lines.
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'line_width_unit', type => 'unit',
+          desc => 'The line width setting unit' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "unit", line_width_unit,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_line_cap_style {
+    $blurb = 'Get the line cap style setting.';
+
+    $help = <<'HELP';
+Returns the line cap style setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'cap_style', type => 'enum GimpCapStyle',
+          desc => 'The line cap style setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "cap-style", &cap_style,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_line_cap_style {
+    $blurb = 'Set the line cap style setting.';
+
+    $help = <<'HELP';
+Modifies the line cap style setting for stroking lines.
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'cap_style', type => 'enum GimpCapStyle',
+          desc => 'The line cap style setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "cap-style", cap_style,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_line_join_style {
+    $blurb = 'Get the line join style setting.';
+
+    $help = <<'HELP';
+Returns the line join style setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'join_style', type => 'enum GimpJoinStyle',
+          desc => 'The line join style setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "join-style", &join_style,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_line_join_style {
+    $blurb = 'Set the line join style setting.';
+
+    $help = <<'HELP';
+Modifies the line join style setting for stroking lines.
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'join_style', type => 'enum GimpJoinStyle',
+          desc => 'The line join style setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "join-style", join_style,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_line_miter_limit {
+    $blurb = 'Get the line miter limit setting.';
+
+    $help = <<'HELP';
+Returns the line miter limit setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'miter_limit', type => '0.0 <= double <= 100.0',
+          desc => 'The line miter limit setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "miter-limit", &miter_limit,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_line_miter_limit {
+    $blurb = 'Set the line miter limit setting.';
+
+    $help = <<'HELP';
+Modifies the line miter limit setting for stroking lines.
+
+A mitered join is converted to a bevelled join if the miter would
+extend to a distance of more than (miter-limit * line-width) from the
+actual join point.
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'miter_limit', type => '0.0 <= double <= 100.0',
+          desc => 'The line miter limit setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "miter-limit", miter_limit,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_line_dash_offset {
+    $blurb = 'Get the line dash offset setting.';
+
+    $help = <<'HELP';
+Returns the line dash offset setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'dash_offset', type => '0.0 <= double <= 2000.0',
+          desc => 'The line dash offset setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_get (options,
+                "dash-offset", &dash_offset,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_line_dash_offset {
+    $blurb = 'Set the line dash offset setting.';
+
+    $help = <<'HELP';
+Modifies the line dash offset setting for stroking lines.
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'dash_offset', type => '0.0 <= double <= 100.0',
+          desc => 'The line dash offset setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "dash-offset", dash_offset,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_line_dash_pattern {
+    $blurb = 'Get the line dash pattern setting.';
+
+    $help = <<'HELP';
+Returns the line dash pattern setting.
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @outargs = (
+        { name => 'dashes', type => 'doublearray', void_ret => 1,
+          desc => 'The line dash pattern setting',
+          array => { desc => 'The number of dashes in the dash_pattern array' } }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  GArray *pattern = gimp_stroke_options_get_dash_info (options);
+
+  dashes = gimp_dash_pattern_to_double_array (pattern, &num_dashes);
+}
+CODE
+    );
+}
+
+sub context_set_line_dash_pattern {
+    $blurb = 'Set the line dash pattern setting.';
+
+    $help = <<'HELP';
+Modifies the line dash pattern setting for stroking lines.
+
+
+The unit of the dash pattern segments is the actual line width used
+for the stroke operation, in other words a segment length of 1.0
+results in a square segment shape (or gap shape).
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_stroke_selection(), gimp_drawable_edit_stroke_item().
+HELP
+
+    &mitch_pdb_misc('2015', '2.10');
+
+    @inargs = (
+        { name => 'dashes', type => 'doublearray',
+          desc => 'The line dash pattern setting',
+          array => { desc => 'The number of dashes in the dash_pattern array' } }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  GArray *pattern = NULL;
+
+  if (num_dashes > 0)
+    {
+      pattern = gimp_dash_pattern_from_double_array (num_dashes, dashes);
+
+      if (! pattern)
+        success = FALSE;
+    }
+
+  if (success)
+    gimp_stroke_options_take_dash_pattern (options, GIMP_DASH_CUSTOM, pattern);
+}
+CODE
+    );
+}
+
+sub context_get_brush {
+    $blurb = 'Get the currently active brush.';
+
+    $help = <<'HELP';
+Returns the currently active brush.
+All paint and stroke operations use this brush.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+	{ name  => 'brush',
+    type  => 'brush',
+	  desc  => 'The active brush' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  brush = gimp_context_get_brush (context);
+}
+CODE
+    );
+}
+
+sub context_set_brush {
+    $blurb = 'Set the active brush.';
+
+    $help = <<'HELP';
+Sets the active brush in the current context.
+The brush will be used in subsequent paint and stroke operations.
+Returns an error when the brush data was uninstalled since the brush object was created.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+        { name => 'brush',
+          type => 'brush',
+          non_empty => 1, no_validate => 1,
+          desc => 'The brush' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_context_set_brush (context, brush);
+}
+CODE
+    );
+}
+
+sub context_get_brush_size {
+    $blurb = 'Get brush size in pixels.';
+    $help = 'Get the brush size in pixels for brush based paint tools.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "size", type => "0 < double",
+          desc => "Brush size in pixels" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "brush-size", &size,
+                   NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_brush_size {
+    $blurb = 'Set brush size in pixels.';
+    $help = 'Set the brush size in pixels for brush based paint tools.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "size", type => "1 <= double <= 10000",
+          desc => "Brush size in pixels" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *options;
+  GList *list;
+
+  options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+  for (list = options; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "brush-size", (gdouble) size,
+                   NULL);
+
+  g_list_free (options);
+}
+CODE
+    );
+}
+
+sub context_set_brush_default_size {
+    $blurb = 'Set brush size to its default.';
+    $help = <<'HELP';
+Set the brush size to the default (max of width and height) for
+paintbrush, airbrush, or pencil tools.
+HELP
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpBrush *brush = gimp_context_get_brush (context);
+
+  if (brush)
+    {
+      GList *options;
+      GList *list;
+
+      options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+      for (list = options; list; list = g_list_next (list))
+        gimp_paint_options_set_default_brush_size (list->data, brush);
+
+      g_list_free (options);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub context_set_brush_aspect_ratio {
+    $blurb = 'Set brush aspect ratio.';
+    $help = 'Set the aspect ratio for brush based paint tools.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "aspect", type => "-20 <= double <= 20",
+          desc => "Aspect ratio" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *options;
+  GList *list;
+
+  options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+  for (list = options; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "brush-aspect-ratio", (gdouble) aspect,
+                   NULL);
+
+  g_list_free (options);
+}
+CODE
+    );
+}
+
+sub context_get_brush_aspect_ratio {
+    $blurb = 'Get brush aspect ratio.';
+    $help = 'Set the aspect ratio for brush based paint tools.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "aspect", type => "-20 <= double <= 20",
+          desc => "Aspect ratio" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "brush-aspect-ratio", &aspect,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_brush_angle {
+    $blurb = 'Set brush angle in degrees.';
+    $help = 'Set the angle in degrees for brush based paint tools.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+	{ name => "angle", type => "-180 <= double <= 180",
+	  desc => "Angle in degrees" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *options;
+  GList *list;
+
+  options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+  for (list = options; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "brush-angle", (gdouble) angle,
+                   NULL);
+
+  g_list_free (options);
+}
+CODE
+    );
+}
+
+sub context_get_brush_angle {
+    $blurb = 'Get brush angle in degrees.';
+    $help = 'Set the angle in degrees for brush based paint tools.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+	{ name => "angle", type => "-180 <= double <= 180",
+	  desc => "Angle in degrees" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "brush-angle", &angle,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_get_brush_spacing {
+    $blurb = 'Get brush spacing as percent of size.';
+    $help = 'Get the brush spacing as percent of size for brush based paint tools.';
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    @outargs = (
+        { name => "spacing", type => "0.01 <= double <= 50.0",
+          desc => "Brush spacing as fraction of size" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "brush-spacing", &spacing,
+                   NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_brush_spacing {
+    $blurb = 'Set brush spacing as percent of size.';
+    $help = 'Set the brush spacing as percent of size for brush based paint tools.';
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    @inargs = (
+        { name => "spacing", type => "0.01 <= double <= 50.0",
+          desc => "Brush spacing as fraction of size" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *options;
+  GList *list;
+
+  options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+  for (list = options; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "brush-spacing", (gdouble) spacing,
+                   NULL);
+
+  g_list_free (options);
+}
+CODE
+    );
+}
+
+sub context_set_brush_default_spacing {
+    $blurb = 'Set brush spacing to its default.';
+    $help = <<'HELP';
+Set the brush spacing to the default  for
+paintbrush, airbrush, or pencil tools.
+HELP
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpBrush *brush = gimp_context_get_brush (context);
+
+  if (brush)
+    {
+      GList *options;
+      GList *list;
+
+      options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+      for (list = options; list; list = g_list_next (list))
+        gimp_paint_options_set_default_brush_spacing (list->data, brush);
+
+      g_list_free (options);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub context_get_brush_hardness {
+    $blurb = 'Get brush hardness in paint options.';
+    $help = 'Get the brush hardness for brush based paint tools.';
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    @outargs = (
+        { name => "hardness", type => "0.0 <= double <= 1.0",
+          desc => "Brush hardness" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "brush-hardness", &hardness,
+                   NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_brush_hardness {
+    $blurb = 'Set brush hardness.';
+    $help = 'Set the brush hardness for brush based paint tools.';
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    @inargs = (
+        { name => "hardness", type => "0.0 <= double <= 1.0",
+          desc => "Brush hardness" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *options;
+  GList *list;
+
+  options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+  for (list = options; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "brush-hardness", (gdouble) hardness,
+                   NULL);
+
+  g_list_free (options);
+}
+CODE
+    );
+}
+
+sub context_set_brush_default_hardness {
+    $blurb = 'Set brush spacing to its default.';
+    $help = <<'HELP';
+Set the brush spacing to the default  for
+paintbrush, airbrush, or pencil tools.
+HELP
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpBrush *brush = gimp_context_get_brush (context);
+
+  if (brush)
+    {
+      GList *options;
+      GList *list;
+
+      options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+      for (list = options; list; list = g_list_next (list))
+        gimp_paint_options_set_default_brush_hardness (list->data, brush);
+
+      g_list_free (options);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub context_get_brush_force {
+    $blurb = 'Get brush force in paint options.';
+    $help = 'Get the brush application force for brush based paint tools.';
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    @outargs = (
+        { name => "force", type => "0.0 <= double <= 1.0",
+          desc => "Brush application force" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "brush-force", &force,
+                   NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_brush_force {
+    $blurb = 'Set brush application force.';
+    $help = 'Set the brush application force for brush based paint tools.';
+
+    &adeath_pdb_misc('2014', '2.10');
+
+    @inargs = (
+        { name => "force", type => "0.0 <= double <= 1.0",
+          desc => "Brush application force" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GList *options;
+  GList *list;
+
+  options = gimp_pdb_context_get_brush_options (GIMP_PDB_CONTEXT (context));
+
+  for (list = options; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "brush-force", (gdouble) force,
+                   NULL);
+
+  g_list_free (options);
+}
+CODE
+    );
+}
+
+sub context_get_dynamics_name {
+    $blurb = 'Get the currently active paint dynamics.';
+
+    $help = <<'HELP';
+Returns the name of the currently active paint dynamics.
+If enabled, all paint operations and stroke operations use
+this paint dynamics to control the application of paint to the image.
+If disabled, the dynamics will be ignored during paint actions.
+
+See gimp_context_are_dynamics_enabled() to enquire whether dynamics are
+used or ignored.
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @outargs = (
+	{ name  => 'name', type  => 'string',
+	  desc  => 'The name of the active paint dynamics' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpDynamics *dynamics = gimp_context_get_dynamics (context);
+
+  if (dynamics)
+    name = g_strdup (gimp_object_get_name (dynamics));
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_dynamics_name {
+    $blurb = 'Set the active paint dynamics.';
+
+    $help = <<'HELP';
+Sets the active paint dynamics.
+The paint dynamics will be used in all subsequent paint operations
+when dynamics are enabled.
+The name should be a name of an installed paint dynamics.
+Returns an  error if no matching paint dynamics is found.
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @inargs = (
+        { name => 'name', type => 'string', non_empty => 1,
+          desc => 'A name of a paint dynamics' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpDynamics *dynamics = GIMP_DYNAMICS (gimp_pdb_get_resource (gimp, GIMP_TYPE_DYNAMICS, name, GIMP_PDB_DATA_ACCESS_READ, error));
+
+  if (dynamics)
+    gimp_context_set_dynamics (context, dynamics);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_are_dynamics_enabled {
+    $blurb = 'Whether the currently active paint dynamics will be applied to painting.';
+
+    $help = <<'HELP';
+Returns whether the currently active paint dynamics (as
+returned by gimp_context_get_dynamics()) is enabled.
+HELP
+
+    &jehan_pdb_misc('2022', '3.0');
+
+    @outargs = (
+	{ name => "enabled", type => 'boolean',
+	  desc => "Whether dynamics enabled or disabled" }
+    );
+
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    enabled = gimp_paint_options_are_dynamics_enabled (options);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_enable_dynamics {
+    $blurb = 'Enables paint dynamics using the active paint dynamics.';
+
+    $help = <<'HELP';
+Enables the active paint dynamics to be used in all subsequent paint operations.
+HELP
+
+    &jehan_pdb_misc('2022', '3.0');
+
+    @inargs = (
+	{ name => "enable", type => 'boolean',
+	  desc => "Whether to enable or disable dynamics" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    gimp_paint_options_enable_dynamics (options, enable);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_get_emulate_brush_dynamics {
+    $blurb = 'Retrieve the currently active stroke option\'s emulate brush dynamics setting.';
+
+    $help = <<'HELP';
+    This procedure returns the emulate brush dynamics property of the currently active stroke options.
+HELP
+
+    $author = 'Massimo Valentini';
+    $copyright = 'Massimo Valentini';
+    $date = '2018';
+    $since = '3.0';
+
+    @outargs = (
+	{ name  => 'emulate_dynamics', type  => 'boolean',
+	  desc  => 'The emulate brush dynamics setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  if (options)
+    g_object_get (options,
+                  "emulate-brush-dynamics", &emulate_dynamics,
+		  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_emulate_brush_dynamics {
+    $blurb = 'Set the stroke option\'s emulate brush dynamics setting.';
+
+    $help = <<'HELP';
+This procedure sets the specified emulate brush dynamics setting.
+The new method will be used in all subsequent stroke
+operations.
+HELP
+
+    $author = 'Massimo Valentini';
+    $copyright = 'Massimo Valentini';
+    $date = '2018';
+    $since = '3.0';
+
+    @inargs = (
+        { name => 'emulate_dynamics', type => 'boolean',
+          desc => 'The new emulate brush dynamics setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpStrokeOptions *options =
+    gimp_pdb_context_get_stroke_options (GIMP_PDB_CONTEXT (context));
+
+  g_object_set (options,
+                "emulate-brush-dynamics", emulate_dynamics,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_get_paint_fade_length {
+    $blurb = 'Get the paint fade length.';
+
+    $help = <<'HELP';
+Get the paint fade length for paint tools and the gradient tool.
+HELP
+
+    $author = 'Alx Sa.';
+    $copyright = 'Alx Sa.';
+    $date = '2025';
+    $since = '3.2';
+
+    @outargs = (
+	{ name  => 'fade_length', type  => '0.0 <= double <= 32767.0',
+	  desc  => 'The paint fade length setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "fade-length", &fade_length,
+		  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_paint_fade_length {
+    $blurb = 'Set the paint fade length.';
+
+    $help = <<'HELP';
+Set the paint fade length for paint tools and the gradient tool.
+HELP
+
+    $author = 'Alx Sa.';
+    $copyright = 'Alx Sa.';
+    $date = '2025';
+    $since = '3.2';
+
+    @inargs = (
+        { name => 'fade_length', type => '0.0 <= double <= 32767.0',
+          desc => 'The paint fade length setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  g_object_set (options,
+                "fade-length", fade_length,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_get_paint_fade_repeat {
+    $blurb = 'Get the paint fade repeat type.';
+
+    $help = <<'HELP';
+Get the paint fade repeat type for paint tools and the gradient tool.
+HELP
+
+    $author = 'Alx Sa.';
+    $copyright = 'Alx Sa.';
+    $date = '2025';
+    $since = '3.2';
+
+    @outargs = (
+	{ name  => 'fade_repeat', type  => 'enum GimpRepeatMode',
+	  desc  => 'The paint fade repeat type setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "fade-repeat", &fade_repeat,
+		  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_paint_fade_repeat {
+    $blurb = 'Set the paint fade repeat type.';
+
+    $help = <<'HELP';
+Set the paint fade repeat type for paint tools and the gradient tool.
+HELP
+
+    $author = 'Alx Sa.';
+    $copyright = 'Alx Sa.';
+    $date = '2025';
+    $since = '3.2';
+
+    @inargs = (
+        { name => 'fade_repeat', type => 'enum GimpRepeatMode',
+          desc => 'The paint fade repeat type setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+  g_object_set (options,
+                "fade-repeat", fade_repeat,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_get_mypaint_brush {
+    $blurb = 'Get the currently active MyPaint brush.';
+
+    $help = <<'HELP';
+Returns the name of the currently active MyPaint brush.
+HELP
+
+    &mitch_pdb_misc('2016', '2.10');
+
+    @outargs = (
+	{ name  => 'name', type  => 'string',
+	  desc  => 'The name of the active MyPaint brush' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpMybrush *brush = gimp_context_get_mybrush (context);
+
+  if (brush)
+    name = g_strdup (gimp_object_get_name (brush));
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_mypaint_brush {
+    $blurb = 'Set a MyPaint brush as the active MyPaint brush.';
+
+    $help = <<'HELP';
+Sets the active MyPaint brush to the named MyPaint brush.
+The brush will be used in all subsequent MyPaint paint operations.
+The name should be a name of an installed MyPaint brush.
+Returns an error if no matching MyPaint brush is found.
+HELP
+
+    &mitch_pdb_misc('2016', '2.10');
+
+    @inargs = (
+        { name => 'name', type => 'string', non_empty => 1,
+          desc => 'A name of a MyPaint brush' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpMybrush *brush = GIMP_MYBRUSH (gimp_pdb_get_resource (gimp, GIMP_TYPE_MYBRUSH, name,
+                                                            GIMP_PDB_DATA_ACCESS_READ, error));
+
+  if (brush)
+    gimp_context_set_mybrush (context, brush);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_get_pattern {
+    $blurb = 'Get the currently active pattern.';
+
+    $help = <<'HELP';
+Returns the active pattern in the current context.
+All clone and bucket-fill operations with patterns will use this
+pattern to control the application of paint to the image.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+	{ name  => 'pattern',
+    type  => 'pattern',
+	  desc  => 'The active pattern' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  pattern = gimp_context_get_pattern (context);
+
+  if (!pattern)
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_pattern {
+    $blurb = 'Set the active pattern.';
+
+    $help = <<'HELP';
+Sets the active pattern in the current context.
+The pattern will be used in subsequent fill operations using a pattern.
+Returns an error when the pattern data was uninstalled since the pattern object was created.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+        { name => 'pattern',
+          type => 'pattern',
+          non_empty => 1, no_validate => 1,
+          desc => 'The pattern' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gimp_context_set_pattern (context, pattern);
+}
+CODE
+    );
+}
+
+sub context_get_gradient {
+    $blurb = 'Get the currently active gradient.';
+
+    $help = <<'HELP';
+Returns the currently active gradient.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+	{ name  => 'gradient',
+    type  => 'gradient',
+	  desc  => 'The active gradient' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gradient = gimp_context_get_gradient (context);
+
+  if (!gradient)
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_gradient {
+    $blurb = 'Sets the active gradient.';
+
+    $help = <<'HELP';
+Sets the active gradient in the current context.
+The gradient will be used in subsequent gradient operations.
+Returns an error when the gradient data was uninstalled since the gradient object was created.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+    	{ name => 'gradient',
+        type => 'gradient',
+        non_empty => 1, no_validate => 1,
+    	  desc => 'The gradient' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_gradient (context, gradient);
+}
+CODE
+    );
+}
+
+sub context_set_gradient_fg_bg_rgb {
+    $blurb = 'Sets the built-in FG-BG RGB gradient as the active gradient.';
+
+    $help = <<'HELP';
+Sets the built-in FG-BG RGB gradient as the active
+gradient. The gradient will be used for subsequent gradient operations.
+HELP
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_gradient (context,
+                             gimp_gradients_get_fg_bg_rgb (gimp));
+}
+CODE
+    );
+}
+
+sub context_set_gradient_fg_bg_hsv_cw {
+    $blurb = 'Sets the built-in FG-BG HSV (cw) gradient as the active gradient.';
+
+    $help = <<'HELP';
+Sets the built-in FG-BG HSV (cw) gradient as the active
+gradient. The gradient will be used for subsequent gradient operations.
+HELP
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_gradient (context,
+                             gimp_gradients_get_fg_bg_hsv_cw (gimp));
+}
+CODE
+    );
+}
+
+sub context_set_gradient_fg_bg_hsv_ccw {
+    $blurb = 'Sets the built-in FG-BG HSV (ccw) gradient as the active gradient.';
+
+    $help = <<'HELP';
+Sets the built-in FG-BG HSV (ccw) gradient as the active
+gradient. The gradient will be used for subsequent gradient operations.
+HELP
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_gradient (context,
+                             gimp_gradients_get_fg_bg_hsv_ccw (gimp));
+}
+CODE
+    );
+}
+
+sub context_set_gradient_fg_transparent {
+    $blurb = 'Sets the built-in FG-Transparent gradient as the active gradient.';
+
+    $help = <<'HELP';
+Sets the built-in FG-Transparent gradient as the active gradient.
+The gradient will be used for subsequent gradient operations.
+HELP
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_gradient (context,
+                             gimp_gradients_get_fg_transparent (gimp));
+}
+CODE
+    );
+}
+
+sub context_set_gradient_blend_color_space {
+    $blurb = 'Set the gradient blend color space.';
+    $help = 'Set the gradient blend color space for paint tools and the gradient tool.';
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    @inargs = (
+	{ name => "blend_color_space", type => 'enum GimpGradientBlendColorSpace',
+	  desc => "Blend color space" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *options;
+  GList         *list;
+
+  options = gimp_pdb_context_get_paint_options_list (GIMP_PDB_CONTEXT (context));
+
+  for (list = GIMP_LIST (options)->queue->head; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "gradient-blend-color-space", blend_color_space,
+                   NULL);
+}
+CODE
+    );
+}
+
+sub context_get_gradient_blend_color_space {
+    $blurb = 'Get the gradient blend color space.';
+    $help = 'Get the gradient blend color space for paint tools and the gradient tool.';
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    @outargs = (
+	{ name => "blend_color_space", type => 'enum GimpGradientBlendColorSpace',
+	  desc => "Color blend space" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "gradient-blend-color-space", &blend_color_space,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_gradient_repeat_mode {
+    $blurb = 'Set the gradient repeat mode.';
+    $help = 'Set the gradient repeat mode for paint tools and the gradient tool.';
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    @inargs = (
+	{ name => "repeat_mode", type => 'enum GimpRepeatMode',
+	  desc => "Repeat mode" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *options;
+  GList         *list;
+
+  options = gimp_pdb_context_get_paint_options_list (GIMP_PDB_CONTEXT (context));
+
+  for (list = GIMP_LIST (options)->queue->head; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "gradient-repeat", repeat_mode,
+                   NULL);
+}
+CODE
+    );
+}
+
+sub context_get_gradient_repeat_mode {
+    $blurb = 'Get the gradient repeat mode.';
+    $help = 'Get the gradient repeat mode for paint tools and the gradient tool.';
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    @outargs = (
+	{ name => "repeat_mode", type => 'enum GimpRepeatMode',
+	  desc => "Repeat mode" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "gradient-repeat", &repeat_mode,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_gradient_reverse {
+    $blurb = 'Set the gradient reverse setting.';
+    $help = 'Set the gradient reverse setting for paint tools and the gradient tool.';
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    @inargs = (
+	{ name => "reverse", type => 'boolean',
+	  desc => "Reverse" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  GimpContainer *options;
+  GList         *list;
+
+  options = gimp_pdb_context_get_paint_options_list (GIMP_PDB_CONTEXT (context));
+
+  for (list = GIMP_LIST (options)->queue->head; list; list = g_list_next (list))
+    g_object_set (list->data,
+                  "gradient-reverse", reverse,
+                   NULL);
+}
+CODE
+    );
+}
+
+sub context_get_gradient_reverse {
+    $blurb = 'Get the gradient reverse setting.';
+    $help = 'Get the gradient reverse setting for paint tools and the gradient tool.';
+
+    &mitch_pdb_misc('2018', '2.10');
+
+    @outargs = (
+	{ name => "reverse", type => 'boolean',
+	  desc => "Reverse" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  /* all options should have the same value, so pick a random one */
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-paintbrush");
+
+  if (options)
+    g_object_get (options,
+                  "gradient-reverse", &reverse,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_get_palette {
+    $blurb = 'Get the currently active palette.';
+
+    $help = <<'HELP';
+Returns the currently active palette.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+	{ name  => 'palette',
+    type  => 'palette',
+	  desc  => 'The active palette' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  palette = gimp_context_get_palette (context);
+
+  if (!palette)
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_set_palette {
+    $blurb = 'Set the active palette.';
+
+    $help = <<'HELP';
+Sets the active palette in the current context.
+The palette will be used in subsequent paint operations.
+Returns an error when the palette data was uninstalled since the palette object was created.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+    	{ name => 'palette',
+        type => 'palette',
+        non_empty => 1, no_validate => 1,
+    	  desc => 'The palette' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_palette (context, palette);
+}
+CODE
+    );
+}
+
+
+sub context_get_font {
+    $blurb = 'Get the currently active font.';
+
+    $help = <<'HELP';
+Returns the currently active font.
+HELP
+
+    &pdb_misc;
+
+    @outargs = (
+	{ name  => 'font',
+    type  => 'font',
+	  desc  => 'The active font' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  font = gimp_context_get_font (context);
+}
+CODE
+    );
+}
+
+sub context_set_font {
+    $blurb = 'Set the active font.';
+
+    $help = <<'HELP';
+Sets the active font in the current context.
+The font will be used in subsequent text operations.
+Returns an error when the font data was uninstalled since the font object was created.
+HELP
+
+    &pdb_misc;
+
+    @inargs = (
+    	{ name => 'font',
+        type => 'font',
+        non_empty => 1, no_validate => 1,
+    	  desc => 'The font' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  gimp_context_set_font (context, font);
+}
+CODE
+    );
+}
+
+sub context_get_antialias {
+    $blurb = 'Get the antialias setting.';
+
+    $help = <<'HELP';
+Returns the antialias setting.
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @outargs = (
+        { name => 'antialias', type => 'boolean',
+          desc => 'The antialias setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "antialias", &antialias,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_antialias {
+    $blurb = 'Set the antialias setting.';
+
+    $help = <<'HELP';
+Modifies the antialias setting. If antialiasing is
+turned on, the edges of selected region will contain intermediate
+values which give the appearance of a sharper, less pixelized edge.
+This should be set as TRUE most of the time unless a binary-only
+selection is wanted.
+
+
+This setting affects the following procedures:
+gimp_image_select_color(), gimp_image_select_contiguous_color(),
+gimp_image_select_round_rectangle(), gimp_image_select_ellipse(),
+gimp_image_select_polygon(), gimp_image_select_item(),
+gimp_drawable_edit_bucket_fill(), gimp_drawable_edit_stroke_item(),
+gimp_drawable_edit_stroke_selection().
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @inargs = (
+        { name => 'antialias', type => 'boolean',
+          desc => 'The antialias setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "antialias", antialias,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_feather {
+    $blurb = 'Get the feather setting.';
+
+    $help = <<'HELP';
+Returns the feather setting.
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @outargs = (
+        { name => 'feather', type => 'boolean',
+          desc => 'The feather setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "feather", &feather,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_feather {
+    $blurb = 'Set the feather setting.';
+
+    $help = <<'HELP';
+Modifies the feather setting. If the feather option is
+enabled, selections will be blurred before combining. The blur is a
+gaussian blur; its radii can be controlled using
+gimp_context_set_feather_radius().
+
+
+This setting affects the following procedures:
+gimp_image_select_color(), gimp_image_select_contiguous_color(),
+gimp_image_select_rectangle(), gimp_image_select_round_rectangle(),
+gimp_image_select_ellipse(), gimp_image_select_polygon(),
+gimp_image_select_item().
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @inargs = (
+        { name => 'feather', type => 'boolean',
+          desc => 'The feather setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "feather", feather,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_feather_radius {
+    $blurb = 'Get the feather radius setting.';
+
+    $help = <<'HELP';
+Returns the feather radius setting.
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @outargs = (
+        { name => 'feather_radius_x', type => '0 <= double <= 1000', void_ret => 1,
+          desc => 'The horizontal feather radius' },
+        { name => 'feather_radius_y', type => '0 <= double <= 1000',
+          desc => 'The vertical feather radius' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "feather-radius-x", &feather_radius_x,
+                "feather-radius-y", &feather_radius_y,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_feather_radius {
+    $blurb = 'Set the feather radius setting.';
+
+    $help = <<'HELP';
+Modifies the feather radius setting.
+
+
+This setting affects all procedures that are affected
+by gimp_context_set_feather().
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @inargs = (
+        { name => 'feather_radius_x', type => '0 <= double <= 1000',
+          desc => 'The horizontal feather radius' },
+        { name => 'feather_radius_y', type => '0 <= double <= 1000',
+          desc => 'The vertical feather radius' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "feather-radius-x", feather_radius_x,
+                "feather-radius-y", feather_radius_y,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_sample_merged {
+    $blurb = 'Get the sample merged setting.';
+
+    $help = <<'HELP';
+Returns the sample merged setting.
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @outargs = (
+        { name => 'sample_merged', type => 'boolean',
+          desc => 'The sample merged setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "sample-merged", &sample_merged,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_sample_merged {
+    $blurb = 'Set the sample merged setting.';
+
+    $help = <<'HELP';
+Modifies the sample merged setting. If an operation
+depends on the colors of the pixels present in a drawable, like when
+doing a seed fill, this setting controls whether the pixel data from
+the given drawable is used ('sample-merged' is FALSE), or the
+pixel data from the composite image ('sample-merged' is TRUE. This is
+equivalent to sampling for colors after merging all visible layers).
+
+
+This setting affects the following procedures:
+gimp_image_select_color(), gimp_image_select_contiguous_color(),
+gimp_drawable_edit_bucket_fill().
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @inargs = (
+        { name => 'sample_merged', type => 'boolean',
+          desc => 'The sample merged setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "sample-merged", sample_merged,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_sample_criterion {
+    $blurb = 'Get the sample criterion setting.';
+
+    $help = <<'HELP';
+Returns the sample criterion setting.
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @outargs = (
+        { name => 'sample_criterion', type => 'enum GimpSelectCriterion',
+          desc => 'The sample criterion setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "sample-criterion", &sample_criterion,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_sample_criterion {
+    $blurb = 'Set the sample criterion setting.';
+
+    $help = <<'HELP';
+Modifies the sample criterion setting. If an operation
+depends on the colors of the pixels present in a drawable, like when
+doing a seed fill, this setting controls how color similarity is
+determined. SELECT_CRITERION_COMPOSITE is the default value.
+
+
+This setting affects the following procedures:
+gimp_image_select_color(), gimp_image_select_contiguous_color(),
+gimp_drawable_edit_bucket_fill().
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @inargs = (
+        { name => 'sample_criterion', type => 'enum GimpSelectCriterion',
+          desc => 'The sample criterion setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "sample-criterion", sample_criterion,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_sample_threshold {
+    $blurb = 'Get the sample threshold setting.';
+
+    $help = <<'HELP';
+Returns the sample threshold setting.
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @outargs = (
+        { name => 'sample_threshold', type => '0.0 <= double <= 1.0',
+          desc => 'The sample threshold setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "sample-threshold", &sample_threshold,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_sample_threshold {
+    $blurb = 'Set the sample threshold setting.';
+
+    $help = <<'HELP';
+Modifies the sample threshold setting. If an operation
+depends on the colors of the pixels present in a drawable, like when
+doing a seed fill, this setting controls what is "sufficiently close"
+to be considered a similar color. If the sample threshold has not been
+set explicitly, the default threshold set in gimprc will be used.
+
+
+This setting affects the following procedures:
+gimp_image_select_color(), gimp_image_select_contiguous_color(),
+gimp_drawable_edit_bucket_fill().
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @inargs = (
+        { name => 'sample_threshold', type => '0.0 <= double <= 1.0',
+          desc => 'The sample threshold setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "sample-threshold", sample_threshold,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_sample_threshold_int {
+    $blurb = 'Get the sample threshold setting as an integer value.';
+
+    $help = <<'HELP';
+Returns the sample threshold setting as an integer
+value. See gimp_context_get_sample_threshold().
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @outargs = (
+        { name => 'sample_threshold', type => '0 <= int32 <= 255',
+          desc => 'The sample threshold setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  gdouble threshold;
+
+  g_object_get (context,
+                "sample-threshold", &threshold,
+                NULL);
+
+  sample_threshold = (gint) (threshold * 255.99);
+}
+CODE
+    );
+}
+
+sub context_set_sample_threshold_int {
+    $blurb = 'Set the sample threshold setting as an integer value.';
+
+    $help = <<'HELP';
+Modifies the sample threshold setting as an integer
+value. See gimp_context_set_sample_threshold().
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @inargs = (
+        { name => 'sample_threshold', type => '0 <= int32 <= 255',
+          desc => 'The sample threshold setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "sample-threshold", (gdouble) sample_threshold / 255.0,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_sample_transparent {
+    $blurb = 'Get the sample transparent setting.';
+
+    $help = <<'HELP';
+Returns the sample transparent setting.
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @outargs = (
+        { name => 'sample_transparent', type => 'boolean',
+          desc => 'The sample transparent setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "sample-transparent", &sample_transparent,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_sample_transparent {
+    $blurb = 'Set the sample transparent setting.';
+
+    $help = <<'HELP';
+Modifies the sample transparent setting. If an
+operation depends on the colors of the pixels present in a drawable,
+like when doing a seed fill, this setting controls whether
+transparency is considered to be a unique selectable color. When this
+setting is TRUE, transparent areas can be selected or filled.
+
+
+This setting affects the following procedures:
+gimp_image_select_color(), gimp_image_select_contiguous_color(),
+gimp_drawable_edit_bucket_fill().
+HELP
+
+    &mitch_pdb_misc('2011', '2.8');
+
+    @inargs = (
+        { name => 'sample_transparent', type => 'boolean',
+          desc => 'The sample transparent setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "sample-transparent", sample_transparent,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_diagonal_neighbors {
+    $blurb = 'Get the diagonal neighbors setting.';
+
+    $help = <<'HELP';
+Returns the diagonal neighbors setting.
+HELP
+
+    $author = 'Ell';
+    $copyright = 'Ell';
+    $date = '2016';
+    $since = '2.10';
+
+    @outargs = (
+        { name => 'diagonal_neighbors', type => 'boolean',
+          desc => 'The diagonal neighbors setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "diagonal-neighbors", &diagonal_neighbors,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_diagonal_neighbors {
+    $blurb = 'Set the diagonal neighbors setting.';
+
+    $help = <<'HELP';
+Modifies the diagonal neighbors setting. If the affected
+region of an operation is based on a seed point, like when doing a seed
+fill, then, when this setting is TRUE, all eight neighbors of each pixel
+are considered when calculating the affected region; in contrast, when
+this setting is FALSE, only the four orthogonal neighbors of each pixel
+are considered.
+
+
+This setting affects the following procedures:
+gimp_image_select_contiguous_color(), gimp_drawable_edit_bucket_fill().
+HELP
+
+    $author = 'Ell';
+    $copyright = 'Ell';
+    $date = '2016';
+    $since = '2.10';
+
+    @inargs = (
+        { name => 'diagonal_neighbors', type => 'boolean',
+          desc => 'The diagonal neighbors setting' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "diagonal-neighbors", diagonal_neighbors,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_distance_metric {
+    $blurb = 'Get the distance metric used in some computations.';
+
+    $help = <<'HELP';
+Returns the distance metric in the current context.
+See gimp_context_set_distance_metric() to know more about its usage.
+HELP
+
+    &jehan_pdb_misc('2018', '2.10');
+
+    @outargs = (
+        { name => 'metric', type => 'enum GeglDistanceMetric',
+          desc => 'The distance metric' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "distance-metric", &metric,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_set_distance_metric {
+    $blurb = 'Set the distance metric used in some computations.';
+
+    $help = <<'HELP';
+Modifies the distance metric used in some computations,
+such as gimp_drawable_edit_gradient_fill(). In particular, it does not
+change the metric used in generic distance computation on canvas, as
+in the Measure tool.
+
+
+This setting affects the following procedures:
+gimp_drawable_edit_gradient_fill().
+HELP
+
+    &jehan_pdb_misc('2018', '2.10');
+
+    @inargs = (
+        { name => 'metric', type => 'enum GeglDistanceMetric',
+          desc => 'The distance metric' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "distance-metric", metric,
+		NULL);
+}
+CODE
+    );
+}
+
+sub context_get_interpolation {
+    $blurb = 'Get the interpolation type.';
+
+    $help = <<'HELP';
+Returns the interpolation setting. The return value
+is an integer which corresponds to the values listed in the argument
+description. If the interpolation has not been set explicitly by
+gimp_context_set_interpolation(), the default interpolation set in
+gimprc will be used.
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @outargs = (
+        { name => 'interpolation', type => 'enum GimpInterpolationType',
+          desc => 'The interpolation type' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "interpolation", &interpolation,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_interpolation {
+    $blurb = 'Set the interpolation type.';
+
+    $help = <<'HELP';
+Modifies the interpolation setting.
+
+
+This setting affects affects the following procedures:
+gimp_item_transform_flip(), gimp_item_transform_perspective(),
+gimp_item_transform_rotate(), gimp_item_transform_scale(),
+gimp_item_transform_shear(), gimp_item_transform_2d(),
+gimp_item_transform_matrix(), gimp_image_scale(), gimp_layer_scale().
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @inargs = (
+        { name => 'interpolation', type => 'enum GimpInterpolationType',
+          desc => 'The interpolation type' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "interpolation", interpolation,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_transform_direction {
+    $blurb = 'Get the transform direction.';
+
+    $help = <<'HELP';
+Returns the transform direction. The return value
+is an integer which corresponds to the values listed in the argument
+description.
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @outargs = (
+        { name => 'transform_direction', type => 'enum GimpTransformDirection',
+          desc => 'The transform direction' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "transform-direction", &transform_direction,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_transform_direction {
+    $blurb = 'Set the transform direction.';
+
+    $help = <<'HELP';
+Modifies the transform direction setting.
+
+
+This setting affects affects the following procedures:
+gimp_item_transform_flip(), gimp_item_transform_perspective(),
+gimp_item_transform_rotate(), gimp_item_transform_scale(),
+gimp_item_transform_shear(), gimp_item_transform_2d(),
+gimp_item_transform_matrix().
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @inargs = (
+        { name => 'transform_direction', type => 'enum GimpTransformDirection',
+          desc => 'The transform direction' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "transform-direction", transform_direction,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_transform_resize {
+    $blurb = 'Get the transform resize type.';
+
+    $help = <<'HELP';
+Returns the transform resize setting. The return value
+is an integer which corresponds to the values listed in the argument
+description.
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @outargs = (
+        { name => 'transform_resize', type => 'enum GimpTransformResize',
+          desc => 'The transform resize type' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_get (context,
+                "transform-resize", &transform_resize,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_set_transform_resize {
+    $blurb = 'Set the transform resize type.';
+
+    $help = <<'HELP';
+Modifies the transform resize setting. When transforming
+pixels, if the result of a transform operation  has a different size
+than the original area, this setting determines how the resulting area
+is sized.
+
+
+This setting affects affects the following procedures:
+gimp_item_transform_flip(), gimp_item_transform_flip_simple(),
+gimp_item_transform_perspective(), gimp_item_transform_rotate(),
+gimp_item_transform_rotate_simple(), gimp_item_transform_scale(),
+gimp_item_transform_shear(), gimp_item_transform_2d(),
+gimp_item_transform_matrix().
+HELP
+
+    &mitch_pdb_misc('2010', '2.8');
+
+    @inargs = (
+        { name => 'transform_resize', type => 'enum GimpTransformResize',
+          desc => 'The transform resize type' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  g_object_set (context,
+                "transform-resize", transform_resize,
+                NULL);
+}
+CODE
+    );
+}
+
+sub context_get_ink_size {
+    $blurb = 'Get ink blob size in pixels.';
+    $help = 'Get the ink blob size in pixels for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "size", type => "0 <= double <= 200",
+          desc => "ink blob size in pixels" }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "size", &size,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_size {
+    $blurb = 'Set ink blob size in pixels.';
+    $help = 'Set the ink blob size in pixels for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "size", type => "0 <= double <= 200",
+          desc => "ink blob size in pixels" }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "size", size,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_angle {
+    $blurb = 'Get ink angle in degrees.';
+    $help = 'Get the ink angle in degrees for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "angle", type => "-90 <= double <= 90",
+          desc => "ink angle in degrees" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "tilt-angle", &angle,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_angle {
+    $blurb = 'Set ink angle in degrees.';
+    $help = 'Set the ink angle in degrees for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "angle", type => "-90 <= double <= 90",
+          desc => "ink angle in degrees" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "tilt-angle", angle,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_size_sensitivity {
+    $blurb = 'Get ink size sensitivity.';
+    $help = 'Get the ink size sensitivity for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "size", type => "0 <= double <= 1",
+          desc => "ink size sensitivity" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "size-sensitivity", &size,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_size_sensitivity {
+    $blurb = 'Set ink size sensitivity.';
+    $help = 'Set the ink size sensitivity for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "size", type => "0 <= double <= 1",
+          desc => "ink size sensitivity" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "size-sensitivity", size,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_tilt_sensitivity {
+    $blurb = 'Get ink tilt sensitivity.';
+    $help = 'Get the ink tilt sensitivity for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "tilt", type => "0 <= double <= 1",
+          desc => "ink tilt sensitivity" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "tilt-sensitivity", &tilt,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_tilt_sensitivity {
+    $blurb = 'Set ink tilt sensitivity.';
+    $help = 'Set the ink tilt sensitivity for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "tilt", type => "0 <= double <= 1",
+          desc => "ink tilt sensitivity" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "tilt-sensitivity", tilt,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_speed_sensitivity {
+    $blurb = 'Get ink speed sensitivity.';
+    $help = 'Get the ink speed sensitivity for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "speed", type => "0 <= double <= 1",
+          desc => "ink speed sensitivity" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "vel-sensitivity", &speed,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_speed_sensitivity {
+    $blurb = 'Set ink speed sensitivity.';
+    $help = 'Set the ink speed sensitivity for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "speed", type => "0 <= double <= 1",
+          desc => "ink speed sensitivity" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "vel-sensitivity", speed,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_blob_type {
+    $blurb = 'Get ink blob type.';
+    $help = 'Get the ink blob type for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "type", type => "enum GimpInkBlobType",
+          desc => "Ink blob type" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "blob-type", &type,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_blob_type {
+    $blurb = 'Set ink blob type.';
+    $help = 'Set the ink blob type for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "type", type => "enum GimpInkBlobType",
+          desc => "Ink blob type" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "blob-type", type,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_blob_aspect_ratio {
+    $blurb = 'Get ink blob aspect ratio.';
+    $help = 'Get the ink blob aspect ratio for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "aspect", type => "1 <= double <= 10",
+          desc => "ink blob aspect ratio" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_get (options,
+                  "blob-aspect", &aspect,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_blob_aspect_ratio {
+    $blurb = 'Set ink blob aspect ratio.';
+    $help = 'Set the ink blob aspect ratio for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "aspect", type => "1 <= double <= 10",
+          desc => "ink blob aspect ratio" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "blob-aspect", aspect,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_get_ink_blob_angle {
+    $blurb = 'Get ink blob angle in degrees.';
+    $help = 'Get the ink blob angle in degrees for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @outargs = (
+        { name => "angle", type => "-180 <= double <= 180",
+          desc => "ink blob angle in degrees" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    {
+      g_object_get (options,
+		    "blob-angle", &angle,
+		    NULL);
+      angle *= (180-0 / G_PI);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+
+sub context_set_ink_blob_angle {
+    $blurb = 'Set ink blob angle in degrees.';
+    $help = 'Set the ink blob angle in degrees for ink tool.';
+
+    &ejs_pdb_misc('2012', '2.8');
+
+    @inargs = (
+        { name => "angle", type => "-180 <= double <= 180",
+          desc => "ink blob angle in degrees" }
+    );
+
+    %invoke = (
+    code => <<'CODE'
+{
+  GimpPaintOptions *options =
+    gimp_pdb_context_get_paint_options (GIMP_PDB_CONTEXT (context),
+                                        "gimp-ink");
+
+  if (options)
+    g_object_set (options,
+                  "blob-angle", (gdouble) angle * G_PI / 180.0,
+                  NULL);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub context_get_resource {
+    $blurb = 'Get the currently active resource for a type.';
+
+    $help = <<'HELP';
+Returns the currently active resource for the given type name.
+HELP
+
+    $lib_private = 1;
+
+    &jehan_pdb_misc('2023', '3.0');
+
+    @inargs = (
+        { name => 'type_name', type => 'string', non_empty => 1,
+          desc => 'The name of the resource type' }
+    );
+    @outargs = (
+	{ name  => 'resource',
+          type  => 'resource',
+	  desc  => 'The active resource' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GType type = g_type_from_name (type_name);
+
+  if (g_type_is_a (type, GIMP_TYPE_RESOURCE))
+    {
+      if (type == GIMP_TYPE_BRUSH)
+        resource = GIMP_RESOURCE (gimp_context_get_brush (context));
+      else if (type == GIMP_TYPE_FONT)
+        resource = GIMP_RESOURCE (gimp_context_get_font (context));
+      else if (type == GIMP_TYPE_GRADIENT)
+        resource = GIMP_RESOURCE (gimp_context_get_gradient (context));
+      else if (type == GIMP_TYPE_PATTERN)
+        resource = GIMP_RESOURCE (gimp_context_get_pattern (context));
+      else if (type == GIMP_TYPE_PALETTE)
+        resource = GIMP_RESOURCE (gimp_context_get_palette (context));
+      else
+        /* Should not be reached. */
+        success = FALSE;
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+@headers = qw(<cairo.h>
+              "core/gimp.h"
+              "core/gimp-gradients.h"
+              "core/gimpcontainer.h"
+              "core/gimpdashpattern.h"
+              "core/gimpdatafactory.h"
+              "core/gimpdynamics.h"
+              "core/gimplist.h"
+              "core/gimpmybrush.h"
+              "core/gimpstrokeoptions.h"
+              "paint/gimppaintoptions.h"
+              "libgimpcolor/gimpcolor.h"
+              "libgimpconfig/gimpconfig.h"
+              "plug-in/gimpplugin.h"
+              "plug-in/gimpplugin-context.h"
+              "plug-in/gimppluginmanager.h"
+              "gimppdb-utils.h"
+              "gimppdbcontext.h");
+
+@procs = qw(context_push context_pop context_set_defaults
+            context_list_paint_methods
+            context_get_paint_method context_set_paint_method
+            context_get_stroke_method context_set_stroke_method
+            context_get_foreground context_set_foreground
+            context_get_background context_set_background
+            context_set_default_colors
+            context_swap_colors
+            context_get_opacity context_set_opacity
+            context_get_paint_mode context_set_paint_mode
+            context_get_line_width context_set_line_width
+            context_get_line_width_unit context_set_line_width_unit
+            context_get_line_cap_style context_set_line_cap_style
+            context_get_line_join_style context_set_line_join_style
+            context_get_line_miter_limit context_set_line_miter_limit
+            context_get_line_dash_offset context_set_line_dash_offset
+            context_get_line_dash_pattern context_set_line_dash_pattern
+            context_get_brush context_set_brush
+            context_get_brush_size
+            context_set_brush_size context_set_brush_default_size
+            context_get_brush_aspect_ratio context_set_brush_aspect_ratio
+            context_get_brush_angle context_set_brush_angle
+            context_get_brush_spacing
+            context_set_brush_spacing context_set_brush_default_spacing
+            context_get_brush_hardness
+            context_set_brush_hardness context_set_brush_default_hardness
+            context_get_brush_force
+            context_set_brush_force
+            context_get_dynamics_name context_set_dynamics_name
+            context_are_dynamics_enabled context_enable_dynamics
+            context_get_emulate_brush_dynamics context_set_emulate_brush_dynamics
+            context_get_mypaint_brush context_set_mypaint_brush
+            context_get_pattern context_set_pattern
+            context_get_gradient context_set_gradient
+            context_set_gradient_fg_bg_rgb
+            context_set_gradient_fg_bg_hsv_cw
+            context_set_gradient_fg_bg_hsv_ccw
+            context_set_gradient_fg_transparent
+            context_get_gradient_blend_color_space context_set_gradient_blend_color_space
+            context_get_gradient_repeat_mode context_set_gradient_repeat_mode
+            context_get_gradient_reverse context_set_gradient_reverse
+            context_get_paint_fade_length context_set_paint_fade_length
+            context_get_paint_fade_repeat context_set_paint_fade_repeat
+            context_get_palette context_set_palette
+            context_get_font context_set_font
+            context_get_antialias context_set_antialias
+            context_get_feather context_set_feather
+            context_get_feather_radius context_set_feather_radius
+            context_get_sample_merged context_set_sample_merged
+            context_get_sample_criterion context_set_sample_criterion
+            context_get_sample_threshold context_set_sample_threshold
+            context_get_sample_threshold_int context_set_sample_threshold_int
+            context_get_sample_transparent context_set_sample_transparent
+            context_get_diagonal_neighbors context_set_diagonal_neighbors
+            context_get_distance_metric context_set_distance_metric
+            context_get_interpolation context_set_interpolation
+            context_get_transform_direction context_set_transform_direction
+            context_get_transform_resize context_set_transform_resize
+            context_get_ink_size context_set_ink_size
+            context_get_ink_angle context_set_ink_angle
+            context_get_ink_size_sensitivity context_set_ink_size_sensitivity
+            context_get_ink_tilt_sensitivity context_set_ink_tilt_sensitivity
+            context_get_ink_speed_sensitivity context_set_ink_speed_sensitivity
+            context_get_ink_blob_type context_set_ink_blob_type
+            context_get_ink_blob_aspect_ratio context_set_ink_blob_aspect_ratio
+            context_get_ink_blob_angle context_set_ink_blob_angle
+            context_get_resource);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Context';
+$doc_title = 'gimpcontext';
+$doc_short_desc = "Functions to manipulate a plug-in's context.";
+$doc_long_desc = "Functions to manipulate a plug-in's context.";
+
+1;

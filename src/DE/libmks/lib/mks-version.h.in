@@ -1,0 +1,96 @@
+/* mks-version.h.in
+ *
+ * Copyright 2023 Christian Hergert
+ *
+ * This library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of the
+ * License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#pragma once
+
+#if !defined(MKS_INSIDE) && !defined(MKS_COMPILATION)
+# error "Only <libmks.h> can be included directly."
+#endif
+
+/**
+ * SECTION:mksversion
+ * @short_description: mks version checking
+ *
+ * mks provides macros to check the version of the library
+ * at compile-time
+ */
+
+/**
+ * MKS_MAJOR_VERSION:
+ *
+ * mks major version component (e.g. 1 if %MKS_VERSION is 1.2.3)
+ */
+#define MKS_MAJOR_VERSION (@MAJOR_VERSION@)
+
+/**
+ * MKS_MINOR_VERSION:
+ *
+ * mks minor version component (e.g. 2 if %MKS_VERSION is 1.2.3)
+ */
+#define MKS_MINOR_VERSION (@MINOR_VERSION@)
+
+/**
+ * MKS_MICRO_VERSION:
+ *
+ * mks micro version component (e.g. 3 if %MKS_VERSION is 1.2.3)
+ */
+#define MKS_MICRO_VERSION (@MICRO_VERSION@)
+
+/**
+ * MKS_VERSION
+ *
+ * mks version.
+ */
+#define MKS_VERSION (@VERSION@)
+
+/**
+ * MKS_VERSION_S:
+ *
+ * mks version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define MKS_VERSION_S "@VERSION@"
+
+#define MKS_ENCODE_VERSION(major,minor,micro) \
+        ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * MKS_VERSION_HEX:
+ *
+ * mks version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define MKS_VERSION_HEX \
+        (MKS_ENCODE_VERSION (MKS_MAJOR_VERSION, MKS_MINOR_VERSION, MKS_MICRO_VERSION))
+
+/**
+ * MKS_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of mks is greater than the required one.
+ */
+#define MKS_CHECK_VERSION(major,minor,micro)   \
+        (MKS_MAJOR_VERSION > (major) || \
+         (MKS_MAJOR_VERSION == (major) && MKS_MINOR_VERSION > (minor)) || \
+         (MKS_MAJOR_VERSION == (major) && MKS_MINOR_VERSION == (minor) && \
+          MKS_MICRO_VERSION >= (micro)))

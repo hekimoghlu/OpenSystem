@@ -1,0 +1,139 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/orientable.h>
+#include <gtkmm/editable.h>
+#include <gtkmm/celleditable.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+_WRAP_ENUM(SpinType, GtkSpinType, decl_prefix GTKMM_API)
+
+class GTKMM_API Adjustment;
+
+//TODO: Derive from (and implement) AccessibleRange when we can break ABI.
+
+/** Numeric Entry with up/down buttons.
+ * Slightly misnamed, this should be called a SpinEntry.
+ *
+ * The %SpinButton widget looks like this:
+ * @image html spinbutton1.png
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API SpinButton
+: public Widget,
+  public Orientable,
+  public Editable,
+  public CellEditable
+{
+  _CLASS_GTKOBJECT(SpinButton, GtkSpinButton, GTK_SPIN_BUTTON, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Orientable)
+  _IMPLEMENTS_INTERFACE(Editable)
+  _IMPLEMENTS_INTERFACE(CellEditable)
+public:
+  _WRAP_ENUM(UpdatePolicy, GtkSpinButtonUpdatePolicy, decl_prefix GTKMM_API)
+
+  /** Creates a %SpinButton.
+   * @param climb_rate The acceleration rate when you hold down a button.
+   * @param digits The number of decimal places to display.
+   */
+  explicit SpinButton(double climb_rate = 0.0, guint digits = 0);
+
+  /** Creates a %SpinButton.
+   * @param adjustment The Adjustment object that this spin button should use.
+   * @param climb_rate The acceleration rate when you hold down a button.
+   * @param digits The number of decimal places to display.
+   */
+  _WRAP_CTOR(SpinButton(const Glib::RefPtr<Adjustment>& adjustment, double climb_rate = 0.0, guint digits = 0), gtk_spin_button_new)
+
+  _WRAP_METHOD(void configure(const Glib::RefPtr<Adjustment>& adjustment, double climb_rate, guint digits), gtk_spin_button_configure)
+
+  _WRAP_METHOD(void set_activates_default(bool activates_default = true), gtk_spin_button_set_activates_default)
+  _WRAP_METHOD(bool get_activates_default() const, gtk_spin_button_get_activates_default)
+
+  _WRAP_METHOD(void set_adjustment(const Glib::RefPtr<Adjustment>& adjustment), gtk_spin_button_set_adjustment)
+  void unset_adjustment();
+  _WRAP_METHOD(Glib::RefPtr<Adjustment> get_adjustment(), gtk_spin_button_get_adjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_adjustment() const, gtk_spin_button_get_adjustment, refreturn, constversion)
+
+  _WRAP_METHOD(void set_digits(guint digits), gtk_spin_button_set_digits)
+  _WRAP_METHOD(guint get_digits() const, gtk_spin_button_get_digits)
+
+  _WRAP_METHOD(void set_increments(double step, double page), gtk_spin_button_set_increments)
+  _WRAP_METHOD(void get_increments(double& step, double& page) const, gtk_spin_button_get_increments)
+
+  _WRAP_METHOD(void set_range(double min, double max), gtk_spin_button_set_range)
+  _WRAP_METHOD(void get_range(double& min, double& max) const, gtk_spin_button_get_range)
+
+  _WRAP_METHOD(double get_value() const, gtk_spin_button_get_value)
+  _WRAP_METHOD(int get_value_as_int() const, gtk_spin_button_get_value_as_int)
+  _WRAP_METHOD(void set_value(double value), gtk_spin_button_set_value)
+
+  _WRAP_METHOD(void set_update_policy(UpdatePolicy policy), gtk_spin_button_set_update_policy)
+  _WRAP_METHOD(UpdatePolicy get_update_policy() const, gtk_spin_button_get_update_policy)
+
+  _WRAP_METHOD(void set_numeric(bool numeric = true), gtk_spin_button_set_numeric)
+  _WRAP_METHOD(bool get_numeric() const, gtk_spin_button_get_numeric)
+
+  _WRAP_METHOD(void spin(SpinType direction, double increment), gtk_spin_button_spin)
+
+  _WRAP_METHOD(void set_wrap(bool wrap = true), gtk_spin_button_set_wrap)
+  _WRAP_METHOD(bool get_wrap() const, gtk_spin_button_get_wrap)
+
+  _WRAP_METHOD(void set_snap_to_ticks(bool snap_to_ticks = true), gtk_spin_button_set_snap_to_ticks)
+  _WRAP_METHOD(bool get_snap_to_ticks() const, gtk_spin_button_get_snap_to_ticks)
+
+  _WRAP_METHOD(void set_climb_rate(double climb_rate), gtk_spin_button_set_climb_rate)
+  _WRAP_METHOD(double get_climb_rate() const, gtk_spin_button_get_climb_rate)
+
+  _WRAP_METHOD(void update(), gtk_spin_button_update)
+
+  /** Constant to return from a signal handler for the input
+   * signal in case of conversion failure.
+   *
+   * @ingroup gtkmmEnums
+   */
+  enum { INPUT_ERROR = -1 };
+
+  // no_default_handler because GtkSpinButtonClass is private.
+  _WRAP_SIGNAL(int input(double& new_value), "input", no_default_handler)
+  _WRAP_SIGNAL(bool output(), "output", no_default_handler)
+  _WRAP_SIGNAL(void wrapped(), "wrapped", no_default_handler)
+  _WRAP_SIGNAL(void value_changed(), "value_changed", no_default_handler)
+  _WRAP_SIGNAL(void activate(), "activate", no_default_handler)
+
+  //Keybinding signals:
+  _IGNORE_SIGNAL(change_value)
+
+  _WRAP_PROPERTY("activates-default", bool)
+  _WRAP_PROPERTY("adjustment", Glib::RefPtr<Adjustment>)
+  _WRAP_PROPERTY("climb-rate", double)
+  _WRAP_PROPERTY("digits", guint)
+  _WRAP_PROPERTY("snap-to-ticks", bool)
+  _WRAP_PROPERTY("numeric", bool)
+  _WRAP_PROPERTY("wrap", bool)
+  _WRAP_PROPERTY("update-policy", UpdatePolicy)
+  _WRAP_PROPERTY("value", double)
+};
+
+} // namespace Gtk

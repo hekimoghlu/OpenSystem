@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="SysprofMarkChart" parent="GtkWidget">
+    <child>
+      <object class="GtkBox" id="box">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="vexpand">true</property>
+            <child>
+              <object class="GtkListView" id="list_view">
+                <property name="show-separators">true</property>
+                <style>
+                  <class name="data-table"/>
+                </style>
+                <property name="model">
+                  <object class="GtkNoSelection">
+                    <property name="model">
+                      <object class="GtkMapListModel" id="map">
+                        <binding name="model">
+                          <lookup name="mark-catalog" type="SysprofMarksSectionModel">
+                            <lookup name="marks-section-model">SysprofMarkChart</lookup>
+                          </lookup>
+                        </binding>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+                <property name="header-factory">
+                  <object class="GtkBuilderListItemFactory">
+                    <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListHeader">
+    <property name="child">
+      <object class="GtkBox">
+        <child>
+          <object class="GtkInscription">
+            <property name="xalign">0</property>
+            <property name="margin-start">6</property>
+            <property name="hexpand">true</property>
+            <binding name="text">
+              <lookup name="group" type="SysprofMarkCatalog">
+                <lookup name="catalog" type="SysprofMarkChartItem">
+                  <lookup name="item">GtkListHeader</lookup>
+                </lookup>
+              </lookup>
+            </binding>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="margin-end">6</property>
+            <property name="icon-name">eye-open-negative-filled-symbolic</property>
+            <signal name="clicked" handler="toggle_group_button_clicked_cb" object="GtkListHeader" swapped="no" />
+            <style>
+              <class name="circular" />
+              <class name="flat" />
+            </style>
+          </object>
+        </child>
+      </object>
+    </property>
+  </template>
+</interface>
+]]>
+                    </property>
+                  </object>
+                </property>
+                <property name="factory">
+                  <object class="GtkBuilderListItemFactory">
+                    <property name="bytes"><![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="GtkListItem">
+    <property name="child">
+      <object class="SysprofMarkChartRow">
+        <property name="hexpand">true</property>
+        <binding name="item">
+          <lookup name="item">GtkListItem</lookup>
+        </binding>
+      </object>
+    </property>
+  </template>
+</interface>
+]]>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

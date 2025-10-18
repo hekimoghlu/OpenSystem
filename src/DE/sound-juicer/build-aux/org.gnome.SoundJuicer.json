@@ -1,0 +1,322 @@
+{
+    "app-id": "org.gnome.SoundJuicer",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "sound-juicer",
+    "tags": [ "nightly" ],
+    "desktop-file-name-suffix": " ☢️",
+    "finish-args": [
+        /* X11 + XShm access */
+        "--share=ipc", "--socket=fallback-x11",
+        /* Wayland access */
+        "--socket=wayland",
+        /* audio CDs */
+        "--device=all",
+        /* Needs to talk to the network */
+        "--share=network",
+        /* Play sounds */
+        "--socket=pulseaudio",
+        /* Browse user's Music directory */
+        "--filesystem=xdg-music",
+        /* Access to gvfs socket */
+        "--filesystem=xdg-run/gvfsd",
+        /* Migrate DConf settings from the host */
+        "--metadata=X-DConf=migrate-path=/org/gnome/sound-juicer/",
+        /* optical media detection */
+        "--talk-name=org.gtk.vfs", "--talk-name=org.gtk.vfs.*",
+        "--system-talk-name=org.freedesktop.UDisks2",
+        "--system-talk-name=org.freedesktop.UDisks2.*",
+        /* Ensure cdda gstreamer plugin is picked found for audio CD's */
+        "--env=GST_PLUGIN_PATH=/app/lib/codecs/lib/gstreamer-1.0"
+    ],
+    "cleanup": [ "/include", "/share/bash-completion" ],
+    "modules": [
+        {
+            "name": "fdkaac",
+            "config-opts": [
+                "--with-pic",
+                "--disable-static",
+                "--enable-shared",
+                "--prefix=/app/share/vlc/extra/fdkaac"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/mstorsjo/fdk-aac/archive/v2.0.2.tar.gz",
+                    "sha256": "7812b4f0cf66acda0d0fe4302545339517e702af7674dd04e5fe22a5ade16a90"
+                },
+                {
+                    "type": "script",
+                    "commands": [
+                        "autoreconf -fiv"
+                    ],
+                    "dest-filename": "autogen.sh"
+                }
+            ]
+        },
+        /* gst-plugins-base needs cdparanoia to add support for cdda */
+        {
+            "name": "cdparanoia",
+            "buildsystem": "simple",
+            "build-commands": [
+                "cp /usr/share/automake-*/config.{sub,guess} .",
+                "./configure --prefix=/app",
+                "make all slib",
+                "make install"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://downloads.xiph.org/releases/cdparanoia/cdparanoia-III-10.2.src.tgz",
+                    "sha256": "005db45ef4ee017f5c32ec124f913a0546e77014266c6a1c50df902a55fe64df"
+                },
+                {
+                    "type": "patch",
+                    "path": "cdparanoia-use-proper-gnu-config-files.patch"
+                }
+            ]
+        },
+        /* To encode in MP3 */
+        {
+          "name": "taglib",
+          "buildsystem": "cmake-ninja",
+          "config-opts": [
+            "-DBUILD_SHARED_LIBS=ON",
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+          ],
+          "cleanup": [
+            "/include",
+            "/lib/*.so"
+          ],
+          "sources": [
+            {
+              "type": "archive",
+              "url": "https://taglib.org/releases/taglib-1.13.tar.gz",
+              "sha512": "b6e3253d158b41173073c0da1915f5e4a3de947db918660817cb1c755fba7e3723ea1a335fbbc30b0dcf942348a471b493fe2ce1d52d1a808578edee14e1bfc7"
+            }
+         ]
+        },
+        /* To play cdda */
+        {
+            "name": "gstreamer",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dauto_features=disabled",
+                "-Dtools=enabled",
+                "-Dgst-plugins-base:cdparanoia=enabled",
+                "-Dgst-plugins-base:ogg=enabled",
+                "-Dgst-plugins-base:vorbis=enabled",
+                "-Dgst-plugins-base:opus=enabled",
+                "-Dgst-plugins-base:encoding=enabled",
+                "-Dgst-plugins-base:gio=enabled",
+                "-Dgst-plugins-good:taglib=enabled",
+                "-Dgst-plugins-good:lame=enabled",
+                "-Dgst-plugins-good:isomp4=enabled",
+                "-Dgst-plugins-good:flac=enabled",
+                "-Dgst-plugins-good:wavenc=enabled",
+                "-Dgst-plugins-good:xingmux=enabled",
+                "-Dgst-plugins-bad:fdkaac=enabled",
+                "-Dpython=disabled",
+                "-Ddevtools=disabled",
+                "-Dges=disabled",
+                "-Drtsp_server=disabled",
+                "-Dsharp=disabled",
+                "-Dgst-examples=disabled",
+                "-Dtests=disabled",
+                "-Dexamples=disabled",
+                "-Ddoc=disabled",
+                "-Dgtk_doc=disabled",
+                "-Dgpl=enabled",
+                "-Dlibav=disabled",
+                "-Dbad=enabled",
+                "-Dvaapi=disabled",
+                "-Dugly=enabled"
+            ],
+            "cleanup": [ "/share/gtk-doc" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "disable-submodules": true,
+                    "url": "https://gitlab.freedesktop.org/gstreamer/gstreamer.git",
+                    "tag": "1.24.12"
+                }
+            ]
+        },
+        /* libneon is required to build libmusicbrainz */
+        {
+            "name": "libneon",
+            "config-opts": [
+                "--enable-shared",
+                "--with-gssapi",
+                "--with-libxml2"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://notroj.github.io/neon/neon-0.33.0.tar.gz",
+                    "sha256": "659a5cc9cea05e6e7864094f1e13a77abbbdbab452f04d751a8c16a9447cf4b8"
+                }
+            ]
+        },
+        {
+            "name": "libdiscid",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/metabrainz/libdiscid/archive/v0.6.2.tar.gz",
+                    "sha256": "a9b73b030603ce707941a3aab4f46649fa5029025e7e2bfbbe0c3c93a86d7b20"
+                }
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        /* libmusicbrainz is required for Audio CD track listing support */
+        {
+            "name": "libmusicbrainz",
+            "buildsystem": "cmake",
+            "config-opts": [
+                "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/metabrainz/libmusicbrainz/releases/download/release-5.1.0/libmusicbrainz-5.1.0.tar.gz",
+                    "sha256": "6749259e89bbb273f3f5ad7acdffb7c47a2cf8fcaeab4c4695484cef5f4c6b46"
+                },
+                {
+                    "type": "patch",
+                    "path": "0001-libxml-constify-the-storage-of-xmlGetLastError.patch"
+                }
+            ]
+        },
+        /* intltool is required to build udisks */
+        {
+            "name": "intltool",
+            "cleanup": [ "*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256": "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ]
+        },
+        /* pam is required to build udisks */
+        {
+            "name": "pam",
+            "config-opts": [
+                "--includedir=/app/include/security",
+                "--disable-doc"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/linux-pam/linux-pam/releases/download/v1.4.0/Linux-PAM-1.4.0.tar.xz",
+                    "sha256": "cd6d928c51e64139be3bdb38692c68183a509b83d4f2c221024ccd4bcddfd034"
+                }
+            ]
+        },
+        /* polkit is required to build udisks */
+        {
+            "name": "polkit",
+            "config-opts": [
+                "--disable-polkitd",
+                "--enable-libelogind=no",
+                "--enable-libsystemd-login=no",
+                "--disable-introspection",
+                "--disable-man-pages",
+                "--disable-test",
+                "--with-systemdsystemunitdir=no"
+            ],
+            "rm-configure": true,
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://www.freedesktop.org/software/polkit/releases/polkit-0.116.tar.gz",
+                    "sha256": "88170c9e711e8db305a12fdb8234fac5706c61969b94e084d0f117d8ec5d34b1"
+                },
+                {
+                    "type": "patch",
+                    "path": "polkit-build-Add-option-to-build-without-polkitd.patch"
+                },
+                {
+                    "type": "file",
+                    "path": "polkit-autogen",
+                    "dest-filename": "autogen.sh"
+                }
+            ]
+        },
+        /* udisks is required to enumerate optical disks */
+        {
+            "name": "udisks2",
+            "buildsystem": "autotools",
+            "config-opts": [
+                "--enable-btrfs=no",
+                "--enable-introspection=no",
+                "--enable-lvm2=no",
+                "--enable-daemon=no",
+                "--with-systemdsystemunitdir=no",
+                "--with-tmpfilesdir=no"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/storaged-project/udisks.git"
+                }
+            ]
+        },
+        {
+            "name": "libcanberra",
+            "cleanup": [
+                "*.la",
+                "/bin",
+                "/etc",
+                "/include",
+                "/libexec",
+                "/share/gtk-doc",
+                "/share/man"
+            ],
+            "config-opts": [
+                "--disable-static",
+                "--disable-gtk-doc",
+                "--disable-oss",
+                "--enable-pulse",
+                "--disable-udev",
+                "--disable-gtk",
+                "--enable-gtk3",
+                "--disable-lynx"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz",
+                    "sha256": "c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72",
+                    "git-init" : true
+                },
+                {
+                    "type": "patch",
+                    "path": "0001-gtk-Don-t-assume-all-GdkDisplays-are-GdkX11Displays-.patch",
+                    "use-git-am": true
+                }
+            ]
+        },
+        {
+            "name": "sound-juicer",
+            "buildsystem": "meson",
+            "builddir": true,
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/sound-juicer.git"
+                }
+            ]
+        }
+    ]
+}

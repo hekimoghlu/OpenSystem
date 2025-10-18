@@ -1,0 +1,145 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/capsfeatures.h>
+
+namespace Gst
+{
+
+GType Caps::get_type()
+{
+  return gst_caps_get_type();
+}
+
+Glib::RefPtr<Caps> Caps::create_writable()
+{
+  return Glib::RefPtr<Caps>::cast_static(MiniObject::create_writable());
+}
+
+Glib::RefPtr<Gst::Caps> Caps::create(const Structure& structure)
+{
+  //We take a copy because gst_caps_append_structure() wants to take ownership:
+  GstStructure* copy = gst_structure_copy(structure.gobj());
+  return Glib::wrap(gst_caps_new_full(copy, nullptr));
+}
+
+void Caps::append_structure(const Structure& structure)
+{
+  //We take a copy because gst_caps_append_structure() wants to take ownership:
+  GstStructure* copy = gst_structure_copy(structure.gobj());
+  gst_caps_append_structure(gobj(), copy);
+}
+
+void Caps::append_structure(const Structure& structure, const CapsFeatures& features)
+{
+  //We take a copy because gst_caps_append_structure_full() wants to take ownership:
+  GstStructure* copy_structure = gst_structure_copy(structure.gobj());
+  GstCapsFeatures* copy_features = gst_caps_features_copy(features.gobj());
+  gst_caps_append_structure_full(gobj(), copy_structure, copy_features);
+}
+
+
+Glib::RefPtr<Caps> Caps::merge_structure(const Structure& structure)
+{
+  //We take a copy because gst_caps_merge_structure() wants to take ownership:
+  GstStructure* copy = gst_structure_copy(structure.gobj());
+  return Glib::wrap(gst_caps_merge_structure(gobj(), copy), true);
+}
+
+Glib::RefPtr<Caps> Caps::merge_structure(const Structure& structure, const CapsFeatures& features)
+{
+  //We take a copy because gst_caps_merge_structure_full() wants to take ownership:
+  GstStructure* copy_structure = gst_structure_copy(structure.gobj());
+  GstCapsFeatures* copy_features = gst_caps_features_copy(features.gobj());
+  return Glib::wrap(gst_caps_merge_structure_full(gobj(), copy_structure, copy_features), true);
+}
+
+//TODO: Want to return RefPtr to Caps but using RefPtr in expressions such
+// as 'caps->set_simple(name1, value1)->set_simple(name2, value2)' a
+// causes gstreamer Structure immutability warnings because the Caps is
+// referenced more than once in the expression (see bug #510301).
+/*
+  This method is implemented in place of gst_caps_set_simple which is a
+  variable argument function and cannot be wrapped.  We don't call
+  gst_caps_set_simple() directly because we are using a Glib::ValueBase as the
+  value to be set instead of listing out each field in the value as would be
+  done with gst_caps_set_simple()
+*/
+//Glib::RefPtr<Gst::Caps>
+void
+Caps::set_simple(const Glib::ustring& name, const Glib::ValueBase& value)
+{
+  g_return_if_fail (g_atomic_int_get(&(this->gobj())->mini_object.refcount) == 1); // IS_WRITABLE(caps) fails
+
+  //The result of gst_caps_get_structure() should not be modified, according to
+  //its documentation, but we are reimplementing gst_caps_set_simple() which
+  //does that:
+  GstStructure* structure = gst_caps_get_structure(gobj(), 0);
+  if(structure)
+    gst_structure_set_value(structure, name.c_str(), value.gobj());
+
+  //return Glib::wrap(gobj(), true);
+}
+
+void
+Caps::set_simple(const Glib::ustring& name, const char* data)
+{
+  set_simple(name, std::string(data));
+}
+
+CapsFeatures Caps::get_features(guint index) const
+{
+  GstCapsFeatures* features = gst_caps_get_features(gobj(), index);
+  return CapsFeatures(features, true);
+}
+
+void Caps::set_features(guint index, const CapsFeatures& features)
+{
+  GstCapsFeatures* copy = gst_caps_features_copy(features.gobj());
+  gst_caps_set_features(gobj(), index, copy);
+}
+
+Glib::RefPtr<Gst::Caps> Caps::truncate()
+{
+  reference();
+  return Glib::wrap(gst_caps_truncate(gobj()));
+}
+
+Glib::RefPtr<Gst::Caps> Caps::merge(Glib::RefPtr<Gst::Caps>&& caps)
+{
+  if (is_writable())
+  {
+    return Glib::wrap(gst_caps_merge(gobj(), caps.release()->gobj()), true);
+  }
+  else
+  {
+    reference();
+    return Glib::wrap(gst_caps_merge(gobj(), caps.release()->gobj()), false);
+  }
+}
+
+} //namespace Gst
+
+namespace Glib 
+{
+Glib::RefPtr<Gst::Caps> Value< Glib::RefPtr<Gst::Caps> >::get()
+{
+  return Glib::wrap(reinterpret_cast<GstCaps*>(get_boxed()), true); 
+}
+}

@@ -1,0 +1,16 @@
+foundry_private_sources += files([
+  'plugin.c',
+  'plugin-devhelp-book.c',
+  'plugin-devhelp-heading.c',
+  'plugin-devhelp-documentation-provider.c',
+  'plugin-devhelp-importer.c',
+  'plugin-devhelp-job.c',
+  'plugin-devhelp-keyword.c',
+  'plugin-devhelp-navigatable.c',
+  'plugin-devhelp-progress.c',
+  'plugin-devhelp-purge-missing.c',
+  'plugin-devhelp-repository.c',
+  'plugin-devhelp-sdk.c',
+  'plugin-devhelp-search-model.c',
+  'plugin-devhelp-search-result.c',
+])

@@ -1,0 +1,137 @@
+<page xmlns="http://projectmallard.org/1.0/"
+      xmlns:its="http://www.w3.org/2005/11/its"
+      type="topic" style="task"
+      id="lockdown-command-line">
+
+  <info>
+    <link type="guide" xref="software#management" />
+    <link type="guide" xref="user-settings#lockdown"/>
+    <revision pkgversion="3.30" date="2019-02-08" status="review"/>
+
+    <credit type="author copyright">
+      <name>Petr Kovar</name>
+      <email>pknbe@volny.cz</email>
+      <years>2014</years>
+    </credit>
+    <credit type="author copyright">
+      <name>Ekaterina Gerasimova</name>
+      <email>kittykat3756@gmail.com</email>
+      <years>2014</years>
+    </credit>
+    <credit type="author copyright">
+      <name>Jana Svarova</name>
+      <email>jana.svarova@gmail.com</email>
+      <years>2015</years>
+    </credit>
+
+    <include href="legal.xml" xmlns="http://www.w3.org/2001/XInclude"/>
+
+    <desc>Prevent users from accessing the command-line.</desc>
+  </info>
+
+  <title>Disable command-line access</title>
+
+  <p>To disable command-line access for your desktop user, you need to make
+  configuration changes in a number of different contexts. Bear in mind that the
+  following steps do not remove the desktop user's permissions to access a
+  command line, but rather remove the ways that the desktop user could access
+  the command line.</p>
+
+  <list>
+    <item>
+      <p>Set the <code>org.gnome.desktop.lockdown.disable-command-line</code>
+      GSettings key, which prevents the user from accessing the terminal or
+      specifying a command line to be executed (the <keyseq><key>Alt</key>
+      <key>F2</key></keyseq> command prompt).</p>
+    </item>
+    <item>
+      <p>Prevent users from accessing the <keyseq><key>Alt</key><key>F2</key>
+      </keyseq> command prompt.</p>
+    </item>
+    <item>
+      <p>Disable switching to virtual terminals (VTs) with the <keyseq>
+      <key>Ctrl</key><key>Alt</key><key><var>function key</var></key></keyseq>
+      shortcuts by modifying the X server configuration.</p>
+    </item>
+    <item>
+      <p>Remove <app>Terminal</app> and all other terminal applications from
+      the <gui>Activities</gui> overview in GNOME Shell. You will also need to
+      prevent the user from installing a new terminal application.</p>
+      <comment>
+        <cite>Petr Kovar</cite>
+        <p>We have yet to cover removing a menu item in this guide. We don’t
+        want system admins having to modify .desktop files as those could be
+        overwritten on system update.</p>
+      </comment>
+    </item>
+  </list>
+
+<section id="command-prompt">
+  <title>Disable the command prompt</title>
+
+  <steps>
+    <include href="dconf-snippets.xml"
+      xpointer="xpointer(/*/*[@xml:id='dconf-profile-user'])"
+      xmlns="http://www.w3.org/2001/XInclude"/>
+    <item>
+      <p>Create a <sys>local</sys> database for machine-wide settings in
+      <file>/etc/dconf/db/local.d/00-lockdown</file>:</p>
+      <code># Specify the dconf path
+[org/gnome/desktop/lockdown]
+
+# Disable the command prompt
+disable-command-line=true</code>
+    </item>
+    <item>
+      <p>Override the user’s setting and prevent the user from changing it in
+      <file>/etc/dconf/db/local.d/locks/lockdown</file>:</p>
+      <code># List the keys used to configure lockdown
+/org/gnome/desktop/lockdown/disable-command-line</code>
+    </item>
+    <include href="dconf-snippets.xml"
+      xpointer="xpointer(/*/*[@xml:id='dconf-update'])"
+      xmlns="http://www.w3.org/2001/XInclude"/>
+    <include href="dconf-snippets.xml"
+      xpointer="xpointer(/*/*[@xml:id='dconf-logoutin'])"
+      xmlns="http://www.w3.org/2001/XInclude"/>
+  </steps>
+</section>
+
+<section id="virtual-terminal">
+  <title>Disable dropping to a virtual terminal</title>
+
+  <p>Users can normally use the
+  <keyseq><key>Ctrl</key><key>Alt</key><key><var>function
+  key</var></key></keyseq> shortcuts (for example,
+  <keyseq><key>Ctrl</key><key>Alt</key><key>F2</key></keyseq>) to switch from
+  the GNOME desktop to a virtual terminal.</p>
+
+  <p>If the computer is running the <em>X Window System</em>, you can disable
+  access to all virtual terminals by adding a <code>DontVTSwitch</code> option
+  to the <code>Serverflags</code> section in an X configuration file in the
+  <file>/etc/X11/xorg.conf.d/</file> directory.</p>
+
+  <steps>
+    <item>
+      <p>Create or edit an X configuration file in
+      <file>/etc/X11/xorg.conf.d/</file>. For example,
+      <file>/etc/X11/xorg.conf.d/10-xorg.conf</file>:</p>
+    <listing>
+    <title><file>/etc/X11/xorg.conf.d/10-xorg.conf</file></title>
+<code>Section "Serverflags"
+
+Option "DontVTSwitch" "yes"
+
+EndSection
+</code>
+    </listing>
+    </item>
+    <item>
+      <p>Restart the X server for the changes to take effect.</p>
+    </item>
+  </steps>
+
+</section>
+
+<!-- TODO: add section for removing applications from the Activities overview. -->
+</page>

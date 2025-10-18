@@ -1,0 +1,574 @@
+using Gtk 4.0;
+using Adw 1;
+
+menu primary_menu {
+  section {
+    item (_("_New Window"), "app.new-window")
+    item (_("_Open…"), "win.open-video")
+  }
+
+  section {
+    item {
+      label: _("Show in _Files");
+      action: "win.show-in-files";
+      hidden-when: "action-disabled";
+    }
+  }
+
+  section {
+    item {
+      label: _("Take _Screenshot");
+      action: "win.screenshot";
+      hidden-when: "action-disabled";
+    }
+  }
+
+  section {
+    item (_("_Keyboard Shortcuts"), "app.shortcuts")
+    item (_("_About Video Player"), "win.about")
+  }
+}
+
+template $Window: Adw.ApplicationWindow {
+  default-width: 800;
+  default-height: 500;
+  height-request: 202; // For a 16:9 aspect ratio
+  width-request: 360;
+  title: _("Video Player");
+  gravity: center;
+  realize => $_on_realize();
+  move-focus => $_on_motion();
+
+  content: Adw.ToastOverlay toast_overlay {
+    child: $DragOverlay drag_overlay {
+      drop_target: drop_target;
+
+      overlayed: Adw.Bin {
+        can-target: false;
+
+        styles ["background"]
+
+        [child]
+        Adw.StatusPage {
+          title: _("Drop Video to Play");
+          icon-name: "video-x-generic-symbolic";
+
+          styles ["showtime-dragging-area-highlight"]
+        }
+      };
+
+      child: Stack stack {
+        Adw.ToolbarView placeholder_page {
+          [top]
+          Adw.HeaderBar header_bar {
+            [end]
+            MenuButton placeholder_primary_menu_button {
+              primary: true;
+              icon-name: "open-menu-symbolic";
+              tooltip-text: _("Main Menu");
+              menu-model: primary_menu;
+            }
+          }
+
+          content: WindowHandle {
+            child: Stack placeholder_stack {
+              Adw.StatusPage open_status_page {
+                icon-name: "video-x-generic-symbolic";
+                title: _("Watch Videos");
+                description: _("Drag and drop videos here");
+
+                child: Button button_open {
+                  label: _("Open…");
+                  halign: center;
+                  action-name: "win.open-video";
+
+                  styles [
+                    "pill",
+                    "suggested-action",
+                  ]
+                };
+              }
+
+              Adw.StatusPage error_status_page {
+                icon-name: "dialog-error-symbolic";
+                title: _("Unable to Play Video");
+              }
+
+              Adw.StatusPage missing_plugin_status_page {
+                icon-name: "puzzle-piece-symbolic";
+                title: _("Missing Plugin");
+              }
+            };
+          };
+        }
+
+        WindowHandle video_page {
+          name: "video-page";
+
+          child: Overlay video_overlay {
+            [overlay]
+            Adw.Clamp toolbar_clamp {
+              maximum-size: 1920;
+              tightening-threshold: 1920;
+
+              child: Box toolbar_box {
+                orientation: vertical;
+                margin-start: 12;
+                margin-end: 12;
+                margin-bottom: 12;
+
+                Box controls_box {
+                  hexpand: true;
+                  vexpand: true;
+                  halign: center;
+                  valign: center;
+                  margin-top: 48;
+
+                  Button {
+                    name: "backwards-button";
+                    valign: center;
+                    icon-name: "skip-backwards-10-symbolic";
+                    action-name: "win.backwards";
+
+                    accessibility {
+                      label: _("Go Back 10 Seconds");
+                    }
+
+                    styles [
+                      "circular",
+                      "highlighted",
+                      "overlaid",
+                    ]
+                  }
+
+                  Button play_button {
+                    name: "play-button";
+                    margin-start: 12;
+                    margin-end: 12;
+                    valign: center;
+                    icon-name: bind $_get_play_icon(template.paused) as <string>;
+                    action-name: "win.toggle-playback";
+
+                    accessibility {
+                      label: _("Play");
+                    }
+
+                    styles [
+                      "circular",
+                      "highlighted",
+                      "overlaid",
+                    ]
+                  }
+
+                  Button {
+                    name: "forwards-button";
+                    valign: center;
+                    icon-name: "skip-forward-10-symbolic";
+                    action-name: "win.forwards";
+
+                    accessibility {
+                      label: _("Go Forward 10 Seconds");
+                    }
+
+                    styles [
+                      "circular",
+                      "highlighted",
+                      "overlaid",
+                    ]
+                  }
+                }
+
+                Box bottom_overlay_box {
+                  orientation: vertical;
+
+                  Box {
+                    name: "bottom-overlay-box";
+                    vexpand: bind controls_box.can-target inverted;
+                    valign: end;
+
+                    Label title_label {
+                      hexpand: true;
+                      halign: start;
+                      margin-start: 12;
+                      margin-end: 12;
+                      ellipsize: end;
+
+                      styles [
+                        "title-4",
+                        "overlaid",
+                      ]
+                    }
+
+                    $SoundOptions sound_options {
+                      mute: bind template.mute bidirectional;
+                      volume: bind template.volume;
+                      schedule-volume-change => $_schedule_volume_change();
+                    }
+
+                    $Options options {
+                      rate: bind template.rate bidirectional no-sync-create;
+                      rotate-left => $_rotate_left();
+                      rotate-right => $_rotate_right();
+                    }
+                  }
+
+                  Scale seek_scale {
+                    hexpand: true;
+                    valign: end;
+                    change-value => $_seek();
+
+                    adjustment: Adjustment {
+                      lower: 0;
+                      upper: 500; // ×500 so that seeking isn't too rough
+                      value: 0;
+                    };
+
+                    accessibility {
+                      labelled-by: title_label;
+                    }
+
+                    styles [
+                      "highlighted",
+                      "overlaid",
+                    ]
+                  }
+
+                  Box timestamp_box {
+                    valign: end;
+                    margin-bottom: 3;
+
+                    Label position_label {
+                      hexpand: true;
+                      halign: start;
+                      label: "0:00";
+                      margin-start: 12;
+                      margin-end: 3;
+
+                      styles [
+                        "caption-heading",
+                        "numeric",
+                        "timestamp",
+                        "overlaid",
+                      ]
+                    }
+
+                    Button end_timestamp_button {
+                      hexpand: true;
+                      name: "end-timestamp-button";
+                      halign: end;
+                      label: "0:00";
+                      margin-start: 3;
+                      tooltip-text: _("Toggle Duration/Remaining");
+                      clicked => $_cycle_end_timestamp_type();
+
+                      styles [
+                        "caption-heading",
+                        "numeric",
+                        "timestamp",
+                        "highlighted",
+                        "overlaid",
+                      ]
+                    }
+                  }
+                }
+              };
+
+              styles [
+                "shade",
+              ]
+            }
+
+            [overlay]
+            Adw.BreakpointBin restore_breakpoint_bin {
+              opacity: 0;
+              can-target: false;
+              margin-bottom: 60;
+              width-request: 1;
+              height-request: 1;
+
+              child: Box restore_box {
+                halign: center;
+                valign: center;
+                spacing: 9;
+                margin-start: 3;
+                margin-end: 3;
+
+                Button resume_button {
+                  child: Box resume_box {
+                    margin-top: 9;
+                    margin-bottom: 9;
+                    margin-start: 18;
+                    margin-end: 18;
+                    valign: center;
+                    spacing: 18;
+
+                    Image resume_icon {
+                      icon-name: "media-playback-start-symbolic";
+
+                      styles [
+                        "overlaid",
+                      ]
+                    }
+
+                    Label resume_label {
+                      justify: center;
+                      wrap: true;
+                      label: _("Resume");
+
+                      styles [
+                        "overlaid",
+                      ]
+                    }
+                  };
+
+                  clicked => $_resume();
+
+                  accessibility {
+                    labelled-by: resume_label;
+                  }
+
+                  styles [
+                    "overlaid",
+                    "highlighted",
+                  ]
+                }
+
+                Button restart_button {
+                  child: Box restart_box {
+                    margin-top: 9;
+                    margin-bottom: 9;
+                    margin-start: 18;
+                    margin-end: 18;
+                    valign: center;
+                    spacing: 18;
+
+                    Image restart_icon {
+                      icon-name: "arrow-circular-top-right-symbolic";
+
+                      styles [
+                        "overlaid",
+                      ]
+                    }
+
+                    Label restart_label {
+                      justify: center;
+                      wrap: true;
+                      label: _("Start Again");
+
+                      styles [
+                        "overlaid",
+                      ]
+                    }
+                  };
+
+                  clicked => $_play_again();
+
+                  accessibility {
+                    labelled-by: restart_label;
+                  }
+
+                  styles [
+                    "overlaid",
+                    "highlighted",
+                  ]
+                }
+              };
+
+              Adw.Breakpoint {
+                condition ("max-height: 320px and max-width: 720px")
+
+                setters {
+                  restart_label.visible: false;
+                  resume_label.visible: false;
+                }
+              }
+
+              Adw.Breakpoint {
+                condition ("min-height: 320px")
+
+                setters {
+                  restore_box.spacing: 24;
+                  restart_button.width-request: 126;
+                  restart_button.height-request: 120;
+                  restart_box.orientation: vertical;
+                  restart_box.margin-top: 0;
+                  restart_box.margin-bottom: 0;
+                  restart_box.margin-start: 0;
+                  restart_box.margin-end: 0;
+                  restart_icon.icon-size: large;
+                  restart_icon.margin-top: 12;
+                  resume_button.width-request: 126;
+                  resume_button.height-request: 120;
+                  resume_box.orientation: vertical;
+                  resume_box.margin-top: 0;
+                  resume_box.margin-bottom: 0;
+                  resume_box.margin-start: 0;
+                  resume_box.margin-end: 0;
+                  resume_icon.icon-size: large;
+                  resume_icon.margin-top: 12;
+                }
+              }
+            }
+
+            [overlay]
+            WindowHandle header_handle_start {
+              valign: start;
+              halign: start;
+
+              child: Box header_start {
+                margin-top: 6;
+                margin-bottom: 3;
+                margin-start: 6;
+                margin-end: 3;
+                spacing: 6;
+
+                WindowControls window_controls_start {
+                  halign: start;
+                  valign: start;
+                  visible: bind window_controls_start.empty inverted;
+                  side: start;
+
+                  styles [
+                    "overlaid",
+                  ]
+                }
+
+                Button {
+                  hexpand: true;
+                  margin-bottom: 24;
+                  margin-end: 24;
+                  icon-name: bind $_get_fullscreen_icon(template.fullscreened) as <string>;
+                  tooltip-text: _("Toggle Fullscreen");
+                  action-name: "win.toggle-fullscreen";
+
+                  styles [
+                    "circular",
+                    "highlighted",
+                    "overlaid",
+                  ]
+                }
+              };
+            }
+
+            [overlay]
+            WindowHandle header_handle_end {
+              valign: start;
+              halign: end;
+
+              child: Box header_end {
+                margin-top: 6;
+                margin-bottom: 3;
+                margin-end: 6;
+                margin-start: 3;
+                spacing: 6;
+
+                Adw.Spinner spinner {
+                  width-request: 18;
+                  height-request: 18;
+                  margin-end: 9;
+                  opacity: 0;
+                  can-target: false;
+
+                  styles [
+                    "overlaid",
+                  ]
+                }
+
+                MenuButton video_primary_menu_button {
+                  hexpand: true;
+                  primary: true;
+                  icon-name: "open-menu-symbolic";
+                  tooltip-text: _("Main Menu");
+                  menu-model: primary_menu;
+
+                  styles [
+                    "circular",
+                    "highlighted",
+                    "overlaid",
+                  ]
+                }
+
+                WindowControls window_controls_end {
+                  halign: end;
+                  valign: start;
+                  visible: bind window_controls_end.empty inverted;
+                  side: end;
+
+                  styles [
+                    "overlaid",
+                  ]
+                }
+              };
+            }
+
+            child: GraphicsOffload graphics_offload {
+              child: Picture picture {};
+
+              black-background: true;
+            };
+
+            GestureClick {
+              button: 1;
+              released => $_on_primary_click_released();
+            }
+
+            GestureClick {
+              button: 3;
+              pressed => $_on_secondary_click_pressed();
+            }
+
+            EventControllerMotion overlay_motion {
+              motion => $_on_motion();
+            }
+          };
+        }
+      };
+    };
+  };
+
+  DropTarget drop_target {
+    formats: "GFile";
+    actions: copy;
+    drop => $_on_drop();
+  }
+
+  Adw.Breakpoint {
+    condition ("min-width: 550px")
+
+    setters {
+      toolbar_box.margin-bottom: 24;
+      toolbar_box.margin-start: 24;
+      toolbar_box.margin-end: 24;
+      restore_breakpoint_bin.margin-bottom: 90;
+    }
+  }
+}
+
+FileDialog open_video_dialog {
+  default-filter: FileFilter {
+    name: _("Video");
+
+    mime-types [
+      "video/*",
+    ]
+  };
+}
+
+FileDialog choose_subtitles_dialog {
+  default-filter: FileFilter {
+    name: _("Subtitles");
+
+    mime-types [
+      "application/x-subrip",
+      "text/x-ssa",
+      "text/vtt",
+    ]
+
+    suffixes [
+      "srt",
+      "ssa",
+      "ass",
+      "vtt",
+    ]
+  };
+}

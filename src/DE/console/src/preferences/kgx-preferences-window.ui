@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="KgxPreferencesWindow" parent="AdwPreferencesDialog">
+    <child>
+      <object class="AdwPreferencesPage">
+        <property name="title" translatable="yes">General</property>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Font</property>
+            <child>
+              <object class="AdwSwitchRow" id="use_system_font">
+                <property name="title" translatable="yes">Use _System Default</property>
+                <property name="use-underline">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="custom_font">
+                <property name="title" translatable="yes">Custom _Font</property>
+                <property name="use-underline">True</property>
+                <property name="activatable">True</property>
+                <property name="action-name">prefs.select-font</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <binding name="attributes">
+                          <closure type='PangoAttrList' function='font_as_attributes'>
+                            <lookup name="custom-font">
+                              <lookup name="settings">KgxPreferencesWindow</lookup>
+                            </lookup>
+                          </closure>
+                        </binding>
+                        <binding name="label">
+                          <closure type='gchararray' function='font_as_label'>
+                            <lookup name="custom-font">
+                              <lookup name="settings">KgxPreferencesWindow</lookup>
+                            </lookup>
+                          </closure>
+                        </binding>
+                        <property name="ellipsize">middle</property>
+                        <style>
+                          <class name="dim-label" />
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="icon-name">go-next-symbolic</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Behavior</property>
+            <child>
+              <object class="AdwSwitchRow" id="unlimited_scrollback">
+                <property name="title" translatable="yes">_Unlimited Scrollback</property>
+                <property name="use-underline">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="scrollback">
+                <property name="title" translatable="yes">_Scrollback Lines</property>
+                <property name="use-underline">True</property>
+                <property name="sensitive" bind-source="unlimited_scrollback" bind-property="active"
+                  bind-flags="sync-create|invert-boolean" />
+                <property name="numeric">True</property>
+                <property name="digits">0</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">800000</property>
+                    <property name="page-increment">1000</property>
+                    <property name="step-increment">1000</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Terminal Bell</property>
+            <property name="description" translatable="yes">Control how alerts are indicated</property>
+            <child>
+              <object class="AdwSwitchRow" id="audible_bell">
+                <property name="title" translatable="yes">Play _Sound</property>
+                <property name="use-underline">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="visual_bell">
+                <property name="title" translatable="yes">_Visual Effects</property>
+                <property name="use-underline">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+  <object class="GBindingGroup" id="settings_binds">
+    <property name="source" bind-source="KgxPreferencesWindow" bind-property="settings"
+      bind-flags="sync-create" />
+  </object>
+</interface>

@@ -1,0 +1,55 @@
+/* Copyright (C) 2011 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/exceptionhandler.h>
+#include <glibmm/variant.h>
+
+namespace Gio
+{
+
+SimpleAction::SimpleAction(const Glib::ustring& name) : _CONSTRUCT("name", name.c_str())
+{
+}
+
+SimpleAction::SimpleAction(const Glib::ustring& name, const Glib::VariantBase& state)
+: _CONSTRUCT("name", name.c_str(), "state", const_cast<GVariant*>((state).gobj()))
+{
+}
+
+Glib::RefPtr<SimpleAction>
+SimpleAction::create_bool(const Glib::ustring& name, bool state)
+{
+  // We must provide some initial state, as a way to specify the type of the state.
+  return create(name, Glib::Variant<bool>::create(state));
+}
+
+Glib::RefPtr<SimpleAction>
+SimpleAction::create_radio_string(const Glib::ustring& name, const Glib::ustring& initial_state)
+{
+  // See https://docs.gtk.org/glib/gvariant-format-strings.html#strings
+  return create(
+    name, Glib::VARIANT_TYPE_STRING, Glib::Variant<Glib::ustring>::create(initial_state));
+}
+
+Glib::RefPtr<SimpleAction>
+SimpleAction::create_radio_integer(const Glib::ustring& name, gint32 initial_state)
+{
+  // See https://docs.gtk.org/glib/gvariant-format-strings.html#numeric-types
+  return create(name, Glib::VARIANT_TYPE_INT32, Glib::Variant<gint32>::create(initial_state));
+}
+
+} // namespace Gio

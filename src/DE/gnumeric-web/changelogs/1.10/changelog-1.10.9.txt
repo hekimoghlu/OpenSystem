@@ -1,0 +1,224 @@
+2010-08-16  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.9
+
+2010-08-16  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (collect_floats): Fix #627079 (FMR).
+
+	* src/complex.c (complex_pow): Special-case a=0 which the general
+	formula bungles.  Fixes #627014.
+
+2010-08-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* samples/chart-tests.gnumeric: make sure the images match the graphs
+	  (and fix the data to make it more likely to stay in this way.)
+	
+2010-08-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (CmdPasteCopy): new fields
+	(cmd_paste_copy_impl): store sizes for rows and columns and restore them
+	(cmd_paste_copy_finalize): finalize new fields
+	(cmd_paste_copy): iitalize new fields
+	
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_area_set_array_expr): autofit rows and columns.
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/colrow.h (colrow_autofit_col): new
+	(colrow_autofit_row): new
+	* src/colrow.c (colrow_autofit_col): new
+	(colrow_autofit_row): new
+	* src/commands.c (cmd_set_text_full_autofit_row): renamed and moved to
+	  src/colrow.c
+	(cmd_set_text_full_autofit_col): renamed and moved to src/colrow.c with
+	  changes
+	(cmd_set_text_full): adjust calls to cmd_set_text_full_autofit_*
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_text_full): check whether the same-text and 
+	  not same-markup situation in fact applies.
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_text_full_check_text): if we have already
+	  have a string in the cell, we can ignore a leading '
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_text_full_check_text): new
+	(cmd_set_text_full_check_markup): new
+	(cmd_set_text_full): check for changed text and markup
+
+2010-08-13  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.c (colrow_state_list_destroy): Make this a function.
+
+	* src/commands.c (cmd_set_text_full): Restore check for actual
+	changes.  Fixes #626797.
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_text_full_check_texpr): new
+	(cmd_set_text_full): check whether we are entering the same expression
+	  already in all cells.
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_text_full): always autofit the rows and also
+	  autofit the columns for non-strings.
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/colrow.c (colrow_set_sizes): revert last change
+	* src/commands.c (cmd_set_text_full_autofit_*): new
+	(cmd_set_text_full): don't use colrow_set_sizes but colrow_autofit
+	* src/undo.c (gnm_undo_colrow_set_sizes_new): fix comment
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/colrow.c (colrow_set_sizes): use -2 as an indicator only to
+	auto-fit non-strings
+	* src/commands.c (cmd_set_text_full): use size -2
+	* src/undo.c (gnm_undo_colrow_set_sizes_new): use -1 and -2 as
+	autofit markers.
+
+2010-08-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_set_text_*): deleted
+	(cmd_set_text_full): new
+	(cmd_set_text): use cmd_set_text_full
+	(cmd_area_set_text): use cmd_set_text_full
+
+2010-08-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_area_set_text): use autocorrection
+
+2010-08-12  Morten Welinder  <terra@gnome.org>
+
+	* src/cell.c (gnm_cell_set_expr_and_value, gnm_cell_set_value):
+	Plug leaks in case preconditions fail.
+
+2010-08-12  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-edit.c (item_edit_update_bounds): fix in-cell editing when
+	zoom < 100%. [#626679]
+
+2010-08-11  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_colrow): Set "pos" initially.
+
+2010-08-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-pane.c (cb_update_ctrl_pts), (set_item_x_y),
+	(set_acetate_coords): make control points zoom correctly. [see #626404]
+
+2010-08-10  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-pane-impl.h: update comment.
+	* src/gnm-pane.c (cb_pane_drag_motion): fixed objects dragging when zoomed.
+	[#626484]
+	* src/sheet-control-gui.c (scg_drag_receive_same_process): ditto.
+
+2010-08-08  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_must_have_style): New function.  Use
+	throughout.
+
+2010-08-08  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-control-gui.c (gnm_pane_make_cell_visible): fix scroll when
+	selecting a merged cell. [#626065]
+
+2010-08-06  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-random.c (random_01_mersenne): Produce full precision
+	for long double case.
+	(mt_setup_win32): New function.
+	(random_01_determine): Try mt_setup_win32 on Win32.  Fixes
+	#533779.
+
+2010-08-05  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (value_new_from_string): Quiet warning.
+
+	* src/xml-sax-read.c (xml_sax_must_have_sheet): New function.  Use
+	heavily throughout the parser.  Fixes #626043.
+	(xml_sax_colrow): Avoid near-infinite loop.
+
+2010-08-04  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_cell_set_array_expr): Use
+	gnm_cell_set_array.  Fixes #626034's original problem.
+
+	* src/cell.c (gnm_cell_set_array): New, somewhat saner variant.
+
+	* src/expr.c (gnm_expr_eval): Catch when the alleged array corner
+	isn't a corner.  See bug 626034.
+
+	* src/cell.c (gnm_cell_set_array_formula): Improve preconditions.
+	(gnm_cell_cleanout): Add precondition.
+
+	* src/mstyle.c (gnm_style_set_font_italic,
+	gnm_style_set_font_bold, gnm_style_set_font_strike,
+	gnm_style_set_wrap_text, gnm_style_set_shrink_to_fit,
+	gnm_style_set_contents_locked, gnm_style_set_contents_hidden):
+	Normalize gboolean.
+	(gnm_style_set_font_strike): Fix argument type.
+
+2010-08-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/dependent.c (gnm_cell_eval_content): force columns span
+	recalculation when switching between number and error. [#625994]
+
+2010-08-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnumeric_create_tooltip_rc_style): set all colours
+	(gnumeric_create_tooltip): set the label style
+
+2010-08-03  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_cell, xml_sax_cell_content): Don't
+	check data with g_return_if_fail.  Plug leaks.
+
+	* src/workbook.c (workbook_sheet_by_index): Fix crash.  [#625985]
+
+	* src/gnm-random.c (random_01_device): Read the right number of
+	new bytes, just in case.
+
+2010-08-02  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-random.c: Split from src/mathfunc.c.
+	(random_01): Split into manageable pieces.
+
+2010-08-01  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/item-bar.c (ib_draw_cell): use theme foreground color for row and
+	column headers. [#625727]
+
+2010-07-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (legend_start), (position_end),
+	(gnm_sogg_prep_sax_parser): import the legend from guppi graph.
+
+2010-07-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (dim_start): survive malformed guppi graphs.
+	[#625726]
+
+2010-07-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (gnm_sog_prep_sax_parser),
+	(sheet_object_graph_ensure_size), (vector_start), (vector_end),
+	(plot_type_start), (series_start), (dim_start), (marker_end),
+	(linear_start), (cubic_start), (horiz_end), (stacked_end),
+	(percent_end), (separation_end), (bubble_end),
+	(gnm_sogg_sax_parser_done), (gnm_sogg_prep_sax_parser): import Guppi
+	graphs from gnumeric-1.0.x files. [#567953]
+
+2010-07-30  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

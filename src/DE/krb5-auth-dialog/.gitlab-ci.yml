@@ -1,0 +1,76 @@
+include: 'https://gitlab.gnome.org/GNOME/citemplates/raw/master/flatpak/flatpak_ci_initiative.yml'
+
+default:
+  # Protect CI infra from rogue jobs
+  timeout: 15 minutes
+  # Allow jobs to be caneled on new commits
+  interruptible: true
+  # Retry on infra hickups automatically
+  retry:
+    max: 1
+    when:
+      - 'api_failure'
+      - 'runner_system_failure'
+      - 'scheduler_failure'
+      - 'stuck_or_timeout_failure'
+
+variables:
+    DEBIAN_DEPS:
+      build-essential
+      bison
+      flex
+      gnome-common
+      intltool
+      itstool
+      libadwaita-1-dev
+      libglib2.0-dev
+      libgtk-4-dev
+      libpam0g-dev
+      meson
+      pkg-config
+      yelp-tools
+
+build-debian-mit:
+  image: debian:bookworm
+  stage: build
+  before_script:
+    - apt-get update
+    - apt-get -y install $DEBIAN_DEPS libkrb5-dev
+  script:
+    - meson . _build
+    - ninja -C _build
+
+build-debian-heimdal:
+  image: debian:bookworm
+  stage: build
+  before_script:
+    - apt-get update
+    - apt-get -y install $DEBIAN_DEPS heimdal-dev
+  script:
+    - meson . _build
+    - ninja -C _build
+
+flatpak:
+  stage: build
+  variables:
+    MANIFEST_PATH: 'org.gnome.KrbAuthDialog.json'
+    FLATPAK_MODULE: "org.gnome.KrbAuthDialog"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.KrbAuthDialog"
+    BUNDLE: 'org.gnome.KrbAuthDialog.flatpak'
+  extends: .flatpak
+
+update-etpo:
+  image: debian:bookworm
+  stage: build
+  when: manual
+  before_script:
+    - apt-get update
+    - apt-get -y install $DEBIAN_DEPS libkrb5-dev flex bison git
+  script:
+    - git clone --depth=1 https://github.com/krb5/krb5
+    - meson -Detpo=enabled . _build
+    - ninja -C _build
+    - ET_DIR=$PWD/krb5  _build/etpo/update-etpo
+    - git diff src/dummy-strings.c
+

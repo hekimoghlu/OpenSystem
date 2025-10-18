@@ -1,0 +1,809 @@
+{
+    "app-id": "org.gimp.GIMP.Nightly",
+    "branch": "master",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "gimp",
+    "build-options": {
+        "env": {
+            "CLICOLOR_FORCE": "1"
+        },
+        "cflags": "-fdiagnostics-color=always",
+        "cxxflags": "-fdiagnostics-color=always"
+    },
+    "separate-locales": false,
+    "rename-appdata-file": "org.gimp.GIMP.appdata.xml",
+    "rename-desktop-file": "gimp.desktop",
+    "rename-icon": "gimp",
+    "copy-icon": true,
+    "finish-args": [
+        "--share=ipc",
+        "--share=network",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--filesystem=host",
+        "--filesystem=xdg-config/GIMP:create",
+        "--filesystem=xdg-config/gtk-3.0",
+        "--filesystem=/tmp",
+        "--filesystem=xdg-run/gvfs",
+        "--filesystem=xdg-run/gvfsd",
+        "--unset-env=GTK_MODULES",
+        "--talk-name=org.gtk.vfs.*",
+        "--talk-name=org.freedesktop.FileManager1",
+        "--talk-name=org.gnome.Shell.Screenshot",
+        "--talk-name=org.kde.kwin.Screenshot"
+    ],
+    "tags": [
+        "GTK+3",
+        "nightly"
+    ],
+    "desktop-file-name-prefix": "(Nightly) ",
+    "cleanup": [
+        "/lib/cmake",
+        "/man",
+        "/share/aclocal",
+        "/share/doc",
+        "/share/gir-1.0",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "//": "This dep is tricky to be included in the SDK: https://gitlab.com/freedesktop-sdk/freedesktop-sdk/-/issues/1826",
+            "name": "libbacktrace",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/ianlancetaylor/libbacktrace.git",
+                    "commit": "1db85642e3fca189cf4e076f840a45d6934b2456"
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "autoreconf -vfi"
+                    ]
+                }
+            ],
+            "config-opts": [
+                "--enable-shared"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "name": "gexiv2",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/gexiv2/0.14/gexiv2-0.14.6.tar.xz",
+                    "sha256": "606c28aaae7b1f3ef5c8eabe5e7dffd7c5a1c866d25b7671fb847fe287a72b8b",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 1626,
+                        "stable-only": true,
+                        "//": "https://gitlab.gnome.org/GNOME/gexiv2/-/issues/82",
+                        "versions": {
+                            "<": "0.15.0"
+                        },
+                        "url-template": "https://download.gnome.org/sources/gexiv2/$major.$minor/gexiv2-$version.tar.xz"
+                    }
+                }
+            ],
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dpython3=false",
+                "-Dtools=false"
+            ],
+            "modules": [
+                {
+                    "name": "exiv2",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/Exiv2/exiv2/archive/refs/tags/v0.28.7.tar.gz",
+                            "sha256": "5e292b02614dbc0cee40fe1116db2f42f63ef6b2ba430c77b614e17b8d61a638",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 769,
+                                "stable-only": true,
+                                "url-template": "https://github.com/Exiv2/exiv2/archive/refs/tags/v$version.tar.gz"
+                            }
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "builddir": true,
+                    "config-opts": [
+                        "-DEXIV2_BUILD_EXIV2_COMMAND=OFF",
+                        "-DEXIV2_ENABLE_INIH=OFF",
+                        "-DEXIV2_ENABLE_VIDEO=OFF"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "openexr",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/AcademySoftwareFoundation/openexr/archive/refs/tags/v3.4.2.tar.gz",
+                    "sha256": "d7d38eb6a63ea8ba0f301d0ad6a80094032d488e9e6c525b35236d20a9ae3ef2",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 13289,
+                        "stable-only": true,
+                        "url-template": "https://github.com/AcademySoftwareFoundation/openexr/archive/refs/tags/v$version.tar.gz"
+                    }
+                }
+            ],
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DOPENEXR_BUILD_TOOLS=OFF",
+                "-DOPENEXR_BUILD_EXAMPLES=OFF",
+                "-DBUILD_TESTING=OFF"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ],
+            "modules": [
+                {
+                    "name": "imath",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/AcademySoftwareFoundation/Imath/archive/refs/tags/v3.2.2.tar.gz",
+                            "sha256": "b4275d83fb95521510e389b8d13af10298ed5bed1c8e13efd961d91b1105e462",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 223366,
+                                "stable-only": true,
+                                "url-template": "https://github.com/AcademySoftwareFoundation/Imath/archive/refs/tags/v$version.tar.gz"
+                            }
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "builddir": true,
+                    "config-opts": [
+                        "-DBUILD_TESTING=OFF"
+                    ],
+                    "cleanup": [
+                        "/include",
+                        "/lib/pkgconfig"
+                    ]
+                },
+                {
+                    "name": "libdeflate",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.24.zip",
+                            "sha256": "1e33358dc545a3258af213e2fb0ebb84e6d970bb098d774c33bdacfbdde4a087",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 242778,
+                                "stable-only": true,
+                                "url-template": "https://github.com/ebiggers/libdeflate/archive/refs/tags/v$version.zip"
+                            }
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "builddir": true,
+                    "config-opts": [
+                        "-DLIBDEFLATE_BUILD_STATIC_LIB=OFF",
+                        "-DLIBDEFLATE_GZIP_SUPPORT=OFF",
+                        "-DLIBDEFLATE_BUILD_GZIP=OFF"
+                    ],
+                    "cleanup": [
+                        "/include",
+                        "/lib/pkgconfig"
+                    ]
+                },
+                {
+                    "name": "openjph",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/aous72/OpenJPH/archive/refs/tags/0.24.2.tar.gz",
+                            "sha256": "c99218752b15b5b2afca3b0e4d4f0ddf1ac19f94dbcbe11874fe492d44ed3e2d",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 375199,
+                                "stable-only": true,
+                                "url-template": "https://github.com/aous72/OpenJPH/archive/refs/tags/$version.tar.gz"
+                            }
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "builddir": true,
+                    "config-opts": [
+                        "-DOJPH_ENABLE_TIFF_SUPPORT=OFF",
+                        "-DOJPH_BUILD_EXECUTABLES=OFF"
+                    ],
+                    "cleanup": [
+                        "/include",
+                        "/lib/pkgconfig"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "poppler",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://poppler.freedesktop.org/poppler-25.10.0.tar.xz",
+                    "sha256": "6b5e9bb64dabb15787a14db1675291c7afaf9387438cc93a4fb7f6aec4ee6fe0",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 3686,
+                        "stable-only": true,
+                        "url-template": "https://poppler.freedesktop.org/poppler-$version.tar.xz"
+                    }
+                }
+            ],
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DBUILD_GTK_TEST=OFF",
+                "-DBUILD_QT5_TESTS=OFF",
+                "-DBUILD_QT6_TESTS=OFF",
+                "-DBUILD_CPP_TESTS=OFF",
+                "-DBUILD_MANUAL_TESTS=OFF",
+                "-DENABLE_GOBJECT_INTROSPECTION=OFF",
+                "-DENABLE_UTILS=OFF",
+                "-DENABLE_CPP=OFF",
+                "-DENABLE_LIBOPENJPEG=openjpeg2",
+                "-DENABLE_BOOST=OFF",
+                "-DENABLE_NSS3=OFF",
+                "-DENABLE_GPGME=OFF",
+                "-DENABLE_QT5=OFF",
+                "-DENABLE_QT6=OFF"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ],
+            "modules": [
+                {
+                    "name": "popplerdata",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://poppler.freedesktop.org/poppler-data-0.4.12.tar.gz",
+                            "sha256": "c835b640a40ce357e1b83666aabd95edffa24ddddd49b8daff63adb851cdab74",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 3687,
+                                "stable-only": true,
+                                "url-template": "https://poppler.freedesktop.org/poppler-data-$version.tar.gz"
+                            }
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "builddir": true
+                }
+            ]
+        },
+        {
+            "name": "libmng",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://src.fedoraproject.org/repo/pkgs/rpms/libmng/libmng-2.0.3.tar.gz/7e9a12ba2a99dff7e736902ea07383d4/libmng-2.0.3.tar.gz",
+                    "sha256": "cf112a1fb02f5b1c0fce5cab11ea8243852c139e669c44014125874b14b7dfaa"
+                }
+            ],
+            "config-opts": [
+                "--disable-static"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "name": "libwmf",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/caolanm/libwmf/archive/refs/tags/v0.2.13.tar.gz",
+                    "sha512": "f45a936c9bc98fc1a5f2b0808b497119e4dcd3c132615fdddb7583e5719c7d1d7f85c16ebf313cad453e5b7ae3508bf6b80c4ed2b42322b7dec295d8f4eb86ce",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 230209,
+                        "stable-only": true,
+                        "url-template": "https://github.com/caolanm/libwmf/archive/refs/tags/v$version.tar.gz"
+                    }
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "cp -p /usr/share/automake-*/config.{sub,guess} .",
+                        "autoreconf -vfi"
+                    ]
+                }
+            ],
+            "config-opts": [
+                "--disable-static",
+                "--disable-dependency-tracking"
+            ],
+            "cleanup": [
+                "/bin",
+                "/include",
+                "/lib/gdk-pixbuf-*",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "name": "ghostscript",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10060/ghostscript-10.06.0.tar.gz",
+                    "sha512": "21ba2110693cfb98126f06daff410b0a94ae9b1690b867a383aa82b56a817ffd237044e024c2cf26daa6efe4d5cf8903db8e637c4629f0c8a0eb325a30fdc0cb",
+                    "x-checker-data": {
+                        "//": "Bypass broken url-template with anitya checker - See https://github.com/flathub/flatpak-external-data-checker/issues/360",
+                        "type": "json",
+                        "url": "https://api.github.com/repos/ArtifexSoftware/ghostpdl-downloads/releases/latest",
+                        "version-query": ".name | split(\" \") | .[1]",
+                        "url-query": ".assets[] | select(.name|test(\"^ghostscript-(.*).tar.gz$\")) | .browser_download_url"
+                    }
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "cp -p /usr/share/automake-*/config.{sub,guess} freetype/builds/unix/",
+                        "cp -p /usr/share/automake-*/config.{sub,guess} ijs/",
+                        "cp -p /usr/share/automake-*/config.{sub,guess} jpeg/",
+                        "cp -p /usr/share/automake-*/config.{sub,guess} libpng/",
+                        "cp -p /usr/share/automake-*/config.{sub,guess} lcms2mt/",
+                        "cp -p /usr/share/automake-*/config.{sub,guess} tiff/config/",
+                        "rm -rf libpng/pngread.c"
+                    ]
+                }
+            ],
+            "config-opts": [
+                "--disable-cups",
+                "--disable-gtk",
+                "--without-tesseract",
+                "--without-libpaper",
+                "--without-pdftoraster"
+            ],
+            "make-args": [
+                "so"
+            ],
+            "make-install-args": [
+                "soinstall"
+            ],
+            "cleanup": [
+                "/bin",
+                "/include",
+                "/lib/pkgconfig",
+                "/share"
+            ]
+        },
+        {
+            "name": "libmypaint",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/mypaint/libmypaint/releases/download/v1.6.1/libmypaint-1.6.1.tar.xz",
+                    "sha256": "741754f293f6b7668f941506da07cd7725629a793108bb31633fb6c3eae5315f",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 12974,
+                        "stable-only": true,
+                        "url-template": "https://github.com/mypaint/libmypaint/releases/download/v$version/libmypaint-$version.tar.xz"
+                    }
+                }
+            ],
+            "config-opts": [
+                "--disable-gegl",
+                "--disable-introspection"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig",
+                "/share"
+            ],
+            "modules": [
+                {
+                    "name": "json-c",
+                    "sources": [
+                        {
+                            "type": "git",
+                            "url": "https://github.com/json-c/json-c.git",
+                            "tag": "json-c-0.18-20240915",
+                            "commit": "41a55cfcedb54d9c1874f2f0eb07b504091d7e37",
+                            "x-checker-data": {
+                                "type": "git",
+                                "tag-pattern": "^json-c-([\\d.]+)-[\\d]+$"
+                            }
+                        },
+                        {
+                            "type": "patch",
+                            "paths": [
+                                "patches/0001-Allow-build-with-cmake-4.0.0.patch"
+                            ]
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "config-opts": [
+                        "-DDISABLE_WERROR=ON",
+                        "-DBUILD_TESTING=OFF"
+                    ],
+                    "cleanup": [
+                        "/include",
+                        "/lib/pkgconfig"
+                    ]
+                },
+                {
+                    "//": "Copy from shared-modules to avoid submodules on dev repo.",
+                    "name": "intltool",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                            "sha256": "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 1385,
+                                "stable-only": true,
+                                "url-template": "https://launchpad.net/intltool/trunk/$version/+download/intltool-$version.tar.gz"
+                }
+                        }
+                    ],
+                    "cleanup": [
+                        "*"
+            ]
+                }
+            ]
+        },
+        {
+            "name": "mypaint-brushes",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/mypaint/mypaint-brushes/releases/download/v2.0.2/mypaint-brushes-2.0.2.tar.xz",
+                    "sha256": "7984a74edef94571d872d0629b224abaa956a36f632f5c5516b33d22e49eb566",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 17096,
+                        "stable-only": true,
+                        "url-template": "https://github.com/mypaint/mypaint-brushes/releases/download/v$version/mypaint-brushes-$version.tar.xz"
+                    }
+                },
+                {
+                    "//": "https://gitlab.gnome.org/GNOME/gimp/-/issues/14461",
+                    "type": "patch",
+                    "paths": [
+                        "patches/0001-change-surfacemap-inputs.patch"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "libilbm",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/svanderburg/libilbm.git",
+                    "commit": "586f5822275ef5780509a851cb90c7407b2633d9"
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "./bootstrap"
+                    ]
+                },
+                {
+                    "type": "patch",
+                    "paths": [
+                        "patches/libilbm-no-ilbmpack-ilbmpp-acbm2ilbm-ilbm2acbm.patch"
+                    ]
+                }
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ],
+            "modules": [
+                {
+                    "name": "libiff",
+                    "sources": [
+                        {
+                            "type": "git",
+                            "url": "https://github.com/svanderburg/libiff.git",
+                            "commit": "b5f542a83c824f26e0816770c9a17c22bd388606"
+                        },
+                        {
+                            "type": "shell",
+                            "commands": [
+                                "./bootstrap"
+                            ]
+                        },
+                        {
+                            "type": "patch",
+                            "paths": [
+                                "patches/libiff-no-iffjoin-and-iffp.patch"
+                            ]
+                        }
+                    ],
+                    "cleanup": [
+                        "/include",
+                        "/lib/pkgconfig"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "xmu",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://xorg.freedesktop.org/releases/individual/lib/libXmu-1.2.1.tar.xz",
+                    "sha256": "fcb27793248a39e5fcc5b9c4aec40cc0734b3ca76aac3d7d1c264e7f7e14e8b2",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 1785,
+                        "stable-only": true,
+                        "url-template": "https://xorg.freedesktop.org/releases/individual/lib/libXmu-$version.tar.xz"
+                    }
+                }
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "name": "qoi",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/phoboslab/qoi.git",
+                    "commit": "4ab68bbd20618a663255625160c40875713f5485"
+                }
+            ],
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -D qoi.h /app/include/qoi.h"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "name": "cfitsio",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/HEASARC/cfitsio/archive/refs/tags/cfitsio-4.6.2.tar.gz",
+                    "sha256": "83f710f9441e7c703eeb485c9a475f50801ae7fad32ac7e356a406d318b4c02f",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 270,
+                        "stable-only": true,
+                        "url-template": "https://github.com/HEASARC/cfitsio/archive/refs/tags/cfitsio-$version.tar.gz"
+                    }
+                },
+                {
+                    "type": "patch",
+                    "paths": [
+                        "patches/0001-bump-CMake-min-required-version.patch"
+                    ]
+                }
+            ],
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DUTILS=OFF",
+                "-DTESTS=OFF"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "//": "Originally taken from org.octave.Octave manifest",
+            "name": "SuiteSparse",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v7.11.0.tar.gz",
+                    "sha256": "93ed4c4e546a49fc75884c3a8b807d5af4a91e39d191fbbc60a07380b12a35d1",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 4908,
+                        "stable-only": true,
+                        "url-template": "https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v$version.tar.gz"
+                    }
+                }
+            ],
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DBLA_VENDOR=OpenBLAS",
+                "-DGRAPHBLAS_COMPACT=ON",
+                "-DSUITESPARSE_USE_OPENMP=ON",
+                "-DSUITESPARSE_USE_PYTHON=OFF",
+                "-DSUITESPARSE_DEMOS=OFF",
+                "-DBUILD_TESTING=OFF",
+                "-DCMAKE_INSTALL_LIBDIR=/app/lib",
+                "-DCMAKE_INSTALL_INCLUDEDIR=/app/include"
+            ],
+            "cleanup": [
+                "/bin",
+                "/include",
+                "/lib/pkgconfig"
+            ],
+            "modules": [
+                {
+                    "name": "openblas",
+                    "sources": [
+                        {
+                            "type": "archive",
+                            "url": "https://github.com/xianyi/OpenBLAS/archive/v0.3.29.tar.gz",
+                            "sha256": "38240eee1b29e2bde47ebb5d61160207dc68668a54cac62c076bb5032013b1eb",
+                            "x-checker-data": {
+                                "type": "anitya",
+                                "project-id": 2540,
+                                "stable-only": true,
+                                "//": "https://github.com/OpenMathLib/OpenBLAS/issues/5324",
+                                "versions": {
+                                    "<": "0.3.30"
+                                },
+                                "url-template": "https://github.com/xianyi/OpenBLAS/archive/v$version.tar.gz"
+                            }
+                        }
+                    ],
+                    "buildsystem": "cmake-ninja",
+                    "config-opts": [
+                        "-DBUILD_SHARED_LIBS=ON",
+                        "-DDYNAMIC_ARCH=ON",
+                        "-DUSE_OPENMP=ON",
+                        "-DBUILD_WITHOUT_CBLAS=ON",
+                        "-DNO_LAPACKE=1"
+                    ],
+                    "cleanup": [
+                        "/include",
+                        "/lib/pkgconfig"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "maxflow",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/gerddie/maxflow.git",
+                    "commit": "6ac148f164b9567ac81fbb4ebb36112f850c902b"
+                }
+            ],
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+            ],
+            "cleanup": [
+                "/include",
+                "/lib/pkgconfig"
+            ]
+        },
+        {
+            "name": "graphviz",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://gitlab.com/graphviz/graphviz/-/archive/14.0.1/graphviz-14.0.1.tar.gz",
+                    "sha256": "a969b754ecd9e25cc93b2d299cc03f573ff65c5d3595350fa22678c028b8de52",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 1249,
+                        "stable-only": true,
+                        "url-template": "https://gitlab.com/graphviz/graphviz/-/archive/$version/graphviz-$version.tar.gz"
+                    }
+                }
+            ],
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DWITH_GDK=OFF",
+                "-DWITH_GTK=OFF",
+                "-DWITH_GHOSTSCRIPT=OFF",
+                "-DWITH_POPPLER=OFF",
+                "-DWITH_RSVG=OFF",
+                "-DWITH_WEBP=OFF",
+                "-DWITH_X=OFF"
+            ],
+            "cleanup": [
+                "/bin/??",
+                "/bin/????*",
+                "/bin/fdp",
+                "/bin/nop",
+                "/include",
+                "/lib/libgvpr*",
+                "/lib/graphviz/libgvplugin_core*",
+                "/lib/graphviz/libgvplugin_kitty*",
+                "/lib/graphviz/libgvplugin_neato_layout*",
+                "/lib/graphviz/libgvplugin_vt*",
+                "/lib/pkgconfig",
+                "/share"
+            ]
+        },
+        {
+            "name": "babl",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/babl.git",
+                    "branch": "master"
+                }
+            ],
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dwith-docs=false",
+                "-Dgi-docgen=disabled"
+            ],
+            "cleanup": [
+                "/bin"
+            ]
+        },
+        {
+            "name": "gegl",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gegl.git",
+                    "branch": "master"
+                }
+            ],
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Ddocs=false",
+                "-Dgi-docgen=disabled",
+                "-Dworkshop=true"
+            ],
+            "cleanup": [
+                "/bin/gegl-imgcmp",
+                "/share/gegl*"
+            ]
+        },
+        {
+            "name": "gimp",
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "../../.."
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "xsltproc -o desktop/org.gimp.GIMP.appdata.xml.in.in build/linux/flatpak/remove-future-appdata-release.xslt desktop/org.gimp.GIMP.appdata.xml.in.in"
+                    ]
+                }
+            ],
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dgi-docgen=disabled",
+                "-Dicc-directory=/run/host/usr/share/color/icc/",
+                "-Dcheck-update=no",
+                "-Denable-default-bin=enabled",
+                "-Dbuild-id=org.gimp.GIMP.flatpak.nightly"
+            ],
+            "cleanup": [
+                "/bin/gimp-console*"
+            ]
+        }
+    ]
+}

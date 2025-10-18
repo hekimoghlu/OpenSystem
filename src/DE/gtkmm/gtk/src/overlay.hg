@@ -1,0 +1,78 @@
+/* Copyright (C) 2014 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+/** A container which overlays widgets on top of each other.
+ *
+ * Gtk::Overlay is a container which contains a single main child, on top
+ * of which it can place “overlay” widgets. The
+ * position of each overlay widget is determined by its Gtk::Widget:halign
+ * and Gtk::Widget:valign properties. E.g. a widget with both alignments
+ * set to Gtk::Align::START will be placed at the top left corner of the
+ * main widget, whereas an overlay with halign set to Gtk::Align::CENTER
+ * and valign set to Gtk::Align::END will be placed a the bottom edge of
+ * the main widget, horizontally centered. The position can be adjusted
+ * by setting the margin properties of the child to non-zero values.
+ *
+ * More complicated placement of overlays is possible by connecting
+ * to the Gtk::Overlay::get-child-position signal.
+ *
+ * The Gtk::Overlay implementation of the Gtk::Buildable interface
+ * supports placing a child as an overlay by specifying “overlay” as
+ * the “type” attribute of a `<child>` element.
+ *
+ * @ingroup Containers
+ * @newin{3,14}
+ */
+
+class GTKMM_API Overlay
+  : public Widget
+{
+  _CLASS_GTKOBJECT(Overlay, GtkOverlay, GTK_OVERLAY, Gtk::Widget, GtkWidget, , , GTKMM_API)
+public:
+
+  /** Creates a new Overlay.
+   */
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(void add_overlay(Gtk::Widget& widget), gtk_overlay_add_overlay)
+  _WRAP_METHOD(void remove_overlay(Gtk::Widget& widget), gtk_overlay_remove_overlay)
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_overlay_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_overlay_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_overlay_get_child, constversion)
+
+  _WRAP_METHOD(bool get_measure_overlay(Widget& widget) const, gtk_overlay_get_measure_overlay)
+  _WRAP_METHOD(void set_measure_overlay(Widget& widget, bool measure = true), gtk_overlay_set_measure_overlay)
+  _WRAP_METHOD(bool get_clip_overlay(const Widget& widget) const, gtk_overlay_get_clip_overlay)
+  _WRAP_METHOD(void set_clip_overlay(const Widget& widget, bool clip_overlay = true), gtk_overlay_set_clip_overlay)
+
+  // no_default_handler because GtkOverlayClass is private.
+#m4 _CONVERSION(`GdkRectangle*',`Gdk::Rectangle&',`Glib::wrap($3)')
+  _WRAP_SIGNAL(bool get_child_position(Gtk::Widget* widget, Gdk::Rectangle& allocation),
+    "get-child-position", no_default_handler)
+
+  _WRAP_PROPERTY("child", Widget*)
+};
+
+} // namespace Gtk

@@ -1,0 +1,467 @@
+{
+    "app-id": "org.pitivi.Pitivi",
+    "branch": "master",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "47",
+    "command": "pitivi",
+    "finish-args": [
+        "--socket=fallback-x11",
+        "--share=ipc",
+        "--socket=pulseaudio",
+        "--socket=wayland",
+        "--metadata=X-DConf=migrate-path=/org/pitivi/Pitivi/",
+        "--talk-name=org.freedesktop.Notifications",
+        "--filesystem=host",
+        "--device=dri"
+    ],
+    "sdk": "org.gnome.Sdk",
+    "copy-icon": true,
+    "build-options": {
+        "env": {
+            "PYTHON": "python3",
+            "GST_PLUGIN_SYSTEM_PATH": "/app/lib/gstreamer-1.0/",
+            "FREI0R_PATH": "/app/lib/frei0r-1/"
+        },
+        "strip": false,
+        "no-debuginfo": true
+    },
+    "modules": [
+        "aarch64/python3-ipdb.json",
+        "x86_64/python3-ipdb.json",
+
+        "aarch64/python3-pre-commit.json",
+        "x86_64/python3-pre-commit.json",
+
+        "aarch64/python3-hotdoc.json",
+        "x86_64/python3-hotdoc.json",
+
+        "aarch64/python3-pylint.json",
+        "x86_64/python3-pylint.json",
+
+        "aarch64/python3-matplotlib.json",
+        "x86_64/python3-matplotlib.json",
+
+        "aarch64/python3-librosa.json",
+        "x86_64/python3-librosa.json",
+
+        "libcanberra/libcanberra.json",
+        {
+            "name": "gsound",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gsound.git",
+                    "tag": "1.0.3",
+                    "commit": "95d36d60cf53e0e7c5d5325e0f1f4fc765a611ae",
+                    "x-checker-data": {
+                        "type": "gnome",
+                        "name": "gsound",
+                        "stable-only": true
+                    }
+                }
+            ]
+        },
+        {
+            "name": "x264",
+            "config-opts": [
+                "--enable-shared",
+                "--enable-static",
+                "--enable-pic",
+                "--disable-lavf"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://code.videolan.org/videolan/x264.git",
+                    "//": "Just get the latest from https://code.videolan.org/videolan/x264/-/commits/stable/ they don't do tags/snapshots/releases anymore",
+                    "commit": "31e19f92f00c7003fa115047ce50978bc98c3a0d"
+                }
+            ]
+        },
+        {
+            "//": "Needed by frei0r",
+            "name": "gavl",
+            "rm-configure": true,
+            "config-opts": [
+                "--without-doxygen",
+                "--disable-static",
+                "--enable-shared",
+                "--with-cpuflags=none"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "//": "Last updated in 2012: https://sourceforge.net/projects/gmerlin/files/gavl/",
+                    "//": "If you need to touch this again, see how an unreleased snapshot is used here: https://github.com/flathub/org.kde.kdenlive/blob/master/org.kde.kdenlive.json",
+                    "url": "https://downloads.sourceforge.net/project/gmerlin/gavl/1.4.0/gavl-1.4.0.tar.gz",
+                    "mirror-urls": [
+                        "http://http.debian.net/debian/pool/main/g/gavl/gavl_1.4.0.orig.tar.gz"
+                    ],
+                    "sha256": "51aaac41391a915bd9bad07710957424b046410a276e7deaff24a870929d33ce"
+                },
+                {
+                    "type": "patch",
+                    "path": "gavl/gavl-armel-ftbfs.patch"
+                },
+                {
+                    "type": "patch",
+                    "path": "gavl/gavl-implicit-declaration-of-memset.patch"
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "pwd",
+                        "cp -p -v /usr/share/automake-*/config.{sub,guess} ."
+                    ]
+                },
+                {
+                    "type": "script",
+                    "dest-filename": "autogen.sh",
+                    "commands": [
+                        "autoreconf -vfi"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "opencv",
+            "buildsystem": "cmake",
+            "builddir": true,
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DOPENCV_EXTRA_MODULES_PATH=../contrib/modules",
+                "-DOPENCV_GENERATE_PKGCONFIG=1",
+                "-DBUILD_opencv_alphamat=OFF",
+                "-DBUILD_opencv_aruco=OFF",
+                "-DBUILD_opencv_bgsegm=ON",
+                "-DBUILD_opencv_bioinspired=OFF",
+                "-DBUILD_opencv_ccalib=OFF",
+                "-DBUILD_opencv_cnn_3dobj=OFF",
+                "-DBUILD_opencv_cudaarithm=OFF",
+                "-DBUILD_opencv_cudabgsegm=OFF",
+                "-DBUILD_opencv_cudacodec=OFF",
+                "-DBUILD_opencv_cudafeatures2d=OFF",
+                "-DBUILD_opencv_cudafilters=OFF",
+                "-DBUILD_opencv_cudaimgproc=OFF",
+                "-DBUILD_opencv_cudalegacy=OFF",
+                "-DBUILD_opencv_cudaobjdetect=OFF",
+                "-DBUILD_opencv_cudaoptflow=OFF",
+                "-DBUILD_opencv_cudastereo=OFF",
+                "-DBUILD_opencv_cudawarping=OFF",
+                "-DBUILD_opencv_cudev=OFF",
+                "-DBUILD_opencv_cvv=OFF",
+                "-DBUILD_opencv_datasets=OFF",
+                "-DBUILD_opencv_dnn_objdetect=OFF",
+                "-DBUILD_opencv_dnns_easily_fooled=OFF",
+                "-DBUILD_opencv_dnn_superres=OFF",
+                "-DBUILD_opencv_dpm=OFF",
+                "-DBUILD_opencv_face=OFF",
+                "-DBUILD_opencv_freetype=OFF",
+                "-DBUILD_opencv_fuzzy=OFF",
+                "-DBUILD_opencv_hdf=OFF",
+                "-DBUILD_opencv_hfs=OFF",
+                "-DBUILD_opencv_img_hash=OFF",
+                "-DBUILD_opencv_intensity_transform=OFF",
+                "-DBUILD_opencv_line_descriptor=OFF",
+                "-DBUILD_opencv_matlab=OFF",
+                "-DBUILD_opencv_optflow=OFF",
+                "-DBUILD_opencv_ovis=OFF",
+                "-DBUILD_opencv_phase_unwrapping=OFF",
+                "-DBUILD_opencv_plot=ON",
+                "-DBUILD_opencv_quality=OFF",
+                "-DBUILD_opencv_rapid=OFF",
+                "-DBUILD_opencv_reg=OFF",
+                "-DBUILD_opencv_rgbd=OFF",
+                "-DBUILD_opencv_saliency=OFF",
+                "-DBUILD_opencv_sfm=OFF",
+                "-DBUILD_opencv_shape=OFF",
+                "-DBUILD_opencv_stereo=OFF",
+                "-DBUILD_opencv_structured_light=OFF",
+                "-DBUILD_opencv_superres=OFF",
+                "-DBUILD_opencv_surface_matching=OFF",
+                "-DBUILD_opencv_text=OFF",
+                "-DBUILD_opencv_tracking=ON",
+                "-DBUILD_opencv_videoio=OFF",
+                "-DBUILD_opencv_videostab=OFF",
+                "-DBUILD_opencv_viz=OFF",
+                "-DBUILD_opencv_xfeatures2d=OFF",
+                "-DBUILD_opencv_ximgproc=OFF",
+                "-DBUILD_opencv_xobjdetect=OFF",
+                "-DBUILD_opencv_xphoto=OFF"
+            ],
+            "cleanup": [
+                "/bin"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/opencv/opencv/archive/refs/tags/3.4.19.tar.gz",
+                    "sha256": "9b913e74299ce4416a5c94000da577c592bf670fd53bad16220eb115a0821529"
+                },
+                {
+                    "type": "archive",
+                    "url": "https://github.com/opencv/opencv_contrib/archive/3.4.19.tar.gz",
+                    "sha256": "4e7426f1d0f8dffafa5fe70b72ab33997d0055c7804d7d2760c7ff0a153efb38",
+                    "dest": "contrib"
+                }
+            ]
+        },
+        {
+            "name": "frei0r-plugins",
+            "buildsystem": "cmake-ninja",
+            "builddir": true,
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/dyne/frei0r/archive/v2.3.3.tar.gz",
+                    "sha256": "aeeefe3a9b44761b2cf110017d2b1dfa2ceeb873da96d283ba5157380c5d0ce5",
+                    "x-checker-data": {
+                        "type": "anitya",
+                        "project-id": 10670,
+                        "stable-only": true,
+                        "url-template": "https://github.com/dyne/frei0r/archive/v$version.tar.gz"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "soundtouch",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://codeberg.org/soundtouch/soundtouch",
+                    "tag": "2.3.3",
+                    "commit": "e83424d5928ab8513d2d082779c275765dee31b9",
+                    "x-checker-data": {
+                        "type": "git",
+                        "tag-pattern": "^([\\d.]+)$"
+                    }
+                },
+                {
+                    "type": "patch",
+                    "path": "disable-fast-math-as-it-affects-the-entire-process.patch"
+                }
+            ]
+        },
+        {
+            "name": "vo-aacenc",
+            "sources": [
+                {
+                    "type": "archive",
+                    "//": "Last updated in 2013: https://github.com/mstorsjo/vo-aacenc/tags",
+                    "url": "https://github.com/mstorsjo/vo-aacenc/archive/refs/tags/v0.1.3.tar.gz",
+                    "sha256": "ae38610405f862237f6c70360c406297cc4222abf82e86722c505ba74b53a97d"
+                },
+                {
+                    "type": "script",
+                    "dest-filename": "autogen.sh",
+                    "commands": [
+                        "autoreconf -fiv"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "x265",
+            "buildsystem": "cmake",
+            "subdir": "source",
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://bitbucket.org/multicoreware/x265_git/downloads/x265_3.6.tar.gz",
+                    "sha256": "663531f341c5389f460d730e62e10a4fcca3428ca2ca109693867bc5fe2e2807",
+                    "x-checker-data": {
+                        "type": "html",
+                        "url": "https://bitbucket.org/multicoreware/x265_git/raw/stable/x265Version.txt",
+                        "version-pattern": "releasetag: ([\\d\\.-]*)$",
+                        "url-template": "https://bitbucket.org/multicoreware/x265_git/downloads/x265_$version.tar.gz"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "ffmpeg",
+            "config-opts": [
+                "--disable-static",
+                "--enable-shared",
+                "--enable-pic",
+                "--disable-avdevice",
+                "--disable-postproc",
+                "--disable-swscale",
+                "--disable-programs",
+                "--disable-ffplay",
+                "--disable-ffprobe",
+                "--disable-ffmpeg",
+                "--disable-encoder=flac",
+                "--disable-protocols",
+                "--disable-devices",
+                "--disable-network",
+                "--disable-hwaccels",
+                "--disable-dxva2",
+                "--disable-vdpau",
+                "--disable-filters",
+                "--enable-filter=yadif",
+                "--disable-doc",
+                "--disable-d3d11va",
+                "--disable-dxva2",
+                "--disable-audiotoolbox",
+                "--disable-videotoolbox",
+                "--disable-vaapi",
+                "--disable-mediacodec",
+                "--disable-nvenc",
+                "--disable-mmal",
+                "--disable-omx",
+                "--disable-omx-rpi",
+                "--disable-cuda",
+                "--disable-cuvid",
+                "--disable-libmfx",
+                "--disable-libnpp",
+                "--disable-iconv",
+                "--disable-jni",
+                "--disable-v4l2_m2m",
+                "--enable-gpl",
+                "--enable-optimizations"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n7.0.2.tar.gz",
+                    "sha256": "5eb46d18d664a0ccadf7b0adee03bd3b7fa72893d667f36c69e202a807e6d533",
+                    "x-checker-data": {
+                        "type": "html",
+                        "url": "https://git.ffmpeg.org/gitweb/ffmpeg.git/tags",
+                        "version-pattern": "<td><a class=\"list name\" href=\"/gitweb/ffmpeg.git/commit/.+\">n(\\d[.\\d]+\\d)</a></td>",
+                        "url-template": "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n$version.tar.gz"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "fdk-aac",
+            "config-opts": [
+                "--with-pic",
+                "--disable-static",
+                "--enable-shared"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/mstorsjo/fdk-aac/archive/refs/tags/v2.0.3.tar.gz",
+                    "sha256": "e25671cd96b10bad896aa42ab91a695a9e573395262baed4e4a2ff178d6a3a78"
+                }
+            ]
+        },
+        {
+            "name": "orc",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "tag": "0.4.39",
+                    "url": "https://gitlab.freedesktop.org/gstreamer/orc.git"
+                }
+            ]
+        },
+        {
+            "name": "libdv",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "branch": "meson",
+                    "url": "https://gitlab.freedesktop.org/gstreamer/meson-ports/libdv.git"
+                }
+            ]
+        },
+        {
+            "name": "gstreamer",
+            "buildsystem": "meson",
+            "builddir": true,
+            "config-opts": [
+                "--libdir=lib",
+                "--wrap-mode=nodownload",
+                "-Dbad=enabled",
+                "-Dbase=enabled",
+                "-Ddevtools=enabled",
+                "-Ddoc=disabled",
+                "-Dges=enabled",
+                "-Dgood=enabled",
+                "-Dgpl=enabled",
+                "-Dgst-devtools:doc=disabled",
+                "-Dgst-editing-services:doc=disabled",
+                "-Dgst-editing-services:pygi-overrides-dir=/app/lib/python3.12/site-packages/gi/overrides/",
+                "-Dgst-libav:doc=disabled",
+                "-Dgst-plugins-bad:aom=disabled",
+                "-Dgst-plugins-bad:doc=disabled",
+                "-Dgst-plugins-bad:frei0r=enabled",
+                "-Dgst-plugins-bad:soundtouch=enabled",
+                "-Dgst-plugins-bad:voaacenc=enabled",
+                "-Dgst-plugins-bad:x265=enabled",
+                "-Dgst-plugins-base:doc=disabled",
+                "-Dgst-plugins-base:orc=enabled",
+                "-Dgst-plugins-good:doc=disabled",
+                "-Dgst-plugins-good:dv=enabled",
+                "-Dgst-plugins-ugly:doc=disabled",
+                "-Dgst-plugins-ugly:x264=enabled",
+                "-Dgst-python:pygi-overrides-dir=/app/lib/python3.12/site-packages/gi/overrides/",
+                "-Dgstreamer-vaapi:doc=disabled",
+                "-Dintrospection=enabled",
+                "-Dlibav=enabled",
+                "-Dpython=enabled",
+                "-Dugly=enabled",
+                "-Dvaapi=enabled"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.freedesktop.org/gstreamer/gstreamer.git",
+                    "branch": "main",
+                    "disable-submodules": true
+                }
+            ]
+        },
+        {
+            "name": "libpeas",
+            "buildsystem": "meson",
+            "config-opts": [
+                "--libdir=lib"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libpeas.git",
+                    "tag": "libpeas-1.36.0",
+                    "x-checker-data": {
+                        "type": "gnome",
+                        "name": "libpeas",
+                        "stable-only": true
+                    }
+                }
+            ]
+        },
+        {
+            "name": "pitivi",
+            "buildsystem": "meson",
+            "builddir": true,
+            "config-opts": [
+                "--libdir=lib"
+            ],
+            "build-options": {
+                "build-args": [
+                    "--share=network"
+                ]
+            },
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/pitivi.git",
+                    "branch": "master"
+                }
+            ]
+        }
+    ]
+}

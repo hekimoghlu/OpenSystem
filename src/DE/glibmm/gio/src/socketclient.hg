@@ -1,0 +1,176 @@
+/* Copyright (C) 2010 Jonathon Jongsma
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/asyncresult.h>
+#include <giomm/cancellable.h>
+#include <giomm/socketconnectable.h>
+#include <giomm/enums.h>
+#include <giomm/socket.h>
+#include <giomm/socketconnection.h>
+#include <giomm/proxyresolver.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+_WRAP_ENUM(SocketClientEvent, GSocketClientEvent, decl_prefix GIOMM_API)
+
+/** Helper for connecting to a network service.
+ *
+ * @see SocketConnection, SocketListener
+ *
+ * SocketClient is a high-level utility class for connecting to a
+ * network host using a connection oriented socket type.
+ *
+ * You create a SocketClient object, set any options you want, then
+ * call a sync or async connect operation, which returns a SocketConnection
+ * subclass on success.
+ *
+ * The type of the SocketConnection object returned depends on the type of
+ * the underlying socket that is in use. For instance, for a TCP/IP connection
+ * it will be a TcpConnection.
+ *
+ * @newin{2,24}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API SocketClient : public Glib::Object
+{
+  _CLASS_GOBJECT(SocketClient, GSocketClient, G_SOCKET_CLIENT, Glib::Object, GObject, , , GIOMM_API)
+
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_CREATE()
+  _WRAP_METHOD(SocketFamily get_family() const, g_socket_client_get_family)
+  _WRAP_METHOD(void set_family(SocketFamily family), g_socket_client_set_family)
+  _WRAP_METHOD(Socket::Type get_socket_type() const, g_socket_client_get_socket_type)
+  _WRAP_METHOD(void set_socket_type(Socket::Type type), g_socket_client_set_socket_type)
+  _WRAP_METHOD(Socket::Protocol get_protocol() const, g_socket_client_get_protocol)
+  _WRAP_METHOD(void set_protocol(Socket::Protocol protocol), g_socket_client_set_protocol)
+  _WRAP_METHOD(Glib::RefPtr<SocketAddress> get_local_address(), g_socket_client_get_local_address)
+  _WRAP_METHOD(Glib::RefPtr<const SocketAddress> get_local_address() const, g_socket_client_get_local_address, constversion)
+  _WRAP_METHOD(void set_local_address(const Glib::RefPtr<SocketAddress>& address), g_socket_client_set_local_address)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect(const Glib::RefPtr<SocketConnectable>& connectable, const Glib::RefPtr<Cancellable>& cancellable{?}), g_socket_client_connect, errthrow)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_to_host(const Glib::ustring& host_and_port, guint16 default_port, const Glib::RefPtr<Cancellable>& cancellable{?}), g_socket_client_connect_to_host, errthrow)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_to_service(const Glib::ustring& domain, const Glib::ustring& service, const Glib::RefPtr<Cancellable>& cancellable{?}), g_socket_client_connect_to_service, errthrow)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_to_uri(const Glib::ustring& uri, guint16 default_port, const Glib::RefPtr<Cancellable>& cancellable{?}), g_socket_client_connect_to_uri, errthrow)
+
+  _WRAP_METHOD_DOCS_ONLY(g_socket_client_connect_async)
+  void connect_async(const Glib::RefPtr<SocketConnectable>& connectable, const Glib::RefPtr<Cancellable>& cancellable, const SlotAsyncReady& slot);
+
+  /** This is the asynchronous version of connect().
+   * When the operation is finished @a slot will be called. You can then call finish() to get the result of the operation.
+   *
+   * @param connectable A SocketConnectable specifying the remote address.
+   * @param slot A callback slot to call after the operation completes.
+   */
+  void connect_async(const Glib::RefPtr<SocketConnectable>& connectable, const SlotAsyncReady& slot);
+ _IGNORE(g_socket_client_connect_async)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_finish(const Glib::RefPtr<AsyncResult>& result), g_socket_client_connect_finish, errthrow)
+
+
+  _WRAP_METHOD_DOCS_ONLY(g_socket_client_connect_to_host_async)
+  void connect_to_host_async(const Glib::ustring& host_and_port, guint16 default_port, const Glib::RefPtr<Cancellable>& cancellable, const SlotAsyncReady& slot);
+
+  /** This is the asynchronous version of connect_to_host().
+   * When the operation is finished @a slot will be called. You can then call connect_to_host_finish() to get the result of the operation.
+   *
+   * @param host_and_port The name and optionally the port of the host to connect to.
+   * @param default_port The default port to connect to.
+   * @param slot A callback slot to call after the opration completes.
+   */
+  void connect_to_host_async(const Glib::ustring& host_and_port, guint16 default_port, const SlotAsyncReady& slot);
+  _IGNORE(g_socket_client_connect_to_host_async)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_to_host_finish(const Glib::RefPtr<AsyncResult>& result), g_socket_client_connect_to_host_finish, errthrow)
+
+
+  _WRAP_METHOD_DOCS_ONLY(g_socket_client_connect_to_service_async)
+  void connect_to_service_async(const Glib::ustring& domain, const Glib::ustring& service, const Glib::RefPtr<Cancellable>& cancellable, const SlotAsyncReady& slot);
+
+  /** This is the asynchronous version of connect_to_service().
+   *
+   * @param domain A domain name.
+   * @param service The name of the service to connect to
+   * @param slot A callback slot to call after the opration completes.
+   */
+  void connect_to_service_async(const Glib::ustring& domain, const Glib::ustring& service, const SlotAsyncReady& slot);
+  _IGNORE(g_socket_client_connect_to_service_async)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_to_service_finish(const Glib::RefPtr<AsyncResult>& result), g_socket_client_connect_to_service_finish, errthrow)
+
+
+  _WRAP_METHOD_DOCS_ONLY(g_socket_client_connect_to_uri_async)
+  void connect_to_uri_async(const Glib::ustring& uri, guint16 default_port, const Glib::RefPtr<Cancellable>& cancellable, const SlotAsyncReady& slot);
+
+  /** This is the asynchronous version of connect_to_uri().
+   *
+   * @param uri A network URI.
+   * @param default_port The default port to connect to.
+   * @param slot A callback slot to call after the opration completes.
+   */
+  void connect_to_uri_async(const Glib::ustring& uri, guint16 default_port, const SlotAsyncReady& slot);
+  _IGNORE(g_socket_client_connect_to_uri_async)
+
+  _WRAP_METHOD(Glib::RefPtr<SocketConnection> connect_to_uri_finish(const Glib::RefPtr<AsyncResult>& result), g_socket_client_connect_to_uri_finish, errthrow)
+
+  _WRAP_METHOD(bool get_enable_proxy() const, g_socket_client_get_enable_proxy)
+  _WRAP_METHOD(void set_enable_proxy(bool enable), g_socket_client_set_enable_proxy)
+
+  _WRAP_METHOD(bool get_tls() const, g_socket_client_get_tls)
+  _WRAP_METHOD(void set_tls(bool tls = true), g_socket_client_set_tls)
+
+  _WRAP_METHOD(TlsCertificateFlags get_tls_validation_flags() const, g_socket_client_get_tls_validation_flags,
+    deprecated "Do not attempt to ignore validation errors.")
+  _WRAP_METHOD(void set_tls_validation_flags(TlsCertificateFlags flags), g_socket_client_set_tls_validation_flags,
+    deprecated "Do not attempt to ignore validation errors.")
+
+  _WRAP_METHOD(Glib::RefPtr<ProxyResolver> get_proxy_resolver(), g_socket_client_get_proxy_resolver, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const ProxyResolver> get_proxy_resolver() const, g_socket_client_get_proxy_resolver, refreturn, constversion)
+  _WRAP_METHOD(void set_proxy_resolver(const Glib::RefPtr<ProxyResolver>& proxy_resolver), g_socket_client_set_proxy_resolver)
+
+  _WRAP_METHOD(guint get_timeout() const, g_socket_client_get_timeout)
+  _WRAP_METHOD(void set_timeout(guint timeout), g_socket_client_set_timeout)
+
+  _WRAP_METHOD(void add_application_proxy(const Glib::ustring& protocol), g_socket_client_add_application_proxy)
+
+  _WRAP_PROPERTY("family", SocketFamily)
+  _WRAP_PROPERTY("local-address", Glib::RefPtr<SocketAddress>)
+  _WRAP_PROPERTY("protocol", Socket::Protocol)
+  _WRAP_PROPERTY("type", Socket::Type)
+  _WRAP_PROPERTY("timeout", guint)
+  _WRAP_PROPERTY("enable-proxy", bool)
+  _WRAP_PROPERTY("tls", bool)
+  _WRAP_PROPERTY("tls-validation-flags", TlsCertificateFlags,
+    deprecated "Do not attempt to ignore validation errors.")
+  _WRAP_PROPERTY("proxy-resolver", Glib::RefPtr<ProxyResolver>)
+
+#m4 _CONVERSION(`GSocketConnectable*',`const Glib::RefPtr<SocketConnectable>&',`Glib::wrap($3, true)')
+#m4 _CONVERSION(`GIOStream*',`const Glib::RefPtr<IOStream>&',`Glib::wrap($3, true)')
+  _WRAP_SIGNAL(void event(SocketClientEvent event, const Glib::RefPtr<SocketConnectable>& connectable,
+    const Glib::RefPtr<IOStream>& connection), event)
+};
+
+} // namespace Gio

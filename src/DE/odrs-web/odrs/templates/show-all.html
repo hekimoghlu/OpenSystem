@@ -1,0 +1,86 @@
+{% extends "default.html" %}
+{% block title %}All Reviews{% endblock %}
+
+{% block content %}
+
+{% if reviews|length == 0 %}
+<p>
+  There are no results for this query.
+</p>
+{% else %}
+<table class="table table-hover table-responsive">
+  <tr class="row">
+    <th class="col-sm-3">Application</th>
+    <th class="col-sm-1">Version</th>
+    <th class="col-sm-1">Rating</th>
+    <th class="col-sm-1">Locale</th>
+    <th class="col-sm-2">Name</th>
+    <th class="col-sm-3">Summary</th>
+    <th class="col-sm-1">&nbsp;</th>
+  </tr>
+
+{% for r in reviews %}
+  <tr class="row">
+    <td>{{r.component.app_id}}</td>
+    <td>{{r.version}}</td>
+    <td>
+      {{format_rating(r.rating)}}
+      ({{r.karma_up}}&uarr;, {{r.karma_down}}&darr;)
+{% if r.reported > 0 %}
+      [{{r.reported}}]
+{% endif %}
+    </td>
+    <td>{{r.locale}}</td>
+{% if r.user_display %}
+    <td>{{format_truncate(r.user_display, 15)}}</td>
+{% else %}
+    <td><i>Unknown</i></td>
+{% endif %}
+    <td>
+      <p>{{format_truncate(r.summary, 30)}}</p>
+      <p>{{format_truncate(r.description, 30)}}</p>
+    </td>
+    <td>
+      <a class="btn btn-info btn-block" href="{{url_for('.admin_show_review', review_id=r.review_id)}}">Details</a>
+      <a class="btn btn-danger btn-block" href="{{url_for('.admin_delete_force', review_id=r.review_id)}}">Delete</a>
+    </td>
+  </tr>
+{% endfor %}
+
+</table>
+
+{% macro render_pagination(pagination) %}
+  <ul class=pagination>
+  {% if pagination.has_prev %}
+    <li><a href="{{url_for_other_page(pagination.page - 1)}}">
+      &laquo;</a></li>
+  {% else %}
+    <li><span>&laquo;</span></li>
+  {% endif %}
+  {%- for page in pagination.iter_pages() %}
+    {% if page %}
+      {% if page != pagination.page %}
+        <li><a href="{{url_for_other_page(page)}}">{{page}}</a></li>
+      {% else %}
+        <li class="active"><span>{{page}}</span></li>
+      {% endif %}
+    {% else %}
+      <li class="disabled"><span>…</span></li>
+    {% endif %}
+  {%- endfor %}
+  {% if pagination.has_next %}
+    <li><a href="{{url_for_other_page(pagination.page + 1)
+}}">&raquo;</a></li>
+  {% else %}
+    <li><span>&raquo;</span></li>
+  {% endif %}
+  </ul>
+{% endmacro %}
+
+{% if pagination %}
+{{render_pagination(pagination)}}
+{% endif %}
+
+{% endif %}
+
+{% endblock %}

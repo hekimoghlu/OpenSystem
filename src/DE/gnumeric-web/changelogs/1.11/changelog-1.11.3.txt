@@ -1,0 +1,176 @@
+2012-04-21  Morten Welinder <terra@gnome.org>
+
+	* Release 1.11.3
+
+2012-04-18  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/selection.c (sv_selection_to_plot): never skip a required plot
+	dimension. [#674341]
+
+2012-04-17  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_font_name_changed, cb_font_size_changed)
+	(cb_zoom_activated): Try working around gtk bug.
+
+2012-04-06  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (gnm_search_normalize): Function to normalize text
+	before search and search/replace.
+	(gnm_search_replace_comment, gnm_search_replace_cell)
+	(gnm_search_replace_value): Use gnm_search_normalize.
+	(gnm_search_replace_cell): Normalize the result to NFC.  Fixes
+	#673447.
+
+2012-03-29  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c: Switch to g_slice by default.
+
+	* src/colrow.c (colrow_autofit): Mark as unit for recalc.  (This
+	one hits for paste-to-large-area.)
+
+	* src/sheet.c (sheet_redraw_region): Revert to redrawing the whole
+	sheet if the region is too tall.
+
+	* src/sheet-control-gui.c (scg_redraw_range): Ditto.
+
+2012-03-28  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_redraw_all, sheet_redraw_region): Mark whole
+	thing as one computation.  Jit-computation of rendered values
+	would otherwise discard caches between each cell.
+
+2012-03-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr.c (do_expr_as_string): use new convs->output.boolean
+	* src/parse-util.h (_GnmConventions): add output.boolean
+	* src/parse-util.c (gnm_conventions_new_full): initialize output.boolean
+
+2012-03-26  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (sheet_object_image_set_image),
+	(gnm_soi_assign_to_sheet): register the image when importing from .xls.
+	Fixes #672716 item 3.
+
+2012-03-25  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_simplify_if): New function.
+
+	* src/rangefunc.c (gnm_range_covar_pop): Rename from
+	gnm_range_covar.
+	(gnm_range_covar_est): New function.
+
+2012-03-23  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-image.c (content_end): Simplify.  Decode image
+	also if we don't have a name.
+
+	* src/sheet-object-widget.c
+	(sheet_widget_adjustment_prep_sax_parser): Set the right thing
+	when we see a "Page" attribute.  Fixes #672716 item 2.
+
+2012-03-18  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_eval),
+	(gnm_go_data_vector_finalize), (gnm_go_data_vector_get_value),
+	(cb_assign_string), (gnm_go_data_vector_get_str): fixed labels vectors
+	made of multiple ranges. [#672330]
+
+2012-03-18  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_get_markup): don't access an array with
+	an index larger than the size.
+
+2012-03-14  Morten Welinder  <terra@gnome.org>
+
+	* src/cell.h (struct _GnmCell): remove row_info pointers.  All
+	users fixed.
+
+	* src/sheet.c (sheet_cell_queue_respan): New function.
+	(cb_re_render_formulas, cb_clear_rendered_cells): Use
+	sheet_cell_queue_respan.
+
+	* src/dependent.c (gnm_cell_eval_content): Use
+	sheet_cell_queue_respan.
+
+2012-03-13  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_share_expressions): Add sharing debug
+	code.
+
+	* src/expr.c (gnm_expr_sharer_report): New function.
+
+2012-03-12  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (do_expr_as_string): Set a precedence for set.
+
+	* src/sheet-style.c (cb_style_extent, cb_is_default)
+	(cb_most_common): Fix handling of width and height.
+
+2012-03-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: needs goffice >= 0.9.3.
+	* src/sheet-object-component.c (gnm_soc_copy): rewritten.
+
+2012-03-11  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (print_info_get_paper_size): New function.
+
+2012-03-11  Morten Welinder  <mwelinder@gmail.com>
+
+	* test/GnumericTest.pm (test_importer): Survive non-compressed
+	.gnumeric files.
+
+2012-03-10  Morten Welinder  <terra@gnome.org>
+
+	* src/sstest.c (test_random): Use more samples for normal tests to
+	reduce failure rates.
+
+	* src/xml-sax-write.c (xml_write_colrow_info): Don't write records
+	that match the default col/row style.
+	(gnm_xml_out_add_gocolor): Don't go through GdkRGBA which causes
+	rounding problems.
+
+	* src/sheet-object-widget.h: Grand rename.  Make GNM_IS_SOW
+	public.
+
+2012-03-10  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (gnm_soi_write_image): make it work again.
+
+2012-03-09  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (sheet_style_is_default)
+	(sheet_style_get_nondefault_extent): New function.
+	(sheet_style_has_visible_content, sheet_style_most_common_in_col): Delete.
+	(sheet_style_get_extent): Drop col_styles argument.  All callers
+	changed.
+
+2012-03-08  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (expr_name_set_pos): Make this work even without
+	an existing scope.
+
+	* src/sheet-object-image.c (gnm_soi_new_view): Fix crash.
+
+2012-03-08  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (widget_wbc), (cb_selection_changed): fixed
+	crash with sheet object. [#671617]
+
+2012-03-07  Morten Welinder  <terra@gnome.org>
+
+	* plugins/excel/ms-excel-read.c (excel_read_LABEL): supply the
+	byte length to excel_read_LABEL_markup, not the character length.
+
+2012-03-06  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (install_icons): Move icon installation to
+	here.  We need unknown_image even without the gui.
+	(gnm_app_class_init): Hook it up here.
+
+	* src/wbc-gtk.c: Move from here.
+	(wbc_gtk_class_init): Instead of here.
+
+2012-03-02  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

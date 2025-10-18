@@ -1,0 +1,63 @@
+include:
+  - project: "gnome/citemplates"
+    file: "flatpak/flatpak_ci_initiative.yml"
+
+
+.flatpak rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $REPO_TOKEN_FILE && ($CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "schedule")
+
+.vars-extension:
+  extends: ".flatpak rules"
+  variables:
+    MANIFEST_PATH: "build-aux/flatpak/org.freedesktop.Sdk.Extension.vala-nightly.yml"
+    FLATPAK_MODULE: "valac"
+    APP_ID: "org.freedesktop.Sdk.Extension.vala-nightly"
+    BUNDLE: "vala-extension.flatpak"
+    EXPORT_RUNTIME: "--runtime"
+    RUN_TESTS: "no"
+    MESON_DIST: "no"
+
+.vars-25.08:
+  extends: [".vars-extension"]
+  # Use the image from the last stable runtime that includes 25.08 sdk
+  image: 'quay.io/gnome_infrastructure/gnome-runtime-images:gnome-master'
+  variables:
+    BRANCH: "25.08"
+  before_script:
+    - sed -i "s/24.08/$BRANCH/g" $MANIFEST_PATH
+
+.vars-24.08:
+  extends: [".vars-extension"]
+  # Use the image from the last stable runtime that includes 24.08 sdk
+  image: 'quay.io/gnome_infrastructure/gnome-runtime-images:gnome-48'
+  variables:
+    BRANCH: "24.08"
+
+flatpak-extension@25.08@x86_64:
+  extends: [".flatpak@x86_64", ".vars-25.08"]
+
+flatpak-extension@24.08@x86_64:
+  extends: [".flatpak@x86_64", ".vars-24.08"]
+
+flatpak-extension@25.08@aarch64:
+  extends: [".flatpak@aarch64", ".vars-25.08"]
+
+flatpak-extension@24.08@aarch64:
+  extends: [".flatpak@aarch64", ".vars-24.08"]
+
+nightly@25.08@x86_64:
+  extends: [".publish_nightly", ".flatpak rules"]
+  needs: ["flatpak-extension@25.08@x86_64"]
+
+nightly@24.08@x86_64:
+  extends: [".publish_nightly", ".flatpak rules"]
+  needs: ["flatpak-extension@24.08@x86_64"]
+
+nightly@25.08@aarch64:
+  extends: [".publish_nightly", ".flatpak rules"]
+  needs: ["flatpak-extension@25.08@aarch64"]
+
+nightly@24.08@aarch64:
+  extends: [".publish_nightly", ".flatpak rules"]
+  needs: ["flatpak-extension@24.08@aarch64"]

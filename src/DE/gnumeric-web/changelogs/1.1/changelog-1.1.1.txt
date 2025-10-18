@@ -1,0 +1,885 @@
+2002-03-10  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.1
+
+2002-03-10  Jody Goldberg <jody@gnome.org>
+
+	* src/tools/solver/reports.c : warning suppression
+	* src/tools/solver/solver.c (lp_solver_init) : ditto.
+
+	* configure.in : bump gal version req.
+
+2002-03-09  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnm-marshalers.list : add NONE:STRING
+
+2002-03-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/func.c (copy_hash_table_to_ptr_array): Check if function is
+	FUNCTION_NAMEONLY here.
+	(function_dump_defs): So that we can use the earlier version of this.
+
+2002-03-09  Jon K Hellan  <hellan@acm.org>
+
+	Dump function definitions from plugins, this time the easy way
+	which even works.
+	
+	* src/func.c (copy_hash_table_to_ptr_array): Copy also when fd->help
+	is NULL.
+	(function_dump_defs): Load function definition before dumping name
+	only function.
+
+	* src/main.c (main): Drop force load argument to plugins_init.
+
+	* src/plugin.[ch] (activate_plugin, plugin_db_activate_plugin_list,
+	plugin_db_activate_saved_active_plugins, plugins_init): Revert to
+	pre 2002-03-08 version. We apologize for the inconvenience. 
+	However, error reporting by means of gnumeric_error_error_info
+	remains.
+	
+	* src/plugin-service.[ch]
+	(plugin_service_function_group_initialize): Revert to pre
+	2002-03-08 version.
+	(plugin_service_activate): Ditto. Except that we don't reinstate
+	#ifdef PLUGIN_ALWAYS_LOAD. That branch is hopelessly bitrotted.
+	
+	* src/plugin.h: Drop #undef PLUGIN_ALWAYS_LOAD. 
+
+2002-03-09  Jody Goldberg <jody@gnome.org>
+
+	* src/func.c (func_def_load) : rename from function_def_get_full_info_if_needed
+	  and remove the condition.
+
+	* src/eval.c (link_expr_dep) : Call func_def_load if necessary to
+	  check for a link function.
+
+2002-03-09  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* samples/solver/blend.mps: Added another Netlib demo.  The
+	results seem to be correct now, so we are finally getting close..
+
+2002-03-09  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_editline_focus_in) : if editing fails
+	restore focus to the sheet.
+
+	* src/workbook-edit.c (wbcg_edit_start) : fix typo and swapping of the
+	  warnings.
+
+2002-03-09  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* workbook-control-gui.c : change menu items "Re-order sheets"
+	  to "Manage Sheets" and enable these items even for single sheet 
+	  workbooks.
+	* commands.h : add deleted_sheets argument to cmd_reorganize_sheets
+	* commands.c : ditto
+	
+2002-03-08  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric.xml : switch Format->Workbook with
+	  Format->AutoFormat
+	* src/workbook-control-gui.c (workbook_menu_format) : ditto.
+
+	* src/workbook-view.c (wb_view_is_protected) : new.
+
+	* src/workbook-edit.c (wbcg_edit_start) : load style directly
+	  don't use cell_get_style.  This enables support for protection of
+	  blank cells.  Use wb_view_is_protected, and command_context_invalid.
+
+2002-03-08  C. Scott Ananian <cananian@lesser-magoo.lcs.mit.edu>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet): don't put us in
+	  edit mode if wbcg_edit_start indicates the cell is locked.
+	* src/workbook-control-gui.c (cb_autosum, cb_autofunction): handle
+	  case where wbcg_edit_start returns FALSE indicating that cell is
+	  locked.
+	* src/workbook-edit.c (wbcg_edit_start): this function now returns a
+	   boolean which indicates whether the 'edit_start' attempt succeeded.
+	   Check cell properties to return FALSE if the cell is locked.
+	* src/workbook-edit.h (wbcg_edit_start): modify the prototype as per above.
+	* src/workbook-view.c (wb_view_set_attribute, workbook_view_init):
+	  Remove ARG_VIEW_* enumeration, which isn't used after Gnome2 port.
+	  Add WorkbookView::is_protected attribute, and initialize it to
+	  FALSE.  The update to wb_view_set_attribute is enough to get
+	  xml_sax import working properly (yay, modular code!).
+	* src/workbook-view.h: add 'is_protected' field to WorkbookView struct.
+	  This is TRUE iff the workbook is locked.
+	* src/xml-io.c (xml_write_wbv_attributes):
+	  Write the new 'protected' workbook view attribute.  Two lines are
+	  enough to get read/write from xml_io working.  Score one for
+	  xml_sax: zero should have been sufficient.
+	* src/dialogs/cell-format.glade: The 'worksheet protected' checkbox
+	  shouldn't be greyed-out anymore.
+	* src/dialogs/dialog-cell-format.c (cb_protection_sheet_protected_toggle,
+	fmt_dialog_init_protection_page, cb_fmt_dialog_dialog_buttons):
+	  connect up the 'worksheet protected' button in the
+	  Format->Cells->Protection dialog.  Update worksheet object when
+	  toggled and mark that the dialog's changed.
+	* src/dialogs/dialog-workbook-attr.c src/dialogs/workbook-attr.glade:
+	  Add Format->Worksheet->Protection dialog.
+
+2002-03-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/command-context-stderr.c (ccs_class_init): Make gmorten happy.
+
+	* src/command-context.h (COMMAND_CONTEXT): Fix typo.
+
+	* src/command-context-stderr.c
+	(command_context_stderr_get_status): Fix typo.
+
+	* src/command-context-stderr.[ch]: Add.
+
+	* src/Makefile.am: Add command-context-stderr.[ch]
+
+	* src/main.c (main): Force load plugins before dumping function
+	definitions.
+
+	* src/plugin.[ch] (activate_plugin, plugin_db_activate_plugin_list,
+	plugin_db_activate_saved_active_plugins, plugins_init): Add
+	force_load parameter.
+	(plugins_init): Use virtual function gnumeric_error_error_info to
+	report error.
+
+	* src/plugin-service.[ch]
+	(plugin_service_function_group_initialize): Add force_load
+	parameter. Get function info if force loaded.
+	(plugin_service_activate): Propagate force_load parameter.
+	
+	* src/gnumeric.h: Declare CommandContextStderr.
+
+	* src/func.[ch] (function_def_get_full_info_if_needed): Make
+	public so that it's available when force-loading plugins.
+
+	* src/error-info.c (error_info_print_with_offset): Print to stderr
+	instead of stdout.
+
+2002-03-08  Morten Welinder  <terra@diku.dk>
+
+	* src/validation.c (validation_eval): Minor cleanup.
+	* src/value.c (value_peek_string): Be smarter about errors.
+
+2002-03-08  Jakub Steiner <jimmac@ximian.com>
+
+	* src/pixmaps/Makefile.am:
+	* src/pixmaps/format_money_24.png:
+	* src/pixmaps/format_percent_24.png:
+	* src/pixmaps/object_list_24.png:
+	* src/pixmaps/object_combo_24.png: fix the filenames
+
+2002-03-08  Jakub Steiner <jimmac@ximian.com>
+
+	* icons/down-right.png, icons/right-down.png: pretty gnome2 icons
+	* src/pixmaps/percent.png: 
+	* src/pixmaps/money.png: 
+	* src/pixmaps/list.png: 
+	* src/pixmaps/combo.png, src/pixmaps/Makefile.am: replace xpm
+	  with a PNG (removed combo.xpm)
+
+2002-03-08  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add sample_datasource
+
+	* src/validation.c (validation_eval) : cleanup handling of 'int'
+	and fix handling of between.
+
+2002-03-08  Jody Goldberg <jody@gnome.org>
+
+	* src/eval.h : Add DEPENDENT_ALWAYS_UNLINK.
+	  and the as yet unused DEPENDENT_HAS_3D.
+
+	* src/io-context.c (gnm_io_warning) : new stub.
+	(gnm_io_warning_unknown_font) : ditto.
+	(gnm_io_warning_unknown_function) : ditto.
+	(gnm_io_warning_unsupported_feature) : ditto.
+
+	* src/func.c (function_def_get_full_info_if_needed) :  add
+	  link/unlink.
+
+	* src/plugin-service.c
+	(plugin_service_function_group_get_full_info_callback) : add
+	  link/unlink.  This is a terrible interface.  Why not just make the
+	  thing into the FunctionDescriptor.
+	* src/plugin-loader-module.c
+	(gnumeric_plugin_loader_module_func_get_full_function_info) : ditto.
+
+2002-03-08  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_write_print_info) : handle missing paper so that
+	  we can save again.
+
+	* templates/autoformat/autoformat.3D.button.xml : fix.
+
+	* plugins/Makefile.am (SUBDIRS) : add sample_datasource.
+
+2002-03-07  Jody Goldberg <jody@gnome.org>
+
+	* src/plugin-loader-module.h (ModulePluginFunctionInfo) : add
+	  'link' and 'unlink'.
+
+2002-03-07  Jody Goldberg <jody@gnome.org>
+
+	* src/position.c (eval_pos_init*) : handle the optional dependent.
+
+	* src/eval.c (link_expr_dep) : support the adjustment to EvalPos.
+	(unlink_expr_dep) : support the adjustment to EvalPos.
+
+	* *.c : directly include gnome-i18n.h, value.h and expr.h
+	  where necessary now that they are no longer included.
+	* src/func.h : here.
+
+	* src/position.h (EvalPos) : Pass in an optional Dependent.
+
+	* src/expr.h (FunctionEvalInfo) : remove the func_def.  Send in the
+	  ExprFunc wrapper instead.  That contains the func-def if desired.
+
+	* src/func.c (function_set_link_handlers) : differentiate signatures
+	  for link & unlink.
+
+2002-03-07  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/analysis-tools.[ch]: Moved into src/tools.
+	src/auto-correct.[ch]: Ditto.
+	src/goal-seek.[ch]: Ditto.
+
+	* src/solver.h (SolverResults): Added a few more fields to improve
+	reporting.
+
+2002-03-07  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* workbook.c (workbook_sheet_reorganize) : implement adding of
+	  multiple sheets
+
+2002-03-06  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet.c (sheet_new) : initialize sheet->index_in_wb
+	* src/sheet.h : new field sheet::index_in_wb
+	* src/workbook-control-gui.c (wbcg_sheet_add) : replace 
+	  workbook_sheet_index_get with sheet->index_in_wb
+	* src/workbook-view.c (wb_view_sheet_focus) : ditto
+	* src/workbook.c (workbook_sheet_index_get) : deleted
+	(workbook_sheet_index_update) : new
+	(workbook_sheet_attach) : replace workbook_sheet_index_get 
+	  with sheet->index_in_wb, call workbook_sheet_index_update
+	(workbook_sheet_detach) : ditto
+	(workbook_sheet_move) : ditto
+	(workbook_sheet_reorganize) : ditto
+	
+2002-03-06  Jukka-Pekka Iivonen  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/tools: New directory created for tools.
+
+	* src/tools/solver: Moved src/solver-lp.c into here and split it
+	into two files: src/tools/solver/solver.c and
+	src/tools/solver/reports.c.  A _major_ rewrite.
+
+	* src/tools/solver/lp_solve: Integrated key parts of an LGPLed
+	linear programming toolkit called LP Solve 3.2.  (The whole
+	package can be found from ftp://ftp.ics.ele.tue.nl/pub/lp_solve).
+	Major clean up for making it to look like GNOME code.  LP Solve is
+	written by Michel Berkelaar and others.  Thanks for the great
+	work!
+	
+	* configure.in: Added src/tools/Makefile, src/tools/solver/Makefile,
+	and src/tools/solver/lp_solve/Makefile.
+
+	* src/Makefile.am: Added tools subdirectory.
+
+	* src/mathfunc.[ch]: Removed all solver related functions.
+
+	* src/solver.h, src/sheet.c: solver_lp_new renamed as
+	solver_param_new.  solver_lp_destroy renamed as
+	solver_param_destroy.
+
+	* src/xml-io.c: Solver related changes.
+
+	* samples/solver/production-plan.gnumeric: A Solver sample file.
+	
+2002-03-06  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.c (gnumeric_error_info_dialog_show) : remove
+	  forced placement by mouse
+	(gnumeric_set_transient) : remove unused code, set dialog
+	  placement to GTK_WIN_POS_CENTER_ON_PARENT
+
+2002-03-06  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/eval.c (link_expr_dep) : fix typo
+
+2002-03-06  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (delete_pristine_sheets) : new
+	(cmd_reorganize_sheets_undo) : delete new sheets, change calling
+	  sequence of workbook_sheet_reorganize
+	(cmd_reorganize_sheets_redo) : change calling
+	  sequence of workbook_sheet_reorganize
+	(cmd_reorganize_sheets_finalize) : clear new_sheets
+	(cmd_reorganize_sheets) : handle adding of sheets, streamline 
+	  selection of cmd descriptor
+	* src/workbook-control-gui.c (cb_insert_sheet) : use 
+	  cmd_reorganize_sheets
+	* src/workbook.c (workbook_sheet_reorganize) : handle adding of sheets
+	* src/workbook.h (workbook_sheet_reorganize) : add argument
+
+2002-03-05  Jody Goldberg <jody@gnome.org>
+
+	* src/eval.c (link_single_dep) : flag inter-{sheet,book} references.
+	(link_cellrange_dep) : ditto.
+	(link_expr_dep) : collect the flags.
+	(dependent_link) : and assign them here.
+	(dependent_unlink_sheet) : delete and merge into.
+	(do_deps_destroy) : here.  And use the new inter-{sheet,book} flags to
+	  avoid removing internal links.
+
+	* src/sheet.c (sheet_destroy_contents) : depends are now handled
+	  outside this routine add a precondition.
+
+	* src/main.c : delete style_debugging.
+
+	* src/clipboard.c (clipboard_copy_range) : suppress warning.
+
+2002-03-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c (workbook_close_if_user_permits) :
+	  use gtk_message_dialog_new/gnumeric_dialog_run
+
+2002-03-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-control-gui.c (scg_comment_display) : put
+	  a frame around the pop-up
+
+2002-03-05  Morten Welinder  <terra@diku.dk>
+
+	* src/expr.c (expr_eval_real): Improve precision of %.
+
+2002-03-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-control-gui.c (scg_comment_display) : use 
+	  textview widget
+
+2002-03-05  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-edit.c (auto_complete_matches): Plug leak.
+
+	* src/gutils.c (erfgnum, erfcgnum, yngnum): Ground work for later.
+
+	* src/mathfunc.c (gpow10): Fix precision for large negative
+	exponents.
+	(gpow2): Fix for negative exponents.
+
+2002-03-05  Jody Goldberg <jody@gnome.org>
+
+	* src/eval.c : split add/drop into distinct functions and use
+	  link/unlink consistently.
+
+2002-03-05  Morten Welinder  <terra@diku.dk>
+
+	* src/validation.c (validation_eval): Make int-check saner.
+	Fix translated string.
+
+	* src/analysis-tools.c (fourier_fft_inv, fourier_fft): Improve
+	precision.
+
+	* src/mathfunc.h (M_LN2gnum, M_LN10gnum, M_PIgnum, M_PI_2gnum,
+	M_LN2gnum, M_LN10gnum, M_SQRT2gnum): Provide high-precision
+	constants.
+
+2002-03-05  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/clipboard.c (clipboard_paste_region) : preserve comments
+	  when pasting content
+	* src/clipboard.h : exclude comments from PASTE_DEFAULT
+	* src/sheet-control-gui.c : Add `Add/modify comments' item to
+	  cell context menu
+	* src/sheet.h : CLEAR_COMMENTS and CLEAR_MERGES should be distinct.
+	* src/workbook-control-gui.c : correct spelling
+
+2002-03-05  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_cell_remove_from_hash) : only unlink if it is
+	  linked.
+	(sheet_cell_destroy) : simplify slightly.
+	(cb_remove_allcells) : just destroy them, no need to remove from hash.
+	(sheet_destroy_contents) : ditto.
+
+	* src/eval.c (UNLINK_DEP) : delete.
+	(dependent_unlink) : simplify.
+	(dependent_unlink_sheet) : clean up and don't bother to unlink from
+	  deps list.
+
+	* src/cell.c : s/CELL_BEING_ITERATED/DEPENDENT_BEING_ITERATED/
+
+2002-03-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/clipboard.c (clipboard_copy_range, clipboard_prepend_cell
+	  clipboard_prepend_comment) : check existing cells and all
+	  comments.
+	* sheet-object-cell-comment.c (cell_comment_event) : handle
+	  double click by opening dialog (slightly modified patch by
+	  Wayne Schuster)
+
+2002-03-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/clipboard.h : PASTE_ALL_TYPES should include comments
+
+2002-03-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/clipboard.c (paste_cell) : paste comment
+	(clipboard_prepend_cell) : store comment info
+	(clipboard_copy_range) : check all cells
+	* src/clipboard.h : add comment field to CellCopy
+	* src/commands.c (cmd_clear_undo) : handle comments
+	(cmd_clear_selection) : ditto
+	
+2002-03-04  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* commands.h (cmd_set_comment) : new
+	* commands.c (cmd_set_comment_apply, set_comment_undo, 
+	  cmd_set_comment_redo, cmd_set_comment_finalize, cmd_set_comment) :
+	  new
+
+2002-03-04  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (dexp): Add give_log arg and use R's version.
+	All callers changed.
+
+	* src/analysis-tools.c (destroy_data_set_list): Plug leak.
+
+2002-03-04  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_cell_insert) : make it clear that this routine
+	  does not link the expression or register the dependencies.
+	(sheet_cell_remove_from_hash) : document state changes and use
+	  dependend_unlink.
+	(cb_remove_allcells) : cell_destroy will unlink.
+	(cb_collect_cell) : be clear that the results are unlinked.
+	(colrow_move) : some docs.
+	(sheet_move_range) : simplify now that the collected cells are
+	  unlinked rather than just having their depends dropped.
+
+	* src/eval.c (cell_add_dependencies) : delete.
+	(cell_drop_dependencies) : delete.
+
+	* src/style.c (style_font_new_simple) : If we can't find a font check
+	  a map to see if we know of something similar.
+	(get_substitute_font) : moved here from the XL importer.
+
+2002-03-03  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_rename_sheet,...) : now a wrapper around 
+	  cmd_reorganize_sheets.
+	(cmd_reorganize_sheets_apply) : moved into workbook.c as
+	  workbook_sheet_reorganize
+	(cmd_reorganize_sheets,...) : implement sheet renaming
+	* src/commands.h : add an argument to cmd_rename_sheet
+	* src/workbook-control-gui.c (cb_sheet_label_changed) : 
+	  change invocation of cmd_rename_sheet
+	* src/workbook.c (workbook_sheet_rename) replaced by
+	  workbook_sheet_reorganize
+	* src/workbook.h: ditto
+
+2002-03-02  Jody Goldberg <jody@gnome.org>
+
+	* src/eval.c (handle_tree_deps) : Use hooks for per dependent
+	  link/unlink for each function.
+
+2002-03-02  Jody Goldberg <jody@gnome.org>
+
+	* src/global-gnome-font.c : Use string chunk.
+
+	* src/sheet-object-cell-comment.c :  This is a GObject now.
+	(comment_get_points) : fix x offset.
+
+2002-03-01  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-control-gui.c: Add dots to "Sort" entry.
+
+	* src/complex.h (complex_scale_real): New function.
+
+	* src/analysis-tools.c (fourier_fft, fourier_fft_inv): Clean using
+	existing complex math routines.
+
+2002-03-01  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_reorganize_sheets_finalize) : fix typo
+
+2002-03-01  Morten Welinder  <terra@diku.dk>
+
+	* src/commands.c (cmd_reorganize_free_names): Remove.
+	(cmd_reorganize_sheets_finalize): Simplify.
+
+	* src/analysis-tools.c (regression_tool): Fix P values.
+
+	* src/regression.c (general_linear_regression): Fix ->var in the
+	trivial n==xdim case.
+
+2002-02-29  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* commands.h (cmd_reorganize_sheets) : new
+	* commands.c : implement cmd_reorganize_sheets
+
+2002-02-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c (wbcg_validation_msg) : delete
+	  dialog and fix sense of test
+
+2002-02-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.[hc] (entry_to_float_with_format_default) : new
+
+2002-02-28  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c (linear_solve): Move rescaling from here...
+	(LUPDecomp): ...to here so we save a copy.
+	(general_linear_regression): Allocate the permutation matrix with
+	the proper size.  (The old size was too big, so no-one really got
+	hurt.)
+
+	* src/rangefunc.c (range_minabs, range_maxabs): New functions.
+
+	* src/regression.c (rescale): Don't include "b" in determining the
+	scale.  Use range_maxabs.
+
+2002-02-28  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c (general_linear_regression): If the inverse has
+	negative elements in the diagonal, assume near singularity.
+	(linear_solve): Rescale matrix and target.  Rip out the error
+	correction attempt.
+	(rescale): New function.
+	(LUPDecomp, backsolve): Remove col/row confusion.
+
+2002-02-28  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (workbook_control_gui_init) : fix
+	  reordering of ins col/row in non-bonobo case.
+
+2002-02-28  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c (delete_sheet_if_possible) : 
+	  use gnumeric_dialog_question_yes_no 
+	
+2002-02-28  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (expr_name_set_expr) : always relink.
+
+	* src/eval.c (handle_tree_deps) : ignore inactive names.
+
+2002-02-27  Jody Goldberg <jody@gnome.org>
+
+	* src/global-gnome-font.c (global_gnome_font_init) : fix leak.
+
+	* src/style.c (style_font_new_simple) : fix leak.
+
+2002-02-27  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gui-util.h (entry_to_float_with_format) : new
+	* src/gui-util.c (entry_to_float_with_format) : add format to 
+	  entry_to_float
+	(entry_to_float) : wrapper around entry_to_float_with_format
+	
+2002-02-27  Morten Welinder  <terra@diku.dk>
+
+	* src/analysis-tools.c: Use new lower-tail flag for R's q*
+ 	routines.
+	(new_data_set): Plug leak.
+
+2002-02-27  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/value.c (value_get_as_string) : case VALUE_CELLRANGE can be
+	  for absolute and A1-rel references. Use global_range_name.
+
+2002-02-27  Morten Welinder  <terra@diku.dk>
+
+	* src/analysis-tools.c (ztest_tool): Fix problem from R upgrade.
+	(regression_tool): Simplify.
+
+	* src/regression.c (linear_solve): Attempt error correction in the
+ 	near-singular case.
+	(linear_regression, exponential_regression): Change return type to
+ 	an enum.  All callers changed.
+	(LUPDecomp): Attempt to detect near-singularity.
+
+2002-02-26  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c (linear_regression, exponential_regression):
+	Add safety check.
+
+	* plugins/*/*.xml.in: just use the .la file for module_file.
+
+	* plugins/*/Makefile.am: don't hack the .xml file any more.
+
+	* src/mathfunc.c: Make various helper functions static.
+
+	* src/format-template.h: prototype the template member functions.
+
+2002-02-26  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_read_cell) : xmlNodeGetContent always returns a
+	  value now.  That simplifies comments and complicates content.
+	(xml_cellregion_read) : ditto.
+
+2002-02-25  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_progress_message_set) : port to
+	  gnome2.
+
+	* src/print-cell.c (print_show_iso8859_1) : delete.
+
+	* src/gui-file.c (gui_file_open) : someportability tweaks.
+
+	* icons/Makefile.am : move the icons here.
+
+	* src/history.c (history_menu_item_create) : constness.
+	* src/formats.c (currency_date_format_init) : constness.
+	* src/solver.h : some constness.
+	* src/workbook-control-gui.c (cb_select_auto_expr) : constness.
+	(workbook_control_gui_init) : some fixes for the bonobo build.
+
+2002-02-25  Morten Welinder  <terra@diku.dk>
+
+	* src/format-template.h: prototype the template member functions.
+
+	* src/mathfunc.c: Switch to R-1.4.0 sources.  Deal with signature
+	changes everywhere.
+
+2002-02-25  Morten Welinder  <terra@diku.dk>
+
+	* configure.in: Test if we must prototype strtold.  Test for
+	log1pl.
+
+2002-02-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/sheet-object-widget.c (cb_scrollbar_set_focus) : remove code
+	  now held in wbcg_edit_attach_guru
+	(cb_checkbox_set_focus) : ditto
+	(sheet_widget_scrollbar_user_config) : rearrange signal callbacks
+	(sheet_widget_checkbox_user_config) : ditto
+	
+2002-02-25  Morten Welinder  <terra@diku.dk>
+
+	* src/xml-io.c (xml_cellregion_write) : specify the encoding, and
+	  enable formatting.
+	(gnumeric_xml_write_workbook) : ditto.
+
+2002-02-25  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (random_01): Reduce the number of system calls
+	and get more precision for the general gnum_float case.
+
+	* src/mathfunc.c (random_*): use gnum_float, not double.  (Since
+	many underlying functions are still double-based, not all these
+	will have precision beyond double.)
+
+	* src/solver-lp.c: Constify.  Plug a few leaks.
+
+	* src/sheet.h (struct _Sheet): Make solver_parameters a pointer.
+	Deal with this everywhere.
+
+2002-02-25  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/analysis-tools.h : delete tool_set_focus
+	* src/workbook-edit.c (guru_set_focus) : new, formerly tool_set_focus
+	  in src/dialogs/dialog-analysis-tools.c
+	(wbcg_edit_attach_guru) : attach guru_set_focus to set_focus widget
+
+2002-02-25  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (atan2l, sinhl, coshl, tanhl, asinhl, acoshl,
+	atanhl, erfl, erfcl, ynl, isnanl, finitel, hypotl): Add checks for these.
+	* src/numbers.h: supply right version of above.  Use everywhere.
+
+2002-02-25  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-image.h: Declare typedef ObjectImage.
+
+	* src/sheet-object-image.c (struct _SheetObjectImage): Add
+	cropping parameters.
+	(sheet_object_image_new): Initialize cropping parameters.
+	(sheet_object_image_set_crop): New function. Set cropping
+	parameters.
+	(soi_get_cropped_pixbuf): New function. Get the cropped image from
+	pixbuf.
+	(soi_get_pixbuf): Do cropping by calling soi_get_cropped_pixbuf.
+	(sheet_object_image_init): Initialize cropping parameters.
+
+2002-02-24  Almer S. Tigelaar  <almer@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=72416
+	http://bugzilla.gnome.org/show_bug.cgi?id=71783
+	* src/stf-export.c (stf_export_cell):
+	Honor the 'never' quote setting and fix a subtle
+	bug that caused the quoting character always be	"
+
+2002-02-22  Morten Welinder  <terra@diku.dk>
+
+	* src/numbers.h (floorgnum, ceilgnum, powgnum, expgnum, loggnum,
+	log10gnum, singnum, cosgnum, tangnum, asingnum, acosgnum,
+	atangnum): Supply these.  Use everywhere.
+
+	* configure.in: Check for the above.
+
+2002-02-22  Morten Welinder  <terra@diku.dk>
+
+	* configure.in: Check for ldexpl and frexpl.
+
+	* src/mathfunc.c (gpow2): New function.
+	(gnumeric_add_epsilon, gnumeric_sub_epsilon, gnumeric_fake_floor,
+	gnumeric_fake_ceil, gnumeric_fake_round, gnumeric_fake_trunc):
+	Make these gnum_float typed.
+
+	* src/numbers.h (frexpgnum, ldexpgnum): New stuff.
+
+2002-02-21  Morten Welinder  <terra@diku.dk>
+
+	* src/numbers.h: Define prototypes for strtognum, modfgnum, and
+	gnumabs here when needed.
+
+	* src/workbook-control-gui.c (wbcg_validation_msg): Constify.
+
+	* src/cell.c (cell_is_zero): Use gnum_float.
+
+	* src/regression.c (LUPDecomp): Use gnumabs.
+	* src/solver-lp.c (solver_answer_report): Ditto.
+	* src/value.c (value_diff): Ditto.
+	* src/goal-seek.c: Ditto.
+	* src/rangefunc.c (range_avedev): Ditto.
+
+	* src/validation.c (validation_eval): Use gnum_float, modfgnum,
+	and gnumabs.
+
+	* src/numbers.h (GNUM_MANT_DIG, GNUM_MAX_EXP, gnumabs): New stuff.
+
+2002-02-21  Morten Welinder <terra@diku.dk>
+
+	* src/solver-lp.c (callback): Fix formats.
+
+	* src/plugin-loader-module.h (ModulePluginFunctionInfo): Constify.
+	* src/plugin-loader-module.c (gnumeric_plugin_loader_module_func_get_full_function_info): Constify.
+	* src/func.c (function_def_get_full_info_if_needed): Constify.
+
+2002-02-20  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.h : some house cleaning.
+
+	* src/workbook.c (workbook_is_pristine) : remove stuf for
+	  external_dependents.  No use having fogotten stubs hanging around.
+
+	* src/workbook-control-gui.c (cb_insert_component) : look for
+	  ControlFactories.
+	(cb_insert_shaped_component) : look for CanvasComponentFactories.
+
+	* src/commands.h : remove include for gtkobject.
+
+	* idl/GNOME_Gnumeric_Graph.idl : We a ControlFactory now, not an
+	  Embeddable.
+
+2002-02-20  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (display): Fix format.
+	* src/analysis-tools.c (confidence_level): Ditto.
+	(regression_tool): Ditto.
+	* src/format.c (fmt_general_int): Ditto.
+
+	* configure.in (set_mode_warnings): Add -Wformat also.
+
+2002-02-20  Morten Welinder  <terra@diku.dk>
+
+	* src/func.c (fn_def_new, function_add_args, function_add_nodes):
+ 	Constify.
+
+2002-02-20  Morten Welinder  <terra@diku.dk>
+
+	* src/parser.y (yyerror): Constify.
+
+	* src/xml-io.c (xml_node_set_print_unit): Constify.
+	(xml_read_print_repeat_range): Constify.
+
+	* src/summary.c (summary_item_name): Constify.
+
+	* src/print-info.c (predefined_formats, render_ops): Constify.
+
+2002-02-20  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/expr-name.c (builtins): Constify.
+
+	* src/complex.c (complex_to_string): Constify.
+
+	* src/commands.c (cmd_set_text): Constify.
+	(cmd_area_set_text): Constify.
+
+	* src/mstyle.c (mstyle_to_string): Missing g_strdup added for
+ 	sanity check, just in case.
+	* src/summary.c (summary_item_as_text): Ditto.
+	* src/value.c (value_get_as_string): Ditto.
+
+	* configure.in (CFLAGS): Add -Wwrite-strings, if possible.
+
+	* src/gui-util.c (gnumeric_dialog_raise_if_exists): Constify.
+
+2002-02-20  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/analysis-tools.c (regression_tool) : use only values
+	  from extra_stat (renamed to regression_stat)
+	* src/regression.c (general_linear_regression) : calculate more 
+	  regression_stat
+	(regression_stat_new) : new
+	(regression_stat_destroy) : new
+	* src/regression.h : add fields to regression_stat_t and add 
+	  declarations of regression_stat_new and regression_stat_destroy
+
+2002-02-20  Morten Welinder  <terra@diku.dk>
+
+	* src/format.c (format_value): Missing g_strdup added for sanity
+ 	check, just in case.
+
+	* src/datetime.c (coup_cd): Cleanup using
+ 	g_date_get_days_in_month.
+
+2002-02-19  Morten Welinder  <terra@diku.dk>
+
+	* src/numbers.h (modfgnum, strtgnum, GNUM_FORMAT_[eEfg],
+ 	GNUM_DIG): New stuff.
+
+  	* .../*.[cy]: All relevant strtod changed to strtognum; modf to
+ 	modfgnum; DBL_DIG to GNUM_DIG; formats changed to use
+ 	GNUM_FORMAT_...
+
+	* src/gutils.c (strtognum): If needed, define a version here.
+
+	* src/complex.c (complex_to_string): Use right format for
+ 	imaginary part.
+
+	* configure.in: Add support for --with-long-double.
+
+	* acconfig.h: Add WITH_LONG_DOUBLE.
+
+2002-02-19  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=69362
+	* src/auto-correct.c (autocorrect_tool) : only upper case things if
+	  they are at the start of a word.
+
+2002-02-19  Morten Welinder  <terra@diku.dk>
+
+	* src/format.c: Use gnum_float instead of double.
+
+	* src/mathfunc.c (random_01): Use /dev/urandom when available.
+
+	* src/sheet-autofill.c (autofill_cell): Use gnum_float instead of
+	double.
+	* src/expr.c (expr_eval_real): Ditto.
+	* src/datetime.c (datetime_timet_to_serial_raw): Ditto.
+
+	* src/format.c (format_compile): Fix isdigit usage.
+
+	* src/value.c (value_diff): Return a gnum_float, not a double.
+
+2002-02-19  Jody Goldberg <jody@gnome.org>
+
+	* src/global-gnome-font.c (global_gnome_font_init) : get font list
+	  from pango.
+	(global_gnome_font_shutdown) : and free it here.
+
+2002-02-18  Jody Goldberg <jody@gnome.org>
+
+	* configure.in  : post release bump.

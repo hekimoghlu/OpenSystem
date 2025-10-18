@@ -1,0 +1,125 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <glibmm/arrayhandle.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+//Gst::IteratorBasic<> forward declaration.
+template <class CppType>
+class IteratorBasic;
+
+_WRAP_ENUM(Format, GstFormat)
+
+/** A class to store the details of a Gst::Format retrieved by
+ * Gst::get_format_details().
+ */
+class FormatDefinition
+{
+  _CLASS_GENERIC(FormatDefinition, GstFormatDefinition)
+
+public:
+  /// Default constructor.
+  FormatDefinition();
+
+  /** Constructs a Gst::FormatDefinition from a C GstFormatDefinition type.
+   * The @a castitem is left unaffected; its contents are simply copied.
+   * @param castitem The GstFormatDefinition to copy contents from.
+   */
+  explicit FormatDefinition(const GstFormatDefinition* castitem);
+
+  /// The unique id of this format.
+  Gst::Format         value;
+
+  /// A short nick of the format.
+  Glib::ustring       nick;
+
+  /// A longer description of the format.
+  Glib::ustring       description;
+
+  /// A quark for the nick.
+  Glib::QueryQuark    quark;
+};
+
+namespace Enums
+{
+
+/** Gets a printable name for the given format. Do not modify or free.
+ * 
+ * @param format A Gst::Format.
+ * @return The name of the format or an empty string if the format is unknown.
+ */
+Glib::ustring get_name(Format format);
+
+/** Gets the unique quark for the given format.
+ *
+ * @param format A Gst::Format.
+ * @return The quark associated with the format or 0 if the format is unknown. 
+ */
+Glib::QueryQuark get_quark(Format format);
+
+} //namespace Enums
+
+/** Creates a new Gst::Format based on the nick or return an already
+ * registered format with that nick.
+ *
+ * @param nick The nick of the new format.
+ * @param description The description of the new format.
+ * @return A new Gst::Format or an already registered format with the same
+ * nick. MT safe.
+ */
+Format register_format(const Glib::ustring& nick, const Glib::ustring&
+description);
+
+/** Returns the format registered with the given nick.
+ *
+ * @param nick The nick of the format.
+ * @return The format with nick or Gst::FORMAT_UNDEFINED if the format was not
+ * registered.
+ */
+Format get_format(const Glib::ustring& nick);
+
+/** Sees if the given format is inside the array of formats.
+ *
+ * @param formats The array of formats to search.
+ * @param format The format to find.
+ * @return true If the format is found inside the array.
+ */
+bool formats_contain(const Glib::ArrayHandle<Format>& formats, Format format);
+
+/** Gets details about the given format.
+ *
+ * @param format The format to get details of.
+ * @param def The Gst::FormatDefinition in which to store the details of
+ * the format.
+ * @return true if successful, false otherwise. MT safe.
+ */
+bool get_format_details(Format format, FormatDefinition& def);
+
+/** Iterates all the registered formats.  The format definitions are read
+ * only.
+ * @return a Gst::IteratorBasic of Gst::FormatDefinition.
+ */
+IteratorBasic<const FormatDefinition> iterate_format_definitions();
+
+} //namespace Gst

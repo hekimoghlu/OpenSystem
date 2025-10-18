@@ -1,0 +1,104 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/asyncresult.h>
+#include <gdkmm/pixbuf.h>
+#include <gdkmm/pixbufanimationiter.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gdk
+{
+
+/** The gdk-pixbuf library provides a simple mechanism to load and represent animations.
+ * An animation is conceptually a series of frames to be displayed over time.
+ * Each frame is the same size. The animation may not be represented as a series of frames internally;
+ * for example, it may be stored as a sprite and instructions for moving the sprite around a background.
+ * To display an animation you don't need to understand its representation, however; you just ask
+ * gdk-pixbuf what should be displayed at a given point in time.
+ *
+ * @deprecated 4.20: Pixbuf animation is deprecated. There is no replacement.
+ */
+class GDKMM_API PixbufAnimation : public Glib::Object
+{
+  _CLASS_GOBJECT(PixbufAnimation, GdkPixbufAnimation, GDK_PIXBUF_ANIMATION, Glib::Object, GObject, , , GDKMM_API)
+  _IGNORE(gdk_pixbuf_animation_ref, gdk_pixbuf_animation_unref)
+protected:
+
+public:
+  _WRAP_METHOD(static Glib::RefPtr<PixbufAnimation> create_from_file(const std::string& filename),
+    gdk_pixbuf_animation_new_from_file, errthrow)
+  _WRAP_METHOD(static Glib::RefPtr<PixbufAnimation> create_from_stream(
+    const Glib::RefPtr<Gio::InputStream>& stream, const Glib::RefPtr<Gio::Cancellable>& cancellable = {}),
+    gdk_pixbuf_animation_new_from_stream, errthrow, newin "4,4")
+  _WRAP_METHOD(static void create_from_stream_async(const Glib::RefPtr<Gio::InputStream>& stream,
+    const Gio::SlotAsyncReady& slot{callback}, const Glib::RefPtr<Gio::Cancellable>& cancellable{.} = {}),
+    gdk_pixbuf_animation_new_from_stream_async, slot_name slot, slot_callback gdkmm_SignalProxy_async_callback, newin "4,4")
+  _WRAP_METHOD(static Glib::RefPtr<PixbufAnimation> create_from_stream_finish(const Glib::RefPtr<Gio::AsyncResult>& result),
+    gdk_pixbuf_animation_new_from_stream_finish, errthrow, newin "4,4")
+  _WRAP_METHOD(static Glib::RefPtr<PixbufAnimation> create_from_resource(const std::string& resource_path),
+    gdk_pixbuf_animation_new_from_resource, errthrow, newin "4,4")
+
+  _WRAP_METHOD(int get_width() const, gdk_pixbuf_animation_get_width)
+  _WRAP_METHOD(int get_height() const, gdk_pixbuf_animation_get_height)
+  _WRAP_METHOD(bool is_static_image() const, gdk_pixbuf_animation_is_static_image)
+  _WRAP_METHOD(Glib::RefPtr<Pixbuf> get_static_image(), gdk_pixbuf_animation_get_static_image, refreturn)
+
+  /** Get an iterator for displaying an animation.
+   * The iterator provides the frames that should be displayed at a given time.
+   *
+   * @a start_time would normally come from g_get_real_time(), and marks
+   * the beginning of animation playback. After creating an iterator, you
+   * should immediately display the pixbuf returned by
+   * Gdk::PixbufAnimationIter::get_pixbuf(). Then, you should install
+   * a timeout (with Glib::signal_timeout().connect()) or by some other mechanism
+   * ensure that you'll update the image after
+   * Gdk::PixbufAnimationIter::get_delay_time() milliseconds. Each time
+   * the image is updated, you should reinstall the timeout with the new,
+   * possibly-changed delay time.
+   *
+   * As a shortcut, the default value of @a start_time is g_get_real_time().
+   *
+   * To update the image (i.e. possibly change the result of
+   * Gdk::PixbufAnimationIter::get_pixbuf() to a new frame of the animation),
+   * call Gdk::PixbufAnimationIter::advance().
+   *
+   * If you're using Gdk::PixbufLoader, in addition to updating the image
+   * after the delay time, you should also update it whenever you
+   * receive the area_updated signal and
+   * Gdk::PixbufAnimationIter::on_currently_loading_frame() returns
+   * <tt>true</tt>. In this case, the frame currently being fed into the loader
+   * has received new data, so needs to be refreshed. The delay time for
+   * a frame may also be modified after an area_updated signal, for
+   * example if the delay time for a frame is encoded in the data after
+   * the frame itself. So your timeout should be reinstalled after any
+   * area_updated signal.
+   *
+   * A delay time of -1 is possible, indicating "infinite."
+   *
+   * @param start_time Time when the animation starts playing.
+   * @return An iterator to move over the animation.
+   */
+  Glib::RefPtr<PixbufAnimationIter> get_iter(gint64 start_time = g_get_real_time());
+  _IGNORE(gdk_pixbuf_animation_get_iter)
+};
+
+} // namespace Gdk

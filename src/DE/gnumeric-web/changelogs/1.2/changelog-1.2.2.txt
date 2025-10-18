@@ -1,0 +1,314 @@
+e2003-11-26  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.2.2
+
+2003-11-25  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/print.c (print_job_info_destroy): plug leak
+	
+2003-11-24  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_colrow_group_ungroup) : when adding a group
+	  calculate the global max gutter, not just the max in the changed
+	  region.
+
+2003-11-23  Jody Goldberg <jody@gnome.org>
+
+	* src/item-cursor.c (item_cursor_draw) : Use not xor.
+
+2003-11-20  Jody Goldberg <jody@gnome.org>
+
+	* src/colrow.c (colrow_is_empty) : new.
+
+2003-11-19  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/print-info.c (print_info_new): don't read n_copies from
+	  gnome_config
+	(print_info_save): don't bother writing n_copies to gnome_config
+	(print_info_set_n_copies): new
+	* src/print-info.h: remove n_copies field from PrintInformation
+	(print_info_set_n_copies): new
+
+2003-11-18  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=64297
+	* src/item-cursor.c (item_cursor_draw) : invert selection rectangle
+	  outlining the content to keep it visible on dark backgrounds.
+
+2003-11-18  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/print-info.c (print_info_new): disable page setup continuity 
+	  again. The bug seems to be still in libgnomeprint 2.4.x (it is gone 
+	  from 2.5.x, at least so it seems).
+
+2003-11-17  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/print-info.c (print_info_new): re-enable page setup continuity
+
+2003-11-18  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=127262
+	* src/item-grid.c (item_grid_draw) : Avoid 16bit overflow when drawing
+	  the divider line,  just draw the visible bit.
+
+2003-11-17  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=127238
+	* src/format-template.c (format_template_transform_edges) : fix.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=127211
+	* src/style.c (style_default_halign) : errors appear to have default
+	  horizontal alignment of center.  This is ancient code, I wonder why
+	  no one ever noticed.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=127199
+	* src/gui-file.c (gui_file_read) : do a sheet_update after a
+	  successful read.
+
+2003-11-16  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : no need to
+	  sheet_update on queued movement.
+
+	* src/sheet-control-gui.c (scg_queue_movement) : call sheet_update as
+	  necessary.
+	(cb_scg_queued_movement) : ditto.
+
+2003-11-16  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (random_01): Optionally generate pseudo-random
+	(as opposed to random) numbers.
+
+2003-11-16  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_parse_ctx_new) : set the workbook here.
+
+2003-11-15  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=116090
+	* src/normal-args.c (gnumeric_arg_parse) : function info dumps do not
+	  require libgnomui.
+	* src/main-application.c (main) : only init session when we have a gui.
+
+	* gnumeric.xsd : Add the Calculation info
+
+	* src/xml-io.c (xml_workbook_write) : Save manual recalc and iteration
+	  preferences.
+	(xml_workbook_read) : And read them.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=126907
+	* src/commands.c (cmd_set_text_redo) : even when using manual recalc
+	  we should calculate newly entered expression.
+
+2003-11-14  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=68794
+	* src/selection.c (sv_selection_to_plot) : default to rows
+	  when rows == cols
+
+2003-11-06  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=126389
+	* src/commands.c (cmd_format_redo) : dirty the sheet.
+
+2003-11-05  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c : ditto.
+	* src/GNOME_Gnumeric.xml : Enable select inputs
+
+2003-11-03  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (sheet_print): Plug leak.
+
+	* src/gui-util.c (gnumeric_error_info_dialog_new): Plug leak.
+
+2003-11-03  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=126056
+	* src/graph.c (cb_assign_val) : failed string conversion is inf,
+	  rather than nan.
+
+2003-11-03  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.mime : add more.
+
+2003-11-02  Jody Goldberg <jody@gnome.org>
+
+	* src/main-application.c (main) : init before calling
+	  handle_paint_events.
+
+	* src/application.c: s/g_assert/g_return_if_fail/
+
+	* src/ssconvert.c :  Add --list-importers
+	* doc/C/ssconvert.1 : document it.
+
+2003-11-02  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/gnumeric-gconf.c (gnm_conf_init_printer_decoration_font): new
+	(gnm_conf_init_extra): call gnm_conf_init_printer_decoration_font
+	  rather than doing the work itself.
+	(gnm_conf_shutdown): new
+	* src/gnumeric-gconf.h: printer_decoration_font replaces 
+	  printer_decoration_font_* 
+	* src/libgnumeric.c (gnm_common_init): gnm_conf_init requires 
+	  mstyle_init
+	(gnm_shutdown): call gnm_conf_shutdown
+	* src/print.c (print_job_info_get): printer_decoration_font replaces 
+	  printer_decoration_font_* 
+
+2003-11-02  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* src/application.c: Added g_assert()s to ensure app is not NULL prior
+	to being dereferenced, to make crashes like Debian #217368 less
+	spectacular.
+
+2003-10-31  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : disable deprecated is only for development releases.
+
+2003-10-29  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* src/stf.c (stf_init): csv means "... values"
+
+2003-10-29  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.desktop.in : Add a new String 'Spreadsheet' to conform to
+	  freedesktop standards with a 'GenericName' entry.
+
+2003-10-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_gconf_get_float): Avoid double->float
+	precision loss.  Quiet gcc.
+
+2003-10-27  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=125577
+	* src/sheet.c (cb_collect_cell) : preserve the recalc state.
+
+2003-10-26  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_probe) : rework to use sax.
+	(xml_dom_read_warning) : new.
+	(xml_dom_read_error) : new.
+	(xml_init) : setup.
+	(gnumeric_xml_read_workbook) : cheesy mechanism to send errors to the
+	  iocontext.
+
+2003-10-25  Andreas J. Guelzow  <aguelzow@taliesin.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: add schemas for header/footer
+	  font
+	* src/gnumeric-gconf-priv.h: new keys:
+	  PRINTSETUP_GCONF_HF_FONT_NAME, PRINTSETUP_GCONF_HF_FONT_SIZE,
+	  PRINTSETUP_GCONF_HF_FONT_BOLD, PRINTSETUP_GCONF_HF_FONT_ITALIC
+	* src/gnumeric-gconf.c (gnm_conf_init_extras): initialize new fields 
+	* src/gnumeric-gconf.h: new fields for preference structure
+	* src/print.c (print_job_info_get): use preference info and fallback
+	  fonts
+
+2003-10-25  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=125421
+	* src/sheet-view.c (sv_panes_insdel_colrow) : don't move the top when
+	  the insert happens before it
+
+2003-10-25  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* debian/changelog, debian/control, debian/rules: Updated.
+
+2003-10-24  Morten Welinder  <terra@gnome.org>
+
+	* src/regression.c (general_linear_regression): Handle a
+	loss-of-precision case for xdim==2.
+
+2003-10-24  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=125230
+	* src/format.c (append_hour_elapsed) : Add epsilon _before_ we scale
+
+2003-10-24  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (clipboard_paste_region) : Fill in increasing order
+	  to avoid the dreaded ultra deep stack caused by recalcing starting
+	  at the end.  It is a bandaid.  During 1.3 we'll need something more
+	  robust.
+
+2003-10-23  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c : Ensure that all actions with
+	  accelerators attempt to finish any edits in progress.
+
+2003-10-22  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=77303
+	* src/sheet-control-gui.c (scg_cursor_move) : don't scroll the other
+	  panes unless we absolutely have to.
+
+2003-10-21  Morten Welinder  <terra@gnome.org>
+
+	* src/format.c (append_hour_elapsed): Get sign right, even when
+	the hour is zero.
+
+2003-10-20  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=124975
+	* src/commands.c (CmdPasteCut) : handle undo for paste from a deleted
+	  external sheet.  Only fixes first order problem.  We'll need a more
+	  invasive approach later.
+
+2003-10-20  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=123325
+	* src/value.c (criteria_test_greater_or_equal) : NULL args are valid.
+	(criteria_test_less_or_equal) : ditto.
+	(criteria_test_greater) : ditto.
+	(criteria_test_less) : ditto.
+	(criteria_test_equal) : ditto.
+
+2003-10-16  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-gconf.c : rework to catch missing schemas and delay non
+	  essential loads until later.
+
+2003-10-14  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_general): Add maxlines argument.  All
+	callers changed.
+
+2003-10-13  Jody Goldberg <jody@gnome.org>
+
+	* src/number-match.c (format_match_init) : trivial optimization to
+	  avoid checking against the same regexp multiple times.
+
+2003-10-13  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_fixed_cell, stf_parse_csv_cell,
+	stf_parse_general, stf_parse_lines): Switch to allocating from a
+	GStringChunk.
+
+2003-10-12  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : remove GTK_DISABLE_DEPRECATED for now.  gtk head has
+	  changed alot recently and this breaks the build.
+
+2003-10-12  Rodrigo Moya <rodrigo@gnome-db.org>
+
+	* configure.in: bumped requirements for libgda and libgnomedb.
+
+2003-10-10  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (stf_write_csv) : new to write csv files without
+	  intervention.
+	(stf_init) : Use it.
+
+2003-10-09  Jody Goldberg <jody@gnome.org>
+
+	* src/libgnumeric.c : pull the ancient if BONOBO checks
+
+	* src/io-context-gtk.c (icg_show_gui) : mark the window as a splash.
+
+	* schemas/Makefile.am : make friendlier for rpm builders
+
+2003-10-08  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump 

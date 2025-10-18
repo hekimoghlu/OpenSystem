@@ -1,0 +1,212 @@
+<?xml version="1.0"?>
+<!--*- mode: xml -*-->
+<interface>
+	<requires lib="gtk+" version="3.12"/>
+	<menu id="primary-menu">
+		<section>
+			<item>
+				<attribute name="action">app.new-game</attribute>
+				<attribute name="label" translatable="yes">_New Game</attribute>
+			</item>
+			<submenu id="board_size_menu">
+				<attribute name="label" translatable="yes">Board _Size</attribute>
+				<section>
+					<item>
+						<attribute name="action">app.board-size</attribute>
+						<attribute name="label" translatable="yes">_5×5</attribute>
+						<attribute name="target">5</attribute>
+					</item>
+					<item>
+						<attribute name="action">app.board-size</attribute>
+						<attribute name="label" translatable="yes">_6×6</attribute>
+						<attribute name="target">6</attribute>
+					</item>
+					<item>
+						<attribute name="action">app.board-size</attribute>
+						<attribute name="label" translatable="yes">_7×7</attribute>
+						<attribute name="target">7</attribute>
+					</item>
+					<item>
+						<attribute name="action">app.board-size</attribute>
+						<attribute name="label" translatable="yes">_8×8</attribute>
+						<attribute name="target">8</attribute>
+					</item>
+					<item>
+						<attribute name="action">app.board-size</attribute>
+						<attribute name="label" translatable="yes">_9×9</attribute>
+						<attribute name="target">9</attribute>
+					</item>
+					<item>
+						<attribute name="action">app.board-size</attribute>
+						<attribute name="label" translatable="yes">_10×10</attribute>
+						<attribute name="target">10</attribute>
+					</item>
+				</section>
+			</submenu>
+		</section>
+		<section>
+			<item>
+				<attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+				<attribute name="action">win.show-help-overlay</attribute>
+			</item>
+			<item>
+				<attribute name="action">app.help</attribute>
+				<attribute name="label" translatable="yes">_Help</attribute>
+			</item>
+			<item>
+				<attribute name="action">app.about</attribute>
+				<attribute name="label" translatable="yes">_About Hitori</attribute>
+			</item>
+		</section>
+	</menu>
+	<object class="GtkApplicationWindow" id="hitori_main_window">
+		<signal name="destroy" handler="hitori_destroy_cb"/>
+		<signal name="window-state-event" handler="hitori_window_state_event_cb"/>
+		<child type="titlebar">
+			<object class="GtkHeaderBar">
+				<property name="show_close_button">True</property>
+				<property name="title" translatable="yes">Hitori</property>
+				<child>
+					<object class="GtkBox" id="undo_redo_box">
+						<property name="visible">True</property>
+						<property name="can_focus">False</property>
+						<style>
+							<class name="linked"/>
+						</style>
+						<child>
+							<object class="GtkButton" id="undo_button">
+								<property name="visible">True</property>
+								<property name="sensitive">False</property>
+								<property name="valign">center</property>
+								<property name="can_focus">True</property>
+								<property name="focus_on_click">False</property>
+								<property name="action_name">win.undo</property>
+								<property name="tooltip_text" translatable="yes">Undo your last move</property>
+								<style>
+									<class name="image-button"/>
+								</style>
+								<child>
+									<object class="GtkImage">
+										<property name="icon_name">edit-undo-symbolic</property>
+										<property name="icon_size">1</property>
+										<property name="visible">True</property>
+									</object>
+								</child>
+							</object>
+						</child>
+						<child>
+							<object class="GtkButton" id="redo_button">
+								<property name="visible">True</property>
+								<property name="sensitive">False</property>
+								<property name="valign">center</property>
+								<property name="can_focus">True</property>
+								<property name="focus_on_click">False</property>
+								<property name="action_name">win.redo</property>
+								<property name="tooltip_text" translatable="yes">Redo a move</property>
+								<style>
+									<class name="image-button"/>
+								</style>
+								<child>
+									<object class="GtkImage">
+										<property name="icon_name">edit-redo-symbolic</property>
+										<property name="icon_size">1</property>
+										<property name="visible">True</property>
+									</object>
+								</child>
+							</object>
+						</child>
+					</object>
+				</child>
+				<child>
+					<object class="GtkMenuButton" id="primary_menu">
+						<property name="visible">True</property>
+						<property name="valign">center</property>
+						<property name="can_focus">True</property>
+						<property name="focus_on_click">False</property>
+						<property name="menu_model">primary-menu</property>
+						<accelerator key="F10" signal="activate"/>
+						<style>
+							<class name="image-button" />
+						</style>
+						<child>
+							<object class="GtkImage">
+								<property name="visible">True</property>
+								<property name="icon-name">open-menu-symbolic</property>
+								<property name="icon-size">1</property>
+							</object>
+						</child>
+					</object>
+					<packing>
+						<property name="pack_type">end</property>
+					</packing>
+				</child>
+				<child>
+					<object class="GtkButton" id="hint_button">
+						<property name="visible">True</property>
+						<property name="sensitive">False</property>
+						<property name="valign">center</property>
+						<property name="can_focus">True</property>
+						<property name="focus_on_click">False</property>
+						<property name="action_name">win.hint</property>
+						<property name="tooltip_text" translatable="yes">Get a hint for your next move</property>
+						<style>
+							<class name="image-button"/>
+						</style>
+						<child>
+							<object class="GtkImage">
+								<property name="icon_name">dialog-question-symbolic</property>
+								<property name="icon_size">1</property>
+								<property name="visible">True</property>
+							</object>
+						</child>
+					</object>
+					<packing>
+						<property name="pack_type">end</property>
+					</packing>
+				</child>
+			</object>
+		</child>
+		<child>
+			<object class="GtkBox" id="vbox1">
+				<property name="orientation">vertical</property>
+				<child>
+					<object class="GtkDrawingArea" id="hitori_drawing_area">
+						<property name="expand">True</property>
+						<property name="valign">fill</property>
+            <property name="can_focus">True</property>
+						<property name="width-request">360</property>
+						<property name="height-request">360</property>
+						<property name="events">GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_KEY_PRESS_MASK</property>
+						<signal name="draw" handler="hitori_draw_cb"/>
+						<signal name="button-release-event" handler="hitori_button_release_cb"/>
+            <signal name="key-press-event" handler="hitori_key_press_cb"/>
+					</object>
+				</child>
+				<child>
+					<object class="GtkBox">
+						<property name="orientation">horizontal</property>
+						<property name="halign">center</property>
+						<property name="spacing">6</property>
+						<child>
+							<object class="GtkImage" id="timer_image">
+								<property name="icon_name">preferences-system-time-symbolic</property>
+								<property name="icon_size">1</property>
+								<property name="valign">center</property>
+								<property name="visible">True</property>
+							</object>
+						</child>
+						<child>
+							<object class="GtkLabel" id="hitori_timer">
+								<property name="valign">center</property>
+								<property name="visible">True</property>
+							</object>
+						</child>
+					</object>
+					<packing>
+						<property name="padding">6</property>
+					</packing>
+				</child>
+			</object>
+		</child>
+	</object>
+</interface>

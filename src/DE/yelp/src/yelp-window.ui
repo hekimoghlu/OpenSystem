@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <requires lib="libadwaita" version="1.0"/>
+
+  <menu id="primary-menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">New Window</attribute>
+        <attribute name="action">win.yelp-window-new</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Find in Page…</attribute>
+        <attribute name="action">win.yelp-window-find</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Print…</attribute>
+        <attribute name="action">win.yelp-view-print</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Previous Page</attribute>
+        <attribute name="action">win.yelp-view-go-previous</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Next Page</attribute>
+        <attribute name="action">win.yelp-view-go-next</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="custom">zoom-controls</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">All Help</attribute>
+        <attribute name="action">win.yelp-window-go-all</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">About Help</attribute>
+        <attribute name="action">win.yelp-show-about-dialog</attribute>
+      </item>
+    </section>
+  </menu>
+
+  <template class="YelpWindow" parent="AdwApplicationWindow">
+    <signal name="notify::default-width" handler="window_resize_signal"/>
+    <signal name="notify::default-height" handler="window_resize_signal"/>
+
+    <child>
+      <object class="AdwBreakpoint" id="adaptive_mode_breakpoint">
+        <condition>max-width: 400px</condition>
+        <setter object="bottom_toolbar" property="visible">true</setter>
+        <setter object="go_back_button" property="visible">false</setter>
+        <setter object="go_forward_button" property="visible">false</setter>
+        <setter object="bookmark_menu_button" property="direction">up</setter>
+      </object>
+    </child>
+
+    <property name="content">
+      <object class="AdwToolbarView">
+        <property name="top-bar-style">raised</property>
+        <property name="bottom-bar-style">raised</property>
+        <child type="top">
+          <object class="AdwHeaderBar" id="header">
+            <property name="title-widget">
+              <object class="AdwWindowTitle" id="header_title"/>
+            </property>
+
+            <!-- Back/Forward -->
+            <child type="start">
+              <object class="GtkButton" id="go_back_button">
+                <property name="icon-name">go-previous-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Back</property>
+                <property name="action-name">win.yelp-view-go-back</property>
+              </object>
+            </child>
+
+            <child type="start">
+              <object class="GtkButton" id="go_forward_button">
+                <property name="icon-name">go-next-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Forward</property>
+                <property name="action-name">win.yelp-view-go-forward</property>
+              </object>
+            </child>
+
+            <!-- Main menu -->
+            <child type="end">
+              <object class="GtkMenuButton" id="menu_button">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Menu</property>
+                <property name="primary">true</property>
+                <property name="popover">primary_popover_menu</property>
+              </object>
+            </child>
+
+            <!-- Search -->
+            <child type="end">
+              <object class="GtkToggleButton" id="search_button">
+                <property name="icon-name">edit-find-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Search (Ctrl+S)</property>
+              </object>
+            </child>
+
+            <!-- Bookmarks -->
+            <child type="end">
+              <object class="GtkMenuButton" id="bookmark_menu_button">
+                <property name="icon-name">user-bookmarks-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Bookmarks</property>
+                <property name="popover">bookmark_menu</property>
+              </object>
+            </child>
+
+          </object>
+        </child>
+
+        <child type="top">
+          <object class="GtkSearchBar" id="search_bar">
+            <property name="search-mode-enabled" bind-source="search_button" bind-property="active" bind-flags="bidirectional"/>
+            <signal name="notify::search-mode-enabled" handler="window_search_mode"/>
+            <child>
+              <object class="AdwClamp" id="search_entry_clamp">
+                <property name="maximum-size">425</property>
+                <!-- Search entry is added in-code -->
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <property name="content">
+          <object class="GtkOverlay" id="view_overlay">
+            <!-- Find -->
+            <child type="overlay">
+              <object class="GtkRevealer" id="find_bar">
+                <property name="halign">end</property>
+                <property name="margin-start">6</property>
+                <property name="margin-end">6</property>
+                <property name="valign">start</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="spacing">6</property>
+                    <style>
+                      <class name="yelp-find-frame"/>
+                    </style>
+
+                    <child>
+                      <object class="GtkSearchEntry" id="find_entry">
+                        <property name="placeholder-text" translatable="yes">Search in page…</property>
+                        <signal name="changed" handler="find_entry_changed"/>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkButton" id="find_prev_button">
+                        <property name="icon-name">go-up-symbolic</property>
+                        <property name="tooltip-text" translatable="yes">Previous</property>
+                        <property name="valign">center</property>
+                        <signal name="clicked" handler="find_prev_clicked"/>
+                        <style>
+                          <class name="flat"/>
+                        </style>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkButton" id="find_next_button">
+                        <property name="icon-name">go-down-symbolic</property>
+                        <property name="tooltip-text" translatable="yes">Next</property>
+                        <property name="valign">center</property>
+                        <signal name="clicked" handler="find_next_clicked"/>
+                        <style>
+                          <class name="flat"/>
+                        </style>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkButton" id="find_close_button">
+                        <property name="icon-name">window-close-symbolic</property>
+                        <property name="tooltip-text" translatable="yes">Close Search</property>
+                        <property name="valign">center</property>
+                        <signal name="clicked" handler="find_close_clicked"/>
+                        <style>
+                          <class name="flat"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="YelpView" id="view">
+                <signal name="new-view-requested" handler="view_new_window"/>
+                <signal name="loaded" handler="view_loaded"/>
+                <signal name="notify::is-loading" handler="view_is_loading_changed"/>
+                <signal name="notify::yelp-uri" handler="view_uri_selected"/>
+                <signal name="notify::page-id" handler="window_set_bookmark_buttons" swapped="yes"/>
+                <signal name="notify::root-title" handler="view_root_title"/>
+              </object>
+            </child>
+          </object>
+        </property>
+
+        <child type="bottom">
+          <object class="GtkActionBar" id="bottom_toolbar">
+            <property name="visible">false</property>
+
+            <child type="start">
+              <object class="GtkButton" id="go_back_button_bottom">
+                <property name="icon-name">go-previous-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Back</property>
+                <property name="action-name">win.yelp-view-go-back</property>
+              </object>
+            </child>
+
+            <child type="start">
+              <object class="GtkButton" id="go_forward_button_bottom">
+                <property name="icon-name">go-next-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Forward</property>
+                <property name="action-name">win.yelp-view-go-forward</property>
+              </object>
+            </child>
+
+            <!-- Bookmarks button is moved here in-code -->
+          </object>
+        </child>
+      </object>
+    </property>
+  </template>
+
+  <object class="GtkPopoverMenu" id="primary_popover_menu">
+    <property name="menu-model">primary-menu</property>
+    <child type="zoom-controls">
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="homogeneous">True</property>
+        <property name="margin-top">3</property>
+        <property name="margin-bottom">3</property>
+        <child>
+          <object class="GtkButton">
+            <property name="icon-name">zoom-out-symbolic</property>
+            <property name="tooltip-text" translatable="yes">Shrink Text</property>
+            <property  name="action-name">app.yelp-application-smaller-text</property>
+            <property name="halign">center</property>
+            <style>
+              <class name="circular" />
+              <class name="flat" />
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="tooltip-text" translatable="yes">Reset Size</property>
+            <property name="halign">center</property>
+            <property  name="action-name">app.yelp-application-reset-text-size</property>
+            <style>
+              <class name="flat" />
+              <class name="numeric" />
+            </style>
+            <child>
+              <object class="GtkLabel" id="font_adjustment_label">
+                <property name="width_chars">5</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton">
+            <property name="icon-name">zoom-in-symbolic</property>
+            <property name="tooltip-text" translatable="yes">Enlarge Text</property>
+            <property  name="action-name">app.yelp-application-larger-text</property>
+            <property name="halign">center</property>
+            <style>
+              <class name="circular" />
+              <class name="flat" />
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+
+  <object class="GtkPopover" id="bookmark_menu">
+    <style>
+      <class name="yelp-bookmark-menu"/>
+      <class name="menu"/>
+    </style>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">12</property>
+        <property name="width-request">280</property>
+
+        <child>
+          <object class="GtkScrolledWindow" id="bookmark_sw">
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="height-request">200</property>
+            <property name="max-content-width">280</property>
+
+            <child>
+              <object class="GtkListBox" id="bookmark_list">
+                <property name="hexpand">true</property>
+                <property name="selection-mode">none</property>
+                <signal name="row-activated" handler="bookmark_activated"/>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="bookmark_add">
+            <property name="margin-start">6</property>
+            <property name="margin-end">6</property>
+            <property name="margin-top">6</property>
+            <property name="margin-bottom">6</property>
+            <property name="label" translatable="yes">Add Bookmark</property>
+            <signal name="clicked" handler="bookmark_added"/>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="bookmark_remove">
+            <property name="margin-start">6</property>
+            <property name="margin-end">6</property>
+            <property name="margin-top">6</property>
+            <property name="margin-bottom">6</property>
+            <property name="label" translatable="yes">Remove Bookmark</property>
+            <signal name="clicked" handler="bookmark_removed"/>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

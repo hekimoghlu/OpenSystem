@@ -1,0 +1,84 @@
+/* Copyright (C) 2008 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/outputstream.h>
+#include <giomm/seekable.h>
+#include <giomm/pollableoutputstream.h>
+#include <glibmm/object.h>
+#include <gio/gio.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/outputstream_p.h)
+
+namespace Glib
+{
+
+// Forward declaration.
+class GLIBMM_API Bytes;
+
+}
+
+namespace Gio
+{
+
+/** Streaming output operations on memory chunks
+ *
+ * This class uses arbitrary memory chunks as output for GIO streaming output operations.
+ *
+ * @ingroup Streams
+ *
+ * @newin{2,20}
+ */
+class GIOMM_API MemoryOutputStream :
+    public OutputStream,
+    public Seekable,
+    public PollableOutputStream
+{
+  _CLASS_GOBJECT(MemoryOutputStream, GMemoryOutputStream, G_MEMORY_OUTPUT_STREAM, Gio::OutputStream, GOutputStream, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(Seekable)
+  _IMPLEMENTS_INTERFACE(PollableOutputStream)
+
+protected:
+  // Hand-coded because it's equivalent to g_memory_output_stream_new_resizable(),
+  // which sets some properties to non-default values.
+  /** Creates a resizable stream.
+   */
+  MemoryOutputStream();
+  // TODO: more C++-like interface using sigc++
+  _WRAP_CTOR(MemoryOutputStream(void* data, gsize size, GReallocFunc realloc_function, GDestroyNotify destroy_function), g_memory_output_stream_new)
+
+public:
+  _WRAP_CREATE()
+  // TODO: more C++-like interface using sigc++
+  _WRAP_CREATE(void* data, gsize size, GReallocFunc realloc_function, GDestroyNotify destroy_function)
+
+  _WRAP_METHOD(void* get_data(), g_memory_output_stream_get_data)
+  _WRAP_METHOD(const void* get_data() const, g_memory_output_stream_get_data, constversion)
+  _WRAP_METHOD(void* steal_data(), g_memory_output_stream_steal_data)
+
+  _WRAP_METHOD(gsize get_size() const, g_memory_output_stream_get_size)
+  _WRAP_METHOD(gsize get_data_size() const, g_memory_output_stream_get_data_size)
+
+  _WRAP_METHOD(Glib::RefPtr<Glib::Bytes> steal_as_bytes(), g_memory_output_stream_steal_as_bytes)
+
+  _WRAP_PROPERTY("data", void*)
+  _WRAP_PROPERTY("data-size", gulong)
+  _WRAP_PROPERTY("size", gulong)
+
+  _IGNORE_PROPERTY(destroy-function, realloc-function)dnl// Too C-like
+};
+
+} // namespace Gio

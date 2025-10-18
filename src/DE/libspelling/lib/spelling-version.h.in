@@ -1,0 +1,93 @@
+/* libspelling-version.h.in
+ *
+ * Copyright 2023 Christian Hergert
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#pragma once
+
+/**
+ * SECTION:libspellingversion
+ * @short_description: libspelling version checking
+ *
+ * libspelling provides macros to check the version of the library
+ * at compile-time
+ */
+
+/**
+ * SPELLING_MAJOR_VERSION:
+ *
+ * libspelling major version component (e.g. 1 if %SPELLING_VERSION is 1.2.3)
+ */
+#define SPELLING_MAJOR_VERSION (@MAJOR_VERSION@)
+
+/**
+ * SPELLING_MINOR_VERSION:
+ *
+ * libspelling minor version component (e.g. 2 if %SPELLING_VERSION is 1.2.3)
+ */
+#define SPELLING_MINOR_VERSION (@MINOR_VERSION@)
+
+/**
+ * SPELLING_MICRO_VERSION:
+ *
+ * libspelling micro version component (e.g. 3 if %SPELLING_VERSION is 1.2.3)
+ */
+#define SPELLING_MICRO_VERSION (@MICRO_VERSION@)
+
+/**
+ * SPELLING_VERSION
+ *
+ * libspelling version.
+ */
+#define SPELLING_VERSION (@VERSION@)
+
+/**
+ * SPELLING_VERSION_S:
+ *
+ * libspelling version, encoded as a string, useful for printing and
+ * concatenation.
+ */
+#define SPELLING_VERSION_S "@VERSION@"
+
+#define SPELLING_ENCODE_VERSION(major,minor,micro) \
+        ((major) << 24 | (minor) << 16 | (micro) << 8)
+
+/**
+ * SPELLING_VERSION_HEX:
+ *
+ * libspelling version, encoded as an hexadecimal number, useful for
+ * integer comparisons.
+ */
+#define SPELLING_VERSION_HEX \
+        (SPELLING_ENCODE_VERSION (SPELLING_MAJOR_VERSION, SPELLING_MINOR_VERSION, SPELLING_MICRO_VERSION))
+
+/**
+ * SPELLING_CHECK_VERSION:
+ * @major: required major version
+ * @minor: required minor version
+ * @micro: required micro version
+ *
+ * Compile-time version checking. Evaluates to %TRUE if the version
+ * of libspelling is greater than the required one.
+ */
+#define SPELLING_CHECK_VERSION(major,minor,micro)   \
+        (SPELLING_MAJOR_VERSION > (major) || \
+         (SPELLING_MAJOR_VERSION == (major) && SPELLING_MINOR_VERSION > (minor)) || \
+         (SPELLING_MAJOR_VERSION == (major) && SPELLING_MINOR_VERSION == (minor) && \
+          SPELLING_MICRO_VERSION >= (micro)))

@@ -1,0 +1,58 @@
+# If this is a development build, which is used for our Flatpak build
+# so that we have a different app-id (.Devel suffix) than the regular
+# application.
+option('development', type: 'boolean', value: false)
+
+# Optionally disable the GTK application in case you're building the
+# sysprof-cli only for your platform. Might be useful in IoT or various
+# server scenarios.
+option('gtk', type: 'boolean')
+
+# Allow disabling the installation of libsysprof-capture*.a
+option('install-static', type: 'boolean')
+
+# Allow disabling of features that depend on polkit-agent.
+option('polkit-agent', type: 'feature',
+  value: 'auto',
+  description: 'Enable features which require polkit-agent-1'
+)
+
+# Optionally compile sysprofd, which is needed to get elevated privileges.
+# You only really want to ignore this if you are running from a container
+# and are talking to a host daemon. Also, if you're compiling for something
+# other than Linux to allow viewing syscap files.
+option('sysprofd', type: 'combo',
+  choices: ['host', 'bundled', 'none'],
+  value: 'bundled',
+)
+
+# The directory to place systemd service files, so that we can auto-launch
+# sysprofd as necessary (for the daemon privilege helper).
+option('systemdunitdir', type: 'string',
+  description: 'Directory for systemd service files'
+)
+
+# If Yelp documentation should be installed
+option('help', type: 'boolean')
+
+# Build libsysprof (required by tools, tests, sysprof, etc)
+option('libsysprof', type: 'boolean')
+
+# Optionally disable the tools (this is mostly only useful for building only
+# libsysprof-capture as a subproject)
+option('tools', type: 'boolean')
+
+# Optionally disable the tests (this is mostly only useful for building only
+# libsysprof-capture as a subproject)
+option('tests', type: 'boolean')
+
+# Optionally disable the examples (this is mostly only useful for building only
+# libsysprof-capture as a subproject)
+option('examples', type: 'boolean')
+
+option('debuginfod', type: 'feature')
+
+option('introspection', type: 'feature', value: 'disabled',
+       description: 'Enable introspection for libsysprof')
+option('docs', type: 'boolean', value: false,
+       description: 'Build documentation for libsysprof')

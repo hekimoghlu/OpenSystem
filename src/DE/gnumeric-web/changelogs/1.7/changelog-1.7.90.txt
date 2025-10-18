@@ -1,0 +1,249 @@
+2007-11-19  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.7.90
+
+2007-11-18  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_draw_page_cb): set up HFRenderInfo
+	* src/print-info.c (render_cell): handle relative addresses
+	
+2007-11-17  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (render_cell): use rangeref_parse to also handle
+	  other sheets.
+
+2007-11-17  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (HFRenderInfo): add page area info
+	* src/print-info.c (render_cell): new
+	(render_ops): add cell record
+	(hf_render_info_new): initialize page area info
+
+2007-11-16  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_merged_range_gtk): print the 
+	  background behind the cell.
+
+2007-11-16  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c: use the recent manager to received
+	notifications of changes and tell GnmApp watchers.
+
+	* src/gnumeric-gconf.c: Check the right symbol for backend.
+
+	* src/clipboard.c (cellregion_to_string): Fix cut-and-paste-code
+	bug.
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Explicitly clear force
+	rel/abs flags.
+
+2007-11-15  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_release_pref_dialog,
+	gnm_app_get_pref_dialog, gnm_app_set_pref_dialog): Remove.
+
+2007-11-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (set_clipman_targets): New. Restrict the
+	set of formats offered to clipboard manager.
+	(x_claim_clipboard): Use it.
+
+2007-11-15  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (cb_cellregion_extent) : new.
+	(cellregion_extent) : new.  currently internal.  Might be useful
+	 externally.
+	(cellregion_to_string) : check the extent of the content.
+
+2007-11-14  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/pixmaps/hf_date.png: new (temporary) icon
+	* src/pixmaps/hf_page.png: ditto
+	* src/pixmaps/hf_pages.png: ditto
+	* src/pixmaps/hf_cell.png: ditto
+	* src/pixmaps/hf_time.png: ditto
+	* src/pixmaps/hf_sheet.png: ditto
+	* src/pixmaps/Makefile.am: adjust for new icon files
+	* src/wbc-gtk.c (wbc_gtk_setup_icons): add new icons
+
+2007-11-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (debug_clipboard): New function.
+	(x_clipboard_get_cb): Add conditional debug statements.
+
+	* src/wbc-gtk.c (wbcg_sheet_focus): Make sure direction is right,
+	see #496304, comment 3 onwards.
+
+2007-11-13  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_keyed_dialog): Tentatively persist zoom
+	dialog window size within session.
+
+2007-11-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/commands.c (cmd_define_name): Fix typo. Fixes #496334.
+
+2007-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control.c (wb_control_jump): Simplify.  Return
+	error indicator and take simpler arguments.  Caller fixed.  Refuse
+	to jump to invisible sheet.  Fixes #496304.
+
+	* src/sheet.c (sheet_cell_set_text): Fix interaction between
+	spanning and manual recalc.  Fixes #495879.
+
+	* src/parse-util.c (rangeref_parse): Don't allow workbook without
+	sheet.
+
+	* src/rendered-value.c (gnm_rendered_value_new): Don't test
+	cell->value too soon.
+
+2007-11-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (table_cellregion_write): Paste as values so
+	that we don't care about array boundaries. Fixes #496187.
+
+2007-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (gnm_print_sheet): Handle more
+	gtk_print_operation_run result codes.  Fix leak.
+
+	* src/workbook-control.c (wb_control_jump): Add missing
+	inititialization of r.  Fixes #496071.
+
+2007-11-09  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_define_name): Validate name.
+
+	* src/workbook-control.c (wb_control_parse_and_jump): Parse with
+	respect to edit position.
+
+	* src/value.c (value_new_cellrange_parsepos_str): New function
+	split form value_new_cellrange_str.
+	(value_new_cellrange_str): Simplify using
+	value_new_cellrange_parsepos_str.
+
+	* src/workbook-control.c (wb_control_jump): Split from
+	wb_control_parse_and_jump.
+	* src/position.c (eval_pos_init_editpos): New function.
+	See #494318.
+
+2007-11-08  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* gnumeric.xsd: add do_not_print field
+
+2007-11-08  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_do_not_print): new
+	* src/xml-sax-write.c (xml_write_print_info): write do_not_print 
+	  field
+	* src/xml-io.c (xml_read_print_info): read do_not_print field
+	* src/print-info.c (print_info_new): initialize do_not_print
+	
+2007-11-08  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_move_range): Initialize reloc_info.pos.
+	Otherwise we get UMRs in gnm_expr_top_relocate.
+
+2007-11-07  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_dispose): Get rid of ->im_context here,
+	not in gnm_pane_finalize.  First disconnect signals and window.
+	This fixes FMR during workbook destruction.
+	(gnm_pane_finalize): Delete.
+
+2007-11-06  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Use yyyy-m-d format for
+	date entry when appropriate.
+
+	* src/gnm-format.c (gnm_format_month_before_day): Update return
+	value like for go_format_month_before_day.
+
+2007-11-06  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (PrintingInstance): add HFRenderInfo
+	(printing_instance_new): handle HFRenderInfo field
+	(printing_instance_destroy): ditto
+	(ensure_decoration_layout): rewrite for gtkprint
+	(print_hf_element): ditto
+	(print_hf_line): ditto
+	(print_headers): delete
+	(print_footers): delete
+	(print_page): also print headers and footers
+
+2007-11-06  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_hf): new
+	(PRINT_HEADER): hook up xml_sax_print_hf
+	(PRINT_FOOTER): ditto
+
+2007-11-06  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (pdf_write_workbook): Set do_not_print flags to
+	relects sheet selection.
+
+	* src/print.c (compute_pages): Do not print sheets marked
+	do_not_print.
+
+2007-11-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c: (gnm_so_filled_draw_cairo): use cairo_t*
+	as arg for draw_cairo instead of gpointer.
+	* src/gnm-so-line.c: (gnm_so_line_draw_cairo): ditto.
+	* src/gnm-so-polygon.c: (gnm_so_polygon_draw_cairo): ditto.
+	* src/sheet-object-graph.c: (gnm_sog_draw_cairo): ditto.
+	* src/sheet-object-impl.h: ditto.
+	* src/sheet-object.c: (sheet_object_draw_cairo): ditto.
+	* src/sheet-object.h: ditto.
+	* src/sheet-object-image.c: (gnm_soi_draw_cairo),
+	(gnm_soi_class_init): implement draw_cairo (for printing).
+
+2007-11-05  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (pdf_write_workbook): Prepare for printing
+	selected sheets.  Note: doesn't actually work yet.
+	(cb_set_pdf_option): Parse sheets to be printing.
+
+2007-11-05  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_scale_fit_to): new arguments to pass
+	  through to paginate. Also calculate extent internally.
+	(compute_sheet_pages): pass more info to compute_scale_fit_to
+
+2007-11-05  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_n_pages): deleted
+	(compute_scale_fit_to): use paginate rather than compute_n_pages
+	(compute_sheet_pages_add_range): change expected argument order to 
+	  match how you are called.
+	(paginate): drop unneeded arguments
+	
+2007-11-05  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (print_init): Hook up options parsing for pdf
+	export.
+	(page_setup_set_paper): Return an error code.
+	(print_info_set_paper): Ditto.
+
+	* src/stf-export.c (gnm_stf_export_options_sheet_list_clear): Hold
+	a weak sheet reference only.
+
+2007-11-04  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_range_used_units): deleted
+	(print_job_info_init_sheet): deleted
+	(paginate): simplify arguments
+	(compute_sheet_pages): use simplified arguments for paginate
+	
+2007-11-04  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_sheet_pages_down_then_across): use
+	  new pagination info
+	(compute_sheet_pages_across_then_down): ditto
+	(paginate): new
+	(compute_sheet_pages): first paginate and only then create page list.
+
+2007-11-04  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

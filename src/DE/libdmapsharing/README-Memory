@@ -1,0 +1,88 @@
+This documents the effort to make dmapd and libdmapsharing more memory
+efficient. This document describes work done in both libdmapsharing and
+dmapd, because dmapd is the primary application of libdmapsharing's
+server-side functionality.
+
+I found that dmapd used a significant amount of heap space while trying to
+port dmapd to OpenWRT on a WRT160NL router with 32 Megabytes of RAM. A
+2,419-song library caused dmapd on x86_64 to use 7,413,760 bytes of heap
+space after reading the library into memory. Furthermore, connecting to
+dmapd using a DAAP client and receiving a list of songs caused heap usage
+to increase to over 10 Megabytes. Note that this memory usage might be
+smaller on the WRT160NL due to its 32-bit architecture, but it is still
+significant in size.
+
+After attempting to optimize memory use, I measured the following on
+OpenWrt / WRT160NL (*** BUT WITH NO METADATA READ! ***):
+
+Heap, after music is loaded:		0xf5000  (1,003,520)
+Heap, after client received song list:	0x926000 (9,592,832)
+
+SOME METADATA (MP3 ONLY):
+
+Heap, after music is loaded:		0x2d3000 (2,961,408)
+Heap, after client received song list:	0xafa000 (11,509,760)
+
+I use the following tools to troubleshoot memory issues:
+
+	grep heap /proc/PID/maps	(current heap size)
+	valgrind / memcheck		(memory leaks)
+	valgrind / massif		(max heap size and memory over time)
+	gdb
+	objdump -t OBJECT-FILE | grep -e "\.bss" -e "\.data" | sort -k5 
+		| c++filt | tail
+
+I have made the following changes in order to make dmapd more memory
+efficient:
+
+1. Replace the hash table-based DMAPDb implementation with a Berkeley
+Database implementation. Currently measuring the memory use compared to
+the in-memory database.
+
+2. Fixed several memory leaks after analyzing with valgrind.
+
+	Heap without client connection: 3,940,352 bytes
+
+3. Implement database cache so that dmapd does not need to use GStreamer
+to read media metadata each time it is run.
+
+	Heap without client connection using DB cache: 3,346,432 bytes
+
+4. Replace the DMAPDb in the DMAPContainerRecord implementation with a
+GSList of ID's.
+
+	Heap without client connection using DB cache: 4,759,552 bytes
+
+5. Implement "stringletons" and fix errors in 4) above.
+
+	Heap without client connection using DB cache: 2,854,912 bytes
+	Heap without client connection: 3,518,464 bytes
+	Heap after client connection and song list: 6,864,896 bytes
+	Max heap usages (massif): 8,945,760 bytes
+
+6. Modify libdmapsharing so that it responds to "/1/items" requests in
+chunks, avoiding the need to build the entire response in memory.
+
+	The effectiveness of this can be measured by observing the
+	maximum heap usage after a client has asked for a full media
+	list. Previous to this change, dmapd would use 7,811,072 bytes
+	of heap to describe a 2,232-song library. After this change,
+	dmapd's usage was 3,665,920 bytes, a very small increase over
+	the memory used by dmapd immediately after starting.
+
+7. Write a disk-based database for dmapd.
+
+	In order to minimize the memory used by a newly started dmapd,
+	I wrote a disk-based DMAPDb backend. This backend stores all
+	database data in files and avoids storing the entire database
+	in memory. To measure the effectiveness, I measured the memory
+	usage of dmapd after loading a 3,276-photograph library (note
+	that thumbnails are especially problematic). The GHashTable-based
+	database used 35,885,056 bytes of heap space. The disk-based
+	database used 4,763,648 bytes.
+
+8. Decompressing multiple scan JPEG's.
+
+	VIPS must decompress multiple scan JPEG's fully in memory due
+	to the way libjpeg works. Either 1) use embedded EXIF thumbnail
+	or 2) skip.

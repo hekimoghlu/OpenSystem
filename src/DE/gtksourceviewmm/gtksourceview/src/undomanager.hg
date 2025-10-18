@@ -1,0 +1,134 @@
+/* undomanager.h
+ *
+ * Copyright (C) 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <glibmm/interface.h>
+#include <glibmm/ustring.h>
+#include <gdkmm/pixbuf.h>
+#include <gtksourceview/gtksource.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+namespace Gsv
+{
+
+/** Undo manager interface for View.
+ *
+ * The UndoManager interface can be implemented to provide custom
+ * undo management to a Buffer. Use
+ * Buffer::set_undo_manager() to install a custom undo manager for
+ * a particular source buffer.
+ *
+ * Use UndoManager::can_undo_changed() and
+ * UndoManager::can_redo_changed() when respectively the undo state
+ * or redo state of the undo stack has changed.
+ *
+ * @newin{2,10}
+ */
+class UndoManager : public Glib::Interface
+{
+  _CLASS_INTERFACE(UndoManager, GtkSourceUndoManager, GTK_SOURCE_UNDO_MANAGER, GtkSourceUndoManagerIface)
+
+public:
+
+  /** Get whether there are undo operations available.
+   *
+   * @return @c true if there are undo operations available, @c false otherwise.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(bool can_undo() const, gtk_source_undo_manager_can_undo)
+
+  /** Get whether there are redo operations available.
+   *
+   * @return @c true if there are redo operations available, @c false otherwise.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(bool can_redo() const, gtk_source_undo_manager_can_redo)
+
+  /** Perform a single undo. Calling this function when there are no undo
+   * operations available is an error. Use can_undo() to find out if there are
+   * undo operations available.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void undo(), gtk_source_undo_manager_undo)
+
+  /** Perform a single redo. Calling this function when there are no redo
+   * operations available is an error. Use can_redo() to find out if there are
+   * redo operations available.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void redo(), gtk_source_undo_manager_redo)
+
+  /** Begin a not undoable action on the buffer. All changes between this call
+   * and the call to end_not_undoable_action() cannot be undone. This function
+   * should be re-entrant.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void begin_not_undoable_action(), gtk_source_undo_manager_begin_not_undoable_action)
+
+  /** Ends a not undoable action on the buffer.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void end_not_undoable_action(), gtk_source_undo_manager_end_not_undoable_action)
+
+  /** Emits the 'can-undo-changed' signal.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void can_undo_changed(), gtk_source_undo_manager_can_undo_changed)
+
+  /** Emits the 'can-redo-changed' signal.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void can_redo_changed(), gtk_source_undo_manager_can_redo_changed)
+
+  // TODO: should these signals be wrapped? They are marked as action ones. krnowak
+  /** Emitted when the ability to undo has changed.
+   */
+  _WRAP_SIGNAL(void can_undo_changed(), "can-undo-changed")
+
+  /** Emitted when the ability to redo has changed.
+   */
+  _WRAP_SIGNAL(void can_redo_changed(), "can-redo-changed")
+
+private:
+
+  _WRAP_VFUNC(bool can_undo() const, can_undo)
+
+  _WRAP_VFUNC(bool can_redo() const, can_redo)
+
+  _WRAP_VFUNC(void undo(), undo)
+
+  _WRAP_VFUNC(void redo(), redo)
+
+  _WRAP_VFUNC(void begin_not_undoable_action(), begin_not_undoable_action)
+
+  _WRAP_VFUNC(void end_not_undoable_action(), end_not_undoable_action)
+};
+
+} // namespace Gsv
+
+

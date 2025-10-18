@@ -1,0 +1,157 @@
+/* Copyright 2010 The glibmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/varianttype.h>
+#include <glibmm/utility.h>
+#include <glib.h>
+
+namespace Glib
+{
+
+VariantType::VariantType(const GVariantType* castitem)
+{
+  if (castitem)
+    gobject_ = g_variant_type_copy(castitem);
+  else
+    gobject_ = nullptr;
+}
+
+VariantType::VariantType(const std::string& type_string)
+: gobject_(g_variant_type_new(type_string.c_str()))
+{
+}
+
+VariantType&
+VariantType::operator=(const GVariantType* castitem)
+{
+  if (gobject_)
+  {
+    g_variant_type_free(gobject_);
+  }
+
+  if (castitem)
+    gobject_ = g_variant_type_copy(castitem);
+  else
+    gobject_ = nullptr;
+
+  return *this;
+}
+
+VariantType
+VariantType::create_tuple(const std::vector<VariantType>& items)
+{
+  using var_ptr = GVariantType*;
+  const auto var_array = new var_ptr[items.size()];
+
+  for (std::vector<VariantType>::size_type i = 0; i < items.size(); i++)
+  {
+    var_array[i] = const_cast<GVariantType*>(items[i].gobj());
+  }
+
+  auto result = Glib::wrap(g_variant_type_new_tuple(var_array, items.size()));
+  delete[] var_array;
+  return result;
+}
+
+const VariantType VARIANT_TYPE_BOOL(G_VARIANT_TYPE_BOOLEAN);
+
+const VariantType VARIANT_TYPE_BYTE(G_VARIANT_TYPE_BYTE);
+
+const VariantType VARIANT_TYPE_INT16(G_VARIANT_TYPE_INT16);
+
+const VariantType VARIANT_TYPE_UINT16(G_VARIANT_TYPE_UINT16);
+
+const VariantType VARIANT_TYPE_INT32(G_VARIANT_TYPE_INT32);
+
+const VariantType VARIANT_TYPE_UINT32(G_VARIANT_TYPE_UINT32);
+
+const VariantType VARIANT_TYPE_INT64(G_VARIANT_TYPE_INT64);
+
+const VariantType VARIANT_TYPE_UINT64(G_VARIANT_TYPE_UINT64);
+
+const VariantType VARIANT_TYPE_DOUBLE(G_VARIANT_TYPE_DOUBLE);
+
+const VariantType VARIANT_TYPE_STRING(G_VARIANT_TYPE_STRING);
+
+const VariantType VARIANT_TYPE_OBJECT_PATH(G_VARIANT_TYPE_OBJECT_PATH);
+
+const VariantType VARIANT_TYPE_SIGNATURE(G_VARIANT_TYPE_SIGNATURE);
+
+const VariantType VARIANT_TYPE_VARIANT(G_VARIANT_TYPE_VARIANT);
+
+const VariantType VARIANT_TYPE_HANDLE(G_VARIANT_TYPE_HANDLE);
+
+const VariantType VARIANT_TYPE_UNIT(G_VARIANT_TYPE_UNIT);
+
+const VariantType VARIANT_TYPE_ANY(G_VARIANT_TYPE_ANY);
+
+const VariantType VARIANT_TYPE_BASIC(G_VARIANT_TYPE_BASIC);
+
+const VariantType VARIANT_TYPE_MAYBE(G_VARIANT_TYPE_MAYBE);
+
+const VariantType VARIANT_TYPE_ARRAY(G_VARIANT_TYPE_ARRAY);
+
+const VariantType VARIANT_TYPE_TUPLE(G_VARIANT_TYPE_TUPLE);
+
+const VariantType VARIANT_TYPE_DICT_ENTRY(G_VARIANT_TYPE_DICT_ENTRY);
+
+const VariantType VARIANT_TYPE_DICTIONARY(G_VARIANT_TYPE_DICTIONARY);
+
+const VariantType VARIANT_TYPE_STRING_ARRAY(G_VARIANT_TYPE_STRING_ARRAY);
+
+const VariantType VARIANT_TYPE_OBJECT_PATH_ARRAY(G_VARIANT_TYPE_OBJECT_PATH_ARRAY);
+
+const VariantType VARIANT_TYPE_BYTESTRING(G_VARIANT_TYPE_BYTESTRING);
+
+const VariantType VARIANT_TYPE_BYTESTRING_ARRAY(G_VARIANT_TYPE_BYTESTRING_ARRAY);
+
+std::string
+VariantType::get_string() const
+{
+  return std::string(g_variant_type_peek_string(gobj()), g_variant_type_get_string_length(gobj()));
+}
+
+std::vector<VariantType> VariantType::get_item_types() const
+{
+  std::vector<VariantType> result;
+  auto next_item_type = g_variant_type_first(gobj());
+  while (next_item_type)
+  {
+    result.emplace_back(const_cast<GVariantType*>(next_item_type), true);
+    next_item_type = g_variant_type_next(next_item_type);
+  }
+  return result;
+}
+
+// Glib::Value<Glib::VariantType>
+GType Value<VariantType>::value_type()
+{
+  // The type function is *not* called g_variant_type_get_type().
+  // Use the macro in order to avoid using the non-standard function name here.
+  return G_TYPE_VARIANT_TYPE;
+}
+
+void Value<VariantType>::set(const CppType& data)
+{
+  set_boxed(data.gobj());
+}
+
+Value<VariantType>::CppType Value<VariantType>::get() const
+{
+  return Glib::wrap(static_cast<CType>(get_boxed()), true);
+}
+
+} // namespace GLib

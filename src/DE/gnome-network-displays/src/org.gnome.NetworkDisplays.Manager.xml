@@ -1,0 +1,72 @@
+<!DOCTYPE node PUBLIC
+'-//freedesktop//DTD D-BUS Object Introspection 1.0//EN'
+'http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd'>
+<node>
+
+  <!--
+      org.gnome.NetworkDisplays.Manager:
+      @short_description: Connection manager interface
+
+      Interface used to connect and disconnect network display sinks. It may be
+      used in conjunction with org.gnome.NetworkDisplays.Registry, which
+      exposes the UUIDs needed by this interface.
+  -->
+  <interface name="org.gnome.NetworkDisplays.Manager">
+
+    <!--
+        Displays:
+        @short_description: Retrieves detected displays and their properties
+
+        Available properties:
+
+        * display-name (s): The name of the sink to display to the user
+        * priority     (u): The priority of the sink, for de-duplication purposes
+                            (a higher priority sink will be the preferred one)
+        * state        (u): value representing the current state of the sink.
+
+        Possible values for state:
+
+        0x0    : disconnected,
+        0x50   : ensure-firewall,
+        0x100  : wait-p2p,
+        0x110  : wait-socket,
+        0x120  : wait-streaming,
+        0x1000 : streaming,
+        0x10000: error,
+
+        * protocol     (u): value representing the protocol used by the sink.
+
+        Possible values for protocol:
+
+        0: Unknown,
+        1: WiFi Display P2P,
+        2: WiFi Display MICE,
+        3: Chromecast,
+    -->
+    <property name="Displays" type="aa{sv}" access="read" />
+
+    <!--
+        StartStream:
+        @short_description: Connect and start streaming to a sink
+
+        @sink_uuid: UUID of the sink to connect with
+        @stream_unit_name: Name of the resulting transient service
+    -->
+    <method name="StartStream">
+      <arg name="sink_uuid" type="s" direction="in" />
+      <arg name="stream_unit_name" type="s" direction="out" />
+    </method>
+
+    <!--
+        StopStream:
+        @short_description: Disconnect and start streaming to a sink
+
+        @uuid: UUID of the sink to disconnect with
+    -->
+    <method name="StopStream">
+      <arg name="stream_unit_name" type="s" direction="in" />
+    </method>
+
+  </interface>
+
+</node>

@@ -1,0 +1,17 @@
+SELECT DISTINCT ?artist ?name
+WHERE {
+  GRAPH tracker:Audio {
+    ?artist a nmm:Artist ;
+      nmm:artistName ?name .
+    ?ie nmm:artist ?artist ;
+      nie:isStoredAs ?f .
+    ?f nie:dataSource ?ds .
+    OPTIONAL {
+      ?ds tracker:available ?available
+    }
+    FILTER (~showAll^^xsd:boolean || ?available)
+  }
+}
+ORDER BY ASC(?name)
+OFFSET ~offset
+LIMIT ~limit

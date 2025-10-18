@@ -1,0 +1,19 @@
+[Unit]
+Description=GNOME Initial Setup Copy Worker
+
+# Make sure we complete very early before most consumers are started.
+Before=default.target graphical-session-pre.target
+
+# Run before any systemd activated consumers.
+Before=gnome-keyring-daemon.service
+
+ConditionPathExists=!%E/gnome-initial-setup-done
+
+# Never run in GDM
+ConditionUser=!@system
+ConditionEnvironment=XDG_SESSION_CLASS=user
+
+[Service]
+Type=oneshot
+ExecStart=@libexecdir@/gnome-initial-setup-copy-worker
+Restart=no

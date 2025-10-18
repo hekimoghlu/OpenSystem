@@ -1,0 +1,17 @@
+include: 'https://gitlab.gnome.org/GNOME/citemplates/raw/master/flatpak/flatpak_ci_initiative.yml'
+
+variables:
+    BUNDLE: "klotski-dev.flatpak"
+
+flatpak:
+    variables:
+        MANIFEST_PATH: "build-aux/org.gnome.Klotski.json"
+        FLATPAK_MODULE: "gnome-klotski"
+        RUNTIME_REPO: "https://sdk.gnome.org/gnome-nightly.flatpakrepo"
+        APP_ID: " org.gnome.Klotski"
+    extends: .flatpak
+
+nightly:
+    extends: '.publish_nightly'
+    dependencies: ['flatpak']
+    needs: ['flatpak']

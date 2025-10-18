@@ -1,0 +1,99 @@
+{% extends "default.html" %}
+{% block title %}ODRS: Open Desktop Ratings Service{% endblock %}
+
+{% block content %}
+
+<h1>GNOME Open Desktop Ratings</h1>
+<p>
+  Choosing an application to install is hard when there are lots of
+  possible projects matching a specific search term.
+  We already list applications based on the integration level and with
+  useful metrics like <i>is it translated in my language</i> and this makes
+  sure that high quality applications are listed near the top of the results.
+  For more information about an application we often want a more balanced
+  view than the PR speak or unfounded claims of the upstream project.
+  This is where user-contributed reviews come in.
+</p>
+<p>
+  To get a user to contribute a review (which takes time) we need to make
+  the process as easy as possible.
+  Making the user create a user account on yet-another-webservice will
+  make this much harder and increase the barrier to participation to the
+  point that very few people would contribute reviews.
+  If anonymous reviewing does not work the plan is to use some kind of
+  attestation service so you can use a GMail or Facebook for confirming
+  your identity.
+  At this point I'm hoping people will just be nice to each other and not
+  abuse the service although this reviewing facility will go away if it
+  starts being misused.
+</p>
+
+<h2>Privacy</h2>
+<p>
+Designing an anonymous service is hard when you have to be resilient
+against a socially awkward programmer with unusual political ideologies.
+Obviously when contacting a web service you share your IP address.
+This isn't enough to uniquely identify a machine and user, which we
+want for the following reasons:
+</p>
+
+<ol>
+<li>Allowing users to retract only their own reviews</li>
+<li>Stopping users up or down-voting the same review multiple times</li>
+</ol>
+
+<p>
+A compromise would be to send a hash of two things that identify the
+user and machine.
+In GNOME Software we're using a SHA1 hash of the machine-id and the
+UNIX username along with a salt, although this <code>user_id</code> is only
+specified as a string and the format is not checked.
+</p>
+<p>
+When the client requests some comments and sets the <code>user_id</code> hash as
+generated above the returned reviews have an additional key called
+<code>user_key</code>.
+The user key is a SHA1 hash of the user ID sent in the request, along
+with the application ID and also a secret value.
+It should be impossible to generate a <code>user_key</code> from a
+<code>user_id</code> without first requesting the reviews from the server.
+This prevents an end user just writing a trivial python program that
+can upvote a specific comment.
+</p>
+<p>
+To then vote or remove a specific review you need to specify the
+<code>user_key</code> and <code>user_id</code> values along with the
+<code>review_id</code>.
+</p>
+<p>
+  Find the GDPR policy <a href="{{url_for('.odrs_privacy')}}">here</a>.
+</p>
+
+<h2>Moderation</h2>
+<p>
+For projects like RHEL where we care very much what comments are shown
+to paying customers we definitely want reviews to be pre-approved and
+checked before showing to customers.
+For admin_distros like Fedora we don't have this luxury and so we're going to
+rely on the community to self-regulate reviews.
+Reviews are either up-voted or down-voted according how useful they are
+along with the nuclear option of marking the review as abusive.
+</p>
+
+<h3>Choosing Reviews for each Application</h3>
+<p>
+By specifying the users current locale we can sort the potential
+application reviews according to a heuristic that we're still working on.
+Generally we want to prefer useful reviews in the users locale and hide
+ones that have been marked as abusive, and we also want to indicate the
+users self-review so they can remove it later if required.
+We also want to prioritize reviews for the current application version
+compared to really old versions of these applications.
+</p>
+
+<h2>I have a question</h2>
+<p>
+Email me or grab me on IRC (<code>hughsie@libera.chat</code>).
+</p>
+
+{% endblock %}

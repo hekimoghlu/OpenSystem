@@ -1,0 +1,1833 @@
+/*
+ * e-source-webdav.c
+ *
+ * This library is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/**
+ * SECTION: e-source-webdav
+ * @include: libedataserver/libedataserver.h
+ * @short_description: #ESource extension for WebDAV settings
+ *
+ * The #ESourceWebdav extension tracks settings for accessing resources
+ * on a remote WebDAV server.
+ *
+ * This class exists in libedataserver because we have several
+ * WebDAV-based backends.  Each of these backends is free to use
+ * this class directly or subclass it with additional settings.
+ * Subclasses should override the extension name.
+ *
+ * The #GUri is parsed into components and distributed across
+ * several other built-in extensions such as #ESourceAuthentication
+ * and #ESourceSecurity.
+ *
+ * Access the extension as follows:
+ *
+ * |[
+ *   #include <libedataserver/libedataserver.h>
+ *
+ *   ESourceWebdav *extension;
+ *
+ *   extension = e_source_get_extension (source, E_SOURCE_EXTENSION_WEBDAV_BACKEND);
+ * ]|
+ **/
+
+#include "evolution-data-server-config.h"
+
+#include <glib/gi18n-lib.h>
+
+#include "e-data-server-util.h"
+#include "e-source-address-book.h"
+#include "e-source-authentication.h"
+#include "e-source-calendar.h"
+#include "e-source-memo-list.h"
+#include "e-source-registry.h"
+#include "e-source-security.h"
+#include "e-source-task-list.h"
+
+#include "e-source-webdav.h"
+
+struct _ESourceWebdavPrivate {
+	gchar *display_name;
+	gchar *color;
+	gchar *email_address;
+	gchar *resource_path;
+	gchar *resource_query;
+	gchar *ssl_trust;
+	gboolean avoid_ifmatch;
+	gboolean calendar_auto_schedule;
+	GUri *uri;
+	guint order;
+	guint timeout;
+	guint limit_download_days;
+};
+
+enum {
+	PROP_0,
+	PROP_AVOID_IFMATCH,
+	PROP_CALENDAR_AUTO_SCHEDULE,
+	PROP_COLOR,
+	PROP_DISPLAY_NAME,
+	PROP_EMAIL_ADDRESS,
+	PROP_RESOURCE_PATH,
+	PROP_RESOURCE_QUERY,
+	PROP_URI,
+	PROP_SSL_TRUST,
+	PROP_ORDER,
+	PROP_TIMEOUT,
+	PROP_LIMIT_DOWNLOAD_DAYS,
+	N_PROPS
+};
+
+static GParamSpec *properties[N_PROPS] = { NULL, };
+
+G_DEFINE_TYPE_WITH_PRIVATE (
+	ESourceWebdav,
+	e_source_webdav,
+	E_TYPE_SOURCE_EXTENSION)
+
+static void
+source_webdav_notify_cb (GObject *object,
+                         GParamSpec *pspec,
+                         ESourceWebdav *extension)
+{
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_URI]);
+}
+
+static gboolean
+source_webdav_user_to_method (GBinding *binding,
+                              const GValue *source_value,
+                              GValue *target_value,
+                              gpointer user_data)
+{
+	GObject *target_object;
+	ESourceAuthentication *extension;
+	const gchar *user;
+	gchar *method;
+	gboolean success = TRUE;
+
+	target_object = g_binding_get_target (binding);
+	extension = E_SOURCE_AUTHENTICATION (target_object);
+	method = e_source_authentication_dup_method (extension);
+	g_return_val_if_fail (method != NULL, FALSE);
+
+	/* Be careful not to stomp on a custom method name.
+	 * Only change it under the following conditions:
+	 *
+	 * 1) If "user" is empty and "method" is empty,
+	 *    set "method" to "none".
+	 * 2) If "user" is not empty and "method" is "none",
+	 *    set "method" to "plain/password" (corresponds
+	 *    to HTTP Basic authentication).
+	 * 3) Otherwise preserve the current "method" value.
+	 */
+
+	user = g_value_get_string (source_value);
+	if ((user == NULL || *user == '\0') && !*method) {
+		g_value_set_string (target_value, "none");
+	} else if (g_str_equal (method, "none")) {
+		g_value_set_string (target_value, "plain/password");
+	} else {
+		success = FALSE;
+	}
+
+	g_free (method);
+
+	return success;
+}
+
+static void
+source_webdav_update_properties_from_uri (ESourceWebdav *webdav_extension)
+{
+	ESource *source;
+	ESourceExtension *extension;
+	GUri *uri;
+	const gchar *extension_name;
+
+	/* Do not use e_source_webdav_dup_uri() here.  That
+	 * builds the URI from properties we haven't yet updated. */
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (webdav_extension));
+	uri = g_uri_ref (webdav_extension->priv->uri);
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (webdav_extension));
+
+	extension = E_SOURCE_EXTENSION (webdav_extension);
+	source = e_source_extension_ref_source (extension);
+
+	g_object_set (
+		extension,
+		"resource-path", g_uri_get_path (uri),
+		"resource-query", g_uri_get_query (uri),
+		NULL);
+
+	extension_name = E_SOURCE_EXTENSION_AUTHENTICATION;
+	extension = e_source_get_extension (source, extension_name);
+
+	g_object_set (
+		extension,
+		"host", g_uri_get_host (uri),
+		"port", g_uri_get_port (uri) > 0 ? g_uri_get_port (uri) : 0,
+		NULL);
+
+	if (g_uri_get_user (uri) && *g_uri_get_user (uri))
+		g_object_set (
+			extension,
+			"user", g_uri_get_user (uri),
+			NULL);
+
+	extension_name = E_SOURCE_EXTENSION_SECURITY;
+	extension = e_source_get_extension (source, extension_name);
+
+	g_object_set (
+		extension,
+		"secure", !strcmp(g_uri_get_scheme (uri), "https"),
+		NULL);
+
+	g_object_unref (source);
+
+	g_uri_unref (uri);
+}
+
+static void
+source_webdav_update_uri_from_properties (ESourceWebdav *webdav_extension)
+{
+	ESource *source;
+	GUri *nuri;
+	ESourceExtension *extension;
+	const gchar *extension_name;
+	const gchar *scheme;
+	gchar *user;
+	gchar *host;
+	gchar *path;
+	gchar *query;
+	guint port;
+	gboolean secure;
+
+	extension = E_SOURCE_EXTENSION (webdav_extension);
+	source = e_source_extension_ref_source (extension);
+
+	g_object_get (
+		extension,
+		"resource-path", &path,
+		"resource-query", &query,
+		NULL);
+
+	extension_name = E_SOURCE_EXTENSION_AUTHENTICATION;
+	extension = e_source_get_extension (source, extension_name);
+
+	g_object_get (
+		extension,
+		"user", &user,
+		"host", &host,
+		"port", &port,
+		NULL);
+
+	extension_name = E_SOURCE_EXTENSION_SECURITY;
+	extension = e_source_get_extension (source, extension_name);
+
+	g_object_get (
+		extension,
+		"secure", &secure,
+		NULL);
+
+	g_object_unref (source);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (webdav_extension));
+
+	if (port == 0)
+		port = g_uri_get_port (webdav_extension->priv->uri) > 0 ? g_uri_get_port (webdav_extension->priv->uri) : 0;
+
+	scheme = g_uri_get_scheme (webdav_extension->priv->uri);
+
+	/* Try not to disturb the scheme, in case it's "webcal" or some
+	 * other non-standard value.  But if we have to change it, do it. */
+	if (secure && strcmp (scheme, "https"))
+		scheme = "https";
+	if (!secure && !strcmp (scheme, "https"))
+		scheme = "http";
+
+	nuri = soup_uri_copy (webdav_extension->priv->uri,
+	                      SOUP_URI_SCHEME, scheme,
+	                      SOUP_URI_HOST, host,
+	                      SOUP_URI_USER, user,
+	                      SOUP_URI_PORT, port,
+	                      SOUP_URI_PATH, (path != NULL) ? path : "",
+	                      SOUP_URI_QUERY, query,
+	                      SOUP_URI_NONE);
+
+	g_uri_unref (webdav_extension->priv->uri);
+	webdav_extension->priv->uri = nuri;
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (webdav_extension));
+
+	g_free (user);
+	g_free (host);
+	g_free (path);
+	g_free (query);
+}
+
+static void
+source_webdav_set_property (GObject *object,
+                            guint property_id,
+                            const GValue *value,
+                            GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_AVOID_IFMATCH:
+			e_source_webdav_set_avoid_ifmatch (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_boolean (value));
+			return;
+
+		case PROP_CALENDAR_AUTO_SCHEDULE:
+			e_source_webdav_set_calendar_auto_schedule (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_boolean (value));
+			return;
+
+		case PROP_COLOR:
+			e_source_webdav_set_color (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_DISPLAY_NAME:
+			e_source_webdav_set_display_name (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_EMAIL_ADDRESS:
+			e_source_webdav_set_email_address (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_RESOURCE_PATH:
+			e_source_webdav_set_resource_path (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_RESOURCE_QUERY:
+			e_source_webdav_set_resource_query (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_URI:
+			e_source_webdav_set_uri (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_boxed (value));
+			return;
+
+		case PROP_SSL_TRUST:
+			e_source_webdav_set_ssl_trust (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_string (value));
+			return;
+
+		case PROP_ORDER:
+			e_source_webdav_set_order (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_uint (value));
+			return;
+
+		case PROP_TIMEOUT:
+			e_source_webdav_set_timeout (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_uint (value));
+			return;
+
+		case PROP_LIMIT_DOWNLOAD_DAYS:
+			e_source_webdav_set_limit_download_days (
+				E_SOURCE_WEBDAV (object),
+				g_value_get_uint (value));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+source_webdav_get_property (GObject *object,
+                            guint property_id,
+                            GValue *value,
+                            GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_AVOID_IFMATCH:
+			g_value_set_boolean (
+				value,
+				e_source_webdav_get_avoid_ifmatch (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_CALENDAR_AUTO_SCHEDULE:
+			g_value_set_boolean (
+				value,
+				e_source_webdav_get_calendar_auto_schedule (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_COLOR:
+			g_value_take_string (
+				value,
+				e_source_webdav_dup_color (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_DISPLAY_NAME:
+			g_value_take_string (
+				value,
+				e_source_webdav_dup_display_name (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_EMAIL_ADDRESS:
+			g_value_take_string (
+				value,
+				e_source_webdav_dup_email_address (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_RESOURCE_PATH:
+			g_value_take_string (
+				value,
+				e_source_webdav_dup_resource_path (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_RESOURCE_QUERY:
+			g_value_take_string (
+				value,
+				e_source_webdav_dup_resource_query (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_URI:
+			g_value_take_boxed (
+				value,
+				e_source_webdav_dup_uri (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_SSL_TRUST:
+			g_value_take_string (
+				value,
+				e_source_webdav_dup_ssl_trust (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_ORDER:
+			g_value_set_uint (
+				value,
+				e_source_webdav_get_order (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_TIMEOUT:
+			g_value_set_uint (
+				value,
+				e_source_webdav_get_timeout (
+				E_SOURCE_WEBDAV (object)));
+			return;
+
+		case PROP_LIMIT_DOWNLOAD_DAYS:
+			g_value_set_uint (
+				value,
+				e_source_webdav_get_limit_download_days (
+				E_SOURCE_WEBDAV (object)));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+source_webdav_finalize (GObject *object)
+{
+	ESourceWebdavPrivate *priv;
+
+	priv = E_SOURCE_WEBDAV (object)->priv;
+
+	g_free (priv->color);
+	g_free (priv->display_name);
+	g_free (priv->email_address);
+	g_free (priv->resource_path);
+	g_free (priv->resource_query);
+	g_free (priv->ssl_trust);
+
+	g_uri_unref (priv->uri);
+
+	/* Chain up to parent's finalize() method. */
+	G_OBJECT_CLASS (e_source_webdav_parent_class)->finalize (object);
+}
+
+static void
+source_webdav_constructed (GObject *object)
+{
+	ESource *source;
+	ESourceExtension *extension;
+	const gchar *extension_name;
+
+	/* Chain up to parent's constructed() method. */
+	G_OBJECT_CLASS (e_source_webdav_parent_class)->constructed (object);
+
+	/* XXX I *think* we don't need to worry about disconnecting the
+	 *     signals.  ESourceExtensions are only added, never removed,
+	 *     and they all finalize with their ESource.  At least that's
+	 *     how it's supposed to work if everyone follows the rules. */
+
+	extension = E_SOURCE_EXTENSION (object);
+	source = e_source_extension_ref_source (extension);
+
+	g_signal_connect (
+		extension, "notify::resource-path",
+		G_CALLBACK (source_webdav_notify_cb), object);
+
+	g_signal_connect (
+		extension, "notify::resource-query",
+		G_CALLBACK (source_webdav_notify_cb), object);
+
+	extension_name = E_SOURCE_EXTENSION_AUTHENTICATION;
+	extension = e_source_get_extension (source, extension_name);
+
+	g_signal_connect (
+		extension, "notify::host",
+		G_CALLBACK (source_webdav_notify_cb), object);
+
+	g_signal_connect (
+		extension, "notify::port",
+		G_CALLBACK (source_webdav_notify_cb), object);
+
+	g_signal_connect (
+		extension, "notify::user",
+		G_CALLBACK (source_webdav_notify_cb), object);
+
+	/* This updates the authentication method
+	 * based on whether a user name was given. */
+	e_binding_bind_property_full (
+		extension, "user",
+		extension, "method",
+		G_BINDING_SYNC_CREATE,
+		source_webdav_user_to_method,
+		NULL,
+		NULL, (GDestroyNotify) NULL);
+
+	extension_name = E_SOURCE_EXTENSION_SECURITY;
+	extension = e_source_get_extension (source, extension_name);
+
+	g_signal_connect (
+		extension, "notify::secure",
+		G_CALLBACK (source_webdav_notify_cb), object);
+
+	g_object_unref (source);
+}
+
+static void
+e_source_webdav_class_init (ESourceWebdavClass *class)
+{
+	GObjectClass *object_class;
+	ESourceExtensionClass *extension_class;
+
+	object_class = G_OBJECT_CLASS (class);
+	object_class->set_property = source_webdav_set_property;
+	object_class->get_property = source_webdav_get_property;
+	object_class->finalize = source_webdav_finalize;
+	object_class->constructed = source_webdav_constructed;
+
+	extension_class = E_SOURCE_EXTENSION_CLASS (class);
+	extension_class->name = E_SOURCE_EXTENSION_WEBDAV_BACKEND;
+
+	/**
+	 * ESourceWebdav:avoid-ifmatch
+	 *
+	 * Work around a bug in old Apache servers
+	 **/
+	properties[PROP_AVOID_IFMATCH] =
+		g_param_spec_boolean (
+			"avoid-ifmatch",
+			NULL, NULL,
+			FALSE,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:calendar-auto-schedule
+	 *
+	 * Whether the server handles meeting invitations (CalDAV-only)
+	 **/
+	properties[PROP_CALENDAR_AUTO_SCHEDULE] =
+		g_param_spec_boolean (
+			"calendar-auto-schedule",
+			NULL, NULL,
+			FALSE,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:color
+	 *
+	 * Color of the WebDAV resource
+	 **/
+	properties[PROP_COLOR] =
+		g_param_spec_string (
+			"color",
+			NULL, NULL,
+			"",
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:display-name
+	 *
+	 * Display name of the WebDAV resource
+	 **/
+	properties[PROP_DISPLAY_NAME] =
+		g_param_spec_string (
+			"display-name",
+			NULL, NULL,
+			"",
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:email-address
+	 *
+	 * The user's email address
+	 **/
+	properties[PROP_EMAIL_ADDRESS] =
+		g_param_spec_string (
+			"email-address",
+			NULL, NULL,
+			"",
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:resource-path
+	 *
+	 * Absolute path to a WebDAV resource
+	 **/
+	properties[PROP_RESOURCE_PATH] =
+		g_param_spec_string (
+			"resource-path",
+			NULL, NULL,
+			NULL,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:resource-query
+	 *
+	 * Query to access a WebDAV resource
+	 **/
+	properties[PROP_RESOURCE_QUERY] =
+		g_param_spec_string (
+			"resource-query",
+			NULL, NULL,
+			NULL,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:uri
+	 *
+	 * WebDAV service as a GUri
+	 **/
+	properties[PROP_URI] =
+		g_param_spec_boxed (
+			"uri",
+			NULL, NULL,
+			G_TYPE_URI,
+			G_PARAM_READWRITE |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS);
+
+	/**
+	 * ESourceWebdav:ssl-trust
+	 *
+	 * SSL/TLS certificate trust setting, for invalid server certificates
+	 **/
+	properties[PROP_SSL_TRUST] =
+		g_param_spec_string (
+			"ssl-trust",
+			NULL, NULL,
+			NULL,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:order
+	 *
+	 * A sorting order of the resource
+	 **/
+	properties[PROP_ORDER] =
+		g_param_spec_uint (
+			"order",
+			NULL, NULL,
+			0, G_MAXUINT, (guint) -1,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:timeout
+	 *
+	 * Connection timeout, in seconds
+	 **/
+	properties[PROP_TIMEOUT] =
+		g_param_spec_uint (
+			"timeout",
+			NULL, NULL,
+			0, G_MAXUINT, 15,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	/**
+	 * ESourceWebdav:limit-download-days
+	 *
+	 * Limit how many past days can be downloaded. Zero means unlimited.
+	 *
+	 * Since: 3.60
+	 **/
+	properties[PROP_LIMIT_DOWNLOAD_DAYS] =
+		g_param_spec_uint (
+			"limit-download-days",
+			NULL, NULL,
+			0, G_MAXUINT, 0,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS |
+			E_SOURCE_PARAM_SETTING);
+
+	g_object_class_install_properties (object_class, N_PROPS, properties);
+}
+
+static void
+e_source_webdav_init (ESourceWebdav *extension)
+{
+	extension->priv = e_source_webdav_get_instance_private (extension);
+
+	/* Initialize this enough */
+	extension->priv->uri = g_uri_build (SOUP_HTTP_URI_FLAGS, "http", NULL,
+					    NULL, -1, "", NULL, NULL);
+}
+
+/**
+ * e_source_webdav_get_avoid_ifmatch:
+ * @extension: an #ESourceWebdav
+ *
+ * This setting works around a
+ * <ulink url="https://issues.apache.org/bugzilla/show_bug.cgi?id=38034">
+ * bug</ulink> in older Apache mod_dav versions.
+ *
+ * <note>
+ *   <para>
+ *     We may deprecate this once Apache 2.2.8 or newer becomes
+ *     sufficiently ubiquitous, or we figure out a way to detect
+ *     and work around the bug automatically.
+ *   </para>
+ * </note>
+ *
+ * Returns: whether the WebDAV server is known to exhibit the bug
+ *
+ * Since: 3.6
+ **/
+gboolean
+e_source_webdav_get_avoid_ifmatch (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), FALSE);
+
+	return extension->priv->avoid_ifmatch;
+}
+
+/**
+ * e_source_webdav_set_avoid_ifmatch:
+ * @extension: an #ESourceWebdav
+ * @avoid_ifmatch: whether the WebDAV server is known to exhibit the bug
+ *
+ * This setting works around a
+ * <ulink url="https://issues.apache.org/bugzilla/show_bug.cgi?id=38034">
+ * bug</ulink> in older Apache mod_dav versions.
+ *
+ * <note>
+ *   <para>
+ *     We may deprecate this once Apache 2.2.8 or newer becomes
+ *     sufficiently ubiquitous, or we figure out a way to detect
+ *     and work around the bug automatically.
+ *   </para>
+ * </note>
+ *
+ * Since: 3.6
+ **/
+void
+e_source_webdav_set_avoid_ifmatch (ESourceWebdav *extension,
+                                   gboolean avoid_ifmatch)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (extension->priv->avoid_ifmatch == avoid_ifmatch)
+		return;
+
+	extension->priv->avoid_ifmatch = avoid_ifmatch;
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_AVOID_IFMATCH]);
+}
+
+/**
+ * e_source_webdav_get_calendar_auto_schedule:
+ * @extension: an #ESourceWebdav
+ *
+ * FIXME Document me!
+ *
+ * Since: 3.6
+ **/
+gboolean
+e_source_webdav_get_calendar_auto_schedule (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), FALSE);
+
+	return extension->priv->calendar_auto_schedule;
+}
+
+/**
+ * e_source_webdav_set_calendar_auto_schedule:
+ * @extension: an #ESourceWebdav
+ * @calendar_auto_schedule: whether the server supports the
+ * "calendar-auto-schedule" feature of CalDAV
+ *
+ * FIXME Document me!
+ *
+ * Since: 3.6
+ **/
+void
+e_source_webdav_set_calendar_auto_schedule (ESourceWebdav *extension,
+                                            gboolean calendar_auto_schedule)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (extension->priv->calendar_auto_schedule == calendar_auto_schedule)
+		return;
+
+	extension->priv->calendar_auto_schedule = calendar_auto_schedule;
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_CALENDAR_AUTO_SCHEDULE]);
+}
+
+/**
+ * e_source_webdav_get_display_name:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns the last known display name of a WebDAV resource, which may
+ * differ from the #ESource:display-name property of the #ESource to which
+ * @extension belongs.
+ *
+ * Returns: (nullable): the display name of the WebDAV resource
+ *
+ * Since: 3.6
+ **/
+const gchar *
+e_source_webdav_get_display_name (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	return extension->priv->display_name;
+}
+
+/**
+ * e_source_webdav_dup_display_name:
+ * @extension: an #ESourceWebdav
+ *
+ * Thread-safe variation of e_source_webdav_get_display_name().
+ * Use this function when accessing @extension from multiple threads.
+ *
+ * The returned string should be freed with g_free() when no longer needed.
+ *
+ * Returns: (nullable): a newly-allocated copy of #ESourceWebdav:display-name
+ *
+ * Since: 3.6
+ **/
+gchar *
+e_source_webdav_dup_display_name (ESourceWebdav *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_webdav_get_display_name (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_display_name:
+ * @extension: an #ESourceWebdav
+ * @display_name: (nullable): the display name of the WebDAV resource,
+ *                or %NULL
+ *
+ * Updates the last known display name of a WebDAV resource, which may
+ * differ from the #ESource:display-name property of the #ESource to which
+ * @extension belongs.
+ *
+ * The internal copy of @display_name is automatically stripped of leading
+ * and trailing whitespace.  If the resulting string is empty, %NULL is set
+ * instead.
+ *
+ * Since: 3.6
+ **/
+void
+e_source_webdav_set_display_name (ESourceWebdav *extension,
+                                  const gchar *display_name)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->display_name, display_name) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->display_name);
+	extension->priv->display_name = e_util_strdup_strip (display_name);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_DISPLAY_NAME]);
+}
+
+/**
+ * e_source_webdav_get_color:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns the last known color of a WebDAV resource as provided by the server.
+ *
+ * Returns: (nullable): the color of the WebDAV resource, if any set on the server
+ *
+ * Since: 3.30
+ **/
+const gchar *
+e_source_webdav_get_color (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	return extension->priv->color;
+}
+
+/**
+ * e_source_webdav_dup_color:
+ * @extension: an #ESourceWebdav
+ *
+ * Thread-safe variation of e_source_webdav_get_color().
+ * Use this function when accessing @extension from multiple threads.
+ *
+ * The returned string should be freed with g_free() when no longer needed.
+ *
+ * Returns: (nullable): a newly-allocated copy of #ESourceWebdav:color
+ *
+ * Since: 3.30
+ **/
+gchar *
+e_source_webdav_dup_color (ESourceWebdav *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_webdav_get_color (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_color:
+ * @extension: an #ESourceWebdav
+ * @color: (nullable): the color of the WebDAV resource, or %NULL
+ *
+ * Updates the last known color of a WebDAV resource, as provided by the server.
+ *
+ * The internal copy of @color is automatically stripped of leading
+ * and trailing whitespace. If the resulting string is empty, %NULL is set
+ * instead.
+ *
+ * Since: 3.30
+ **/
+void
+e_source_webdav_set_color (ESourceWebdav *extension,
+			   const gchar *color)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->color, color) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->color);
+	extension->priv->color = e_util_strdup_strip (color);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_COLOR]);
+}
+
+/**
+ * e_source_webdav_get_email_address:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns the user's email address which can be passed to a CalDAV server
+ * if the user wishes to receive scheduling messages.
+ *
+ * Returns: (nullable): the user's email address
+ *
+ * Since: 3.6
+ **/
+const gchar *
+e_source_webdav_get_email_address (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	return extension->priv->email_address;
+}
+
+/**
+ * e_source_webdav_dup_email_address:
+ * @extension: an #ESourceWebdav
+ *
+ * Thread-safe variation of e_source_webdav_get_email_address().
+ * Use this function when accessing @extension from multiple threads.
+ *
+ * The returned string should be freed with g_free() when no longer needed.
+ *
+ * Returns: (nullable): the newly-allocated copy of #ESourceWebdav:email-address
+ *
+ * Since: 3.6
+ **/
+gchar *
+e_source_webdav_dup_email_address (ESourceWebdav *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_webdav_get_email_address (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_email_address:
+ * @extension: an #ESourceWebdav
+ * @email_address: (nullable): the user's email address, or %NULL
+ *
+ * Sets the user's email address which can be passed to a CalDAV server if
+ * the user wishes to receive scheduling messages.
+ *
+ * The internal copy of @email_address is automatically stripped of leading
+ * and trailing whitespace.  If the resulting string is empty, %NULL is set
+ * instead.
+ *
+ * Since: 3.6
+ **/
+void
+e_source_webdav_set_email_address (ESourceWebdav *extension,
+                                   const gchar *email_address)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->email_address, email_address) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->email_address);
+	extension->priv->email_address = e_util_strdup_strip (email_address);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_EMAIL_ADDRESS]);
+}
+
+/**
+ * e_source_webdav_get_resource_path:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns the absolute path to a resource on a WebDAV server.
+ *
+ * Returns: (nullable): the absolute path to a WebDAV resource
+ *
+ * Since: 3.6
+ **/
+const gchar *
+e_source_webdav_get_resource_path (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	return extension->priv->resource_path;
+}
+
+/**
+ * e_source_webdav_dup_resource_path:
+ * @extension: an #ESourceWebdav
+ *
+ * Thread-safe variation of e_source_webdav_get_resource_path().
+ * Use this function when accessing @extension from multiple threads.
+ *
+ * The returned string should be freed with g_free() when no longer needed.
+ *
+ * Returns: (nullable): the newly-allocated copy of #ESourceWebdav:resource-path
+ *
+ * Since: 3.6
+ **/
+gchar *
+e_source_webdav_dup_resource_path (ESourceWebdav *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_webdav_get_resource_path (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_resource_path:
+ * @extension: an #ESourceWebdav
+ * @resource_path: (nullable): the absolute path to a WebDAV resource,
+ *                 or %NULL
+ *
+ * Sets the absolute path to a resource on a WebDAV server.
+ *
+ * The internal copy of @resource_path is automatically stripped of leading
+ * and trailing whitespace.  If the resulting string is empty, %NULL is set
+ * instead.
+ *
+ * Since: 3.6
+ **/
+void
+e_source_webdav_set_resource_path (ESourceWebdav *extension,
+                                   const gchar *resource_path)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->resource_path, resource_path) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->resource_path);
+	extension->priv->resource_path = e_util_strdup_strip (resource_path);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_RESOURCE_PATH]);
+}
+
+/**
+ * e_source_webdav_get_resource_query:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns the URI query required to access a resource on a WebDAV server.
+ *
+ * This is typically used when the #ESourceWebdav:resource-path points not
+ * to the resource itself but to a web program that generates the resource
+ * content on-the-fly.  The #ESourceWebdav:resource-query holds the input
+ * values for the program.
+ *
+ * Returns: (nullable): the query to access a WebDAV resource
+ *
+ * Since: 3.6
+ **/
+const gchar *
+e_source_webdav_get_resource_query (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	return extension->priv->resource_query;
+}
+
+/**
+ * e_source_webdav_dup_resource_query:
+ * @extension: an #ESourceWebdav
+ *
+ * Thread-safe variation of e_source_webdav_get_resource_query().
+ * Use this function when accessing @extension from multiple threads.
+ *
+ * The returned string should be freed with g_free() when no longer needed.
+ *
+ * Returns: (nullable): the newly-allocated copy of #ESourceWebdav:resource-query
+ *
+ * Since: 3.6
+ **/
+gchar *
+e_source_webdav_dup_resource_query (ESourceWebdav *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_webdav_get_resource_query (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_resource_query:
+ * @extension: an #ESourceWebdav
+ * @resource_query: (nullable): the query to access a WebDAV resource,
+ *                  or %NULL
+ *
+ * Sets the URI query required to access a resource on a WebDAV server.
+ *
+ * This is typically used when the #ESourceWebdav:resource-path points not
+ * to the resource itself but to a web program that generates the resource
+ * content on-the-fly.  The #ESourceWebdav:resource-query holds the input
+ * values for the program.
+ *
+ * The internal copy of @resource_query is automatically stripped of leading
+ * and trailing whitespace.  If the resulting string is empty, %NULL is set
+ * instead.
+ *
+ * Since: 3.6
+ **/
+void
+e_source_webdav_set_resource_query (ESourceWebdav *extension,
+                                    const gchar *resource_query)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->resource_query, resource_query) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->resource_query);
+	extension->priv->resource_query = e_util_strdup_strip (resource_query);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_RESOURCE_QUERY]);
+}
+
+/**
+ * e_source_webdav_get_ssl_trust:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns an SSL/TLS certificate trust for the @extension.
+ * The value encodes three parameters, divided by a pipe '|',
+ * the first is users preference, can be one of "reject", "accept",
+ * "temporary-reject" and "temporary-accept". The second is a host
+ * name for which the trust was set. Finally the last is a SHA256
+ * hash of the certificate. This is not meant to be changed by a caller,
+ * it is supposed to be manipulated with e_source_webdav_update_ssl_trust()
+ * and e_source_webdav_verify_ssl_trust().
+ *
+ * Returns: (nullable): an SSL/TLS certificate trust for the @extension
+ *
+ * Since: 3.8
+ **/
+const gchar *
+e_source_webdav_get_ssl_trust (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	return extension->priv->ssl_trust;
+}
+
+/**
+ * e_source_webdav_dup_ssl_trust:
+ * @extension: an #ESourceWebdav
+ *
+ * Thread-safe variation of e_source_webdav_get_ssl_trust().
+ * Use this function when accessing @extension from multiple threads.
+ *
+ * The returned string should be freed with g_free() when no longer needed.
+ *
+ * Returns: (nullable): the newly-allocated copy of #ESourceWebdav:ssl-trust
+ *
+ * Since: 3.8
+ **/
+gchar *
+e_source_webdav_dup_ssl_trust (ESourceWebdav *extension)
+{
+	const gchar *protected;
+	gchar *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	protected = e_source_webdav_get_ssl_trust (extension);
+	duplicate = g_strdup (protected);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_ssl_trust:
+ * @extension: an #ESourceWebdav
+ * @ssl_trust: (nullable): the ssl_trust to store, or %NULL to unset
+ *
+ * Sets the SSL/TLS certificate trust. See e_source_webdav_get_ssl_trust()
+ * for more infomation about its content and how to use it.
+ *
+ * Since: 3.8
+ **/
+void
+e_source_webdav_set_ssl_trust (ESourceWebdav *extension,
+                               const gchar *ssl_trust)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	if (e_util_strcmp0 (extension->priv->ssl_trust, ssl_trust) == 0) {
+		e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+		return;
+	}
+
+	g_free (extension->priv->ssl_trust);
+	extension->priv->ssl_trust = g_strdup (ssl_trust);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_SSL_TRUST]);
+}
+
+/**
+ * e_source_webdav_dup_uri:
+ * @extension: an #ESourceWebdav
+ *
+ * This is a convenience function which returns a newly-allocated
+ * #GUri, its contents assembled from the #ESourceAuthentication
+ * extension, the #ESourceSecurity extension, and @extension itself.
+ * Free the returned #GUri with g_uri_unref().
+ *
+ * Returns: (transfer full): a newly-allocated #GUri
+ *
+ * Since: 3.46
+ **/
+GUri *
+e_source_webdav_dup_uri (ESourceWebdav *extension)
+{
+	GUri *duplicate;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), NULL);
+
+	/* Keep this outside of the property lock. */
+	source_webdav_update_uri_from_properties (extension);
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	duplicate = g_uri_ref (extension->priv->uri);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	return duplicate;
+}
+
+/**
+ * e_source_webdav_set_uri:
+ * @extension: an #ESourceWebdav
+ * @uri: a #GUri
+ *
+ * This is a convenience function which propagates the components of
+ * @uri to the #ESourceAuthentication extension, the #ESourceSecurity
+ * extension, and @extension itself.  (The "fragment" component of
+ * @uri is ignored.)
+ *
+ * Since: 3.46
+ **/
+void
+e_source_webdav_set_uri (ESourceWebdav *extension,
+			 GUri *uri)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	e_source_extension_property_lock (E_SOURCE_EXTENSION (extension));
+
+	/* Do not test for URI equality because our
+	 * internal GUri might not be up-to-date. */
+
+	g_uri_unref (extension->priv->uri);
+	extension->priv->uri = g_uri_ref (uri);
+
+	e_source_extension_property_unlock (E_SOURCE_EXTENSION (extension));
+
+	g_object_freeze_notify (G_OBJECT (extension));
+	source_webdav_update_properties_from_uri (extension);
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_URI]);
+	g_object_thaw_notify (G_OBJECT (extension));
+}
+
+static gboolean
+decode_ssl_trust (ESourceWebdav *extension,
+                  ETrustPromptResponse *response,
+                  gchar **host,
+                  gchar **hash)
+{
+	gchar *ssl_trust, **strv;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), FALSE);
+
+	ssl_trust = e_source_webdav_dup_ssl_trust (extension);
+	if (!ssl_trust || !*ssl_trust) {
+		g_free (ssl_trust);
+		return FALSE;
+	}
+
+	strv = g_strsplit (ssl_trust, "|", 3);
+	if (!strv || !strv[0] || !strv[1] || !strv[2] || strv[3]) {
+		g_free (ssl_trust);
+		g_strfreev (strv);
+		return FALSE;
+	}
+
+	if (response) {
+		const gchar *resp = strv[0];
+
+		if (g_strcmp0 (resp, "reject") == 0)
+			*response = E_TRUST_PROMPT_RESPONSE_REJECT;
+		else if (g_strcmp0 (resp, "accept") == 0)
+			*response = E_TRUST_PROMPT_RESPONSE_ACCEPT;
+		else if (g_strcmp0 (resp, "temporary-reject") == 0)
+			*response = E_TRUST_PROMPT_RESPONSE_REJECT_TEMPORARILY;
+		else if (g_strcmp0 (resp, "temporary-accept") == 0)
+			*response = E_TRUST_PROMPT_RESPONSE_ACCEPT_TEMPORARILY;
+		else
+			*response = E_TRUST_PROMPT_RESPONSE_UNKNOWN;
+	}
+
+	if (host)
+		*host = g_strdup (strv[1]);
+
+	if (hash)
+		*hash = g_strdup (strv[2]);
+
+	g_free (ssl_trust);
+	g_strfreev (strv);
+
+	return TRUE;
+}
+
+static gboolean
+encode_ssl_trust (ESourceWebdav *extension,
+                  ETrustPromptResponse response,
+                  const gchar *host,
+                  const gchar *hash)
+{
+	gchar *ssl_trust;
+	const gchar *resp;
+	gboolean changed;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), FALSE);
+
+	if (response == E_TRUST_PROMPT_RESPONSE_REJECT)
+		resp = "reject";
+	else if (response == E_TRUST_PROMPT_RESPONSE_ACCEPT)
+		resp = "accept";
+	else if (response == E_TRUST_PROMPT_RESPONSE_REJECT_TEMPORARILY)
+		resp = "temporary-reject";
+	else if (response == E_TRUST_PROMPT_RESPONSE_ACCEPT_TEMPORARILY)
+		resp = "temporary-accept";
+	else
+		resp = "temporary-reject";
+
+	if (host && *host && hash && *hash) {
+		ssl_trust = g_strconcat (resp, "|", host, "|", hash, NULL);
+	} else {
+		ssl_trust = NULL;
+	}
+
+	changed = g_strcmp0 (extension->priv->ssl_trust, ssl_trust) != 0;
+
+	if (changed)
+		e_source_webdav_set_ssl_trust (extension, ssl_trust);
+
+	g_free (ssl_trust);
+
+	return changed;
+}
+
+/**
+ * e_source_webdav_update_ssl_trust:
+ * @extension: an #ESourceWebdav
+ * @host: a host name to store the certificate for
+ * @cert: the invalid certificate of the connection over which @host is about
+ *        to be sent
+ * @response: user's response from a trust prompt for @cert
+ *
+ * Updates user's response from a trust prompt, thus it is re-used the next
+ * time it'll be needed. An #E_TRUST_PROMPT_RESPONSE_UNKNOWN is treated as
+ * a temporary reject, which means the user will be asked again.
+ *
+ * Since: 3.16
+ **/
+void
+e_source_webdav_update_ssl_trust (ESourceWebdav *extension,
+				  const gchar *host,
+				  GTlsCertificate *cert,
+				  ETrustPromptResponse response)
+{
+	GByteArray *bytes = NULL;
+	gchar *hash;
+
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+	g_return_if_fail (host != NULL);
+	g_return_if_fail (cert != NULL);
+
+	g_object_get (cert, "certificate", &bytes, NULL);
+
+	if (!bytes)
+		return;
+
+	hash = g_compute_checksum_for_data (G_CHECKSUM_SHA256, bytes->data, bytes->len);
+
+	encode_ssl_trust (extension, response, host, hash);
+
+	g_byte_array_unref (bytes);
+	g_free (hash);
+}
+
+/**
+ * e_source_webdav_verify_ssl_trust:
+ * @extension: an #ESourceWebdav
+ * @host: a host name to store the certificate for
+ * @cert: the invalid certificate of the connection over which @host is about
+ *        to be sent
+ * @cert_errors: a bit-or of #GTlsCertificateFlags describing the reason
+ *   for the @cert to be considered invalid
+ *
+ * Verifies SSL/TLS trust for the given @host and @cert, as previously stored in the @extension
+ * with e_source_webdav_update_ssl_trust().
+ **/
+ETrustPromptResponse
+e_source_webdav_verify_ssl_trust (ESourceWebdav *extension,
+				  const gchar *host,
+				  GTlsCertificate *cert,
+				  GTlsCertificateFlags cert_errors)
+{
+	ETrustPromptResponse response;
+	GByteArray *bytes = NULL;
+	gchar *old_host = NULL;
+	gchar *old_hash = NULL;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), E_TRUST_PROMPT_RESPONSE_UNKNOWN);
+	g_return_val_if_fail (host != NULL, E_TRUST_PROMPT_RESPONSE_UNKNOWN);
+	g_return_val_if_fail (cert != NULL, E_TRUST_PROMPT_RESPONSE_UNKNOWN);
+
+	/* Always reject revoked certificates */
+	if ((cert_errors & G_TLS_CERTIFICATE_REVOKED) != 0)
+		return E_TRUST_PROMPT_RESPONSE_REJECT;
+
+	g_object_get (cert, "certificate", &bytes, NULL);
+
+	if (bytes == NULL)
+		return E_TRUST_PROMPT_RESPONSE_REJECT;
+
+	if (decode_ssl_trust (extension, &response, &old_host, &old_hash)) {
+		gchar *hash;
+
+		/* This is required for Flatpak, which can be built with eds before the 3.40, where
+		   had been changed to use SHA256. */
+		if (old_hash && strlen (old_hash) == g_checksum_type_get_length (G_CHECKSUM_SHA1) * 2)
+			hash = g_compute_checksum_for_data (G_CHECKSUM_SHA1, bytes->data, bytes->len);
+		else
+			hash = g_compute_checksum_for_data (G_CHECKSUM_SHA256, bytes->data, bytes->len);
+
+		if (response != E_TRUST_PROMPT_RESPONSE_UNKNOWN &&
+		    g_strcmp0 (old_host, host) == 0 &&
+		    g_strcmp0 (old_hash, hash) == 0) {
+			g_byte_array_unref (bytes);
+			g_free (old_host);
+			g_free (old_hash);
+			g_free (hash);
+
+			return response;
+		}
+
+		g_free (old_host);
+		g_free (old_hash);
+		g_free (hash);
+	}
+
+	g_byte_array_unref (bytes);
+
+	return E_TRUST_PROMPT_RESPONSE_UNKNOWN;
+}
+
+/**
+ * e_source_webdav_unset_temporary_ssl_trust:
+ * @extension: an #ESourceWebdav
+ *
+ * Unsets temporary trust set on this @extension, but keeps
+ * it as is for other values.
+ *
+ * Since: 3.8
+ **/
+void
+e_source_webdav_unset_temporary_ssl_trust (ESourceWebdav *extension)
+{
+	ETrustPromptResponse response = E_TRUST_PROMPT_RESPONSE_UNKNOWN;
+
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (!decode_ssl_trust (extension, &response, NULL, NULL) ||
+	    response == E_TRUST_PROMPT_RESPONSE_UNKNOWN ||
+	    response == E_TRUST_PROMPT_RESPONSE_REJECT_TEMPORARILY ||
+	    response == E_TRUST_PROMPT_RESPONSE_ACCEPT_TEMPORARILY)
+		e_source_webdav_set_ssl_trust (extension, NULL);
+}
+
+/**
+ * e_source_webdav_get_ssl_trust_response:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns: the last SSL trust response, as #ETrustPromptResponse, if none
+ *    is set, then returns %E_TRUST_PROMPT_RESPONSE_UNKNOWN
+ *
+ * Since: 3.32
+ **/
+ETrustPromptResponse
+e_source_webdav_get_ssl_trust_response (ESourceWebdav *extension)
+{
+	ETrustPromptResponse response = E_TRUST_PROMPT_RESPONSE_UNKNOWN;
+
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), E_TRUST_PROMPT_RESPONSE_UNKNOWN);
+
+	if (!decode_ssl_trust (extension, &response, NULL, NULL))
+		response = E_TRUST_PROMPT_RESPONSE_UNKNOWN;
+
+	return response;
+}
+
+/**
+ * e_source_webdav_set_ssl_trust_response:
+ * @extension: an #ESourceWebdav
+ * @response: an #ETrustPromptResponse to set
+ *
+ * Set the SSL trust response, as #ETrustPromptResponse, while keeping
+ * the certificate and host information as before. The function does
+ * nothing, when none SSL trust is set or when %E_TRUST_PROMPT_RESPONSE_UNKNOWN
+ * is used as the @response.
+ *
+ * Since: 3.32
+ **/
+void
+e_source_webdav_set_ssl_trust_response (ESourceWebdav *extension,
+					ETrustPromptResponse response)
+{
+	gchar *host = NULL, *hash = NULL;
+
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (response != E_TRUST_PROMPT_RESPONSE_UNKNOWN &&
+	    decode_ssl_trust (extension, NULL, &host, &hash))
+		encode_ssl_trust (extension, response, host, hash);
+
+	g_free (host);
+	g_free (hash);
+}
+
+/**
+ * e_source_webdav_get_order:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns: the sorting order of the resource, if known. The default
+ *    is (guint) -1, which means unknown/unset.
+ *
+ * Since: 3.40
+ **/
+guint
+e_source_webdav_get_order (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), (guint) -1);
+
+	return extension->priv->order;
+}
+
+/**
+ * e_source_webdav_set_order:
+ * @extension: an #ESourceWebdav
+ * @order: a sorting order
+ *
+ * Set the sorting order of the resource.
+ *
+ * Since: 3.40
+ **/
+void
+e_source_webdav_set_order (ESourceWebdav *extension,
+			   guint order)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (extension->priv->order == order)
+		return;
+
+	extension->priv->order = order;
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_ORDER]);
+}
+
+/**
+ * e_source_webdav_get_timeout:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns: the connection timeout, in seconds. The default
+ *    is 15 seconds.
+ *
+ * Since: 3.54
+ **/
+guint
+e_source_webdav_get_timeout (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), 15);
+
+	return extension->priv->timeout;
+}
+
+/**
+ * e_source_webdav_set_timeout:
+ * @extension: an #ESourceWebdav
+ * @timeout: a timeout, in seconds
+ *
+ * Set the connection timeout, in seconds.
+ *
+ * Since: 3.54
+ **/
+void
+e_source_webdav_set_timeout (ESourceWebdav *extension,
+			     guint timeout)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (extension->priv->timeout == timeout)
+		return;
+
+	extension->priv->timeout = timeout;
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_TIMEOUT]);
+}
+
+/**
+ * e_source_webdav_get_limit_download_days:
+ * @extension: an #ESourceWebdav
+ *
+ * Returns: limit how many past days can be downloaded. Zero means unlimited.
+ *    The default is 0 days.
+ *
+ * Since: 3.60
+ **/
+guint
+e_source_webdav_get_limit_download_days (ESourceWebdav *extension)
+{
+	g_return_val_if_fail (E_IS_SOURCE_WEBDAV (extension), 0);
+
+	return extension->priv->limit_download_days;
+}
+
+/**
+ * e_source_webdav_set_limit_download_days:
+ * @extension: an #ESourceWebdav
+ * @value: a value, in days
+ *
+ * Limit how many past days can be downloaded. Zero means unlimited.
+ *
+ * Since: 3.60
+ **/
+void
+e_source_webdav_set_limit_download_days (ESourceWebdav *extension,
+					 guint value)
+{
+	g_return_if_fail (E_IS_SOURCE_WEBDAV (extension));
+
+	if (extension->priv->limit_download_days == value)
+		return;
+
+	extension->priv->limit_download_days = value;
+
+	g_object_notify_by_pspec (G_OBJECT (extension), properties[PROP_LIMIT_DOWNLOAD_DAYS]);
+}

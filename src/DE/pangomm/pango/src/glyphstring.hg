@@ -1,0 +1,151 @@
+/* glyphstring.h
+ *
+ * Copyright (C) 1998-1999 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <pangomm/font.h>
+#include <pangomm/glyph.h>
+#include <pangomm/item.h> // for Analysis and ShapeFlags
+#include <cairomm/context.h>
+#include <pango/pango.h>
+
+_DEFS(pangomm,pango)
+
+namespace Pango
+{
+/** A Pango::GlyphString is used to store strings of glyphs with geometry and visual attribute information.
+ * It can be measured or drawn to the screen.
+ */
+class PANGOMM_API GlyphString
+{
+  _CLASS_BOXEDTYPE(GlyphString, PangoGlyphString, pango_glyph_string_new, pango_glyph_string_copy, pango_glyph_string_free, PANGOMM_API)
+  _IGNORE(pango_glyph_string_free, pango_glyph_string_copy)
+  _IGNORE(pango_glyph_string_index_to_x, pango_glyph_string_x_to_index, pango_glyph_string_get_logical_widths)
+
+public:
+
+  /** Constructs a string of glyphs from a string of characters.
+   *
+   * Given a segment of text and the corresponding Pango::Analysis structure
+   * returned from Pango::Context::itemize(), convert the characters into glyphs.
+   * You may also pass in only a substring of the item.
+   *
+   * It is recommended that you use the constructor with @a item_text and
+   * @a paragraph_text parameters instead, since that API allows for shaping
+   * interaction happening across text item boundaries.
+   *
+   * @param text The text to process. You must pass the same string into those
+   *             member functions expecting a const Glib::ustring&.
+   * @param analysis The analysis information returned from Pango::Context::itemize().
+   */
+  GlyphString(const Glib::ustring& text, const Analysis& analysis);
+
+  /** Constructs a string of glyphs from a string of characters.
+   *
+   * Given a segment of text and the corresponding Pango::Analysis structure
+   * returned from Pango::Context::itemize(), convert the characters into glyphs.
+   * You may also pass in only a substring of the item.
+   *
+   * This is similar to the constructor with only one @a text parameter, except
+   * it also takes @a flags and the full paragraph text as input, which will then
+   * be used to perform certain cross-item shaping interactions. If you have
+   * access to the broader text of which @a item_text is a part, provide the
+   * broader text as @a paragraph_text.
+   *
+   * @newin{2,44}
+   *
+   * @param item_text Valid UTF-8 text to shape.
+   * @param paragraph_text Text of the paragraph (see details).
+   * @param analysis The analysis information returned from Pango::Context::itemize().
+   * @param flags Flags influencing the shaping process.
+   */
+  GlyphString(const Glib::ustring& item_text, const Glib::ustring& paragraph_text,
+    const Analysis& analysis, ShapeFlags flags = ShapeFlags::NONE);
+
+  _WRAP_METHOD(void set_size (int new_len), pango_glyph_string_set_size)
+
+  _WRAP_METHOD(void get_extents(const Glib::RefPtr<const Font>& font, Rectangle& ink_rect, Rectangle& logical_rect) const, pango_glyph_string_extents)
+  _WRAP_METHOD(void get_extents(int start, int end, const Glib::RefPtr<const Font>& font, Rectangle& ink_rect, Rectangle& logical_rect) const, pango_glyph_string_extents_range)
+
+  _WRAP_METHOD(int get_width() const, pango_glyph_string_get_width)
+
+  /** Computes the extents of the glyph string as drawn.
+   * @param font A Pango::Font.
+   * @return The extents of the glyph string as drawn.
+   */
+  Rectangle get_ink_extents(const Glib::RefPtr<const Font>& font) const;
+
+  /** Computes the extents of a sub-portion of the glyph string as drawn.
+   * @param start The start index.
+   * @param end The end index.
+   * @param font A Panog::Font
+   * @return The extents of the sub-portion of the glyph string as drawn.
+   */
+  Rectangle get_ink_extents(int start, int end, const Glib::RefPtr<const Font>& font) const;
+
+  /** Computes the logical extents of a sub-portion of the glyph string.
+   * @param font A Pango::Font.
+   * @return The logical extents of the glyph string.
+   */
+  Rectangle get_logical_extents(const Glib::RefPtr<const Font>& font) const;
+
+  /** Computes the logical extents of a sub-portion of the glyph string.
+   * @param start The start index.
+   * @param end The end index.
+   * @param font A Pango::Font.
+   * @return The logical extents of the sub-portion of the glyph string.
+   */
+  Rectangle get_logical_extents(int start, int end, const Glib::RefPtr<const Font>& font) const;
+
+  /** Determine the screen width corresponding to each character.
+   * When multiple characters compose a single cluster, the width of the entire cluster
+   * is divided equally among the characters.
+   * @param text The text corresponding to the glyphs.
+   * @param embedding_level The embedding level of the string.
+   * @return An array of integers representing the resulting character widths.
+   */
+  std::vector<int> get_logical_widths(const Glib::ustring& text, int embedding_level) const;
+
+  /** Converts from character position to x position.
+   * (X position is measured from the left edge of the run). Character positions are computed by dividing up each cluster into equal portions.
+   * @param text The text corresponding to the glyphs.
+   * @param analysis The analysis information return from Pango::Context::itemize().
+   * @param index The byte index within text.
+   * @param trailing Whether we should compute the result for the beginning or end of the character.
+   * @return The x position.
+   */
+  int index_to_x(const Glib::ustring& text, const Analysis& analysis, int index, bool trailing) const;
+
+  /** Convert from x offset to character position.
+   * Character positions are computed by dividing up each cluster into equal portions.
+   * In scripts where positioning within a cluster is not allowed (such as Thai),
+   * the returned value may not be a valid cursor position; the caller must combine the
+   * result with the logical attributes for the text to compute the valid cursor position.
+   * @param text The text corresponding to the glyphs.
+   * @param analysis The analysis information return from Pango::Context::itemize().
+   * @param x_pos The x offset (in thousands of a device unit).
+   * @param index The location to store calculated byte index within.
+   * @param trailing The location to store a boolean indicating whether the user clicked on the leading or trailing edge of the character.
+   */
+  void x_to_index(const Glib::ustring& text, const Analysis& analysis, int x_pos, int& index, bool& trailing) const;
+
+  /** Gharacter positions are computed by dividing up each cluster into equal portions.
+   * @return An array of Pango::GlyphInfo objects.
+   */
+  std::vector<GlyphInfo> get_glyphs() const;
+};
+
+} //namespace Pango

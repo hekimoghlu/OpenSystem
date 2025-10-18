@@ -1,0 +1,270 @@
+2011-05-21  Morten Welinder <terra@gnome.org>
+
+	* Release 1.10.15
+
+2011-05-20  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (expr_name_downgrade_to_placeholder): Use
+	nexpr->scope.
+	(expr_name_set_scope): Simplify.
+
+2011-05-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.h (invalid_sheet): make non-const to avoid casts
+	* src/sheet.c (invalid_sheet): ditto
+
+2011-05-20  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.h (invalid_sheet): new
+	* src/sheet.c (invalid_sheet): initialize
+	* src/parser.y (yylex): convs->input.range_ref might return
+	invalid_sheet
+
+2011-05-20  Morten Welinder  <terra@gnome.org>
+
+	* src/expr-name.c (expr_name_is_active): New function.
+
+	* src/expr-name.h (_GnmNamedExpr): Replace active member by scope
+	member.  All users changed.
+
+2011-05-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/expr-name.h (gnm_named_expr_collection_rename): new
+	* src/expr-name.c (gnm_named_expr_collection_rename): new
+
+2011-05-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_sheet): wbc may be NULL
+
+2011-05-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/parse-util.h (_GnmConventions): add name_validate field
+	* src/parse-util.c (gnm_conventions_new_full): initialize name_validate
+	* src/parser.y (parser_simple_val_or_name): use
+	state->convs->input.name_validate
+
+2011-05-17  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_colrow_optimize): Use sheet_get_cells_extent.
+	(sheet_get_cells_extent): New function.
+
+	* src/xml-sax-write.c (xml_write_named_expressions): Do nothing if
+	there are no names.
+
+	* src/expr-name.c (gnm_named_expr_collection_new): Make public.
+	(expr_name_new): Temporarily undo last change.  Remove second
+	argument.
+
+	* src/sheet.c (gnm_sheet_init): Always have a names member.
+	* src/workbook.c (workbook_init): Ditto.
+
+	* src/expr-name.c (expr_name_add): Do not create named collections
+	on demand.
+
+2011-05-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_background_gtk): don't
+	leave a space between cells
+	(print_merged_range_gtk): don't overprint the background
+
+2011-05-16  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_constructed): Changed from
+	gnm_sheet_constructor in order to do this later in the
+	construction sequence.
+	(gnm_sheet_class_init): Move sanity check here.
+
+	* src/expr-name.c (expr_name_new): Make this static.
+
+2011-05-13  Morten Welinder  <terra@gnome.org>
+
+	* src/io-context-gtk.c (icg_show_gui): Plug leak.
+
+2011-05-13  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_get_expr): fixed critical. [#649901]
+
+2011-05-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/parse-util.h (_GnmConventions): add input.string
+	* src/parse-util.c (std_string_parser): new
+	(gnm_conventions_new_full): connect std_string_parser
+	* src/parser.y (yylex): use state->convs->input.string
+
+2011-05-10  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_paste_copy): Clarify and fix ownership rules
+	for cell region.  Fixes leak.
+	(cmd_paste_copy_impl): Don't override the stored flags.  Fixes
+	paste-special repeat.
+
+2011-05-09  Morten Welinder  <terra@gnome.org>
+
+	* src/item-bar.c (item_bar_calc_size): Plug leak.
+
+2011-05-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_sheet): only remember settings if we showed
+	a print dialog
+
+2011-05-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* gnumeric.xsd: add xs:element name="print-to-uri"
+	* src/print-info.h (print_info_set_printtofile_uri): new
+	* src/print-info.c (print_info_set_printtofile_uri): new
+	(print_info_set_printtofile_from_settings): use above
+	* src/xml-sax-read.c (xml_sax_print_to_uri): new
+	* src/xml-sax-write.c (xml_write_print_info): write print-to-uri
+
+2011-05-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (_PrintInformation): new field printtofile_uri
+	(print_info_set_printtofile_from_settings): new
+	(print_info_get_printtofile_uri): new
+	* src/print-info.c (print_info_free): handle printtofile_uri
+	(print_info_new): ditto
+	(print_info_dup): ditto
+	(print_info_set_printtofile_from_settings): new
+	(print_info_get_printtofile_uri): new
+	* src/print.c (gnm_print_sheet): save and restore printtofile uri
+	from PrintInformation of the current sheet.
+
+2011-05-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_print_uri_change_extension): new
+	(gnm_print_sheet): set GTK_PRINT_SETTINGS_OUTPUT_URI
+
+2011-05-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/auto-format.c (do_af_suggest_list): use GNM_*_KILL_SWITCH_WARNING
+	* src/print.c (compute_pages): handle PRINT_SAVED_INFO
+	(gnm_print_sheet): ditto
+	* src/print.h (PrintRange): Since we are saving those numbers we
+	need to fix them. Add PRINT_SAVED_INFO = -1.
+	* src/wbc-gtk-actions.c (cb_file_print): don't force active sheet
+	printing
+
+2011-05-07  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_colrow_optimize1): Take sheet extent into
+	account.
+
+2011-05-06  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_colrow_optimize): New function.
+
+	* src/sheet-style.c (sheet_style_optimize): Also optimize colrows.
+
+	* src/colrow.c (colrow_set_visibility_list): If making visible,
+	optimize colrows.
+
+2011-05-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.c (function_dump_defs): write ellipsis in syntax
+
+2011-05-05  Morten Welinder  <terra@gnome.org>
+
+	* src/style.c (gnm_font_override_codepage): New function.
+
+2011-05-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/compilation.h: new
+	* src/Makefile.am: add compilation.h
+	* src/workbook.c (workbook_sheet_state_diff): use
+	GNM_*_KILL_SWITCH_WARNING
+
+2011-05-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): suppress enum warning
+
+2011-05-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook.c (workbook_sheet_state_diff): disable
+	-Wswitch for this function
+
+2011-05-01  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/colrow.c (colrow_set_states): use colrow_free, not g_free;
+	fixes #649139
+
+2011-05-01  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_init): Use a set-style GHash for cells in
+	order to save memory.
+
+2011-04-29  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-style.c (cell_tile_apply): Prepare for, but do not
+	activate, optimization of newly-divided tiles.  When activated
+	should fix #648868.
+	(cell_tile_apply): Don't let the optimization go recursively down
+	the tree.
+
+2011-04-22  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: requires libgoffice >= 0.8.15.
+
+2011-04-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/stf.c (stf_warning): new
+	(stf_open_and_read): add context argument and change all callers,
+	check for null characters in input. Fixes #648354
+	(stf_preparse): change type pf context argument and change all
+	callers.
+	(stf_read_workbook_auto_csvtab): use stf_warning
+
+2011-04-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c (actions): change
+	"_Wilcoxon-Mann-Whitney Test..." to "Wilcoxon-_Mann-Whitney Test..."
+
+2011-04-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.c (gnm_func_get_arg_description): fix zero-based index
+	counting, fixes #647240
+
+2011-04-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.c (sheet_range_contains_region): formulas ->formul\303\246
+
+2011-04-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/mstyle.c (gnm_style_dump_color): fix format warning
+	(gnm_style_dump): ditto, fixes #646571
+
+2011-03-31  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_open): Plug leak.
+
+2011-03-30  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (dump_externals): Properly use translation domain.
+	(function_dump_defs): Ditto.
+	(function_def_create_arg_names): Ditto.
+	(gnm_func_get_description): Ditto.
+	(gnm_func_get_arg_description): Ditto.
+	(gnm_func_get_name): Get the translated name from
+	GNM_FUNC_HELP_NAME.
+
+	* src/parse-util.h (GnmConventions): Add field for localized
+	function names.
+
+	* src/func.c (gnm_func_get_name): Take extra argument indicating
+	whether the name should be localized.  All callers changed.
+
+2011-03-28  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (dump_guessed_options): New function.
+	(stf_parse_options_guess,stf_parse_options_guess_csv): Optionally
+	call dump_guessed_options.
+
+	* src/stf-parse.h (enum StfTrimType_t): Use the values intended.
+
+2011-03-27  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (snap_pos_to_grid): don't move an aligned
+	object
+
+2011-03-24  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

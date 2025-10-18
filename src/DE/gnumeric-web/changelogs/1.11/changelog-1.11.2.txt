@@ -1,0 +1,324 @@
+2012-03-02  Morten Welinder <terra@gnome.org>
+
+	* Release 1.11.2
+
+2012-03-02  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook.c (workbook_sheet_delete): Just queue
+	recalculation, don't perform it.  Fixes #671192.
+
+2012-02-23  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Explicitly discharge the splash.
+	Nowadays the component holds a ref to the command context so we
+	cannot rely on finalization to do this.
+
+	* src/io-context-gtk.c (gnm_io_context_gtk_set_transient_for): fix
+	reversed arguments to go_gtk_window_set_transient.
+	(icg_show_gui): Resurrect showing text in the progress bar.
+
+2012-02-22  Morten Welinder  <terra@gnome.org>
+
+	* src/io-context-gtk.c (icg_show_gui): Don't pass the splash
+	throught the icon manager for no good reason.
+
+	* src/io-context-gtk.h: Fix namespace issues.
+
+2012-02-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (cmd_selection_clear): don't recalc on
+	pure comment deletion
+
+2012-02-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook-view.c (wb_view_edit_line_set): use
+	gnm_cell_get_text_for_editing
+
+2012-02-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cell.h (gnm_cell_get_text_for_editing): new
+	* src/cell.c (gnm_cell_get_text_for_editing): new, extracted
+	from wbcg_edit_start in src/wbc-gtk-edit.c
+	(close_to_int): new, moved here from src/wbc-gtk-edit.c
+	(guess_time_format): ditto
+	* src/commands.c (cmd_set_text_full_check_text): use
+	gnm_cell_get_text_for_editing
+	* src/wbc-gtk-edit.c (close_to_int): move to src/cell.c
+	(guess_time_format): ditto
+	(wbcg_edit_start): use gnm_cell_get_text_for_editing
+
+2012-02-20  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/undo.c: rename GNMUndo* to GnmUndo*.
+	* src/undo.h: ditto.
+
+2012-02-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sstest.c (test_random_randnorm): new
+	(test_random): enable test_random_randnorm
+	(test_random_normality): new
+	(test_random): use sample size of 20000
+	* src/rangefunc.h (gnm_range_adtest): new
+	* src/rangefunc.c (gnm_range_adtest): new, extracted from
+	plugins/fn-stat/functions.c
+
+2012-02-08  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/wbc-gtk-edit.c (wbcg_insert_object): don't destroy the object
+	before inserting it when another object is selected somewhere in the
+	workbook. [#669648]
+
+2012-02-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sstest.c (test_random_randsnorm): new
+	(test_random): enable test_random_randsnorm
+
+2012-02-03  Morten Welinder  <terra@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: Remove names of separators.  They
+	weren't even unique.
+
+	* src/sstest.c (main): Add framework for testing random number
+	functions.
+
+	* src/wbc-gtk-actions.c (permanent_actions): Get rid of UndoLast
+	and RedoLast.
+
+2012-02-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-actions.c (permanent_actions): delete MenuInsertNames
+
+2012-02-01  Morten Welinder  <terra@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml.in: Restore DataShuffle which has
+	been MIA for at least 8 years.  No idea if it works.
+
+2012-01-26  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnumeric_create_tooltip_text_view_widget): new
+	(gnumeric_convert_to_tooltip): new
+	(gnumeric_create_tooltip): use gnumeric_convert_to_tooltip
+	* src/gui-util.h (gnumeric_create_tooltip_text_view_widget): new
+	(gnumeric_convert_to_tooltip): new
+
+2012-01-15  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c: Switch to using a GtkBuilder ui.
+
+2012-01-11  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init): No need for a GtkGrid when a vbox
+	will do just fine.
+
+	* src/commands.c (cmd_paste_copy_impl): Fix undo problem.
+	[#667702]
+
+2012-01-10  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init): Switch from GtkTable to GtkGrid.
+
+	* src/gui-util.c (gnm_store_text_tag_attr_in_pango): Use
+	gnm_object_get_bool.
+
+2012-01-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init): No need to load the file history
+	here.  We will do that in wbc_gtk_new.
+	(wbcg_get_screen): New function.
+	(wbcg_get_gtk_settings, show_gui, wbcg_find_for_workbook): Use
+	wbcg_get_screen.
+
+2012-01-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gui-util.c (gnm_store_text_tag_attr_in_pango): replace
+	GdkColor with GdkRGBA with GTK 3.2 and later
+
+2012-01-08  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_load_len): use
+	GNM_EXPR_EVAL_ARRAY_CONTEXT, fixes #667237.
+
+2012-01-08  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_top_eval): When we see
+	GNM_EXPR_EVAL_ARRAY_CONTEXT with no array position, fake it.
+
+	* src/gnumeric.h (GnmExprEvalFlags): Introduce new
+	GNM_EXPR_EVAL_ARRAY_CONTEXT flags.
+
+2012-01-08  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_load_len): fix a wrong use of
+	gnm_expr_is_rangeref. [related to #667237]
+
+2012-01-06  Morten Welinder  <terra@gnome.org>
+
+	* src/rendered-value.h (GnmRenderedRotatedValue): Storing six
+	double when all we need is a bit is overkill.
+
+	* src/cell-draw.c (cell_draw): Clean out old code.
+
+2012-01-05  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc): Restore
+	use-max-precision.
+
+2012-01-04  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c: Change from "text" to "value" attribute and
+	move formatting from here...
+	* src/wbc-gtk.c: ...to here.
+
+2012-01-03  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): Add magic to ensure
+	the auto-expression label doesn't grow, even if something else
+	makes the status line grow taller.  Fixes #667094.
+
+	* src/cell-draw.c (cell_draw): Fix problems with underlines and
+	rotated cells.  [#667152]
+
+2012-01-01  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.h (WorkbookView): Rework to track a cell in a
+	managed dependent.
+
+	* src/dependent.c (dependent_managed_set_sheet): New function for
+	this mildly complicated operation.
+
+2011-12-31  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): Beat the auto
+	expression label into submission with respect to ellipsizing.
+
+	* src/workbook-view.c (wb_view_auto_expr_recalc): No need for
+	manual ellipsizing here.
+
+	* src/workbook-view.h (WorkbookView): Move auto-expression
+	settings into a sub-structure.  All users changed.
+
+2011-12-30  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_finalize): Merge contents into
+	dispose and eliminate.
+	(workbook_view_class_init): Properly manage auto-expr-sheet as an
+	object, not a pointer.
+	(wb_view_auto_expr_sheet): Keep an eye on the sheet and clear
+	auto-expr-sheet if the sheet gets deleted.
+	(wb_view_auto_expr_recalc): Handle the nothing-selected case
+	better.
+
+2011-12-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_utf8_strto): Rename from gnm_strto and
+	reimplement.
+
+	* src/sstest.c (test_nonascii_numbers): Test gnm_utf8_strto too.
+
+	* src/gutils.c (gnm_utf8_strtol): Rename from gnm_strtol.  Remove
+	base argument.  Implement independently of strtol.
+
+2011-12-27  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-image.c (gnm_soi_assign_to_sheet): fix image life time.
+
+2011-12-25  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (map_nonascii_digits): Map signs too.  Terminate
+	search/translation no later than third sign.
+
+2011-12-23  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_strto): New function that handles non-ascii
+	digits.
+	(gnm_strtol): Ditto.
+
+2011-12-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): adjust call to
+	gnm_render_general
+
+2011-12-16  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-plugin.c (plugin_service_ui_activate): Teach this about
+	resources (and compressed xml).
+
+2011-12-01  Morten Welinder  <terra@gnome.org>
+
+	* src/Makefile.am: No need for gnm-rsm.[ch]
+
+2011-11-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/stf-parse.c (stf_parse_sheet): remove unused variable
+
+2011-11-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* dead-kittens.h: add G_VALUE_INIT
+
+2011-11-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): allocate space for spaces
+	surrounding "="
+	* src/workbook-view.c (wb_view_darken_foreground_attributes_cb): new
+	(wb_view_darken_foreground_attributes): new
+	(wb_view_auto_expr_recalc): call wb_view_darken_foreground_attributes
+	and add spaces around "="
+
+2011-11-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/cmd-edit.c: adjust calls to sv_selection_add_full and
+	sv_selection_add_pos throughout
+	(sv_select_cur_inputs): fix leak
+	* src/commands.c (cmd_colrow_hide_correct_selection): adjust
+	calls to sv_selection_add_full
+	* src/item-grid.c (item_grid_button_released): simplify selection,
+	adjust call to sv_selection_add_pos
+	* src/selection.c (sv_selection_add_pos): add argument
+	(sv_selection_add_full): add argument
+	(sv_selection_simplified_free): new
+	(sv_selection_simplify): new
+	(sv_selection_calc_simplification): new, use it throughout instead of
+	accessing sv->selection directly
+	(sheet_selection_set_internal): redraw headers if the selection mode
+	is not just ADD
+	(sv_selection_free): use g_slist_free_full
+	* src/selection.h (GnmSelectionMode): new
+	(sv_selection_add_pos): add argument
+	(sv_selection_add_full): add argument
+	(sv_selection_simplified_free): new
+	(sv_selection_simplify): new
+	* src/sheet-control-gui.c: adjust calls to sv_selection_add_full and
+	sv_selection_add_pos throughout
+	* src/sheet-view.c (sv_real_dispose): dispose of simplified selection
+	(sheet_view_init): initialize selection fields
+	* src/sheet-view.h: add fields
+	* src/sheet.c (gnm_sheet_resize_main): adjust call to sv_selection_add_pos
+	* src/test-pango.c (cb_exercise_pango): adjust call to sv_selection_add_full
+	* src/workbook-view.c (wb_view_selection_desc): use selection_first_range
+	rather than accessing the fields directly
+
+2011-11-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): force auto expression
+	background to white. Fixes #641198.
+
+2011-11-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-edit.c (item_edit_draw): use the attr list attached as
+	data
+
+2011-11-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-edit.c (gnm_apply_attribute_list_cb): new
+	(gnm_apply_attribute_list): new
+	(item_edit_draw): retrieve and apply range selection colour
+	highlights
+
+2011-11-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_rangesel_start)
+	(gnm_pane_rangesel_stop): Fix warnings.
+
+2011-11-27  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

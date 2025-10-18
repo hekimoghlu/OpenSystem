@@ -1,0 +1,101 @@
+<page xmlns="http://projectmallard.org/1.0/"
+      xmlns:its="http://www.w3.org/2005/11/its"
+      type="topic" style="task"
+      id="lockdown-online-accounts">
+
+  <info>
+    <link type="guide" xref="user-settings#lockdown"/>
+    <link type="seealso" xref="dconf-lockdown" />
+    <revision pkgversion="3.30" date="2019-02-08" status="review"/>
+
+    <credit type="author copyright">
+      <name>Jana Svarova</name>
+      <email>jana.svarova@gmail.com</email>
+      <years>2015</years>
+    </credit>
+    <credit type="editor">
+      <name>Petr Kovar</name>
+      <email>pknbe@volny.cz</email>
+      <years>2019</years>
+    </credit>
+
+   <include href="legal.xml" xmlns="http://www.w3.org/2001/XInclude"/>
+
+    <desc>Enable or disable some or all online accounts.</desc>
+  </info>
+  <title>Allow or disallow online accounts</title>
+
+  <p>The <app>GNOME Online Accounts</app> (GOA) are used for
+  integrating personal network accounts with the GNOME Desktop and applications.
+  The user can add their online accounts, such as Google, Facebook, Flickr,
+  ownCloud, and others using the <app>Online Accounts</app> application.</p>
+
+  <p>As a system administrator, you can:</p>
+  <list>
+    <item><p>enable all online accounts;</p></item>
+    <item><p>selectively enable a few online accounts;</p></item>
+    <item><p>disable all online accounts.</p></item>
+  </list>
+
+<steps>
+  <title>Configure online accounts</title>
+  <item><p>Make sure that you have the <sys>gnome-online-accounts</sys> package
+  installed on your system.</p>
+  </item>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-profile-user'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-profile-user-dir'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+  <item>
+  <p>Create the key file <file>/etc/dconf/db/local.d/00-goa</file> to provide
+  information for the <sys>local</sys> database containing the following
+  configuration.</p>
+   <list>
+   <item><p>To enable specific providers:</p>
+<code>
+[org/gnome/online-accounts]
+whitelisted-providers= ['google', 'facebook']
+</code>
+  <comment>
+    <cite date="2015-05-18">Kat</cite>
+    <p>Explain where these come from. For example, why "google" instead of
+    "Google"? Where can I find a full list?</p>
+  </comment>
+  </item>
+   <item><p>To disable all providers:</p>
+<code>
+[org/gnome/online-accounts]
+whitelisted-providers= ['']
+</code>
+  </item>
+  <item><p>To allow all available providers:</p>
+<code>
+[org/gnome/online-accounts]
+whitelisted-providers= ['all']
+</code>
+  <p>This is the default setting.</p></item>
+   </list>
+  </item>
+  <item>
+    <p>To prevent the user from overriding these settings, create the file
+    <file>/etc/dconf/db/local.d/locks/goa</file> with the following
+    content:</p>
+    <listing>
+    <title><file>/etc/dconf/db/local.d/locks/goa</file></title>
+<code>
+# Lock the list of providers that are allowed to be loaded
+/org/gnome/online-accounts/whitelisted-providers
+</code>
+    </listing>
+  </item>
+  <include href="dconf-snippets.xml"
+           xpointer="xpointer(/*/*[@xml:id='dconf-update'])"
+           xmlns="http://www.w3.org/2001/XInclude"/>
+  <include href="dconf-snippets.xml"
+           xpointer="xpointer(/*/*[@xml:id='dconf-logoutin'])"
+           xmlns="http://www.w3.org/2001/XInclude"/>
+</steps>
+
+</page>

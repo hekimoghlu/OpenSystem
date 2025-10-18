@@ -1,0 +1,812 @@
+import Gtk from "gi://Gtk?version=4.0";
+import GObject from "gi://GObject";
+import Gst from "gi://Gst";
+import GLib from "gi://GLib";
+import GstPlay from "gi://GstPlay";
+import GstAudio from "gi://GstAudio";
+import Gio from "gi://Gio";
+import GstPbUtils from "gi://GstPbutils";
+
+import type { AddActionEntries } from "./window.js";
+import { APWaveformGenerator } from "./waveform-generator.js";
+
+if (!Gst.is_initialized()) {
+  GLib.setenv("GST_PLAY_USE_PLAYBIN3", "1", false);
+
+  Gst.init(null);
+}
+
+type GTypeToType<Y extends GObject.GType> =
+  Y extends GObject.GType<infer T> ? T : never;
+
+type GTypeArrayToTypeArray<Y extends readonly GObject.GType[]> = {
+  [K in keyof Y]: GTypeToType<Y[K]>;
+};
+
+class APPlaySignalAdapter extends GObject.Object {
+  private static events = {
+    buffering: [GObject.TYPE_INT],
+    "duration-changed": [GObject.TYPE_INT],
+    "end-of-stream": [],
+    error: [GLib.Error.$gtype, Gst.Structure.$gtype],
+    "media-info-updated": [GstPlay.PlayMediaInfo.$gtype],
+    "mute-changed": [GObject.TYPE_BOOLEAN],
+    "position-updated": [GObject.TYPE_DOUBLE],
+    "seek-done": [GObject.TYPE_DOUBLE],
+    "state-changed": [GstPlay.PlayState.$gtype],
+    "uri-loaded": [GObject.TYPE_STRING],
+    "video-dimensions-changed": [GObject.TYPE_INT, GObject.TYPE_INT],
+    "volume-changed": [GObject.TYPE_INT],
+    warning: [GLib.Error.$gtype, Gst.Structure.$gtype],
+  } as const;
+
+  static {
+    GObject.registerClass(
+      {
+        GTypeName: "APPlaySignalAdapter",
+        Signals: Object.fromEntries(
+          Object.entries(this.events).map(([name, types]) => [
+            name,
+            {
+              param_types: types,
+            },
+          ]),
+        ),
+      },
+      this,
+    );
+  }
+  private _play: GstPlay.Play;
+
+  get play(): GstPlay.Play {
+    return this._play;
+  }
+
+  constructor(play: GstPlay.Play) {
+    super();
+
+    this._play = play;
+
+    const bus = this._play.get_message_bus();
+    bus.add_signal_watch();
+
+    bus.connect("message", this.on_message.bind(this));
+  }
+
+  private on_message(_: GstPlay.Play, message: Gst.Message) {
+    if (!GstPlay.Play.is_play_message(message)) {
+      return;
+    }
+
+    const structure = message.get_structure()!;
+    const type = structure.get_enum(
+      "play-message-type",
+      GstPlay.PlayMessage.$gtype,
+    );
+
+    if (!type[0] || structure.get_name() !== "gst-play-message-data") {
+      return;
+    }
+
+    switch (type[1] as GstPlay.PlayMessage) {
+      case GstPlay.PlayMessage.URI_LOADED:
+        this.emit_message("uri-loaded", [structure.get_string("uri")!]);
+        break;
+      case GstPlay.PlayMessage.POSITION_UPDATED:
+        this.emit_message("position-updated", [
+          GstPlay.play_message_parse_position_updated(message)!,
+        ]);
+        break;
+      case GstPlay.PlayMessage.DURATION_CHANGED:
+        this.emit_message("duration-changed", [
+          GstPlay.play_message_parse_duration_updated(message)!,
+        ]);
+        break;
+      case GstPlay.PlayMessage.STATE_CHANGED:
+        this.emit_message("state-changed", [
+          GstPlay.play_message_parse_state_changed(message)!,
+        ]);
+        break;
+      case GstPlay.PlayMessage.BUFFERING:
+        this.emit_message("buffering", [
+          GstPlay.play_message_parse_buffering_percent(message),
+        ]);
+        break;
+      case GstPlay.PlayMessage.END_OF_STREAM:
+        this.emit_message("end-of-stream", []);
+        break;
+      case GstPlay.PlayMessage.ERROR: {
+        const error = GstPlay.play_message_parse_error(message);
+
+        this.emit_message("error", [error[0]!, error[1]!]);
+        break;
+      }
+      case GstPlay.PlayMessage.WARNING: {
+        const warning = GstPlay.play_message_parse_warning(message);
+
+        this.emit_message("warning", [warning[0]!, warning[1]!]);
+        break;
+      }
+      case GstPlay.PlayMessage.VIDEO_DIMENSIONS_CHANGED:
+        this.emit_message(
+          "video-dimensions-changed",
+          GstPlay.play_message_parse_video_dimensions_changed(message),
+        );
+        break;
+      case GstPlay.PlayMessage.MEDIA_INFO_UPDATED:
+        this.emit_message("media-info-updated", [
+          GstPlay.play_message_parse_media_info_updated(message)!,
+        ]);
+        break;
+      case GstPlay.PlayMessage.VOLUME_CHANGED:
+        this.emit_message("volume-changed", [
+          GstPlay.play_message_parse_volume_changed(message),
+        ]);
+        break;
+      case GstPlay.PlayMessage.MUTE_CHANGED:
+        this.emit_message("mute-changed", [
+          GstPlay.play_message_parse_muted_changed(message),
+        ]);
+        break;
+      case GstPlay.PlayMessage.SEEK_DONE:
+        this.emit_message("seek-done", [
+          // NOTE: GstPlay.play_message_parse_seek_done requires Gstreamer 1.26
+          message.get_structure()!.get_uint64("position")[1],
+        ]);
+        break;
+    }
+  }
+
+  private emit_message<
+    Name extends keyof (typeof APPlaySignalAdapter)["events"],
+    Types extends (typeof APPlaySignalAdapter)["events"][Name],
+  >(name: Name, args: GTypeArrayToTypeArray<Types>) {
+    this.emit(name as string, ...(args as GTypeToType<Types[number]>[]));
+  }
+}
+
+export class APMediaStream extends Gtk.MediaStream {
+  static {
+    GObject.registerClass(
+      {
+        GTypeName: "APMediaStream",
+        Properties: {
+          buffering: GObject.param_spec_boolean(
+            "is-buffering",
+            "Is Buffering",
+            "Whether the player is buffering",
+            false,
+            GObject.ParamFlags.READABLE,
+          ),
+          media_info: GObject.param_spec_object(
+            "media-info",
+            "Media Info",
+            "The media info",
+            GstPlay.PlayMediaInfo.$gtype,
+            GObject.ParamFlags.READABLE,
+          ),
+          cubic_volume: GObject.param_spec_double(
+            "cubic-volume",
+            "Cubic Volume",
+            "The volume that is suitable for display",
+            0.0,
+            1.0,
+            1.0,
+            GObject.ParamFlags.READWRITE,
+          ),
+          file: GObject.param_spec_object(
+            "file",
+            "File",
+            "The file currently being played by this stream",
+            Gio.File.$gtype,
+            GObject.ParamFlags.READABLE,
+          ),
+          tags: GObject.param_spec_boxed(
+            "tags",
+            "Tags",
+            "The tags of the currently playing track",
+            Gst.TagList.$gtype,
+            GObject.ParamFlags.READABLE,
+          ),
+          title: GObject.param_spec_string(
+            "title",
+            "Title",
+            "The title of the currently playing track",
+            null,
+            GObject.ParamFlags.READWRITE,
+          ),
+          artist: GObject.param_spec_string(
+            "artist",
+            "artist",
+            "The artist of the currently playing track",
+            null,
+            GObject.ParamFlags.READWRITE,
+          ),
+          rate: GObject.param_spec_double(
+            "rate",
+            "Playback rate",
+            "The rate at which the media is played back at",
+            0.5,
+            3.0,
+            1.0,
+            GObject.ParamFlags.READWRITE,
+          ),
+        },
+        Signals: {
+          error: {
+            param_types: [GLib.Error.$gtype],
+          },
+          loaded: {},
+        },
+      },
+      this,
+    );
+  }
+
+  private discoverer: GstPbUtils.Discoverer;
+  waveform_generator: APWaveformGenerator;
+
+  private autoplay = true;
+
+  constructor() {
+    super();
+
+    this.discoverer = GstPbUtils.Discoverer.new(GLib.MAXINT32);
+    this.discoverer.connect("discovered", (_source, info, error) => {
+      this.tags = info.get_tags();
+
+      switch (info.get_result()) {
+        case GstPbUtils.DiscovererResult.OK: {
+          const uri = info.get_uri();
+          this._play.set_uri(uri);
+          this.waveform_generator.generate_peaks_async(uri);
+          return;
+        }
+        case GstPbUtils.DiscovererResult.MISSING_PLUGINS:
+          this.gerror(
+            GLib.Error.new_literal(
+              GstPlay.PlayError,
+              GstPlay.PlayError.FAILED,
+              _(
+                "File uses a format that cannot be played. Additional media codecs may be required.",
+              ),
+            ),
+          );
+          return;
+        case GstPbUtils.DiscovererResult.ERROR:
+          this.gerror(
+            error ??
+              GLib.Error.new_literal(
+                GstPlay.PlayError,
+                GstPlay.PlayError.FAILED,
+                _(
+                  "An error happened while trying to get information about the file. Please try again.",
+                ),
+              ),
+          );
+          return;
+        case GstPbUtils.DiscovererResult.URI_INVALID:
+          this.gerror(
+            error ??
+              GLib.Error.new_literal(
+                GstPlay.PlayError,
+                GstPlay.PlayError.FAILED,
+                _("File uses an invalid URI"),
+              ),
+          );
+          return;
+        case GstPbUtils.DiscovererResult.TIMEOUT:
+          this.gerror(
+            error ??
+              GLib.Error.new_literal(
+                GstPlay.PlayError,
+                GstPlay.PlayError.FAILED,
+                _(
+                  "Reading the file’s information timed out. Please try again.",
+                ),
+              ),
+          );
+          return;
+      }
+    });
+
+    this.waveform_generator = new APWaveformGenerator();
+
+    this._play = new GstPlay.Play();
+
+    this._play.connect("notify::rate", () => this.notify("rate"));
+
+    this._play.set_video_track_enabled(false);
+
+    const play_config = this._play.get_config();
+    GstPlay.Play.config_set_seek_accurate(play_config, true);
+    this._play.set_config(play_config);
+
+    const adapter = new APPlaySignalAdapter(this._play);
+
+    adapter.connect("uri-loaded", this.uri_loaded_cb.bind(this));
+    adapter.connect("buffering", this.buffering_cb.bind(this));
+    adapter.connect("end-of-stream", this.eos_cb.bind(this));
+    adapter.connect("error", this.error_cb.bind(this));
+    adapter.connect("state-changed", this.state_changed_cb.bind(this));
+    adapter.connect("position-updated", this.position_updated_cb.bind(this));
+    adapter.connect("duration-changed", this.duration_changed_cb.bind(this));
+    adapter.connect(
+      "media-info-updated",
+      this.media_info_updated_cb.bind(this),
+    );
+    adapter.connect("volume-changed", this.volume_changed_cb.bind(this));
+    adapter.connect("mute-changed", this.mute_changed_cb.bind(this));
+    adapter.connect("seek-done", this.seek_done_cb.bind(this));
+    adapter.connect("warning", (_object, error: GLib.Error) => {
+      console.warn("player warning", error.code, error.message);
+    });
+
+    const sink = Gst.ElementFactory.make("fakesink", "sink");
+
+    if (!sink) {
+      throw new Error("Failed to create sink");
+    }
+
+    this._play.pipeline.set_property("video-sink", sink);
+  }
+
+  // cubic volume
+
+  get cubic_volume() {
+    return get_cubic_volume(this.volume);
+  }
+
+  set cubic_volume(value: number) {
+    this.volume = get_linear_volume(value);
+  }
+
+  // rate
+
+  get rate() {
+    return this._play.rate;
+  }
+
+  set rate(value: number) {
+    value = Math.min(3.0, Math.max(0.5, value));
+    if (value !== this._play.rate) {
+      this._play.rate = value;
+    }
+  }
+
+  // UTILS
+
+  protected _play: GstPlay.Play;
+
+  // PROPERTIES
+
+  // property: file
+
+  protected _file: Gio.File | null = null;
+
+  get file() {
+    return this._file;
+  }
+
+  private set file(file: Gio.File | null) {
+    this._file = file;
+    this.notify("file");
+    this.notify("title");
+  }
+
+  // property: title
+
+  protected _title: string | null = null;
+
+  get title() {
+    const tag_title = this.tags?.get_string("title");
+
+    if (tag_title && tag_title[0] && tag_title[1]) {
+      return tag_title[1];
+    }
+
+    const file_info = this.file?.query_info(
+      Gio.FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
+      Gio.FileQueryInfoFlags.NONE,
+      null,
+    );
+    const file_name = file_info?.get_attribute_string(
+      Gio.FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
+    );
+
+    if (file_name) {
+      return file_name;
+    }
+
+    return this._play.uri ?? _("Unknown File");
+  }
+
+  private set title(title: string | null) {
+    this._title = title;
+    this.notify("title");
+  }
+
+  // property: artist
+
+  protected _artist: string | null = null;
+
+  get artist() {
+    const artist = this.tags?.get_string("artist");
+
+    if (artist && artist[0] && artist[1]) {
+      return artist[1];
+    }
+
+    return null;
+  }
+
+  private set artist(artist: string | null) {
+    this.artist = artist;
+    this.notify("artist");
+  }
+
+  // property: tags
+
+  protected _tags: Gst.TagList | null = null;
+
+  get tags() {
+    return this._tags;
+  }
+
+  private set tags(tags: Gst.TagList | null) {
+    this._tags = tags;
+    this.notify("tags");
+    this.notify("title");
+    this.notify("artist");
+  }
+
+  // property: media-info
+
+  protected _media_info: GstPlay.PlayMediaInfo | null = null;
+
+  get media_info() {
+    return this._media_info;
+  }
+
+  set media_info(media_info: GstPlay.PlayMediaInfo | null) {
+    if (media_info === this.media_info) return;
+
+    this._media_info = media_info;
+    this.notify("media-info");
+  }
+
+  // property: buffering
+
+  protected _is_buffering = false;
+
+  get is_buffering() {
+    return this._is_buffering;
+  }
+
+  // property: duration
+
+  get_duration() {
+    if (!this._play.media_info) return 0;
+
+    return (
+      get_safe_duration(this._play.media_info.get_duration()) / Gst.USECOND
+    );
+  }
+
+  /**
+   * @deprecated This property returns the initial duration only. Please use
+   * `get_duration`.
+   */
+  get duration() {
+    return super.duration;
+  }
+
+  // property: error
+
+  private _error: GLib.Error | null = null;
+
+  get error() {
+    return this._error as GLib.Error;
+  }
+
+  // property: has-audio
+
+  get has_audio() {
+    if (!this._play.media_info) return false;
+
+    return this._play.media_info.get_number_of_audio_streams() > 0;
+  }
+
+  // property: has-video
+
+  get has_video() {
+    if (!this._play.media_info) return false;
+
+    return this._play.media_info.get_number_of_video_streams() > 0;
+  }
+
+  vfunc_play(): boolean {
+    this._play.play();
+    return true;
+  }
+
+  vfunc_pause(): boolean {
+    this._play.pause();
+    return true;
+  }
+
+  // get prepared() {
+  //   const state = this.get_state();
+
+  //   if (!state) return false;
+
+  //   return state >= Gst.State.READY;
+  // }
+
+  // FUNCTIONS
+
+  // error functions
+
+  gerror(error: GLib.Error): void {
+    this._error = error;
+    this.notify("error");
+
+    // TODO: cancel pending seeks
+    this._play.stop();
+
+    this.stop();
+
+    this.emit("error", error);
+  }
+
+  // seek
+
+  vfunc_seek(timestamp: number): void {
+    this.update(timestamp);
+    this._play.seek(Math.trunc(timestamp * Gst.USECOND));
+  }
+
+  vfunc_update_audio(muted: boolean, volume: number): void {
+    this._play.mute = muted;
+    this._play.volume = volume;
+    this.notify("cubic-volume");
+  }
+
+  // handlers
+
+  private uri_loaded_cb(): void {
+    this.emit("loaded");
+    this.notify("rate");
+
+    // Calling `this._play.pause()` loads the file immediately instead of
+    // waiting of loading the file after the user starts playing
+    if (this.autoplay) {
+      this.play();
+    } else {
+      this._play.pause();
+    }
+  }
+
+  private buffering_cb(_play: GstPlay.Play, percent: number): void {
+    if (percent < 100) {
+      if (!this.is_buffering && this.playing) {
+        this.pause();
+
+        this._is_buffering = true;
+        this.notify("is-buffering");
+      }
+    } else {
+      this._is_buffering = false;
+      this.notify("is-buffering");
+
+      if (this.playing) this.play();
+    }
+  }
+
+  private position_updated_cb(_play: GstPlay.Play, position: number): void {
+    if (this.seeking && position === 0) {
+      return;
+    }
+
+    if (this.prepared) {
+      this.update(position / Gst.USECOND);
+    }
+  }
+
+  private duration_changed_cb(): void {
+    this.notify("duration");
+  }
+
+  private state_changed_cb(
+    _play: GstPlay.Play,
+    state: GstPlay.PlayState,
+  ): void {
+    if (state == GstPlay.PlayState.BUFFERING) {
+      this._is_buffering = true;
+      this.notify("is-buffering");
+    } else if (this.is_buffering && state != GstPlay.PlayState.STOPPED) {
+      this._is_buffering = false;
+      this.notify("is-buffering");
+    }
+  }
+
+  private error_cb(_play: GstPlay.Play, error: GLib.Error): void {
+    this.gerror(error);
+  }
+
+  protected eos_cb(): void {
+    const playing = this.playing;
+
+    this.pause();
+    this.seek(0);
+
+    if (this.loop && playing) {
+      this.play();
+    }
+  }
+
+  protected media_info_updated_cb(
+    _play: GstPlay.Play,
+    info: GstPlay.PlayMediaInfo,
+  ): void {
+    this.media_info = info;
+
+    if (!this.prepared) {
+      this.stream_prepared(
+        info.get_number_of_audio_streams() > 0,
+        info.get_number_of_video_streams() > 0,
+        info.is_seekable(),
+        get_safe_duration(info.get_duration()) / Gst.USECOND,
+      );
+
+      if (info.get_number_of_audio_streams() <= 0) {
+        return this.gerror(
+          GLib.Error.new_literal(
+            GstPlay.PlayError,
+            GstPlay.PlayError.FAILED,
+            _("The selected file doesn’t contain any audio"),
+          ),
+        );
+      }
+    }
+  }
+
+  private volume_changed_cb(): void {
+    this.notify("volume");
+    this.notify("cubic-volume");
+  }
+
+  private mute_changed_cb(): void {
+    this.notify("muted");
+  }
+
+  private seek_done_cb(_play: GstPlay.Play, timestamp: number): void {
+    if (this.seeking) {
+      this.seek_success();
+    }
+
+    if (this.prepared) {
+      this.update(timestamp / Gst.USECOND);
+    }
+  }
+
+  reset() {
+    this.tags = null;
+    this.discoverer.stop();
+    this.discoverer.start();
+
+    this.waveform_generator.restart();
+
+    this.stop();
+  }
+
+  set_uri(uri: string, autoplay = true): void {
+    this.reset();
+
+    this.file = null;
+    this.autoplay = autoplay;
+
+    this.discoverer.discover_uri_async(uri);
+  }
+
+  get_uri() {
+    return this._play.uri;
+  }
+
+  set_file(file: Gio.File, autoplay = true) {
+    this.reset();
+
+    this.file = file;
+    this.autoplay = autoplay;
+
+    this.discoverer.discover_uri_async(file.get_uri());
+  }
+
+  stop() {
+    if (this.prepared) {
+      this.stream_unprepared();
+    }
+
+    this._play.pipeline.set_state(Gst.State.NULL);
+  }
+
+  skip_seconds(seconds: number) {
+    const duration = this.get_duration();
+    const new_timestamp = Math.max(this.timestamp + seconds * Gst.MSECOND, 0);
+
+    if (duration !== 0 && new_timestamp > duration) {
+      this.eos_cb();
+      return;
+    }
+
+    this.seek(new_timestamp);
+  }
+
+  get_action_group() {
+    const action_group = Gio.SimpleActionGroup.new();
+
+    (action_group.add_action_entries as AddActionEntries)([
+      {
+        name: "play",
+        activate: () => {
+          this.play();
+        },
+      },
+      {
+        name: "pause",
+        activate: () => {
+          this.play();
+        },
+      },
+      {
+        name: "play-pause",
+        activate: () => {
+          if (this.playing) {
+            this.pause();
+          } else {
+            this.play();
+          }
+        },
+      },
+      {
+        name: "skip-seconds",
+        parameter_type: "i",
+        activate: (_source, param) => {
+          if (param) {
+            this.skip_seconds(param.get_int32());
+          }
+        },
+      },
+    ]);
+
+    action_group.add_action(
+      Gio.PropertyAction.new("toggle-mute", this, "muted"),
+    );
+
+    return action_group;
+  }
+}
+
+export function get_linear_volume(value: number) {
+  return GstAudio.stream_volume_convert_volume(
+    GstAudio.StreamVolumeFormat.CUBIC,
+    GstAudio.StreamVolumeFormat.LINEAR,
+    value,
+  );
+}
+
+export function get_cubic_volume(value: number) {
+  return GstAudio.stream_volume_convert_volume(
+    GstAudio.StreamVolumeFormat.LINEAR,
+    GstAudio.StreamVolumeFormat.CUBIC,
+    value,
+  );
+}
+
+function get_safe_duration(value: number) {
+  if (value >= GLib.MAXUINT64) {
+    return 0;
+  }
+
+  return value;
+}

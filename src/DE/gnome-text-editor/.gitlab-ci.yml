@@ -1,0 +1,211 @@
+include:
+  - project: 'gnome/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "flatpak"
+
+variables:
+    FEDORA_IMAGE: "registry.fedoraproject.org/fedora:42"
+    MANIFEST_PATH: "org.gnome.TextEditor.Devel.json"
+    MESON_ARGS: "-Ddevelopment=true"
+    FLATPAK_MODULE: "gnome-text-editor"
+    APP_ID: "org.gnome.TextEditor.Devel"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    BUNDLE: "org.gnome.TextEditor.Devel.flatpak"
+
+.only-default:
+    only:
+        - branches
+    except:
+        - tags
+
+flatpak:
+    extends: '.flatpak@x86_64'
+
+flatpak-aarch64:
+    extends: '.flatpak@aarch64'
+
+nightly:
+    extends: '.publish_nightly'
+    needs: ['flatpak']
+    dependencies: ['flatpak']
+    
+nightly-aarch64:
+    extends: '.publish_nightly'
+    needs: ['flatpak-aarch64']
+    dependencies: ['flatpak-aarch64']
+
+fedora:
+    extends: .only-default
+    only:
+        - branches@GNOME/gnome-text-editor
+    image: $FEDORA_IMAGE
+    needs: []
+    script:
+        - sudo dnf -y install
+                ccache
+                desktop-file-utils
+                editorconfig-devel
+                enchant2-devel
+                expat-devel
+                gcc
+                gcc-c++
+                gettext
+                git
+                glib2-devel
+                gobject-introspection-devel
+                gtk4-devel
+                itstool
+                libadwaita-devel
+                libicu-devel
+                libjpeg-turbo-devel
+                libpng-devel
+                libxkbcommon-devel
+                libXrandr-devel
+                libXi-devel
+                libXcursor-devel
+                libXdamage-devel
+                libXinerama-devel
+                libdrm-devel
+                libglvnd-devel
+                glslc
+                meson
+                ninja-build
+                redhat-rpm-config
+                shared-mime-info
+                xorg-x11-server-Xvfb
+        - mkdir -p pfx/
+        - meson --prefix=${PWD}/pfx
+                -Dwerror=false
+                -Dglib:werror=false
+                -Dgtk:broadway-backend=false
+                -Dgtk:build-examples=false
+                -Dgtk:build-tests=false
+                -Dgtk:build-testsuite=false
+                -Dgtk:build-demos=false
+                -Dgtk:media-gstreamer=disabled
+                -Dgtk:werror=false
+                -Dgtksourceview:documentation=false
+                -Dgtksourceview:introspection=disabled
+                -Dgtksourceview:vapi=false
+                -Dgtksourceview:werror=false
+                -Dicu:werror=false
+                -Dlibadwaita:examples=false
+                -Dlibadwaita:gtk_doc=false
+                -Dlibadwaita:introspection=disabled
+                -Dlibadwaita:tests=false
+                -Dlibadwaita:vapi=false
+                -Dlibadwaita:werror=false
+                -Dlibsass:werror=false
+                -Dlibspelling:docs=false
+                -Dlibspelling:introspection=disabled
+                -Dlibspelling:vapi=false
+                -Dpango:gtk_doc=false
+                -Dpango:introspection=disabled
+                -Dpango:werror=false
+                -Dsassc:werror=false
+                -Dwayland-protocols:tests=false
+                -Dwayland:documentation=false
+                -Dwayland:dtd_validation=false
+                -Dwayland:tests=false
+                _build
+        - cd _build
+        - ninja
+        - meson test --suite gnome-text-editor
+        - ninja install
+
+.msys2-common:
+    tags:
+      - win32-ps
+    script:
+      - C:\msys64\usr\bin\pacman --noconfirm -Syyuu
+      - C:\msys64\usr\bin\bash -lc "./build-aux/win32/build-mingw.sh"
+    artifacts:
+        paths:
+            - './*.zip'
+        when: always
+
+#msys2-mingw64:
+#    extends: .msys2-common
+#    variables:
+#      MSYSTEM: "MINGW64"
+#      CHERE_INVOKING: "yes"
+
+msys2-ucrt64:
+    extends: .msys2-common
+    variables:
+      MSYSTEM: "UCRT64"
+      CHERE_INVOKING: "yes"
+
+#macos:
+#    extends: .only-default
+#    only:
+#        - branches@GNOME/gnome-text-editor
+#    tags:
+#        - macos
+#    needs: []
+#    before_script:
+#        - bash .gitlab-ci/show-info-osx.sh
+#        - pip3 install --user meson==0.59.4
+#        - pip3 install --user ninja
+#        - export PATH=/Users/gitlabrunner/Library/Python/3.7/bin:$PATH
+#    script:
+#        - mkdir -p pfx/
+#        - meson --prefix=${PWD}/pfx
+#                -Dcpp_std=c++11
+#                -Denchant=disabled
+#                -Dglib:tests=false
+#                -Dglib:werror=false
+#                -Dgtk:broadway-backend=false
+#                -Dgtk:build-examples=false
+#                -Dgtk:build-tests=false
+#                -Dgtk:demos=false
+#                -Dgtk:introspection=disabled
+#                -Dgtk:macos-backend=true
+#                -Dgtk:media-gstreamer=disabled
+#                -Dgtk:werror=false
+#                -Dgtk:x11-backend=false
+#                -Dgtksourceview:documentation=false
+#                -Dgtksourceview:introspection=disabled
+#                -Dgtksourceview:vapi=false
+#                -Dgtksourceview:werror=false
+#                -Dicu:werror=false
+#                -Dlibadwaita:examples=false
+#                -Dlibadwaita:gtk_doc=false
+#                -Dlibadwaita:introspection=disabled
+#                -Dlibadwaita:tests=false
+#                -Dlibadwaita:vapi=false
+#                -Dlibadwaita:werror=false
+#                -Dlibsass:werror=false
+#                -Dpango:gtk_doc=false
+#                -Dpango:introspection=disabled
+#                -Dpango:werror=false
+#                -Dpixman:tests=disabled
+#                -Dsassc:werror=false
+#                -Dwayland-protocols:tests=false
+#                -Dwayland:documentation=false
+#                -Dwayland:dtd_validation=false
+#                -Dwayland:tests=false
+#                _build
+#        - cd _build
+#        - ninja
+#        - meson test --suite gnome-text-editor
+#    artifacts:
+#        when: always
+#        paths:
+#            - "${CI_PROJECT_DIR}/_build/meson-logs"
+
+#vs2017-x64:
+#    extends: .only-default
+#    only:
+#        - branches@GNOME/gnome-text-editor
+#    tags:
+#        - win32-ps
+#    needs: []
+#    script:
+#        - .gitlab-ci/test-msvc.bat
+#    artifacts:
+#        when: always
+#        paths:
+#            - "${CI_PROJECT_DIR}/_build/meson-logs"

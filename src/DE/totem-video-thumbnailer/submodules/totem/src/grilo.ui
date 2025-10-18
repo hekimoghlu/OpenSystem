@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.11 -->
+<menu id="selectmenu">
+	<section>
+		<item>
+			<attribute name="label" translatable="yes">Select All</attribute>
+			<attribute name="action">app.select-all</attribute>
+			<attribute name="accel">&lt;Ctrl&gt;A</attribute>
+		</item>
+		<item>
+			<attribute name="label" translatable="yes">Select None</attribute>
+			<attribute name="action">app.select-none</attribute>
+		</item>
+	</section>
+</menu>
+
+  <object class="GtkAdjustment" id="gw_adj_max_items">
+    <property name="lower">1</property>
+    <property name="upper">10000</property>
+    <property name="value">300</property>
+    <property name="step_increment">5</property>
+  </object>
+  <object class="GtkTreeStore" id="recent_model">
+    <columns>
+      <!-- column-name id -->
+      <column type="gchararray"/>
+      <!-- column-name uri -->
+      <column type="gchararray"/>
+      <!-- column-name primary_text -->
+      <column type="gchararray"/>
+      <!-- column-name secondary_text -->
+      <column type="gchararray"/>
+      <!-- column-name icon -->
+      <column type="GdkPixbuf"/>
+      <!-- column-name mtime -->
+      <column type="gint64"/>
+      <!-- column-name selected -->
+      <column type="gboolean"/>
+      <!-- column-name pulse -->
+      <column type="guint"/>
+
+      <!-- column-name source -->
+      <column type="GObject"/>
+      <!-- column-name content -->
+      <column type="GObject"/>
+      <!-- column-name is_prethumbnail -->
+      <column type="gboolean"/>
+      <!-- column-name page -->
+      <column type="gint"/>
+      <!-- column-name remaining -->
+      <column type="guint"/>
+      <!-- column-name priority -->
+      <column type="gint"/>
+      <!-- column-name can-remove -->
+      <column type="gint"/>
+    </columns>
+  </object>
+  <object class="GtkTreeStore" id="browser_model">
+    <columns>
+      <!-- column-name id -->
+      <column type="gchararray"/>
+      <!-- column-name uri -->
+      <column type="gchararray"/>
+      <!-- column-name primary_text -->
+      <column type="gchararray"/>
+      <!-- column-name secondary_text -->
+      <column type="gchararray"/>
+      <!-- column-name icon -->
+      <column type="GdkPixbuf"/>
+      <!-- column-name mtime -->
+      <column type="gint64"/>
+      <!-- column-name selected -->
+      <column type="gboolean"/>
+      <!-- column-name pulse -->
+      <column type="guint"/>
+
+      <!-- column-name source -->
+      <column type="GObject"/>
+      <!-- column-name content -->
+      <column type="GObject"/>
+      <!-- column-name is_prethumbnail -->
+      <column type="gboolean"/>
+      <!-- column-name page -->
+      <column type="gint"/>
+      <!-- column-name remaining -->
+      <column type="guint"/>
+      <!-- column-name priority -->
+      <column type="gint"/>
+      <!-- column-name can-remove -->
+      <column type="gint"/>
+    </columns>
+  </object>
+  <template class="TotemGrilo" parent="GtkBox">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="border_width">0</property>
+    <property name="spacing">0</property>
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkSearchBar" id="search_bar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <object class="TotemSearchEntry" id="search_entry">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="width_request">500</property>
+            <property name="halign">center</property>
+          </object>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GdMainView" id="browser">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="model">browser_model</property>
+        <property name="shadow_type">none</property>
+        <style>
+          <class name="content-view"/>
+        </style>
+      </object>
+      <packing>
+        <property name="expand">True</property>
+        <property name="fill">True</property>
+        <property name="position">2</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkRevealer" id="selection_revealer">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+        <property name="position">3</property>
+      </packing>
+    </child>
+  </template>
+  <object class="GtkTreeStore" id="search_results_model">
+    <columns>
+      <!-- column-name id -->
+      <column type="gchararray"/>
+      <!-- column-name uri -->
+      <column type="gchararray"/>
+      <!-- column-name primary_text -->
+      <column type="gchararray"/>
+      <!-- column-name secondary_text -->
+      <column type="gchararray"/>
+      <!-- column-name icon -->
+      <column type="GdkPixbuf"/>
+      <!-- column-name mtime -->
+      <column type="gint64"/>
+      <!-- column-name selected -->
+      <column type="gboolean"/>
+      <!-- column-name pulse -->
+      <column type="guint"/>
+
+      <!-- column-name source -->
+      <column type="GObject"/>
+      <!-- column-name content -->
+      <column type="GObject"/>
+      <!-- column-name is_prethumbnail -->
+      <column type="gboolean"/>
+      <!-- column-name page -->
+      <column type="gint"/>
+      <!-- column-name remaining -->
+      <column type="guint"/>
+      <!-- column-name priority -->
+      <column type="gint"/>
+      <!-- column-name can-remove -->
+      <column type="gint"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="gw_search_store_sources">
+    <columns>
+      <!-- column-name source -->
+      <column type="GObject"/>
+      <!-- column-name name -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+</interface>

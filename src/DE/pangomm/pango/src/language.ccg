@@ -1,0 +1,68 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+namespace Pango
+{
+
+/* PangoLanguage is just another example of inconsistent coding in atk/pango/gtk:
+ * on the one hand it is defined and registered as a boxed type, on the other
+ * hand it is always a pointer to some statically allocated string and thus
+ * neither allocated by itself, nor copied by value, nor freed. Similar dummy
+ * functions as below are defined in pango/pango-util.c but they are not exported.
+ * Compare with pango/pango-util.c for reference. */
+ //(I wonder who wrote this - it wasn't me. murrayc)
+ 
+inline PangoLanguage* _pango_language_new()
+{
+  return nullptr;
+}
+
+inline PangoLanguage* _pango_language_copy(const PangoLanguage* language)
+{
+  return const_cast<PangoLanguage*>(language);
+}
+
+inline void _pango_language_free(PangoLanguage*)
+{
+  return;
+}
+
+Language::Language()
+:
+  gobject_(nullptr)
+{}
+
+Language::Language(const Glib::ustring& language)
+:
+  gobject_(pango_language_from_string(language.c_str()))
+{}
+
+Glib::ustring Language::get_string() const
+{
+  if (gobject_)
+    return pango_language_to_string(const_cast<PangoLanguage*>(gobj()));
+  else
+    return Glib::ustring();
+}
+
+std::vector<Script> Language::get_scripts() const
+{
+  int num_scripts = 0;
+  const auto* carray = pango_language_get_scripts(const_cast<PangoLanguage*>(gobj()), &num_scripts);
+  return Glib::ArrayHandler<Script>::array_to_vector((const Script*)carray, num_scripts, Glib::OWNERSHIP_NONE);
+}
+
+} /* namespace Pango */

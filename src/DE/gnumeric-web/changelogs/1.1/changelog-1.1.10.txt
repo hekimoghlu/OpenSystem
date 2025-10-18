@@ -1,0 +1,692 @@
+2002-10-27  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.10
+
+2002-10-26  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am : Add input-msg.[ch]
+	* src/input-msg.c : new.  Quick place holder.
+
+2002-10-26  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (copy_hash_table_to_ptr_array) : Add trivial test to
+	  keep blank cells out of the output.
+
+	* src/sheet.c (sheet_regen_adjacent_spans) : Morten found a typo.
+
+2002-10-24  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (link_cellrange_dep) : jonkare found a typo.
+	  Thanks that will make life easier when we start using this flag.
+
+2002-10-25  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet-object-image.c (sheet_object_image_new_view): Plug
+	leak.
+
+	* src/position.c (cellref_make_abs): Fix col/row confusion.
+
+2002-10-24  Morten Welinder  <terra@diku.dk>
+
+	* src/print-info.c (render_opcode): Unconstify opcode arg since
+	it is being changed.
+	(hf_format_render): Simplify.
+
+	* configure.in (with_long_double): Check for lgammal.
+
+	* src/numbers.h (lgammagnum): define.
+
+	* src/search.c (search_replace_string): Avoid matching the empty
+	string at the end of the source after we have done a replacement.
+	(Replace ".*" by "42" in "0.988" should not yield two copies
+	of the replacement.)
+
+	* src/xml-io.c (xml_cell_set_array_expr): Create place-holders for
+	unknown functions (that were presumably known when we saved the
+	file in question).
+	(xml_read_cell): Ditto.
+	(xml_read_cell_copy): Ditto.
+	(xml_read_names): Ditto.
+	(xml_read_style): Ditto.
+
+	* src/expr-name.c (gnm_named_expr_collection_check): Compare in a
+	different order so purify doesn't misunderstand gcc's smart code.
+
+	* src/expr.c (gnm_expr_eval): Debug default cases.
+	(do_gnm_expr_unref): Ditto.
+
+	* src/dependent.c (unlink_expr_dep): Ditto.
+	* src/summary.c: Ditto.
+	* src/mstyle.c (mstyle_hash): Ditto.
+	(summary_item_free): Ditto.
+	(summary_item_as_text): Ditto.
+	(summary_item_copy): Ditto.
+
+2002-10-23  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c : disable GNM_EXPR_PARSE_UNKNOWN_NAMES_ARE_STRINGS
+	  All we really needed was simple value matching before
+	  stringification.
+
+	* src/xml-io.c (cb_xml_write_name) : split out of.
+	(xml_write_names) : here.  rewritten to handle the hashes.
+
+2002-10-23  Morten Welinder  <terra@diku.dk>
+
+	* src/func.c (functions_shutdown): Get rid of the global symbol
+	table.
+
+	* src/style.c (style_font_new_simple): Don't create a layout until
+	we know we have a font.  Get rid of pango context for negative
+	hash entries.
+	(style_shutdown): Complain if we leak style font refs.
+
+2002-10-23  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-merge.c (sheet_merge_add) : improve warning.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=96617
+	* src/gnumeric-pane.c (cb_sheet_object_canvas_event) : Fully init
+	  object drag here too.
+
+	* src/workbook.c (workbook_foreach_cell_in_range) : fix.
+
+	* src/position.c (rangeref_normalize) : fix.
+
+	* src/validation.c (validation_eval) : don't unref the val expr too
+	  early.
+
+2002-10-21  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-file.c (gui_file_read) : handle workbooks with no sheets.
+	* src/workbook-control-gui.c (wbcg_focus_cur_scg) : ditto.
+	(show_gui) : ditto.
+
+2002-10-21  Jody Goldberg <jody@gnome.org>
+
+	* src/rendered-value.h : don't use short for width.
+
+	* src/workbook.c (workbook_set_placeholder) : new.
+	(workbook_is_placeholder) : ditto.
+
+	* src/gui-util.c (cb_parent_mapped) : new utility.
+	(gnumeric_set_transient) : handle the case where we are a transient
+	  child of an unmapped parent.
+
+	* src/expr.c (gnm_expr_equal) : name comparison should take scoping
+	  into account too.
+	(do_expr_as_string) : and here.
+	(ets_hash) : use the name itself as a hash key.
+
+	* src/expr-name.c (expr_name_add) : return a copy of the error
+	  message.  And ensure that all NULL returns generate errors.
+	(expr_name_new) : make this static and internal.
+	(name_print_area) : delete.
+
+	* src/dependent.c (workbook_unlink_3d_dep) : during destruction the
+	  order hash may be gone.  This happens with names that contain 3d
+	  references.
+
+2002-10-17  Jody Goldberg <jody@gnome.org>
+
+	* src/plugin-service.c (gnum_plugin_file_opener_open) : store the save
+	  info before we load so that the file name is valid.
+
+2002-10-20  Morten Welinder  <terra@diku.dk>
+
+	* src/expr-name.c (expr_name_by_name): Sort case insensitively and
+	take sheets into account.
+
+	* src/gutils.c (gnumeric_utf8_collate_casefold): New function.
+
+2002-10-18  Morten Welinder  <terra@diku.dk>
+
+	* src/auto-format.c (auto_format_init): Make table case sensitive.
+
+	* src/gui-file.c (file_opener_description_cmp): Make utf8 safe.
+	(file_saver_description_cmp): Ditto.
+	* src/func.c (function_category_compare): Make utf8 safe.
+	* src/value.c (value_diff): Make utf8 safe.
+
+	* src/value.c (value_compare): Make utf8 safe.
+
+	* src/plugin-service.c (gnum_plugin_file_opener_probe): Use
+	g_utf8_strdown, not g_strdown.
+
+	* src/format.c (format_month_before_day): Eliminate tolower and
+	make utf8 safe.  Hopefully.
+	(append_year): Ditto.
+	(append_day): Ditto.
+	(format_compile): Ditto.
+	(format_number): Ditto.
+	* src/number-match.c (format_create_regexp): Ditto.
+
+2002-10-18  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet.c (sheet_name_quote): Make this utf8 safe.
+	* src/parse-util.c (cellref_a1_get): Eliminate use of toupper and
+	isdigit.  Should be utf8 safe now.
+	(cellpos_parse): Ditto.
+	* src/parse-util.c (r1c1_get_item): Ditto for isdigit.
+
+2002-10-18  Morten Welinder  <terra@diku.dk>
+
+	* src/expr.c (gnm_expr_get_constant): New function.
+
+	* src/stf.c (stf_open_and_read): Seek to beginning of input, just
+	in case.
+	(stf_read_default_probe): Don't probe at file name level.
+
+2002-10-17  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet.c (sheet_rename): Make sure workbook's sheet name hash
+	stays valid.
+
+2002-10-17  Morten Welinder  <terra@diku.dk>
+
+	* src/expr-name.c (expr_name_by_name): New function.
+
+2002-10-17  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-name.c (name_print_area) : Print_Area is a command to the
+	  print system regarding what to print.  It does not return the area
+	  that would be printed.
+
+2002-10-17  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-edit.c (wbcg_edit_finish) : adjust to changes in
+	  ParseError and tweak focus handling when user decides to re-edit so
+	  that we actually select what we want to.
+
+	* src/parse-util.c (parse_error_init) : Use a GError for the error
+	  message to clarify life cycle.
+	(parse_error_free) : ditto.
+
+	* src/item-edit.c (item_edit_cursor_blink_start) : simple support for
+	  xsettings.
+
+	* src/expr.c (do_expr_as_string) : sync the precedence with the parser.
+	(do_expr_as_string) : Always qualify a sheet local name from another
+	  sheet.
+
+2002-10-16  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y : Fix precedences and associativity
+	Revamp error reporting to make sense.
+	Tify up the code a bit.
+	(sheetref) : remove the 3d productions.  We no longer need them
+	(workbookref) : add a new production to simplify error reporting.
+
+
+2002-10-15  Jody Goldberg <jody@gnome.org>
+
+	* src/value-sheet.c (value_area_foreach) : Add CellIterFlags
+
+2002-10-15 Christopher Benedict <cbenedic@csa.concordia.ab.ca>
+
+	* src/sheet-object-widget.c (cb_frame_config_distroy): new
+	(cb_frame_set_focus): new
+	(cb_frame_config_ok_clicked): new
+	(cb_frame_config_cancel_clicked): new
+	(cb_frame_label_changed): new
+	(sheet_widget_frame_user_config): new
+
+2002-10-14  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (update_after_action) : quick and dirty support for
+	  manual recalc.
+	(cmd_paste_cut_update_origin) : ditto.
+
+2002-10-14  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c (non_linear_regression): Use gnumabs.
+
+	* src/mathfunc.c (random_logistic): Use loggnum.
+
+	* src/regression.c (parameter_errors): Use sqrtgnum.
+
+	* src/format.c (fmt_general_int): Handle -2^31 correctly.
+
+	* src/datetime.c (datetime_serial_raw_to_serial): Use floorgnum,
+	not floor.
+	(datetime_serial_raw_to_seconds): Ditto.
+
+2002-10-14  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c : Have the gnumeric-1.0 importer use that flag
+
+	* src/parser.y (parser_simple_val_or_name) : optionally restore the
+	  old 'unknown names are strings' behavior.
+
+2002-10-14  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_calc_spans) : delete.
+
+	* src/stf.c (stf_read_workbook_auto_csvtab) : use the new delayed
+	  respan option.
+	(stf_read_workbook) : ditto.
+
+2002-10-14  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c : Add links for
+	    Data -> Text To Columns
+	    Data -> Import External -> From File
+	Only partially implemented in the last hour, but these are just too
+	easy to pass up.
+
+	* src/stf.c (stf_store_results) : new, split out of.
+	(stf_read_workbook) : here.
+	(cb_get_content) : new utility.
+	(stf_text_to_columns) : new.  Only partially done.
+	  We still need a way to get the target region.
+
+	* src/stf-parse.c (stf_parse_sheet) : take a starting offset for the
+	  output, and return a boolean in place of the sheet that was passed in.
+
+	* src/sheet.c (sheet_queue_respan) : new.
+
+	* src/selection.c (selection_first_range) : start cleanup and take a
+	  CommandContext rather than a Control.
+
+	* src/gui-util.c (gnumeric_notice) : Cheat and access the private
+	  label member to set it to accept markup.
+
+	* src/commands.c (cmd_area_set_text_redo) : a nifty optimization.
+	  Just redraw all and queue respanning for the effected regions.
+
+	* src/GNOME_Gnumeric.xml : Add entries for Text to columns and
+	  External Data -> Import from File
+
+2002-10-14  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_view_freeze_panes) : only center if
+	  we are in the top left, else do H or V only.
+
+	* src/sheet-view.c (sv_freeze_panes) : relax restrictions to allow for
+	  H or V only freezing.
+
+	* src/gnumeric-pane.c (gnm_pane_init) : control configuration of col
+	  and row headers seperately.
+	* src/sheet-control-gui.c (scg_resize) : support H or V only freezing.
+	(scg_set_panes) : ditto.
+	(sheet_control_gui_new) : adjust to the new gnm_pane_init interface.
+	(scg_set_left_col) : test for freezing distinctly from the existence
+	  of pane 3.
+	(scg_set_top_row) : test for freezing distincly from the existence of
+	  pane 1.
+
+2002-10-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/func.c (tokenized_help_new): Fix check for empty help string.
+
+2002-10-12  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-edit.c (wbcg_edit_finish) : clear the guru before
+	  destroying it in case the destruction tries to finish editing too.
+
+2002-10-12  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c (func_builtin_init) : jump to the new interface.
+
+	* src/func.h : some renaming and api cleanup.
+	  The big one was
+	    s/ModulePluginFunctionInfo/GnmFuncDescriptor/
+	  Some extension of that structure to add additional fields (at the
+	  end) and api changes to use it pervasively.  This includes
+	  placeholders for function flags, and implementation and testing
+	  status.
+
+	  Some general cleanup with
+	    s/FunctionDefinition/GnmFunc/
+	    s/func_lookup_by_name/gnm_func_lookup/
+	    s/function_add_placeholder/gnm_func_add_placeholder/
+	    s/function_def_get_name/gnm_func_get_name/
+	    s/function_def_set_user_data/gnm_func_set_user_data/
+	    s/function_def_get_user_data/gnm_func_get_user_data/
+
+	  remove function_add_args vs function_add_nodes and replace them with
+	  a GnmFuncDescriptor based gnm_func_add
+
+2002-10-12  Jody Goldberg <jody@gnome.org>
+
+	* src/cellspan.c (row_calc_spans) : some simple optimizations
+	  to prune the length we check based on col/row maxima and sparseness.
+	  This can be significantly faster when we add per row maxima.
+	 
+	* src/symbol.c (symbol_install) : use g_warning and table_replace in
+	  case of a collison.
+
+	* src/format.c (format_number) : Make utf8 clean
+
+	* src/sheet-control-gui.c (scg_set_panes) : more initial work on
+	  supporting h/v only freezing.
+
+2002-10-11  Jody Goldberg <jody@gnome.org>
+
+	* src/libgnumeric.c (gnm_dump_func_defs) : add a flag to indicate
+	  dumping def or status
+	* src/func.c (function_dump_defs) : ditto.
+	* src/main-application.c (main) : add --func-state-dump
+
+2002-10-11  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (have_ld): Check for fmodl.
+	* src/numbers.h: Supply fmodgnum.
+	* src/gutils.c (g_strsplit_to_list): Delete.
+
+2002-10-11  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Remove plugins/python/Makefile
+
+2002-10-11  Jon K Hellan  <hellan@acm.org>
+
+	* plugins/Makefile.am: Remove old Python plugin
+
+2002-10-11  Morten Welinder  <terra@diku.dk>
+
+	* src/numbers.h (gnum_int): Kill.  All users fixed.
+
+	* src/numbers.h (finitegnum): Attempt a solution for the
+	finite/isfinite/FINITE circus.  (All callers should just use
+	finitegnum.)
+
+	* src/mathfunc.c (gpow2): Use ldexpgnum when available.
+
+2002-10-10  Jody Goldberg <jody@gnome.org>
+
+	* src/expr-sheet.c (value_intersection) : move here and privatize.
+
+	* src/func.c (function_call_with_list) : fence post error.  The first
+	  missing arg can be empty.  While we're here fix the precedence error
+	  that was breaking missing default args.  Remove use of
+	  value_intersection.  gnm_expr_eval handles it (I hope)
+
+	* src/expr.c (gnm_expr_eval) : support depends for constructed ranges too.
+
+2002-10-10  Jody Goldberg <jody@gnome.org>
+
+	* src/value-sheet.c (value_intersection) : move here and rework to
+	  support singletons.
+
+	* src/parser.y (parser_simple_val_or_name) : rename from
+	  parser_lookup_name and restore some of the value matching semantics
+	  so that we handle booleans again.  I'm not sure the error handling
+	  will kick in but it too is good.  the duble and int comparisons
+	  should be useless.  We can optimize things a bit by making a
+	  special case routine and removing those.
+
+	* src/expr.c (gnm_expr_eval) : handle dynamic depends and intersection
+	  for the the results.
+	NOTE WARNING WARNING WARNING : change of semantics
+	  In the permit_non_scalar case we do _not_ ensure that the content of
+	  the range has been evaluated.  The user is required to.  We only
+	  handle that in the intersection case.
+	For constant cellranges we now use value_intersection too.
+
+	* src/dependent.c (dependent_types_init) : register DynamicDep 
+	(dependent_queue_recalc_list) : when we find a dynamic depend queue
+	  its container.
+	(dependent_queue_recalc) : rename from cb_dependent_queue_recalc and
+	  remove the ignored argument the compiler can handle it.
+	(dynamic_dep_debug_name) : new.
+	(dependent_add_dynamic_dep) : new.
+	(dynamic_dep_free) : new.
+	(dependent_clear_dynamic_deps) : new.
+	(dependent_unlink) : clear dynamic depends if they exist.
+	(cell_eval_content) : clear dynamic depends before we start to
+	  evaluate.  They get regenerated by evaluation and we are already know
+	  that we need to recalc, so there is no need to keep them.
+	(dependent_eval) : ditto.  duplicate the code to keep the semantics of
+	  cell_eval_content tidy.
+	(do_deps_destroy) : drop the dynamic depend table.
+	(gnm_dep_container_new) : initialize it here.
+
+2002-10-10  Morten Welinder  <terra@diku.dk>
+
+	* src/rangefunc.c (product_helper): New function.
+	(range_geometric_mean): Improve precision.
+	(range_product): Improve precision.
+
+2002-10-10  Andreas J. Guelzow
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=95333
+	* src/item-grid.c (item_grid_button_press): do not start editing if
+	  the second half of a double click is in a different cell.
+
+2002-10-09  Morten Welinder  <terra@diku.dk>
+
+	* src/gnumeric-graph.c (struct _GnmGraphVector): Avoid "gboolean
+	... : 1".
+	* src/item-bar.c (struct _ItemBar): Ditto.
+	* src/item-cursor.c (struct _ItemCursor): Ditto.
+	* src/formats.h (FormatCharacteristics): Ditto.
+	* src/format-template.h (struct _FormatTemplate): Ditto.
+	* src/sheet-private.h (struct _SheetPrivate): Ditto.
+	* src/sheet-view.h (struct _SheetView): Ditto.
+	* src/validation.h (struct _Validation): Ditto.
+	* src/workbook-priv.h (struct _Workbook): Ditto.
+	* src/expr-name.h (struct _GnmNamedExpr): Ditto.
+
+2002-10-09  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_define_name_redo) : fix ref counting.
+	(cmd_define_name_undo) : and here.
+
+2002-10-08  Jody Goldberg <jody@gnome.org>
+
+	* src/format.c (do_render_number) : Use the scale factor.
+	(format_number) : init the scale factor when a fmt ends a section with
+	  a comma.
+
+2002-10-08  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-view.c (wb_view_new_from_file): Catch invalid file
+	names.
+
+	* src/gutils.c (gnumeric_valid_filename): New function.
+
+2002-10-08  Jody Goldberg <jody@gnome.org>
+
+	Patch from peninguy.nicolas@wanadoo.fr (Nicolas Peninguy)
+	* src/formats.c : regexp for accounting too.
+
+2002-10-08  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (rangeref_parse) : handle relative full col/row
+	  references.
+
+2002-10-08  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y (parser_lookup_name) : default the placeholder to be at
+	  workbook scope.
+
+	* src/cellspan.c (row_calc_spans) : new.
+
+	* src/dependent.c (cell_eval_content) : flag the row as needing
+	  respan.  I'll probably want to distinguish between span and render
+	  somehow.
+
+	* src/sheet.c (sheet_update_only_grid) : test a new idea for doing
+	  just in time spanning.  It does not support a true model view split
+	  of the rendering.  However, it does delay the render & span until
+	  the row is visible, and as a result it is feasible to support
+	  spanning expressions.  The key is to flag the row as needing
+	  respanning then doing the entire row in the redraw loop.
+	* src/item-grid.c (item_grid_draw) : do a span recalc if necessary
+	* src/print-cell.c (print_cell_range) : ditto.
+
+	* src/workbook.c (workbook_init) : fix warning.
+
+	* src/parser.y (parser_lookup_name) : remove implicit conversion of
+	  unquoted strings that are not names into string values.  Replace it
+	  with the creation of a placeholder name.  This is useful for parsing
+	  expressions before a name has been declared.
+
+	* src/cell.c (cell_set_value) : fix docs.
+
+	* src/parse-util.c (col_parse) : don't get confused when parsing an
+	  absolute _row_ (yes I mean row) ref.  $3 would see the dollar then
+	  fail, but would return a col of -1.
+	(check_quoted) : fix stupidity.  Return the char after the last quote.
+
+2002-10-07  Morten Welinder  <terra@diku.dk>
+
+	* src/value.c (value_zero): New variable.
+	* src/value-sheet.c (value_area_fetch_x_y): Use global value_zero.
+
+2002-10-06  Jody Goldberg <jody@gnome.org>
+
+	Patch from peninguy.nicolas@wanadoo.fr (Nicolas Peninguy)
+	* src/formats.c : replace the currency format classification engines
+	  with a cleaner, more accurate regexp based approach.
+
+2002-10-04  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_metadata) : new.
+
+2002-10-04  Jody Goldberg <jody@gnome.org>
+
+	* src/gutils.c (gnumeric_strcase_hash) : Mark for fixing.
+
+	* src/dependent.c (workbook_link_3d_dep) : disable unlinking during
+	  reordering.
+	(workbook_unlink_3d_dep) : disable unlinking during reordering.
+
+	* src/commands.c (cmd_rename_sheet) : use workbook_sheet_by_name.
+
+	* src/sheet.c (sheet_rename) : store a case insensitive key.
+	(sheet_new) : ditto.
+	(sheet_destroy) : clear the name.
+
+	* src/workbook.c (workbook_sheet_reorder) : add missing call to
+	  pre_sheet_index_change.
+	(workbook_init) : No need for case insensitive hashing the callers
+	  will do the conversions.
+	(pre_sheet_index_change) : flag the reorder so that we do not remove
+	  the list of things we're reordering when they get unlinked.
+	(post_sheet_index_change) : ditto.
+	(workbook_sheet_by_name) : convert the target_name to casefolded form.
+	(workbook_sheet_attach) : use the case folded form of the name as key
+	  to the hash.
+	(workbook_sheet_detach) : ditto.
+	(workbook_sheet_reorganize) : ditto.
+
+2002-10-04  Morten Welinder  <terra@diku.dk>
+
+	* src/workbook-control-gui.c (show_gui): Adapt --geometry handling
+	to gtk2.
+
+2002-10-04  Jody Goldberg <jody@gnome.org>
+
+	* src/parser.y (yylex) : reinstate optionally forcing abs references
+	(yylex) : applix scatters random spaces throughout its
+	  expressions but ignores them.
+	(yylex) : extend handling of xml quoting and opencalc quoting of
+	  strings in expressions.
+
+2002-10-04  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control.c (wb_control_parse_and_jump) : use the new
+	  undo support and handle assigning to a placeholder.
+
+	* src/gnumeric-canvas.h : Clean up the naming convention to use
+	  GnmCanvas in all locations.
+
+	* src/expr-name.c (expr_name_add) : its ok if the expr is NULL create
+	  a placeholder.
+	(expr_name_is_placeholder) : new.
+
+	* src/commands.c (CmdChangeSummary) : this has no business being
+	  control specific.
+	(CmdPrintSetup) : ditto.
+	(CmdDefineName) : new.
+
+	* src/command-context.c (gnumeric_error_calc) : new.
+	(gnm_error_calc) : new.
+
+2002-10-03  Jody Goldberg <jody@gnome.org>
+
+	* src/format.c (format_get_currency) : convert locale's currency
+	  symbol to utf8.
+	(gnumeric_setlocale) : clear the cache currency symbol.
+
+2002-10-03  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_is_err) : new util.
+
+2002-10-03  Morten Welinder  <terra@diku.dk>
+
+	* src/parse-util.c (col_name_internal): Handle larger number of
+	columns.
+
+	* src/sheet-style.c (sheet_style_init): Warn if we have a conflict
+	between column name TRUE and constant TRUE.
+
+2002-10-03  Morten Welinder  <terra@diku.dk>
+
+	* src/sheet-style.c (TILE_SIZE_COL, TILE_SIZE_ROW): Auto-size.
+
+2002-10-02  Jody Goldberg <jody@gnome.org>
+
+	* src/commands.c (cmd_reorganize_sheets) : DO NOT STORE CONTROL.
+	  The command context of the inititing action should never be stored.
+	  Undo should use the context from the control that initiated the
+	  undo.
+
+	* src/io-context-priv.h : Inherit from CommandContext and make our
+	  lives easier.  Also avoid the pointless duplication.
+
+	* src/command-context-priv.h : remove the plethora of err types in
+	  favour of GError with a tag and ErrorInfo.
+	  Protect cmd_context_progress_set, cmd_context_progress_message_set.
+	* src/command-context-stderr.c : Adjust to the changes.
+
+	* src/bonobo-io.c : IOContext inherits from CommandContext now use the
+	  error handlers there.
+	* src/plugin-util.c : ditto.
+	* src/sheet-object-bonobo.c : ditto.
+	* src/stf.c : ditto.
+	* src/workbook-control-gui.c : ditto.
+	* src/workbook-view.c : ditto.
+	* src/xml-io.c : ditto.
+
+2002-10-01  Jody Goldberg <jody@gnome.org>
+
+	* src/pixmaps/Makefile.am : add the rest of the new artwork.
+
+2002-10-01  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_sheet_reorder) : take a workbook not a
+	  control.
+
+2002-10-01  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_insert_hyperlink) : hook up the
+	  hyperlink dialog.
+
+	* src/sheet-control-gui.c (context_menu_handler) : adjust to new
+	  calling convention for dialog_hyperlink.
+
+2002-09-30  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c (gnumeric_application_setup_icons) : add the new
+	  icons.
+	* src/pixmaps/Makefile.am : add the new protection icons
+
+2002-09-30  Jody Goldberg <jody@gnome.org>
+
+	Patch from : dorami@bu.iij4u.or.jp
+	* src/gnumeric-canvas.c : re-enable IM support.
+
+2002-09-30  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_editline_focus_in) : give the entry a
+	  chance to handle the focus-in too.
+
+2002-09-30  Morten Welinder  <terra@diku.dk>
+
+	* src/GNOME_Gnumeric.xml: Fix case of Hyperlink.
+
+2002-09-30  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump

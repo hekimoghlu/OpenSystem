@@ -1,0 +1,80 @@
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      dist-job-name: "build"
+      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+
+image: fedora:latest
+
+stages:
+  - review
+  - build
+  - deploy
+
+variables:
+  TARBALL_ARTIFACT_PATH: "_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+
+style-check:
+  stage: review
+  script:
+    - ./.gitlab/ci/style-check.sh
+  artifacts:
+    expire_in: 1 week
+    name: "style-check-junit-report"
+    when: always
+    reports:
+      junit: style-check-junit-report.xml
+    paths:
+      - "style-check-junit-report.xml"
+
+build-folks:
+  stage: build
+  except:
+    - tags
+  before_script:
+    - dnf update -y --nogpgcheck
+    - dnf -y install --nogpgcheck
+      dbus-glib-devel evolution-data-server-devel glib2-devel
+      gobject-introspection-devel libgee-devel libxml2-devel meson ninja-build
+      python3-dbusmock readline-devel redhat-rpm-config telepathy-glib-devel
+      telepathy-glib-vala vala valadoc gtk-doc
+      dbus-daemon # FIXME: dbus-broker breaks the CI, see https://github.com/bus1/dbus-broker/issues/145
+  script:
+    - meson _build -Ddocs=true
+    - meson compile -C _build
+    # Multiply the Meson test timeout by 3 (mostly for the stress tests)
+    # For most tests it doesn't matter anyway, since we internally use
+    # TestUtils.loop_run_with_timeout()
+    - meson test -C _build -t 3
+    - meson dist -C _build
+  artifacts:
+    reports:
+      junit: "_build/meson-logs/testlog.junit.xml"
+    name: "folks-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "_build/config.h"
+      - "_build/meson-logs"
+      - "_build/docs"
+      - $TARBALL_ARTIFACT_PATH
+
+pages:
+  stage: deploy
+  dependencies:
+    - build-folks
+  script:
+    # Devhelp (Vala API)
+    - mkdir -p public/devhelp
+    - mv _build/docs/devhelp/* public/devhelp
+    # Gtk-doc (C API)
+    - >
+      for f in folks folks-dummy folks-eds folks-telepathy; do
+        mkdir -p public/gtkdoc/$f
+        # We're only interested in the generated HTML here
+        mv _build/docs/gtkdoc/$f/html/* public/gtkdoc/$f
+      done
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

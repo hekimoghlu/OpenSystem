@@ -1,0 +1,240 @@
+2013-08-19  Morten Welinder <terra@gnome.org>
+
+	* Release 1.12.5
+
+2013-08-15  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dep_hash_destroy): Relink the changed dep.
+	Fixes #706095.
+
+	* src/sheet.c (sheet_destroy_contents): Also get rid of solver
+	parameters.  See bug 705913, comment 6.
+
+2013-08-13  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-style-impl.h (_GnmStyle): Switch ->deps to a GPtrArray.
+
+2013-08-12  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-widget.c (sow_create_widget): New function.
+	Add sheet-object class to widgets.
+
+2013-08-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (sheet_widget_frame_draw_cairo): set
+	initial colour
+	(sheet_widget_button_draw_cairo): also scale line thickness
+	(sheet_widget_checkbox_draw_cairo): scale button size
+	(sheet_widget_radio_button_draw_cairo): scale button size
+
+2013-08-10  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (draw_cairo_text): add 'scale'
+	argument and change all callers
+
+2013-08-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (get_font): add fall-backs
+
+2013-08-09  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (sheet_widget_button_draw_cairo): Use
+	draw_cairo_text.
+	(draw_cairo_text): add h-vcenter argument and change all callers
+
+2013-08-09  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c (cb_range_destroyed),
+	(sheet_widget_scrollbar_create_widget),
+	(sheet_widget_spinbutton_create_widget),
+	(sheet_widget_slider_create_widget): avoid crashing after destroying a
+	SheetWidgetAdjustment associated widget. [see Gtk+ bug #705692]
+
+2013-08-09  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-widget.c (sheet_widget_button_draw_cairo): Use
+	get_font.
+	(get_font): New function extracted from draw_cairo_text.
+
+2013-08-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (draw_cairo_text): use GtkStyleContext
+	if possible
+
+2013-08-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (draw_cairo_text): add arguments to
+	allow multi-paragraph with a highlighted line. Change all callers
+	(sheet_widget_list_draw_cairo): use draw_cairo_text
+
+2013-08-08  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (sheet_widget_frame_draw_cairo): use
+	cairo version for Gnuemric too.
+	(sheet_widget_button_draw_cairo): ditto
+	(sheet_widget_scrollbar_draw_cairo): ditto
+	(sheet_widget_spinbutton_draw_cairo): ditto
+	(sheet_widget_slider_draw_cairo): ditto
+	(sheet_widget_checkbox_draw_cairo): ditto
+	(sheet_widget_radio_button_draw_cairo): ditto
+	(sheet_widget_list_draw_cairo): ditto
+	(sheet_widget_combo_draw_cairo): ditto
+
+2013-08-08  Morten Welinder  <terra@gnome.org>
+
+	* src/parse-util.c (r1c1_get_index): Handle integer overflow.
+	Reduce crazy relative offsets.
+
+2013-08-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (draw_cairo_text): add arguments and
+	change all callers
+	(sheet_widget_frame_draw_cairo): new
+	(sheet_widget_button_draw_cairo): new
+	(sheet_widget_scrollbar_horizontal_draw_cairo): new
+	(sheet_widget_scrollbar_vertical_draw_cairo): new
+	(sheet_widget_scrollbar_class_init): connect the above
+	(sheet_widget_spinbutton_draw_cairo): new
+	(sheet_widget_spinbutton_class_init): connect the above
+	(sheet_widget_slider_horizontal_draw_cairo): new
+	(sheet_widget_slider_vertical_draw_cairo): new
+	(sheet_widget_slider_draw_cairo): new
+	(sheet_widget_slider_class_init): connect the above
+	(sheet_widget_list_draw_cairo): new
+	(sheet_widget_list_class_init): connect the above
+	(sheet_widget_combo_draw_cairo): new
+	(sheet_widget_combo_class_init): connect the above
+
+2013-08-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (SOW_MAKE_TYPE): add fn_draw_cairo,
+	change all uses of this macro
+	(draw_cairo_text): new
+	(sheet_widget_checkbox_draw_cairo): new
+	(sheet_widget_radio_button_draw_cairo): new
+
+2013-08-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-object-widget.c (sheet_widget_draw_cairo): avoid using
+	gtk_offscreen_window_new without a default screen (see bugs #705638
+	and #705640)
+
+2013-08-07  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (main): Initialize gtk+ without opening any
+	display.
+
+2013-08-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (scg_show_im_tooltip): handle rtl sheets
+
+2013-08-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui-priv.h (_SheetControlGUI): add fields
+	* src/sheet-control-gui.c (scg_init): init new fields
+	(scg_im_destroy): new
+	(scg_finalize): call scg_im_destroy
+	(cb_cell_im_timer): new
+	(scg_find_pane): new
+	(scg_show_im_tooltip): new
+	(scg_class_init): init new field
+	* src/sheet-control-priv.h: add field
+	* src/sheet-control.c: add virtual
+	* src/sheet-control.h: add virtual
+	* src/sheet-view.c (sheet_view_edit_pos_tool_tips): new
+	(sv_update): call sheet_view_edit_pos_tool_tips
+	* src/sheet.c (sheet_col_get_distance_pixels): the defaults need to be
+	in pixels
+	(sheet_row_get_distance_pixels): new
+	* src/sheet.h (sheet_row_get_distance_pixels): new
+
+2013-08-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c (gnm_sogg_prep_sax_parser): accept <graph:Type>
+	nodes in guppi graphs. [Debian #718594]
+
+2013-08-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/workbook-view.c (wb_view_preferred_size): interpret 0 as
+	'default'
+
+2013-08-02  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-control-gui.c (context_menu_handler): add argument to
+	dialog_cell_format call
+	* src/wbc-gtk-actions.c (cb_format_cells): add argument to
+	dialog_cell_format call
+	(cb_data_validate): ditto
+
+2013-07-30  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_style_border): Make sure we have a
+	colour.  Fixes rest of #705031.
+
+2013-07-29  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.c (gnm_func_lookup_prefix): do not include placeholders
+
+2013-07-25  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+	for Dmitry Smirnov
+	* gnumeric.desktop.in: add ODS files
+
+2013-07-23  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c (gnm_go_data_vector_load_values): really load all
+	values for multiple ranges.
+
+2013-07-19  Morten Welinder  <terra@gnome.org>
+
+	* src/style-conditions.c (gnm_style_cond_is_valid): Even stricter
+	check: the enum has a hole in the middle.  Fixes #704562.
+
+2013-07-19  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c (gnm_so_filled_draw_cairo): fix text wrap when
+	printing.
+	* src/gnm-so-path.c (gnm_so_path_draw_cairo): ditto.
+
+2013-07-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnm-so-path.c (gnm_so_path_class_init): add new property
+	(gnm_so_path_set_property): ditto
+	(gnm_so_path_get_property): ditto
+
+2013-07-18  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-path.c (so_path_view_set_bounds),
+	(cb_gnm_so_path_changed): a better fix for the text position.
+
+2013-07-17  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c (so_filled_view_set_bounds),
+	(cb_gnm_so_filled_changed): fix text wrap. [#704417]
+	* src/gnm-so-path.c (so_path_view_set_bounds),
+	(cb_gnm_so_path_changed): fix text wrap in paths too.
+
+2013-07-16  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_foreach_cell_in_range): Avoid overflow when
+	computing range size.  Fixes #704325.
+
+2013-07-15  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (gnm_style_cmp): Borders can be NULL; deal with
+	that.  Fixes #704004.
+
+	* src/expr.c (gnm_expr_new_range_ctor): Undo previous change.
+
+	* src/dependent.c (link_range_dep, unlink_range_dep): Protect
+	against oversize range.
+
+2013-07-12  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_range_op): When constructing a range, make
+	sure it falls within the sheet.
+	(gnm_expr_new_range_ctor): Don't optimize to range if the two
+	parts are on different sheets.  Fixes #704109.
+
+2013-07-10  Morten Welinder <terra@gnome.org>
+
+	* configure.ac: Post-release bump.

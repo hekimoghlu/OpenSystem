@@ -1,0 +1,179 @@
+variables:
+  FF_NETWORK_PER_BUILD: 'true'
+  PYTHON_VERSION: '3.11'
+  OPENSEARCH_VERSION: '2.8.0'
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED == "true"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+stages:
+  - validate
+  - test
+  - security
+  - build
+  - deploy
+
+.pip cache:
+  cache:
+    paths:
+      - $PIP_CACHE_DIR
+    when: always
+  variables:
+    PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
+
+.security defaults:
+  stage: security
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  needs: []
+
+.test defaults:
+  extends:
+    - .pip cache
+  image: python:$PYTHON_VERSION
+  before_script:
+    - pip install -r requirements.dev.txt
+  variables:
+    EGO_DEBUG: 1
+    EGO_SECRET_KEY: .
+    EGO_OPENSEARCH_ADDRESS: opensearch:9200
+  needs: []
+
+.validate defaults:
+  extends:
+    - .test defaults
+  stage: validate
+  script:
+    - >-
+      "${VALIDATE_TOOL}" ${VALIDATE_TOOL_ARGS}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    VALIDATE_TOOL: ruff
+
+test:
+  extends:
+    - .test defaults
+  stage: test
+  services:
+    - name: docker.io/opensearchproject/opensearch:$OPENSEARCH_VERSION
+      alias: opensearch
+      variables:
+        bootstrap.memory_lock: 'false'
+        discovery.type: single-node
+        plugins.security.ssl.http.enabled: 'false'
+        DISABLE_INSTALL_DEMO_CONFIG: 'true'
+        DISABLE_SECURITY_PLUGIN: 'true'
+        OPENSEARCH_JAVA_OPTS: -Xms256m -Xmx256m
+  script:
+    - ./manage.py opensearch index create --force
+    - python -Wd manage.py test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  parallel:
+    matrix:
+      - PYTHON_VERSION:
+          - '3.11'
+          - '3.12'
+          - '3.13'
+
+test collectstatic:
+  extends:
+    - .test defaults
+  stage: test
+  script:
+    - ./manage.py collectstatic --noinput
+  variables:
+    EGO_STATIC_ROOT: static
+
+check migrations:
+  extends:
+    - .test defaults
+  stage: validate
+  script:
+    - python manage.py makemigrations --check
+
+lint:
+  extends:
+    - .validate defaults
+  variables:
+    VALIDATE_TOOL_ARGS: check
+
+format:
+  extends:
+    - .validate defaults
+  variables:
+    VALIDATE_TOOL_ARGS: format --check --diff
+
+security (trivy):
+  extends:
+    - .security defaults
+  image:
+    name: aquasec/trivy
+    entrypoint: [""]
+  script:
+    - trivy fs .
+  cache:
+    paths:
+      - .trivy
+    when: always
+  variables:
+    TRIVY_CACHE_DIR: .trivy
+    TRIVY_EXIT_CODE: 1
+    TRIVY_SCANNERS: vuln,config
+    # This is single-run job so we do not care of k8s recommendations
+    TRIVY_SKIP_FILES: openshift/jobs/reindex-extensions.yml
+
+security (pip-audit):
+  extends:
+    - .pip cache
+    - .security defaults
+  image:
+    name: python:$PYTHON_VERSION
+  before_script:
+    - pip install pip-audit
+  script:
+    - pip-audit -r requirements.txt
+
+.build image:
+  image: quay.io/buildah/stable:latest
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_ISOLATION: chroot
+  retry: 2
+  tags:
+    - aarch64
+  script:
+    - >-
+      buildah bud
+      --build-arg PYTHON_VERSION="${PYTHON_VERSION}"
+      -t quay.io/gnome_infrastructure/extensions:aarch64-latest
+      -f openshift/docker/Dockerfile
+
+build image:
+  extends:
+    - .build image
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH != "deploy"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  needs: []
+
+build and deploy:
+  extends:
+    - .build image
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "deploy"
+  script:
+    - !reference [.build image, script]
+    - buildah login -u ${OCI_REGISTRY_USER} -p ${OCI_REGISTRY_PASSWORD} quay.io
+    - buildah push quay.io/gnome_infrastructure/extensions:aarch64-latest
+  needs:
+    - check migrations
+    - test collectstatic

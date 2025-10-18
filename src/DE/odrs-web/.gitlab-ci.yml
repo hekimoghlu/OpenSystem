@@ -1,0 +1,55 @@
+include:
+  - project: 'Infrastructure/openshift-images/ci-templates'
+    file: '/buildah.yml'
+
+stages:
+  - test
+  - deploy
+
+build-image:
+  stage: test
+  extends:
+    - .buildah
+  variables:
+    CI_COMMIT_REF_PROTECTED: "false"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+
+tests:
+  stage: test
+  needs: []
+  image: registry.access.redhat.com/ubi8/python-39
+  script:
+    - pip install -r requirements.txt
+    - ODRS_REVIEWS_SECRET=not-secret4 python odrs/tests/util_test.py
+    - python odrs/tests/odrs_test.py
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push'
+
+deploy-dev:
+  stage: deploy
+  extends:
+    - .buildah
+  tags:
+    - aarch64
+  variables:
+    OCI_IMAGE_NAME: "odrs"
+    OCI_IMAGE_TAG: "aarch64-dev"
+  rules:
+  - if: $CI_COMMIT_REF_NAME == "master"
+    when: on_success
+
+deploy-prod:
+  stage: deploy
+  extends:
+    - .buildah
+  tags:
+    - aarch64
+  variables:
+    OCI_IMAGE_NAME: "odrs"
+    OCI_IMAGE_TAG: "aarch64-latest"
+  rules:
+  - if: $CI_COMMIT_REF_NAME == "master"
+    when: manual

@@ -1,0 +1,234 @@
+{
+    "app-id": "org.gnome.Contacts.Devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.vala-nightly"
+    ],
+    "command": "gnome-contacts",
+    "tags" : [
+      "Development",
+      "Nightly"
+    ],
+    "build-options" : {
+        "prepend-path" : "/usr/lib/sdk/vala-nightly/bin/",
+        "prepend-ld-library-path" : "/usr/lib/sdk/vala-nightly/lib"
+    },
+    "finish-args": [
+        /* X11 + XShm access */
+        "--share=ipc", "--socket=fallback-x11",
+        /* Wayland access */
+        "--socket=wayland",
+        "--device=dri",
+        /* Webcam access */
+        /* FIMXE: Remove when the webcam portal is available */
+        "--device=all",
+        /* GNOME Control Center (for the Online Accounts panel) */
+        "--talk-name=org.gnome.ControlCenter",
+        "--talk-name=org.gnome.Settings",
+        /* GNOME Online Accounts */
+        "--talk-name=org.gnome.OnlineAccounts",
+        /* Evolution Data server */
+        "--talk-name=org.gnome.evolution.dataserver.AddressBook10",
+        "--talk-name=org.gnome.evolution.dataserver.Sources5",
+        "--talk-name=org.gnome.evolution.dataserver.Subprocess.Backend.*",
+        /* Access to the default cache location for E-D-S avatars */
+        "--filesystem=xdg-cache/evolution/addressbook:ro",
+        /* Access for the default avatars */
+        "--filesystem=xdg-data/pixmaps/faces:create"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name" : "libgee",
+            "buildsystem" : "autotools",
+            "build-options" : {
+                "env" : {
+                    "ACLOCAL_PATH" : "/usr/lib/sdk/vala-nightly/share/aclocal"
+                }
+            },
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libgee.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name": "gnome-online-accounts",
+            "cleanup": [ "/bin", "/share/GConf" ],
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Ddocumentation=false",
+                "-Dfedora=false",
+                "-Dkerberos=false",
+                "-Dman=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-online-accounts.git"
+                }
+            ],
+            "modules": [
+                {
+                    "name": "librest",
+                    "buildsystem": "meson",
+                    "config-opts": [
+                      "-Dgtk_doc=false"
+                    ],
+                    "sources": [
+                        {
+                            "type": "git",
+                            "url": "https://gitlab.gnome.org/GNOME/librest.git"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "libical",
+            "cleanup": [
+              "/lib/cmake"
+            ],
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DICAL_GLIB=true",
+                "-DGOBJECT_INTROSPECTION=true",
+                "-DICAL_GLIB_VAPI=true",
+                "-DICAL_BUILD_DOCS=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/libical/libical/releases/download/v3.0.20/libical-3.0.20.tar.gz",
+                    "sha256": "e73de92f5a6ce84c1b00306446b290a2b08cdf0a80988eca0a2c9d5c3510b4c2"
+                }
+            ]
+        },
+        {
+            "name": "intltool",
+            "cleanup": [ "*" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256": "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ]
+        },
+        {
+            "name": "evolution-data-server",
+            "cleanup": [
+                "/lib/cmake",
+                "/lib/evolution-data-server/*-backends",
+                "/libexec",
+                "/share/dbus-1/services"
+            ],
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DENABLE_GTK=ON",
+                "-DENABLE_GOA=ON",
+                "-DENABLE_UOA=OFF",
+                "-DENABLE_CANBERRA=OFF",
+                "-DENABLE_GOOGLE_AUTH=OFF",
+                "-DENABLE_GOOGLE=OFF",
+                "-DENABLE_WITH_PHONENUMBER=OFF",
+                "-DENABLE_VALA_BINDINGS=ON",
+                "-DENABLE_WEATHER=OFF",
+                "-DWITH_OPENLDAP=OFF",
+                "-DWITH_LIBDB=OFF",
+                "-DENABLE_INTROSPECTION=ON",
+                "-DENABLE_INSTALLED_TESTS=OFF",
+                "-DENABLE_GTK_DOC=OFF",
+                "-DENABLE_EXAMPLES=OFF"
+            ],
+            "buildsystem": "cmake-ninja",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/evolution-data-server.git"
+                }
+            ]
+        },
+        {
+            "name": "folks",
+            "buildsystem": "meson",
+            "cleanup": [
+                "/bin"
+            ],
+            "config-opts": [
+                "-Dtests=false",
+                "-Dtelepathy_backend=false",
+                "-Dbluez_backend=false",
+                "-Dinspect_tool=false",
+                "-Dimport_tool=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "branch": "main",
+                    "url": "https://gitlab.gnome.org/GNOME/folks.git"
+                }
+            ]
+        },
+        {
+            "name" : "libportal",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddocs=false",
+                "-Dtests=false",
+                "-Dbackend-gtk3=disabled",
+                "-Dbackend-gtk4=enabled"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://github.com/flatpak/libportal.git",
+                    "branch" : "main"
+                }
+            ]
+        },
+        {
+            "name" : "libqrencode",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://github.com/fukuchi/libqrencode/archive/refs/tags/v4.1.1.tar.gz",
+                    "sha256" : "5385bc1b8c2f20f3b91d258bf8ccc8cf62023935df2d2676b5b67049f31a049c"
+                }
+            ]
+        },
+        {
+            "name": "gnome-contacts",
+            "buildsystem": "meson",
+            "config-opts" : [
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-contacts.git",
+		    "branch": "main"
+                }
+            ]
+        }
+    ]
+}

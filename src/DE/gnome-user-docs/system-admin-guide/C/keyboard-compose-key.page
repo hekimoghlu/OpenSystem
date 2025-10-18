@@ -1,0 +1,62 @@
+<page xmlns="http://projectmallard.org/1.0/"
+      xmlns:its="http://www.w3.org/2005/11/its"
+      type="topic" style="task"
+      id="keyboard-compose-key">
+
+  <info>
+    <link type="guide" xref="user-settings" />
+    <revision pkgversion="3.30" date="2019-02-08" status="draft"/>
+
+    <credit type="author copyright">
+      <name>Petr Kovar</name>
+      <email>pknbe@volny.cz</email>
+      <years>2014</years>
+    </credit>
+
+    <include href="legal.xml" xmlns="http://www.w3.org/2001/XInclude"/>
+
+    <desc>Enable the compose key by default for all users.</desc>
+  </info>
+
+  <title>Enable the compose key</title>
+
+  <p>To enable the Compose key and configure a certain key on your keyboard as
+  the Compose key, set the
+  <sys>org.gnome.desktop.input-sources.xkb-options</sys> GSettings key. That
+  way, the setting will be enabled by default for all users on your system.</p>
+
+  <steps>
+    <title>Set the Right Alt key as the Compose key</title>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-profile-user'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-profile-user-dir'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <item>
+      <p>Create a <sys>local</sys> database for machine-wide settings in
+      <file>/etc/dconf/db/local.d/00-input-sources</file>:</p>
+        <code>[org/gnome/desktop/input-sources]
+# Set the Right Alt key as the Compose key and enable it
+xkb-options=['compose:<var>ralt</var>']</code>
+      <p>If you want to set a different key than Right <key>Alt</key>, replace
+      <var>ralt</var> with the name of that key as specified in the
+      <link href="man:xkeyboard-config"><cmd>xkeyboard-config</cmd>(7)</link>
+      man page, section <em>Position of Compose key</em>.</p>
+    </item>
+    <item>
+      <p>Override the user's setting and prevent the user from changing it in
+      <file>/etc/dconf/db/local.d/locks/input-sources</file>:</p>
+      <code># Lock the list of enabled XKB options
+/org/gnome/desktop/input-sources/xkb-options
+</code>
+    </item>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-update'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+    <include href="dconf-snippets.xml"
+             xpointer="xpointer(/*/*[@xml:id='dconf-logoutin'])"
+             xmlns="http://www.w3.org/2001/XInclude"/>
+  </steps>
+
+</page>

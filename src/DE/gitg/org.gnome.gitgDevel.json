@@ -1,0 +1,184 @@
+{
+    "app-id": "org.gnome.gitgDevel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "branch": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "gitgDevel",
+    "tags": [
+        "nightly"
+    ],
+    "desktop-file-name-prefix": "",
+    "finish-args": [
+        "--share=ipc",
+        "--share=network",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--socket=ssh-auth",
+        "--filesystem=host",
+        "--filesystem=xdg-config/git:ro",
+        "--talk-name=org.gtk.vfs.*",
+        "--talk-name=org.freedesktop.secrets",
+        "--filesystem=xdg-run/keyring"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/peas-demo",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/share/doc",
+        "/share/gir-1.0",
+        "/share/glade",
+        "/man",
+        "/share/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name": "libssh2",
+            "buildsystem" : "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+                "-DCMAKE_INSTALL_LIBDIR:PATH=/app/lib",
+                "-DBUILD_SHARED_LIBS:BOOL=ON"
+            ],
+            "cleanup" : [
+                 "/share/doc"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/libssh2/libssh2.git",
+                    "branch": "libssh2-1.11.1"
+                }
+            ]
+        },
+        {
+            "name": "libgit2",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DBUILD_SHARED_LIBS:BOOL=ON",
+                "-DBUILD_TESTS:BOOL=OFF",
+                "-DUSE_THREADS:BOOL=ON",
+                "-DUSE_SSH:BOOL=ON"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/libgit2/libgit2.git",
+                    "branch": "maint/v1.7"
+                }
+            ]
+        },
+        {
+            "name": "libgit2-glib",
+            "config-opts": [
+                "--buildtype=debugoptimized"
+            ],
+            "buildsystem": "meson",
+            "builddir": true,
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libgit2-glib.git"
+                }
+            ]
+        },
+        {
+            "name": "libpeas",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dlua51=false",
+                "-Dpython3=false"
+            ],
+            "cleanup": [
+                "/bin/*",
+                "/lib/peas-demo",
+                "/lib/libpeas-gtk*"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libpeas.git",
+                    "branch": "1.36"
+                }
+            ]
+        },
+        {
+            "name": "gspell",
+            "config-opts": [
+                "--disable-gtk-doc",
+                "--disable-static",
+                "--disable-gtk-doc-html"
+            ],
+            "cleanup": [
+                "/bin",
+                "/include",
+                "/lib/pkgconfig",
+                "*.la",
+                "/share"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/gspell/1.12/gspell-1.12.2.tar.xz",
+                    "sha256": "b4e993bd827e4ceb6a770b1b5e8950fce3be9c8b2b0cbeb22fdf992808dd2139",
+                    "x-checker-data": {
+                        "type": "gnome",
+                        "name": "gspell"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "gtksourceview",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gtksourceview.git",
+                    "branch": "gtksourceview-4-8"
+                }
+            ]
+        },
+        {
+            "name": "git",
+            "make-args": [
+                "NO_TCLTK=1",
+                "INSTALL_SYMLINKS=1"
+            ],
+            "make-install-args": [
+                "NO_TCLTK=1",
+                "INSTALL_SYMLINKS=1"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.49.0.tar.xz",
+                    "sha256": "618190cf590b7e9f6c11f91f23b1d267cd98c3ab33b850416d8758f8b5a85628"
+                }
+            ]
+        },
+        {
+            "name": "gitg",
+            "buildsystem": "meson",
+            "builddir": true,
+            "config-opts": [
+                "--buildtype=debugoptimized",
+                "-Ddeprecations=true",
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gitg.git"
+                }
+            ]
+        }
+    ]
+}

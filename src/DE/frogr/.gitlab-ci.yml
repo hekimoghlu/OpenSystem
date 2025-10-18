@@ -1,0 +1,82 @@
+image: fedora:36
+
+stages:
+  - build
+
+before_script:
+  - dnf install -y meson ninja-build git gcc glib2-devel libsoup-devel libsoup3-devel libexif-devel libxml2-devel json-glib-devel libgcrypt-devel gtk3-devel gstreamer1-devel yelp-tools gettext libgcrypt-devel itstool desktop-file-utils libappstream-glib
+
+build-frogr:
+  stage: build
+  script:
+    - meson --prefix /usr _build .
+    - cd _build
+    - ninja
+  except:
+    - tags
+  artifacts:
+    when: on_failure
+    name: "frogr-${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+
+build-frogr-libsoup2:
+  stage: build
+  script:
+    - meson -Dwith-libsoup2=true --prefix /usr _build .
+    - cd _build
+    - ninja
+  except:
+    - tags
+  artifacts:
+    when: on_failure
+    name: "frogr-${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+
+build-frogr-no-header-bar:
+  stage: build
+  script:
+    - meson --prefix /usr -Denable-header-bar=false _build .
+    - cd _build
+    - ninja
+  except:
+    - tags
+
+build-frogr-no-video:
+  stage: build
+  script:
+    - meson --prefix /usr -Denable-video=false _build .
+    - cd _build
+    - ninja
+  except:
+    - tags
+
+test-frogr:
+  stage: build
+  only:
+    - tags
+  script:
+    - meson --prefix /usr --buildtype release _build .
+    - cd _build
+    - ninja test
+  except:
+    - tags
+  artifacts:
+    when: on_failure
+    name: "frogr-${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+
+dist-frogr:
+  stage: build
+  only:
+    - tags
+  script:
+    - meson --prefix /usr --buildtype release _build .
+    - cd _build
+    - ninja dist
+  artifacts:
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-dist/frogr-*.tar.xz"
+

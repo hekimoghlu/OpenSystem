@@ -1,0 +1,69 @@
+{
+    "app-id" : "org.gnome.SimpleScan",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "simple-scan",
+    "tags" : [
+        "devel"
+    ],
+    "desktop-file-name-prefix" : "(Development) ",
+    "finish-args" : [
+        "--device=dri",
+        "--device=all",
+        "--share=network",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--talk-name=org.freedesktop.ColorManager"
+    ],
+    "cleanup" : [
+        "/include",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "gusb",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Ddocs=false",
+                "-Dtests=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "branch" : "main",
+                    "url" : "https://github.com/hughsie/libgusb.git"
+                }
+            ]
+        },
+        {
+            "name" : "sane-backends",
+            "buildsystem" : "autotools",
+            "sources" : [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.com/sane-project/backends.git",
+                    "commit": "c7e4b5e35e3d614d2b1181d760a717bfc395a203",
+                    "tag": "1.4.0"
+                }
+            ]
+        },
+        {
+            "name" : "simple-scan",
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/simple-scan.git"
+                }
+            ]
+        }
+    ]
+}

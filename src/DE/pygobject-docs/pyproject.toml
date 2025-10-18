@@ -1,0 +1,72 @@
+[project]
+name = "pygobject-docs"
+description = "Generate API documentation for PyGObject"
+authors = [
+    { name = "Arjan Molenaar", email = "gaphor@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GNU General Public License v3 (GPLv3)" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+
+dependencies = [
+    "PyGObject @ git+https://gitlab.gnome.org/GNOME/pygobject.git@main",
+    "jinja2",
+    "sphinx>8,<9",
+    "gi-docgen==2025.3",
+    "pydata-sphinx-theme",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.setuptools]
+packages = ["pygobject_docs"]
+
+[tool.setuptools.package-data]
+"pygobject_docs.templates" = ["*.html"]
+
+[tool.black]
+line-length = 110
+
+[tool.isort]
+profile = "black"
+line_length = 110
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+    "--disable-warnings",
+]
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    "dist",
+    "__init__.py",
+]
+ignore = ["E501", "B905", "B019", "C901"]
+line-length = 88
+select = [
+    "B",
+    "B9",
+    "C",
+    "E",
+    "F",
+    "W",
+]
+
+[tool.ruff.mccabe]
+max-complexity = 18
+
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+

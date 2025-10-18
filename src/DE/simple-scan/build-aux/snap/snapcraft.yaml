@@ -1,0 +1,99 @@
+name: simple-scan
+version: git
+summary: Document Scanning Application
+description: |
+  A really easy way to scan both documents and photos from a scanner (e.g. a flatbed scanner).
+
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: strict
+base: core22
+
+slots:
+  # for GtkApplication registration
+  simple-scan:
+    interface: dbus
+    bus: session
+    name: org.gnome.SimpleScan
+ 
+apps:
+  simple-scan:
+    plugs:
+      - network
+      - network-control
+      - home
+      - gsettings
+      - hardware-observe
+      - mount-observe
+      - system-observe
+      - io-ports-control
+      - raw-usb
+    command: usr/bin/simple-scan
+    extensions: [ gnome ]
+    desktop: usr/share/applications/org.gnome.SimpleScan.desktop
+    environment:
+      GSETTINGS_SCHEMA_DIR: $SNAP/share/glib-2.0/schemas
+
+parts:
+  libsane:
+    source: https://gitlab.com/sane-project/backends.git
+    source-type: git
+    source-tag: 1.1.1
+    plugin: autotools
+    autotools-configure-parameters:
+      - --prefix=/snap/simple-scan/current/usr
+      - --with-api-spec=no
+    organize:
+      snap/simple-scan/current/usr: usr
+    build-packages:
+      - autotools-dev
+      - autoconf
+      - chrpath
+      - dh-systemd
+      - gettext
+      - libavahi-client-dev
+      - libcups2-dev
+      - libgphoto2-dev
+      - libieee1284-3-dev
+      - libjpeg-dev
+      - libltdl3-dev
+      - libsystemd-dev
+      - libtiff-dev
+      - libusb-1.0-0-dev
+      - pkg-config
+      - po-debconf
+      - xutils-dev
+
+  simple-scan:
+    after: [libsane]
+    source: .
+    source-type: git
+    plugin: meson
+    meson-parameters: [--prefix=/usr]
+    organize:
+      snap/simple-scan/current/usr: usr
+    build-packages:
+      - desktop-file-utils
+      - gettext
+      - gnome-common
+      - intltool
+      - itstool
+      - libcairo2-dev
+      - libcolord-dev
+      - libdbus-glib-1-dev
+      - libglib2.0-dev
+      - libgtk-4-dev
+      - libadwaita-1-dev
+      - libgdk-pixbuf2.0-dev
+      - libgusb-dev
+      - libgirepository1.0-dev
+      - libpackagekit-glib2-dev
+      - libsane-dev
+      - libwebp-dev
+      - valac
+      - zlib1g-dev
+  libs:
+    plugin: nil
+    stage-packages:
+      - libgusb2
+      - libpackagekit-glib2-18
+      - libieee1284-3

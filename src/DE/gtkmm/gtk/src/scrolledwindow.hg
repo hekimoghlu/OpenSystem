@@ -1,0 +1,159 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+class Adjustment;
+class Scrollbar;
+
+/** A container that makes its child scrollable.
+ *
+ * It does so using either internally added scrollbars or externally
+ * associated adjustments, and optionally draws a frame around the child.
+ *
+ * Widgets with native scrolling support, i.e. those whose classes implement
+ * the Gtk::Scrollable interface, are added directly. For other types
+ * of widget, the class Gtk::Viewport acts as an adaptor, giving
+ * scrollability to other widgets. set_child() intelligently
+ * accounts for whether or not the added child is a %Gtk::Scrollable.
+ * If it isn’t, then it wraps the child in a %Gtk::Viewport. Therefore, you can
+ * just add any child widget and not worry about the details.
+ * If set_child() has added a %Gtk::Viewport for you,
+ * it will be automatically removed when you unset the child.
+ *
+ * Unless property_hscrollbar_policy() and property_vscrollbar_policy() are
+ * Gtk::PolicyType::NEVER or Gtk::PolicyType::EXTERNAL, %Gtk::ScrolledWindow
+ * adds internal Gtk::Scrollbar widgets
+ * around its child. The scroll position of the child, and if applicable the
+ * scrollbars, is controlled by the property_hadjustment()
+ * and property_vadjustment() that are associated with the
+ * %Gtk::ScrolledWindow. See the docs on Gtk::Scrollbar for the details,
+ * but note that the “step_increment” and “page_increment” fields are only
+ * effective if the policy causes scrollbars to be present.
+ *
+ * If a %Gtk::ScrolledWindow doesn’t behave quite as you would like, or
+ * doesn’t have exactly the right layout, it’s very possible to set up
+ * your own scrolling with Gtk::Scrollbar and for example a Gtk::Grid.
+ *
+ * # Touch support
+ *
+ * %Gtk::ScrolledWindow has built-in support for touch devices. When a
+ * touchscreen is used, swiping will move the scrolled window, and will
+ * expose 'kinetic' behavior. This can be turned off with
+ * property_kinetic_scrolling() if it is undesired.
+ *
+ * %Gtk::ScrolledWindow also displays visual 'overshoot' indication when
+ * the content is pulled beyond the end, and this situation can be
+ * captured with signal_edge_overshot().
+ *
+ * If no mouse device is present, the scrollbars will be overlaid as
+ * narrow, auto-hiding indicators over the content. If traditional
+ * scrollbars are desired although no mouse is present, this behavior
+ * can be turned off with property_overlay_scrolling().
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ */
+class GTKMM_API ScrolledWindow : public Widget
+{
+  _CLASS_GTKOBJECT(ScrolledWindow, GtkScrolledWindow, GTK_SCROLLED_WINDOW, Gtk::Widget, GtkWidget, , , GTKMM_API)
+
+public:
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(void set_hadjustment(const Glib::RefPtr<Adjustment>& hadjustment), gtk_scrolled_window_set_hadjustment)
+  _WRAP_METHOD(void set_vadjustment(const Glib::RefPtr<Adjustment>& vadjustment), gtk_scrolled_window_set_vadjustment)
+
+  _WRAP_METHOD(Glib::RefPtr<Adjustment> get_hadjustment(), gtk_scrolled_window_get_hadjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_hadjustment() const, gtk_scrolled_window_get_hadjustment, refreturn, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Adjustment> get_vadjustment(), gtk_scrolled_window_get_vadjustment, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Adjustment> get_vadjustment() const, gtk_scrolled_window_get_vadjustment, refreturn, constversion)
+
+  _WRAP_METHOD(void set_policy(PolicyType hscrollbar_policy, PolicyType vscrollbar_policy), gtk_scrolled_window_set_policy)
+  _WRAP_METHOD(void get_policy(PolicyType& hscrollbar_policy, PolicyType& vscrollbar_policy) const, gtk_scrolled_window_get_policy)
+
+  _WRAP_METHOD(void set_placement(CornerType window_placement), gtk_scrolled_window_set_placement)
+  _WRAP_METHOD(void unset_placement(), gtk_scrolled_window_unset_placement)
+  _WRAP_METHOD(CornerType get_placement() const, gtk_scrolled_window_get_placement)
+
+  _WRAP_METHOD(void set_has_frame(bool has_frame = true), gtk_scrolled_window_set_has_frame)
+  _WRAP_METHOD(bool get_has_frame() const, gtk_scrolled_window_get_has_frame)
+
+#m4 _CONVERSION(`GtkWidget*',`Scrollbar*',`Glib::wrap((GtkScrollbar*)$3)')
+#m4 _CONVERSION(`GtkWidget*',`const Scrollbar*',`Glib::wrap((GtkScrollbar*)$3)')
+  _WRAP_METHOD(Scrollbar* get_vscrollbar(), gtk_scrolled_window_get_vscrollbar)
+  _WRAP_METHOD(const Scrollbar* get_vscrollbar() const, gtk_scrolled_window_get_vscrollbar)
+
+  _WRAP_METHOD(Scrollbar* get_hscrollbar(), gtk_scrolled_window_get_hscrollbar)
+  _WRAP_METHOD(const Scrollbar* get_hscrollbar() const, gtk_scrolled_window_get_hscrollbar)
+
+  _WRAP_METHOD(int get_min_content_width() const, gtk_scrolled_window_get_min_content_width)
+  _WRAP_METHOD(void set_min_content_width(int width), gtk_scrolled_window_set_min_content_width)
+  _WRAP_METHOD(int get_min_content_height() const, gtk_scrolled_window_get_min_content_height)
+  _WRAP_METHOD(void set_min_content_height(int height), gtk_scrolled_window_set_min_content_height)
+
+  _WRAP_METHOD(void set_kinetic_scrolling(bool kinetic_scrolling = true), gtk_scrolled_window_set_kinetic_scrolling)
+  _WRAP_METHOD(bool get_kinetic_scrolling() const, gtk_scrolled_window_get_kinetic_scrolling)
+
+  _WRAP_METHOD(void set_overlay_scrolling(bool overlay_scrolling = true), gtk_scrolled_window_set_overlay_scrolling)
+  _WRAP_METHOD(bool get_overlay_scrolling() const, gtk_scrolled_window_get_overlay_scrolling)
+
+  _WRAP_METHOD(void set_max_content_width(int width), gtk_scrolled_window_set_max_content_width)
+  _WRAP_METHOD(int get_max_content_width() const, gtk_scrolled_window_get_max_content_width)
+  _WRAP_METHOD(void set_max_content_height(int height), gtk_scrolled_window_set_max_content_height)
+  _WRAP_METHOD(int get_max_content_height() const, gtk_scrolled_window_get_max_content_height)
+
+  _WRAP_METHOD(void set_propagate_natural_width(bool propagate = true), gtk_scrolled_window_set_propagate_natural_width)
+  _WRAP_METHOD(bool get_propagate_natural_width() const, gtk_scrolled_window_get_propagate_natural_width)
+  _WRAP_METHOD(void set_propagate_natural_height(bool propagate = true), gtk_scrolled_window_set_propagate_natural_height)
+  _WRAP_METHOD(bool get_propagate_natural_height() const, gtk_scrolled_window_get_propagate_natural_height)
+
+  _WRAP_METHOD(void set_child(Widget& child), gtk_scrolled_window_set_child)
+  void unset_child();
+  _WRAP_METHOD(Widget* get_child(), gtk_scrolled_window_get_child)
+  _WRAP_METHOD(const Widget* get_child() const, gtk_scrolled_window_get_child, constversion)
+
+  //Keybinding signals:
+  _IGNORE_SIGNAL("scroll_child")
+  _IGNORE_SIGNAL("move_focus_out")
+
+  // no_default_handler because the wrapped C signals have no default handlers.
+  _WRAP_SIGNAL(void edge_overshot(Gtk::PositionType pos), "edge-overshot", no_default_handler)
+  _WRAP_SIGNAL(void edge_reached(Gtk::PositionType pos), "edge-reached", no_default_handler)
+
+  _WRAP_PROPERTY("hadjustment", Glib::RefPtr<Adjustment>)
+  _WRAP_PROPERTY("vadjustment", Glib::RefPtr<Adjustment>)
+  _WRAP_PROPERTY("hscrollbar-policy", PolicyType)
+  _WRAP_PROPERTY("vscrollbar-policy", PolicyType)
+  _WRAP_PROPERTY("window-placement", CornerType)
+  _WRAP_PROPERTY("has-frame", bool)
+  _WRAP_PROPERTY("min-content-width", int)
+  _WRAP_PROPERTY("min-content-height", int)
+  _WRAP_PROPERTY("kinetic-scrolling", bool)
+  _WRAP_PROPERTY("overlay-scrolling", bool)
+  _WRAP_PROPERTY("max-content-width", int)
+  _WRAP_PROPERTY("max-content-height", int)
+  _WRAP_PROPERTY("propagate-natural-width", bool)
+  _WRAP_PROPERTY("propagate-natural-height", bool)
+  _WRAP_PROPERTY("child", Widget*)
+};
+
+} //namespace Gtk

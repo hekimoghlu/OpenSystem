@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+  <!-- Please format this file using the following command:
+       tidy -config ../tidy.conf -m gtk-osx-gtkmm.modules; sed -i "" '/^ *$/d' gtk-osx-gtkmm.modules
+       You can get 'tidy' here: https://github.com/htacg/tidy-html5 -->
+  <repository name="git.gnome.org"
+              default="yes"
+              href="https://gitlab.gnome.org/GNOME"
+              type="git" />
+  <repository type='tarball' name='sourceforge'
+	      href="http://downloads.sourceforge.net/"/>
+  <repository name="cairographics"
+              href="https://gitlab.freedesktop.org/cairo/"
+              type="git" />
+  <repository name="github"
+              href="https://github.com"
+              type="git" />
+  <!-- mm-common is C++ glue code needed only to build from git. -->
+    <cmake id="boost" cmakeargs="-DLIBRARIES='date_time;regex;locale;filesystem;program_options;system'">
+    <branch module="boost/boost_1_87_0.tar.bz2" version="1.87.0" 
+
+            repo="sourceforge">
+      <patch file="boost-cmake.patch" strip="1"/>
+    </branch>
+    <after>
+      <dep package="icu"/>
+    </after>
+    </cmake>
+    <cmake id="doxygen">
+      <branch module="doxygen/doxygen"
+              repo="github" />
+    </cmake>
+  <meson id="mm-common">
+    <branch module="mm-common" />
+    <dependencies>
+      <dep package="boost"/>
+      <dep package="doxygen"/>
+    </dependencies>
+  </meson>
+  <!-- Libsigc++ was rewritten to use C++17 variadic templates for
+       version 3, and adopting that has created substantial API breaks
+       for the whole "mm" stack. gtkmm3 uses the older versions, gtkmm4
+       the new ones. -->
+  <meson id="cairomm3">
+    <branch module="cairomm"
+            repo="cairographics"
+            revision="cairomm-1-14" />
+    <dependencies>
+      <dep package="cairo" />
+    </dependencies>
+  </meson>
+  <meson id="cairomm">
+    <branch module="cairomm"
+            repo="cairographics" />
+    <dependencies>
+      <dep package="cairo" />
+    </dependencies>
+  </meson>
+  <meson id="glibmm3">
+    <branch module="glibmm"
+            revision="glibmm-2-60" />
+    <dependencies>
+      <dep package="glib" />
+      <dep package="libsigc++2" />
+    </dependencies>
+  </meson>
+  <meson id="glibmm">
+    <branch />
+    <dependencies>
+      <dep package="glib" />
+      <dep package="libsigc++3" />
+    </dependencies>
+  </meson>
+  <meson id="pangomm3">
+    <branch module="pangomm"
+            revision="pangomm-2-42" />
+    <dependencies>
+      <dep package="glibmm3" />
+      <dep package="cairomm3" />
+      <dep package="pango" />
+    </dependencies>
+  </meson>
+  <meson id="pangomm">
+    <branch />
+    <dependencies>
+      <dep package="glibmm" />
+      <dep package="cairomm" />
+      <dep package="pango" />
+    </dependencies>
+  </meson>
+  <meson id="atkmm3">
+    <branch module="atkmm"
+            revision="atkmm-2-24" />
+    <dependencies>
+      <dep package="glibmm3" />
+      <dep package="cairomm3" />
+      <dep package="pangomm3" />
+      <dep package="atk" />
+    </dependencies>
+  </meson>
+  <meson id="atkmm">
+    <branch />
+    <dependencies>
+      <dep package="glibmm" />
+      <dep package="cairomm" />
+      <dep package="pangomm" />
+      <dep package="atk" />
+    </dependencies>
+  </meson>
+  <!-- libsigc++ depends on doxygen for documentation, but doxygen
+       doesn't build correctly under gtk-osx. It builds fine on its own,
+       of course, and there are OSX binaries available on their
+       website. If you want the docs, install it separately and renable
+       documentation in your jhbuildrc-custom. -->
+  <meson id="libsigc++2"
+         autogen-args="--disable-documentation">
+    <branch module="libsigcplusplus/libsigcplusplus"
+            repo="github"
+            revision="libsigc++-2-10" />
+    <dependencies>
+      <dep package="mm-common" />
+      <!-- dep package="doxygen"/ -->
+    </dependencies>
+  </meson>
+  <meson id="libsigc++3">
+    <branch module="libsigcplusplus/libsigcplusplus"
+            repo="github" />
+    <dependencies>
+      <dep package="mm-common" />
+      <!-- dep package="doxygen"/ -->
+    </dependencies>
+  </meson>
+  <meson id="gtkmm3">
+    <branch module="gtkmm"
+            revision="gtkmm-3-24" />
+    <dependencies>
+      <dep package="glibmm3" />
+      <dep package="cairomm3" />
+      <dep package="pangomm3" />
+      <dep package="atkmm3" />
+      <dep package="gtk+-3.0" />
+    </dependencies>
+  </meson>
+  <meson id="gtkmm4">
+    <branch module="gtkmm" />
+    <dependencies>
+      <dep package="glibmm" />
+      <dep package="cairomm" />
+      <dep package="pangomm" />
+      <dep package="atkmm" />
+      <dep package="gtk-4" />
+    </dependencies>
+  </meson>
+</moduleset>

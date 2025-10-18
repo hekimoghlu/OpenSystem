@@ -1,0 +1,129 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $APPlayerState: Adw.Bin {
+  Adw.ToolbarView {
+    [top]
+    $APHeaderBar headerbar {}
+
+    Adw.Clamp {
+      orientation: vertical;
+      maximum-size: 600;
+      tightening-threshold: 300;
+
+      Box {
+        orientation: vertical;
+
+        $APWaveformScale waveform {
+          position-changed => $waveform_position_changed_cb();
+          vexpand: true;
+          margin-start: 14;
+          margin-end: 14;
+
+          EventControllerScroll {
+            flags: both_axes;
+            scroll => $scroll_cb();
+          }
+        }
+
+        Box labels {
+          margin-start: 24;
+          margin-end: 24;
+
+          Label timestamp_label {
+            styles [
+              "caption",
+              "numeric",
+            ]
+          }
+
+          Label duration_label {
+            hexpand: true;
+            halign: end;
+
+            styles [
+              "caption",
+              "numeric",
+            ]
+          }
+        }
+      }
+    }
+
+    [bottom]
+    CenterBox controls {
+      margin-start: 9;
+      margin-end: 9;
+      margin-bottom: 9;
+
+      styles [
+        "toolbar",
+      ]
+
+      [start]
+      $APPlaybackRateButton {
+        valign: center;
+        tooltip-text: _("Adjust Playback Speed");
+      }
+
+      [center]
+      Box playback_box {
+        spacing: 12;
+
+        Button {
+          action-name: "player.skip-seconds";
+          action-target: "-10";
+          icon-name: "skip-backwards-10-symbolic";
+          valign: center;
+          tooltip-text: _("Skip Back 10s");
+
+          styles [
+            "circular",
+          ]
+        }
+
+        Button playback_button {
+          action-name: "player.play-pause";
+          width-request: 42;
+          height-request: 42;
+
+          Image playback_image {
+            icon-name: "pause-large-symbolic";
+            icon-size: large;
+          }
+
+          styles [
+            "pill",
+          ]
+        }
+
+        Button skip_forward_10_button {
+          action-name: "player.skip-seconds";
+          action-target: "10";
+          icon-name: "skip-forward-10-symbolic";
+          valign: center;
+          tooltip-text: _("Skip Forward 10s");
+
+          styles [
+            "circular",
+          ]
+        }
+      }
+
+      [end]
+      $APVolumeButton volume_button {
+        valign: center;
+      }
+    }
+  }
+
+  ShortcutController {
+    scope: managed;
+
+    Shortcut {
+      trigger: "<Control><Shift>leftarrow";
+      action: "action(player.skip-seconds)";
+      arguments: "10";
+    }
+  }
+}

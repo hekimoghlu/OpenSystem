@@ -1,0 +1,746 @@
+2002-07-21  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.1.6
+
+2002-07-21  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch] (random_rayleigh_tail): Added.
+
+2002-07-21  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch] (random_exppow_pdf, random_exppow,
+	random_gaussian, random_gaussian_pdf, random_laplace_pdf): Added.
+
+2002-07-21  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_sheet_label_button_press) : be
+	  consistent and select before bringing up the context menu given
+	  that the menu is being applied to the tab.
+
+2002-07-20  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Test for BROKEN_PY_INITIALIZE feature (before
+	Python 2.0, Python would write to the environment, and we had to
+	work around it.)
+
+	* acconfig.h: Add BROKEN_PY_INITIALIZE
+
+2002-07-20  Jody Goldberg <jody@gnome.org>
+
+	* src/item-grid.c (item_grid_button_press) : tidy the interface
+	  handle all types button presses, not just button1.
+	  Button 3 is not consistent in selecting and bringing up context menu
+	  rather than just the menu (Thanks to the OpenOffice folk for noticing)
+	(item_grid_event) : move the press logic into item_grid_press_event.
+
+2002-07-20  Jody Goldberg <jody@gnome.org>
+
+	* src/item-grid.c (item_grid_init) : init the cursor timer.
+	(item_grid_event) : handle hlink cursor transitions and tips.
+	(ig_clear_hlink_tip) : new.
+	(item_grid_destroy) : clear the cursor timer and any visible tips.
+	(cb_cursor_come_to_rest) : new.
+	(cb_cursor_motion) : new.
+
+	* src/sheet-control-gui.c (scg_set_display_cursor) : in the non-object
+	  case use the pane's current cursor.
+
+2002-07-18  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (gnm_expr_extract_ref) : take some eval flags to see if
+	  we can support implicit iteration.
+	* src/func.c (function_call_with_list) : ditto.
+
+2002-07-18  Jody Goldberg <jody@gnome.org>
+
+	* src/hlink.c : write url and internal link support.
+
+2002-07-16  Jody Goldberg <jody@gnome.org>
+
+	* src/cellspan.c (cell_calc_span) : center across selection can force
+	  a span for something that would wrap.
+
+	* src/workbook-control-gui.c (wbcg_error_error_info) : add 150% as a
+	  std zoom level.
+
+2002-07-15  Jody Goldberg <jody@gnome.org>
+
+	* src/func.h : add status info to the func def for easy update
+
+2002-07-18  Morten Welinder  <terra@diku.dk>
+
+	* src/search.c (calculate_replacement): Make utf-8 safe at last.
+	(inspect_case): New function split out from calculate_replacement.
+
+	* src/gutils.c (gnumeric_utf8_strcapital): New function (that
+	should really be in glib).
+
+	* src/mathfunc.c (random_01): Use unsigned char array, not
+	unsigned int.
+	(random_cauchy, etc.): Make gnum_float safe.
+
+2002-07-18  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch]: Added random_levy, random_levy_skew, 
+	random_gumbel1 and random_gumbel2.
+
+2002-07-18  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch]: Added random_tdist.
+
+2002-07-18  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch]: Added random_beta, random_chisq, random_fdist,
+	random_geometric, random_hypergeometric, random_logarithmic, and
+	random_logistic.
+
+2002-07-18  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch]: Added random_gamma, random_pareto, random_laplace,
+	and random_weibull.
+
+2002-07-18  Jukka Pekka  <jiivonen@hutcs.cs.hut.fi>
+
+	* src/mathfunc.[ch]: Added random_cauchy and random_lognormal.
+
+2002-07-16  Yanko Kaneti <yaneti@declera.com>
+
+	* configure.in: (ALL_LINGUAS) Added Bulgarian (bg).
+
+2002-07-16  Morten Welinder  <terra@diku.dk>
+
+	* configure.in (long double): Move to later when LIBS is in better
+	shape.
+	* src/gutils.c: Fix includes.
+
+2002-07-13  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_foreach_cell_in_range) : fix 3d handling,
+	  and convert.
+
+	* src/sheet.c (sheet_foreach_cell_in_range) : convert from boolean to
+	  bit flags and support only_visible in addition to only existing.
+	(sheet_col_size_fit_pixels) : Only fit visible cells.
+	(sheet_row_size_fit_pixels) : ditto.
+
+2002-07-12  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (cb_max_cell_width) : leave merged cells out of the
+	  running.
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=87987
+	(sheet_range_bounding_box) : nice catch, thankfully it is a new bug.
+
+2002-07-12  Jody Goldberg <jody@gnome.org>
+
+	* src/plugin-service.c (gnum_plugin_file_opener_probe) : remove
+	  pretend feature that supported regexp.  Only shell paterns are
+	  supported now.
+	(plugin_service_file_opener_read) : ditto.
+
+	* src/io-context.c (file_io_progress_set) : delete.
+	(file_io_progress_update) : ditto.
+	(memory_io_progress_set) : ditto.
+	(memory_io_progress_update) : ditto.
+
+	* src/gnumeric-gconf.c (gnm_gconf_get_horizontal_dpi) : dummy out for
+	  now until we add a cache.
+	(gnm_gconf_get_vertical_dpi) : ditto.
+
+2002-07-10  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (stf_preparse) : stf_parse_convert_to_unix now returns the
+	  length.
+	* src/stf.c (stf_read_default_probe) : handle short files.
+
+2002-07-10  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-clipboard.c (x_clipboard_to_cell_region) :
+	  stf_parse_is_valid_data now takes a length.
+	* src/stf.c (stf_read_default_probe) : ditto.
+	(stf_preparse) : ditto.
+	* src/stf-parse.c (stf_parse_is_valid_data) : Use the supplied buffer
+	  length, not a 0 terminator.
+
+2002-07-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : enable quatro pro plugin
+	* plugins/Makefile.am : ditto
+
+2002-07-11  Morten Welinder  <terra@diku.dk>
+
+	* src/search.c (calculate_replacement): Initial work towards UTF-8
+	safety.
+	(search_replace_compile, search_replace_verify): Make UTF-8 safe,
+	except for the fact that our regexp routines are not.
+
+2002-07-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/workbook-control-component.c (cb_help_about): Remove
+	debugging output.
+	(workbook_control_component_activate): Plug leak.
+
+2002-07-10  Morten Welinder  <terra@diku.dk>
+
+	* src/search.c (search_replace_string): Use glib 2's
+	g_string_append_len.
+	(calculate_replacement): Ditto.
+	(cb_order_sheet_col_row, cb_order_sheet_row_col): Make UTF-8 safe.
+
+2002-07-09  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (random_poisson): Fix loop (by switching method).
+
+2002-07-09  Jody Goldberg <jody@gnome.org>
+
+	* plugins/Makefile.am : excel is no longer conditional
+
+2002-07-09  Jody Goldberg <jody@gnome.org>
+
+	* README : add libgsf and remove libole
+	* configure.in : remove libole
+
+2002-07-08  Jon K Hellan  <hellan@acm.org>
+
+	* src/gnumeric-graph.c: modernize a little bit more.
+
+2002-07-08  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-graph.c : modernize.
+
+2002-07-07  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric.h : Add GnmHLink.
+
+	* src/item-grid.c : include hlink.h
+	(item_grid_event) : a button release on an h-link activates it.
+
+	* src/Makefile.am : Add hlink.[ch]
+
+	* src/sheet.h : Lets take a break from architecture and add something
+	  simple like hyper-links.
+
+2002-07-07  Jon K Hellan  <hellan@acm.org>
+
+	* src/datetime.c (date_init, datetime_g_to_serial,
+	datetime_g_days_between, datetime_g_months_between,
+	datetime_isoweeknum, datetime_weeknum,
+	days_between_BASIS_MSRB_30_360, days_between_BASIS_30E_360,
+	days_between_BASIS_30Ep_360, days_between_basis, coup_cd):
+	Replaced deprecated g_date_xxx with g_data_get_xxx.
+
+	* src/sheet-autofill.c (autofill_compute_delta): Ditto.
+
+2002-07-01  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c (fact): Use table and avoid recursion.
+	(permut): New function.
+	(combin): Improve precision.
+
+2002-06-27  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-view.c : move frozen panes here.
+	* src/sheet.c : from here.
+
+	* src/sheet-control-gui.c (scg_resize) : freezing in in view now.
+	(scg_scrollbar_config) : ditto.
+	(gnm_canvas_update_inital_top_left) : ditto.
+	(scg_set_left_col) : ditto.
+	(scg_set_top_row) : ditto.
+	(scg_make_cell_visible) : ditto.
+	(scg_set_panes) : ditto.
+	* src/workbook-control-gui.c (wbcg_menu_state_update) : ditto.
+	(cb_view_freeze_panes) : ditto.
+	* src/xml-io.c (xml_read_sheet_layout) : ditto.
+	(xml_write_sheet_layout) : ditto.
+
+2002-06-27  Jody Goldberg <jody@gnome.org>
+
+	* src/main-application.c : include gui-file.h
+
+	* src/mathfunc.c : silence some warnings.
+
+	* src/gui-util.c : add missing include.
+
+2002-06-26  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the gsf version req
+
+2002-06-26  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.c (do_gnm_expr_unref) : add missing break.
+
+2002-06-26  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-util.c (gui_file_open) : move the magic directory selector
+	  for here.
+	(gnumeric_dialog_file_selection) : to here, so that it works for other
+	  situations too.
+
+2002-06-26  Jon K Hellan  <hellan@acm.org>
+
+	* GNOME_Gnumeric.server.in.in: Add mime types for lotus, applix,
+	oleo & xbase.
+
+2002-06-25  Jon K Hellan  <hellan@acm.org>
+
+	* src/bonobo-io.c (get_raw_bytes_from_stream)
+	(get_bytes_from_compressed_stream, get_bytes_from_stream)
+	(cleanup_stream, check_gzip_header, init_for_inflate)
+	(hack_xmlSAXParseFile, deserialize_wb_from_xml_stream)
+	(read_from_stream): Remove.
+	(gnumeric_bonobo_read_from_stream): GsfInput-ize. Probe for file
+	type.
+
+2002-06-24  Morten Welinder  <terra@diku.dk>
+
+	* src/regression.c: Include Daniel Carrera's experimental
+ 	non-linear regression code (still unreachable).  Fix the most
+ 	obvious porting mistakes and leaks.
+
+2002-06-24  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=86338
+	* src/formats.c (cell_format_time) : reorder to keep hour major
+	  formats before minute major.
+
+	* src/number-match.c (MatchType) : add cummulative types.
+	(compute_value) : support cummulative time.
+
+2002-06-24  Jody Goldberg <jody@gnome.org>
+
+	* src/func-builtin.c : finish cleaning out the 'selection' function
+	and silence the warnings.
+
+2002-06-23  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui-priv.h (SCG_FOREACH_PANE) : respect the
+	  GnumericPane::is_active flag to begin support for h/v only freezing.
+	* src/sheet-control-gui.c (scg_redraw_headers) : ditto.
+	(scg_make_cell_visible) : ditto.
+
+	* src/sheet-view.c (sv_attach_control) : position the cursors for the
+	  newly attached control.
+
+	* src/func-builtin.c (func_builtin_init) : delete the 'selection'
+	  function.  It is no longer possible with a sheetview.
+
+	* src/workbook-control-gui.c (cb_select_auto_expr) : remove
+	  'selection(0)' argument and just pass function name.  The conversion
+	  to SheetView forces a different methodology.
+	* src/workbook-view.c (workbook_view_new) : ditto.
+	(wb_view_auto_expr_recalc) : Make the call manually.
+
+2002-06-22  Jody Goldberg <jody@gnome.org>
+
+	* src/expr.h : support constructed ranges.
+	* src/parser.y (parser_sheet_by_name) : ditto.
+	* src/expr-name.c (name_refer_circular) : ditto.
+
+	* src/expr.c (do_gnm_expr_unref) : support range_ctor and reorder to
+	  produce a better jump table.
+	(gnm_expr_equal) : ditto.
+	(do_expr_as_string) : ditto.
+	(gnm_expr_rewrite) : ditto.
+	(ets_hash) : ditto.
+	(ets_equal) : ditto.
+	(expr_tree_sharer_share) : ditto.
+	(expr_eval_real) : ditto and use gnm_expr_extract_ref.
+	(gnm_expr_extract_ref) : new.
+
+2002-06-21  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (workbook_view_new) : add views of all existing
+	  sheets.
+
+	* src/workbook-control-component.c (wbcc_sheet_focus) : move to new
+	signature.
+
+	* src/application.c (gnumeric_application_finalize) : do not free the
+	  clipboard here.  It is too late.
+
+2002-06-21  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (parse_cell_name) : take a cellpos *
+
+	* src/func-builtin.c (gnumeric_selection) : dummy out for now until a
+	  different approach is available.
+
+	* src/commands.c : convert to sheetview.
+	  s/parent/cmd/ to make things more readable
+	(cmd_selection_clear) : rename from cmd_clear_selection so that we can
+	  start to group the operations that currently operate on selections.
+	(cmd_selection_format) : rename from cmd_format.
+	(cmd_selection_colrow_hide) : rename from cmd_colrow_hide_selection.
+	(cmd_selection_outline_change) : rename from cmd_colrow_outline_change.
+	(cmd_selection_group) : rename from cmd_group.
+	(cmd_selection_autoformat) : rename from cmd_autoformat.
+	(cmd_colrow_hide_correct_selection) : take a control.
+
+	* src/colrow.c (cb_colrow_visibility) : selections are now part of
+	  sheetview.
+	(colrow_get_visiblity_toggle) : ditto.
+
+	* src/cmd-edit.c (cmd_select_cur_row) : convert to sheetview.
+	(cmd_select_cur_col) : ditto.
+	(cmd_select_cur_array) : ditto.
+	(cmd_select_cur_depends) : ditto.
+	(cmd_select_cur_inputs) : ditto.
+	(cmd_paste_to_selection) : ditto.
+
+	* src/bonobo-io.c (deserialize_wb_from_xml_stream) : pass the wbv into
+	  the context directly.
+	(gnumeric_bonobo_write_workbook) : ditto.
+	(gnumeric_bonobo_read_workbook) : ditto.
+
+	* src/consolidate.c (redraw_respan_and_select) : set selection only
+	  for the calling view.
+	(row_consolidate) : pass in the view.
+	(col_consolidate) : ditto.
+	(colrow_consolidate) : ditto.
+	(consolidate_apply) : Take a control so that we can extract the view.
+
+	* src/commands.c (cmd_consolidate_redo) : Pass the control.
+
+2002-06-20  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-view.c (sheet_view_init) : init the selection.
+
+	* src/workbook-view.c (workbook_view_new) : init current_sheet_view.
+	(wb_view_format_feedback) : operate on the sheetview.
+	(wb_view_selection_desc) : ditto.
+	(wb_view_edit_line_set) : ditto.
+
+2002-06-20  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_sheet_add) : Use sheet_get_view.
+	(wb_view_sheet_focus) : ditto.
+	* src/xml-io.c (xml_write_selection_info) : ditto.
+	(xml_read_selection_info): ditto.
+	(xml_workbook_write) : now that the view is in the context don't
+	  bother passing it.
+	(xml_write_wbv_attributes) : ditto.
+	(xml_read_wbv_attributes) : ditto.
+
+2002-06-21  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/application.h (gnumeric_application_get_app) : new
+	* src/application.c (gnumeric_application_get_app) : new
+	(application_clipboard_clear) : emit "clipboard_modified" rather than
+	  calling wb_control_menu_state_update on each control
+	(application_clipboard_cut_copy) : ditto
+	* src/libgnumeric.c (gnm_common_init) : remove debug spew, no need
+	  to keep an app pointer
+	(gnm_shutdown) : use gnumeric_application_get_app rather than a static 
+	  app pointer
+	* src/workbook-control-priv.h : new clipboard_changed_signal field in 
+	  WorkbookControl
+	* src/workbook-control.c (cb_wbc_clipboard_modified) : new
+	(wbc_finalize) : disconnect signal handler
+	(workbook_control_init) : new
+
+2002-06-21  Morten Welinder  <terra@diku.dk>
+
+	* configure.in: When checking for 2.96, use $CC.
+
+2002-06-20  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in (have_pygtk): Add test for Pygtk.
+
+	* acconfig.h: Add WITH_PYGTK
+
+2002-06-19  Jody Goldberg <jody@gnome.org>
+
+	* src/application.c (application_clipboard_cut_copy) : Use sv_weak_ref.
+	(application_clipboard_clear) : Use sv_weak_unref.
+
+	* src/workbook-view.c (wb_view_sheet_add) : create the view before
+	  potentially looking for it.
+
+	* src/workbook-edit.c (wbcg_edit_finish) : Accept text with only a
+	  leading expr char as strings, we know they can not be expressions.
+
+	* src/parse-util.c (gnumeric_char_start_expr_p) : be more lenient
+	  about accepting leading '+' as the start of an expression.
+
+	* src/application.c (application_set_selected_sheet) : merge into.
+	(application_clipboard_cut_copy) : here.
+
+2002-06-19  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/application.h : gobjectify
+	* src/application.c : gobjectify; replace app. with app-> throughout
+	(application_init) : deleted
+	(gnumeric_application_init) : new
+	(gnumeric_application_class_init) : new
+	(application_display_dpi_set) : deleted
+	(application_use_auto_complete) : use gconf
+	(application_live_scrolling) : ditto
+	(application_auto_expr_recalc_lag) : ditto
+	(gnumeric_application_setup_icons) : new
+	(gnumeric_application_finalize) : finalize
+	* src/libgnumeric.c (gnm_common_init) : use new application object
+	(gnm_shutdown) : ditto
+	* src/commands.c (cmd_cell_range_is_locked_effective) : use range type
+	(cmd_dao_is_locked_effective) : new
+	(cmd_sort_redo) : check for locks
+
+2002-06-19  Morten Welinder  <terra@diku.dk>
+
+	* src/mathfunc.c: Update to R 1.5.1.
+	(pexp, pweibull): Use R's version.  All callers
+	changed to match new prototype.
+
+2002-06-19  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_destroy) : no need to unant, that is a view
+	  responsibility.
+
+	* src/sheet-view.c (sv_weakref_notify) : new.
+	(sv_weak_ref) : new.
+	(sv_weak_unref) : new.
+	(sv_unant) : move here from sheet.
+	(sv_ant) : move here from sheet.
+	(sv_selection_copy): from selection.c
+	(sv_selection_cut) : from selection.c
+
+	* src/sheet-control.c (sc_view) : new.
+
+	* src/sheet-control-gui.c (scg_ant) : the animated cursors are now
+	  stored in the view not the sheet.
+	(context_menu_handler) : sync with the workbook control criteria for
+	  enabling paste special.
+
+	* src/selection.c (sheet_selection_copy) : start the process of
+	  migrating to SheetView and move this there.
+	(sheet_selection_cut) : ditto.
+
+	* src/item-cursor.c (item_cursor_do_action) : pass a SheetView.
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_sheet) : pass a
+	  SheetView.
+
+	* src/corba-sheet.c : untested patch to handle views.
+
+	* src/commands.c (cmd_ins_del_colrow_undo) : use the sheetview.
+	(cmd_ins_del_colrow_redo) : ditto.
+	(cmd_ins_del_colrow_finalize) : remove weakref on the view.
+	(cmd_ins_del_colrow) : add a weak ref to the view.
+
+	* src/application.c (application_init) : we store a view now, not just
+	  a sheet.
+	(application_clipboard_clear) : update all workbooks, not just this
+	  one, and store the view.
+	(application_clipboard_unant) : use the view.
+	(application_set_selected_sheet) : the selection is now view based.
+	(application_clipboard_cut_copy) : take a view and remove the crufy
+	  enable_paste_special flag.  That is handled locally.
+	(application_clipboard_is_empty) : handle SheetView.
+	(application_clipboard_is_cut) : ditto.
+	(application_clipboard_sheet_get) : ditto.
+	(application_clipboard_sheet_view_get) : ditto.
+
+	* src/workbook-control-gui.c (wbcg_menu_state_update) : Use the
+	  current sheet not some magic sheet.
+
+	* src/sheet.c (sheet_new) : delete enable_paste_special.
+
+	* src/workbook-control-gui.c (wbcg_menu_state_update) : paste special
+	  is for local copies, use the application data rather than a sheet
+	  local flag.
+
+2002-06-19  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_attach_view) : renamed from sheet_attach_control.
+	(sheet_detach_view) : renamed from sheet_detach_control.
+
+	* src/sheet-view.c : new.
+
+	* src/sheet-control.c (sc_sheet_set) : delete bogus.
+	(sc_view) : new.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new) : A control now takes a
+	  view in place of a model.
+
+	* src/selection.c (sheet_selection_redraw) : adjustment to 
+	  SHEET_FOREACH_CONTROL.
+
+	* src/gnumeric.h : Add SheetView
+	* src/Makefile.am : Add sheet-view.[ch]
+
+2002-06-18  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (cb_insert_current_date) : check for
+	  failure to start editing.
+	(cb_insert_current_time) : ditto.
+
+2002-06-18  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-graph.c (gnm_graph_vector_seq_scalar) : forward port a
+	  patch for keelyn.
+
+	* src/file.c (gnum_file_saver_save_to_stream_real) : forward port a
+	  warning suppression.
+
+	* src/clipboard.c (clipboard_paste_region) : restore the expr_relocate
+	  code in preparation for supporting the XL style heuristic.
+
+	* src/GNOME_Gnumeric.xml : forward port some fixes.
+	* src/sheet-object-widget.c (cb_scrollbar_value_changed) : ditto.
+	(sheet_widget_scrollbar_set_sheet) : ditto.
+
+2002-06-17  Jody Goldberg <jody@gnome.org>
+
+	* src/dependent.c (cb_name_invalidate) : renamed from
+	  cb_name_invalidate_sheet.  Just set the expression to NULL.
+	  no need to be polite.  It just confuses things during workbook
+	  destruction when the name references another sheet which has already
+	  been destroyed.
+
+2002-06-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_cell_range_is_locked_effective) : use 
+	  gnumeric_error_invalid rather than gnumeric_notice,
+	  change arguments to cmd_cell_range_is_locked_effective 
+	  throughout.
+	(cmd_selection_is_locked_effective) : change arguments
+	(cmd_clear_redo) : check for locked cells
+	(cmd_format_redo) : check for locked cells
+
+2002-06-17  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_selection_is_locked_effective) : new
+	(cmd_area_set_text_redo) : check for locked cells
+	(cmd_ins_del_colrow_redo) : check for locked cells and split arrays
+
+2002-06-15  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/application.c : add pixmaps
+	* src/commands.c (cmd_reorganize_sheets_undo) : change call to 
+	  cmd_reorganize_sheets
+	(cmd_reorganize_sheets_redo) : ditto
+	(cmd_reorganize_sheets_finalize) : handle lock lists
+	(cmd_reorganize_sheets) : handle lock lists
+	* src/commands.h (cmd_reorganize_sheets) : change arguments
+	* src/workbook-control-gui.c : change calls to cmd_reorganize_sheets
+	* src/workbook.c (workbook_sheet_reorganize) : handle changed locks
+	* src/workbook.h (workbook_sheet_reorganize) : add arguments
+	* src/pixmaps/Makefile.am : add padlock_no.xpm and padlock.xpm
+	* src/pixmaps/padlock_no.xpm : new
+	* src/pixmaps/padlock.xpm : new
+
+2002-06-14  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook.c (workbook_sheet_detach) : add comment that we should
+	  not do the check if it is during destruction.
+	(workbook_finalize) : Its too late to destroy the 3d depends here.
+	* src/dependent.c (workbook_deps_destroy) : do it here.
+
+	* src/parser.y (parser_sheet_by_name) : new utility function to
+	  support applix style absolute sheet references.
+	(sheetref) : parser_sheet_by_name.
+
+2002-06-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/commands.c (cmd_cell_range_is_locked_effective) : new
+	(cmd_analysis_tool_redo) : check whether output region is locked.
+
+2002-06-13  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/workbook-control-gui.c (workbook_close_if_user_permits) :
+	show "All" buttons only if multiple workbooks are open.
+	
+2002-06-13  Jody Goldberg <jody@gnome.org>
+
+ 	http://bugzilla.gnome.org/show_bug.cgi?id=85181
+	* src/workbook-edit.c (wbcg_edit_start) : protect against recursion
+	  before testing for protection, we may already have a dialog up.
+
+2002-06-12  Rodrigo Moya <rodrigo@gnome-db.org>
+
+	* src/file.c:
+	* src/plugin-service.c: s/IS_GSF/GSF_IS
+
+2002-06-11  Jon K Hellan  <hellan@acm.org>
+
+	* src/file.c: Include unistd.h to declare unlink, close and read.
+
+	* src/main-application.c: Inlude bonobo-main.h to declare
+	bonobo_activate.
+
+2002-06-10  Jon K Hellan  <hellan@acm.org>
+
+	* src/file.c: Fix up includes to make the bonobo version build.
+
+	* src/plugin-service.c: Ditto.
+
+	* src/gui-file.c (ask_for_file_saver, gui_file_save_to_stream):
+	Disable for now to make the bonobo version build.
+
+	* src/workbook-control-gui.c (cb_file_send): Ditto.
+
+2002-06-07  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_open) : convert to libgsf.
+
+	* src/stf.c (stf_open_and_read) : convert to libgsf.
+	(stf_preparse) : ditto.
+	(stf_read_workbook) : ditto.
+	(stf_read_workbook_auto_csvtab) : ditto.
+	(stf_read_default_probe) : ditto.
+
+	* src/stf-parse.c (stf_parse_is_valid_data) : actually disable the
+	  wide char support if it is not available.
+
+	* src/gutils.c (gnm_extension_pointer) : copied from libgnome to
+	  decrease our dependence on it.
+
+	* src/gui-util.c (gnumeric_editable_enters) : modernize a bit.
+
+	* src/gnumeric-simple-canvas.c (gnm_simple_canvas_grab) : suppress
+	  warning.
+
+	* src/file.c (gnum_file_opener_probe_real) : Use libgsf.
+	(gnum_file_opener_open_real) : ditto.
+	(gnum_file_opener_probe) : ditto.
+	(gnum_file_opener_open) : ditto.
+	(gnum_file_saver_save_to_stream_real) : disable, we can move this out
+	  of here when GsfOutput comes online.
+
+	* src/collect.c (string_range_function) : suppress warning.
+
+	* src/cell.c (cell_set_array_formula) : Adjust to the signature change
+	  for gnm_expr_new_array.
+	* src/sheet-autofill.c (autofill_cell) : ditto.
+
+2002-06-07  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : require libgsf.
+
+	* src/xml-io.c (xml_check_version) : move the sanity checking here.
+	(gnumeric_xml_read_workbook) : rather than here.  Support GsfInput.
+	(xml_probe) : and here.
+	(gnumeric_xml_write_workbook_to_stream) : delete.
+
+2002-05-31  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-simple-canvas.c (gnm_simple_canvas_grab) : actually
+	  return the result.
+
+2002-06-01  Jody Goldberg <jody@gnome.org>
+
+ 	http://bugzilla.gnome.org/show_bug.cgi?id=83794
+	* src/stf.c (stf_read_workbook_auto_csvtab) : simple autodetection of
+	  tab delimited vs csv
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=82847
+	* src/value.c (parse_criteria_range) : Check for null in both cases.
+	  Clean up a touch while we are in here.
+
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am (EXTRA_DIST) : include main-component.c
+
+2002-05-29  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump

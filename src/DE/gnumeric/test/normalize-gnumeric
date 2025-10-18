@@ -1,0 +1,81 @@
+#!/usr/bin/perl -w
+# -----------------------------------------------------------------------------
+
+# This script tries to normalize gnumeric files, i.e., remove insignificant
+# differences due to versions, environment, or hash ordering.
+#
+# It is a perl script mucking with an xml file.  Think it over.  It is not
+# hard to cheat this, but for purposes of testing code, it is fine.
+
+use Getopt::Long;
+use strict;
+
+my $ignore_default_size = 0;
+
+&GetOptions ("ignore-default-size", \$ignore_default_size,
+    );
+
+my @items;
+my $item = '';
+
+while (<STDIN>) {
+    # "x" out version numbers.
+    if (m|^\s*<gnm:Version\s+Epoch="\d+"\s+Major="\d+"\s+Minor="\d+"\s+Full="[.0-9]+"/>\s*$|) {
+	s/="[.0-9]+"/="x"/g;
+    }
+    if (m|^\s*<office:document-meta |) {
+	s/( office:version=")[.0-9]+(")/$1XXX$2/;
+    }
+
+    if (m|^\s*<gnm:Calculation |) {
+	s/\b(FloatRadix)="\d+"/$1="x"/;
+	s/\b(FloatDigits)="\d+"/$1="x"/;
+    }
+
+    if ($ignore_default_size && m{^\s*<gnm:(Rows|Cols) }) {
+	s/\b(DefaultSizePts)="[0-9.]+"/$1="x"/;
+    }
+
+    s{(\bxmlns:gnm="http://www.gnumeric.org/v)\d+(\.dtd)"}{$1XX$2};
+
+    if (m|^\s*<gnm:PrintInformation>\s*$| .. m|^\s*</gnm:PrintInformation>\s*$|) {
+        # "x" out margins.
+	if (m|^\s*<gnm:Margins>\s*$| .. m|^\s*</gnm:Margins>\s*$|) {
+	    s/="[-.0-9a-zA-Z]+"/="x"/g;
+	}
+
+	# "x" out information from cups.
+	s{(<gnm:(paper|orientation)>).*(</gnm:\2>)}{$1xxx$3};
+    }
+
+    if (m|^\s*<office:meta>\s*$| .. m|^\s*</office:meta>\s*$|) {
+        s|(<meta:creation-date>).*(</meta:creation-date>)|$1XXX$2|;
+    }
+
+    if (m|^\s*<gnm:name>WorkbookView::do_auto_completion</gnm:name>\s*$| ..
+	m|^\s*</gnm:Attribute>\s*$|) {
+	s|(<gnm:value>).*(</gnm:value>)|$1xxx$2|;
+    }
+
+    # Sort names.
+    if (0 && m|^\s*<gnm:Sheets>\s*$| .. m|^\s*</gnm:Sheets>\s*$|) {
+	if (m|^\s*<gnm:Names>\s*$| .. m|^\s*</gnm:Names>\s*$|) {
+	    if (m|^\s*<gnm:Names>\s*$|) {
+		# Zip.
+	    } elsif (m|^\s*</gnm:Names>\s*$|) {
+		print sort @items;
+		@items = ();
+	    } else {
+		$item .= $_;
+
+		if (m|^\s*</gnm:Name>\s*$|) {
+		    push @items, $item;
+		    $item = '';
+		}
+		next;
+	    }
+	}
+    }
+
+    print;
+}

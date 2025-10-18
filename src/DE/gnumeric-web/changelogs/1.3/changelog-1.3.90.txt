@@ -1,0 +1,161 @@
+2004-09-08  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.3.90
+
+2004-09-08  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_toggle_visibility) : remember
+	  whether to keep a toolbar when in fullscreen mode.
+	(cb_visibility) : simplify.
+
+	* src/wbcg-actions.c (cb_view_fullscreen) : new.
+	(cb_help_irc) : throw something together.
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area) : hide statusbar by
+	  default in fullscreen mode.
+	(cb_add_menus_toolbars) : hide toolbars by default in fullscreen mode.
+	(cb_toolbar_activate) : simplify.
+	(cb_handlebox_visible) : ditto.
+	(cb_toggle_visibility) : new.
+	(cb_wbcg_window_state_event) : handle fullscreen transitions.
+	(wbc_gtk_init) : init the window_state_event handler.
+
+2004-09-08  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (csv_tsv_probe) : accept files < 80 characters long
+
+2004-09-08  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/wbcg-actions.c: Correct Z-Test menu item description and 
+	  title. We do not allow large sample calculations.
+
+2004-09-07  Jody Goldberg <jody@gnome.org>
+
+	* src/pixmaps/Makefile.am : Move to the splash for 1.4
+
+2004-09-07  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-util.[hc] (gnumeric_notice, gnumeric_notice,
+	gnumeric_dialog_run, gnumeric_error_info_dialog_show): Replace
+	WorkboookControlGUI first paremeter with GtkWindow.
+
+	* src/gui-file.c (go_file_is_writable, gui_get_image_save_info,
+	check_multiple_sheet_support_if_needed, do_save_as,
+	gui_file_save_as): Use updated gui-utils
+
+	* src/item-cursor.c (item_cursor_target_region_ok): Ditto
+
+	* src/print.c (sheet_print): Ditto.
+
+	* src/session.c (interaction_function): Ditto.
+
+	* src/wbcg-actions.c (cb_edit_search_replace_query): Ditto.
+
+	* src/workbook-control-gui.c (wbcg_error_error) Ditto.
+	(wbcg_close_if_user_permits): 
+
+2004-09-06  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add a --disable-ssconvert for development.
+	  Constantly linking gnumeric and ssconvert is irritating, but we do
+	  want ssconvert enabled for releases.
+
+2004-09-06  Jody Goldberg <jody@gnome.org>
+
+	* src/GNOME_Gnumeric-gtk.xml : Update to reflect some input from ui
+	  review
+	* src/wbcg-actions.c (actions) : ditto
+	  s/Search/Find/
+	  s/Search and Replace/Replace/
+
+2004-09-02  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (gnumeric_with_gnome): Fix typo.
+
+2004-09-05  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in (GConf): Fix typo.
+
+2004-09-04  Jon K Hellan  <hellan@acm.org>
+
+	* src/wbc-gtk.c (wbc_gtk_init_undo_redo): Update action group of
+	Repeat.
+
+	* src/sheet-object-graphic.c (sheet_object_text_get_property,
+	sheet_object_text_class_init): Add "label" property.
+
+2004-09-03  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : expand the --with-gtk tests and make --with-gnome
+	  conditional on --with-gtk
+
+2004-09-02  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in: start implementing --with-gui via the WITH_GTK
+	  conditional.  Check also for pango, which is required even if no GUI
+	  is used.  We use gtk+-2.0 >= 2.4.0 which requires pango >= 1.4.0; so
+	  we ask pango >= 1.4.0 too.
+	* src/Makefile.am: Conditionalize solver, start using WITH_GTH.
+	* plugins/Makefile.am: compile the mps plugin only if ENABLE_SOLVER
+	  is set; --enable-plugins can override the plugin list.
+	* src/solver.h: Don't declare anything if not !ENABLE_SOLVER; supply
+	  a few stub macros instead.
+	* src/wbcg-actions.c: Conditionalize on ENABLE_SOLVER.
+	* src/xml-io.c (xml_read_solver, xml_write_solver): Likewise.
+
+2004-08-31  Jody Goldberg <jody@gnome.org>
+
+	* src/tools/dao.c : Remove unnecessary include of gtk/gtk.h
+
+2004-07-31  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in: Gnomish autogen.sh uses ACLOCAL_FLAGS, if some of the
+	  macros are in nonstandard places.  If you touch configure.in then,
+	  aclocal.m4 is regenerated, but without ACLOCAL_FLAGS.  This change
+	  ensures that ACLOCAL_FLAGS is propagated to the Makefile.
+	* Makefile.am: ACLOCAL_AMFLAGS = @ACLOCAL_FLAGS@
+
+	* src/ssconvert.c: s/exporter/importer/
+
+2004-08-31  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_chain_sensitivity): Renamed from
+	cb_set_repeat_sensitivity and changed to take action directly.
+	Caller changed.
+
+2004-08-31  Jon K Hellan  <hellan@acm.org>
+
+	* src/sheet-object-graphic.c (sheet_object_polygon_class_init):
+	Initialize sheet_object_class.
+
+2004-08-30  Jon K Hellan  <hellan@acm.org>
+
+	* src/commands.c (cmd_merge_cells_repeat): Shut up warning.
+
+	* src/gui-file.c (gui_wb_view_show): Remove bogus return.
+
+2004-08-30  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_finalize): Destroy
+	visibility_widgets.
+	(wbcg_toggle_visibility): New function.
+	(wbcg_copy_toolbar_visibility): Reinstate.
+	(workbook_control_gui_init): Initialize visibility_widgets.
+
+	* src/wbcg-actions.c (GNM_ACTION_DEF): Use new
+	wbcg_toggle_visibility.
+
+	* src/wbc-gtk.c (wbc_gtk_create_status_area): Add status bar to
+	visibility widgets.
+	(cb_toolbar_activate): Simplify.
+	(cb_add_menus_toolbars): Add toolbars to visibility widgets.
+	(wbc_gtk_set_toggle_action_state): Also look in toolbar actions.
+	Ick -- this gets uglier by the day.
+
+	* src/workbook-control-gui-priv.h (struct WorkbookControlGUI):
+	Replace statusbar member by visibility_widgets.
+
+2004-08-29  Jody Goldberg <jody@gnome.org>
+
+	* configure.in :  post release bump to .90 to indicate transition to
+	  beta status.

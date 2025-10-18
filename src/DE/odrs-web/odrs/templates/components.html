@@ -1,0 +1,72 @@
+{% extends "default.html" %}
+{% block title %}Components{% endblock %}
+
+{% block content %}
+
+<h2>Components</h2>
+
+{% if components|length == 0 %}
+<p>
+  There are no components stored.
+</p>
+{% else %}
+<form method="post" action="{{url_for('admin_component_join2')}}">
+<input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+<table class="table table-hover table-responsive">
+  <tr class="row">
+    <th class="col-sm-4">AppStream ID</th>
+    <th class="col-sm-3">Parent</th>
+    <th class="col-sm-1">Reviews</th>
+    <th class="col-sm-1">Fetches</th>
+    <th class="col-sm-1">
+      <button type="submit" class="btn btn-primary" class="submit">Join</button>
+    </th>
+    <th class="col-sm-2">&nbsp;</th>
+  </tr>
+{% for component in components %}
+  <tr class="row">
+    <td>
+{% if component.parent %}
+      <span class="text-muted">{{component.app_id}}</span>
+{% else %}
+      {{component.app_id}}
+{% endif %}
+    </td>
+    <td>
+{% if component.parent %}
+      {{component.parent.app_id}}
+{% else %}
+      None
+{% endif %}
+    </td>
+    <td>
+      <a href="{{url_for('.admin_show_app', app_id=component.app_id)}}">
+        {{component.review_cnt}}
+      </a>
+    </td>
+    <td>{{component.fetch_cnt}}</td>
+    <td>
+      P: <input type="radio" name="parent" value="{{component.app_id}}">
+      C: <input type="checkbox" name="child" value="{{component.app_id}}">
+    </td>
+    <td>
+      <a class="btn btn-danger btn-block"
+         href="{{url_for('.admin_component_delete', component_id=component.component_id)}}">
+         Delete</a>
+    </td>
+  </tr>
+{% endfor %}
+</table>
+</form>
+
+<div class="alert alert-info" role="alert">
+  <strong>Tip!</strong> You can also remove duplicates using:
+  <code>{{url_for('.admin_component_join',
+                  component_id_parent='parent',
+                  component_id_child='child',
+                  _external=True)}}</code>
+</div>
+
+{% endif %}
+
+{% endblock %}

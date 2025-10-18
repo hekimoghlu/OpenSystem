@@ -1,0 +1,84 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2015 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/buffer.h>
+_PINCLUDE(gstreamermm/private/miniobject_p.h)
+
+extern "C"
+{
+
+static gboolean BufferList_Foreach_gstreamermm_callback(GstBuffer** buffer, guint idx, void* data)
+{
+  Gst::BufferList::SlotForeach* the_slot =
+    static_cast<Gst::BufferList::SlotForeach*>(data);
+
+  try
+  {
+    // First wrap the original buffer.
+    Glib::RefPtr<Gst::Buffer> temp = Glib::wrap(*buffer, true);
+
+    // Call the slot which can modify the buffer (ie. set it to a new one or
+    // clear it altogether).
+    bool result =
+      static_cast<bool>((*the_slot)(temp, idx));
+
+    // Set the reference to the buffer according to how the temp buffer has
+    // been altered.
+    if(!temp)
+    {
+      // Clear the reference to the original buffer also.
+      *buffer = nullptr;
+    }
+    else if(*buffer != temp->gobj())
+    {
+      // The temp buffer has been set to a new one so make the reference point
+      // to it and take an extra reference for when the temp wrapper is
+      // destroyed (I think that's right).
+      *buffer = temp->gobj();
+      temp->reference();
+    }
+
+    return result;
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return true; // continue
+}
+
+} // extern "C"
+
+
+namespace Gst
+{
+void BufferList::insert(gint idx, const Glib::RefPtr<Gst::Buffer>& buffer)
+{
+  buffer->reference();
+  gst_buffer_list_insert(gobj(), idx, buffer->gobj());
+}
+
+void BufferList::foreach(const SlotForeach& slot)
+{
+  gst_buffer_list_foreach(gobj(), &BufferList_Foreach_gstreamermm_callback,
+    const_cast<SlotForeach*>(&slot));
+}
+
+} //namespace Gst

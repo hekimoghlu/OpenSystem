@@ -1,0 +1,92 @@
+/* Copyright (C) 2010 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/styleprovider.h>
+#include <gtkmm/csssection.h>
+#include <glibmm/object.h>
+#include <glibmm/bytes.h>
+#include <giomm/file.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+
+namespace Gtk
+{
+_WRAP_GERROR(CssParserError, GtkCssParserError, GTK_CSS_PARSER_ERROR, newin "3,96", decl_prefix GTKMM_API)
+_WRAP_GERROR(CssParserWarning, GtkCssParserWarning, GTK_CSS_PARSER_WARNING, newin "3,96", decl_prefix GTKMM_API)
+
+/** CSS-like styling for widgets, implementing the StyleProvider base class.
+ *
+ * It is able to parse <a href="https://www.w3.org/TR/CSS2">CSS</a>-like
+ * input in order to style widgets.
+ *
+ * An application can cause GTK to parse a specific CSS style sheet by
+ * calling load_from_file() and adding the provider with
+ * StyleContext::add_provider() or StyleContext::add_provider_for_screen().
+ * In addition, certain files will be read when GTK is initialized.
+ * See the <a href="https://docs.gtk.org/gtk4/class.CssProvider.html">GtkCssProvider documentation</a>
+ * for details of these default files and details of the stylesheets.
+ *
+ * @newin{3,0}
+ */
+class GTKMM_API CssProvider
+  : public Glib::Object,
+    public StyleProvider
+{
+  _CLASS_GOBJECT(CssProvider, GtkCssProvider, GTK_CSS_PROVIDER, Glib::Object, GObject, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(StyleProvider)
+protected:
+  _CTOR_DEFAULT()
+  _IGNORE(gtk_css_provider_new)
+
+public:
+  _WRAP_CREATE()
+
+  _WRAP_METHOD(Glib::ustring to_string() const, gtk_css_provider_to_string)
+
+_DEPRECATE_IFDEF_START
+  /** Loads @a data into this css provider, making it clear any previously loaded information.
+   *
+   * @deprecated 4.12: Use load_from_string() or load_from_bytes() instead.
+   * @param data CSS data loaded in memory.
+   */
+  void load_from_data(const std::string& data);
+_DEPRECATE_IFDEF_END
+  _IGNORE(gtk_css_provider_load_from_data)
+
+  _WRAP_METHOD(void load_from_string(const std::string& string), gtk_css_provider_load_from_string)
+  _WRAP_METHOD(void load_from_bytes(const Glib::RefPtr<const Glib::Bytes>& data), gtk_css_provider_load_from_bytes)
+  _WRAP_METHOD(void load_from_file(const Glib::RefPtr<const Gio::File>& file), gtk_css_provider_load_from_file)
+  _WRAP_METHOD(void load_from_path(const std::string& path), gtk_css_provider_load_from_path)
+  _WRAP_METHOD(void load_from_resource(const std::string& resource_path), gtk_css_provider_load_from_resource)
+
+  _WRAP_METHOD(void load_named(const Glib::ustring& name, const Glib::ustring& variant{NULL}), gtk_css_provider_load_named)
+
+#m4 _CONVERSION(`GtkCssSection*',`const Glib::RefPtr<const CssSection>&',`Glib::wrap($3, true)')
+#m4 _CONVERSION(`const Glib::RefPtr<const CssSection>&',`GtkCssSection*',__CONVERT_CONST_REFPTR_TO_P)
+#m4 _CONVERSION(`const GError*',`const Glib::Error&',`Glib::Error(g_error_copy($3))')
+#m4 _CONVERSION(`const Glib::Error&',`const GError*',__FR2P)
+  // no_default_handler because GtkCssProviderClass is private.
+  /** @param error The parsing error. The referenced object may belong to a subclass of Glib::Error, such as Gtk::CssParserError.
+   */
+  _WRAP_SIGNAL(void parsing_error(const Glib::RefPtr<const CssSection>& section, const Glib::Error& error), "parsing-error", no_default_handler, custom_c_callback)
+
+  _WRAP_PROPERTY("prefers-color-scheme", InterfaceColorScheme)
+  _WRAP_PROPERTY("prefers-contrast", InterfaceContrast)
+};
+
+} // namespace Gtk

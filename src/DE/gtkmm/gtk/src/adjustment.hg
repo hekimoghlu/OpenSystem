@@ -1,0 +1,97 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <glibmm/object.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gtk
+{
+
+/** A class representing an adjustable bounded value.
+ *
+ * The Gtk::Adjustment object represents a value which has an associated
+ * lower and upper bound, together with step and page increments, and a page
+ * size.  It is used within several gtkmm widgets, including
+ * Gtk::SpinButton, Gtk::Viewport, and Gtk::Range (which is a base class for
+ * Gtk::Scrollbar and Gtk::Scale).
+ *
+ * The Gtk::Adjustment object does not update the value itself. Instead it
+ * is left up to the owner of the Gtk::Adjustment to control the value.
+ */
+class GTKMM_API Adjustment : public Glib::Object
+{
+  _CLASS_GOBJECT(Adjustment,GtkAdjustment,GTK_ADJUSTMENT,Glib::Object,GObject, , , GTKMM_API)
+  _DERIVES_INITIALLY_UNOWNED()
+public:
+
+  friend GTKMM_API class Range;
+  friend GTKMM_API class HScrollbar;
+  friend GTKMM_API class VScrollbar;
+
+protected:
+  /** Constructor to create an Adjustment object.
+   * @param value The initial value
+   * @param lower The minimum value
+   * @param upper The maximum value
+   * @param step_increment The step increment
+   * @param page_increment The page increment
+   * @param page_size The page size
+   */
+  Adjustment(double value, double lower, double upper, double step_increment = 1, double page_increment = 10, double page_size = 0);
+
+public:
+  _WRAP_CREATE(double value, double lower, double upper, double step_increment = 1, double page_increment = 10, double page_size = 0)
+
+  _WRAP_METHOD(void clamp_page(double lower, double upper), gtk_adjustment_clamp_page)
+
+  _WRAP_METHOD(void set_value(double value), gtk_adjustment_set_value)
+  _WRAP_METHOD(double get_value() const, gtk_adjustment_get_value)
+
+  _WRAP_METHOD(void set_lower(double lower), gtk_adjustment_set_lower)
+  _WRAP_METHOD(double get_lower() const, gtk_adjustment_get_lower)
+
+  _WRAP_METHOD(void set_upper(double upper), gtk_adjustment_set_upper)
+  _WRAP_METHOD(double get_upper() const, gtk_adjustment_get_upper)
+
+  _WRAP_METHOD(void set_step_increment(double step_increment), gtk_adjustment_set_step_increment)
+  _WRAP_METHOD(double get_step_increment() const, gtk_adjustment_get_step_increment)
+
+  _WRAP_METHOD(void set_page_increment(double page_increment), gtk_adjustment_set_page_increment)
+  _WRAP_METHOD(double get_page_increment() const, gtk_adjustment_get_page_increment)
+
+  _WRAP_METHOD(void set_page_size(double page_size), gtk_adjustment_set_page_size)
+  _WRAP_METHOD(double get_page_size() const, gtk_adjustment_get_page_size)
+
+  _WRAP_METHOD(void configure(double value, double lower, double upper, double step_increment, double page_increment, double page_size), gtk_adjustment_configure)
+
+  _WRAP_METHOD(double get_minimum_increment() const, gtk_adjustment_get_minimum_increment)
+
+  _WRAP_SIGNAL(void changed(), "changed")
+  _WRAP_SIGNAL(void value_changed(), "value_changed")
+
+  _WRAP_PROPERTY("value", double)
+  _WRAP_PROPERTY("lower", double)
+  _WRAP_PROPERTY("upper", double)
+  _WRAP_PROPERTY("step-increment", double)
+  _WRAP_PROPERTY("page-increment", double)
+  _WRAP_PROPERTY("page-size", double)
+
+};
+
+} //namespace Gtk

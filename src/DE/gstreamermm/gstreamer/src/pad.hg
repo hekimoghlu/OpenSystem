@@ -1,0 +1,422 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/object.h>
+#include <gstreamermm/miniobject.h>
+#include <gstreamermm/format.h>
+#include <gstreamermm/event.h>
+#include <gstreamermm/bufferlist.h>
+#include <glibmm/arrayhandle.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+class Buffer;
+class Caps;
+class Element;
+class Event;
+class PadTemplate;
+class Query;
+class PadProbeInfo;
+
+//Gst::Iterator<> forward declaration.
+template <class CppType>
+class Iterator;
+
+_WRAP_ENUM(PadMode, GstPadMode)
+_WRAP_ENUM(FlowReturn, GstFlowReturn)
+_WRAP_ENUM(PadDirection, GstPadDirection)
+_WRAP_ENUM(PadFlags, GstPadFlags)
+_WRAP_ENUM(PadLinkReturn, GstPadLinkReturn)
+_WRAP_ENUM(PadLinkCheck, GstPadLinkCheck)
+_WRAP_ENUM(PadProbeType, GstPadProbeType)
+_WRAP_ENUM(PadProbeReturn, GstPadProbeReturn)
+
+/** A class that represents objects contained by elements that allows links to
+ * other elements.
+ * A Gst::Element is linked to other elements via "pads", which are extremely
+ * light-weight generic link points. After two pads are retrieved from an
+ * element with Element::get_pad(), the pads can be link with link(). (For
+ * quick links, you can also use Element::link(), which will make the obvious
+ * link for you if it's straightforward.)
+ *
+ * Pads are typically created from a Gst::PadTemplate with the create() method
+ * that takes a Gst::PadTemplate.
+ *
+ * Pads without pad templates can be created with create(), which takes a
+ * direction and a name as an argument.
+ *
+ * get_parent_element() will retrieve the Gst::Element that owns the pad.
+ *
+ * A Gst::Element creating a pad will typically use the underlying C API to
+ * register callbacks for various events on the pads.
+ *
+ * Elements will use push() and pull_range() to push out or pull in a buffer.
+ *
+ * To send a Gst::Event on a pad, use send_event() and push_event().
+ *
+ * Last reviewed on 2016-06-06 (1.8.0)
+ */
+class Pad : public Object 
+{
+  _CLASS_GOBJECT(Pad, GstPad, GST_PAD, Object, GstObject)
+
+protected:
+  /** Constructs a Pad given a name and a direction.
+   * @param name The desired name of the pad.
+   * @param direction The desired direction of the pad.
+   */
+  _WRAP_CTOR(Pad(const Glib::ustring& name, PadDirection direction), gst_pad_new)
+
+  /** Constructs a Pad given a direction without specifying a name.  A unique
+   * name will be assigned to the pad.
+   * @param direction the direction of the pad.
+   */
+  explicit Pad(PadDirection direction);
+
+  /** Constructs a Pad from a PadTemplate with the specified name.
+   * @param templ The PadTemplate.
+   * @param name The desired name of the pad.
+   * @throw std::runtime_error if construction fails.
+   */
+  Pad(const Glib::RefPtr<const Gst::PadTemplate>& templ,
+    const Glib::ustring& name);
+
+  /** Constructs a Pad from a PadTemplate without specifying a name.  A unique
+   * name will ge assigned to the pad.
+   * @param templ The PadTemplate.
+   * @throw std::runtime_error if construction fails.
+   */
+  explicit Pad(const Glib::RefPtr<const Gst::PadTemplate>& templ);
+
+public:
+  /** For example,
+   * bool on_have_data(const Glib::RefPtr<Gst::Pad>& pad, const
+   * Glib::RefPtr<Gst::MiniObjec>& data);.
+   */
+  typedef sigc::slot< PadProbeReturn, const Glib::RefPtr<Gst::Pad>&, const Gst::PadProbeInfo& > SlotProbe;
+
+  typedef sigc::slot< Gst::FlowReturn, const Glib::RefPtr<Gst::Pad>&, /*transfer full*/ Glib::RefPtr<Gst::Buffer>& > SlotChain;
+
+  typedef sigc::slot< gboolean, const Glib::RefPtr<Gst::Pad>&, /*transfer full*/Glib::RefPtr<Gst::Event>& > SlotEvent;
+
+  typedef sigc::slot< gboolean, const Glib::RefPtr<Gst::Pad>&, /*transfer none*/ Glib::RefPtr<Gst::Query>& > SlotQuery;
+
+  typedef sigc::slot< bool, const Glib::RefPtr<Gst::Pad>& > SlotActivate;
+
+  typedef sigc::slot< bool, const Glib::RefPtr<Gst::Pad>&, Gst::PadMode, bool > SlotActivatemode;
+
+  typedef sigc::slot< Gst::FlowReturn, const Glib::RefPtr<Gst::Pad>&, guint64, guint, Glib::RefPtr<Gst::Buffer>& > SlotGetrange;
+
+  /** Creates a new pad with the given name in the given direction.
+   *
+   * @param name The name of the new pad.
+   * @param dir The PadDirection of the pad.
+   * @return A new Gst::Pad, or a null RefPtr<> in case of an error. MT safe.
+   */
+  _WRAP_CREATE(const Glib::ustring& name, PadDirection dir)
+
+  /** Creates a new pad with a guaranteed unique name (across all pads) in the
+   * given direction.
+   *
+   * @param dir The PadDirection of the pad.
+   * @return A new Gst::Pad, or a null RefPtr<> in case of an error. MT safe.
+   */
+  _WRAP_CREATE(PadDirection dir)
+
+  /** Creates a new pad with the given name from the given template.
+   *
+   * @param pad_template The pad template to use.
+   *
+   * @return A new Gst::Pad, or a null RefPtr<> in case of an error.
+   * @throw std::runtime_error if construction fails.
+   */
+  _WRAP_CREATE(const Glib::RefPtr<const Gst::PadTemplate>& pad_template)
+
+  /** Creates a new pad with a guaranteed unique name (across all pads) from
+   * the given template.
+   *
+   * @param pad_template The pad template to use.
+   * @param name The name of the pad.
+   * 
+   * @return A new Gst::Pad, or a null RefPtr<> in case of an error.
+   * @throw std::runtime_error if construction fails.
+   */
+  _WRAP_CREATE(const Glib::RefPtr<const Gst::PadTemplate>& pad_template, const Glib::ustring& name)
+
+  _MEMBER_GET(mode, mode, Gst::PadMode, GstPadMode)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> query_caps(Glib::RefPtr<Gst::Caps> caps), gst_pad_query_caps)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Caps> query_caps(Glib::RefPtr<Gst::Caps> caps) const, gst_pad_query_caps, constversion)
+
+  _WRAP_METHOD(PadDirection get_direction() const, gst_pad_get_direction)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Element> get_parent_element(), gst_pad_get_parent_element)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Element> get_parent_element() const, gst_pad_get_parent_element, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Gst::PadTemplate> get_pad_template(), gst_pad_get_pad_template)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::PadTemplate> get_pad_template() const, gst_pad_get_pad_template, constversion)
+  _WRAP_METHOD(PadLinkReturn link(const Glib::RefPtr<Gst::Pad>& sink_pad), gst_pad_link)
+  _WRAP_METHOD(bool unlink(const Glib::RefPtr<Gst::Pad>& sink_pad), gst_pad_unlink)
+  _WRAP_METHOD(bool is_linked() const, gst_pad_is_linked)
+  _WRAP_METHOD(bool can_link(const Glib::RefPtr<const Gst::Pad>& other_pad) const, gst_pad_can_link)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_allowed_caps(), gst_pad_get_allowed_caps)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Caps> get_allowed_caps() const, gst_pad_get_allowed_caps, constversion)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_pad_template_caps(), gst_pad_get_pad_template_caps)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Caps> get_pad_template_caps() const, gst_pad_get_pad_template_caps, constversion)
+
+  gulong add_probe(PadProbeType mask, const SlotProbe& slot);
+  _IGNORE(gst_pad_add_probe)
+  _WRAP_METHOD(void remove_probe(gulong id), gst_pad_remove_probe)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Pad> get_peer(), gst_pad_get_peer)
+  _WRAP_METHOD(Glib::RefPtr<const Gst::Pad> get_peer() const, gst_pad_get_peer, constversion)
+
+  _WRAP_METHOD(void use_fixed_caps(), gst_pad_use_fixed_caps)
+  _WRAP_METHOD(bool is_active() const, gst_pad_is_active)
+
+
+  _WRAP_METHOD(bool is_blocked() const, gst_pad_is_blocked)
+  _WRAP_METHOD(bool is_blocking() const, gst_pad_is_blocking)
+
+  _WRAP_METHOD(void mark_reconfigure(), gst_pad_mark_reconfigure)
+  _WRAP_METHOD(bool needs_reconfigure() const, gst_pad_needs_reconfigure)
+  _WRAP_METHOD(bool check_reconfigure(), gst_pad_check_reconfigure)
+
+  _WRAP_METHOD(bool has_current_caps() const, gst_pad_has_current_caps)
+
+  _WRAP_METHOD(Glib::ustring create_stream_id(const Glib::RefPtr<Gst::Element>& parent, const Glib::ustring& stream_id), gst_pad_create_stream_id)
+  _WRAP_METHOD(Glib::ustring get_stream_id() const, gst_pad_get_stream_id)
+
+  _WRAP_METHOD(void set_offset(gint64 offset), gst_pad_set_offset)
+  _WRAP_METHOD(gint64 get_offset() const, gst_pad_get_offset)
+
+  _WRAP_METHOD(void set_element_private(gpointer priv), gst_pad_set_element_private)
+  _WRAP_METHOD(gpointer get_element_private(), gst_pad_get_element_private)
+
+
+
+  //This is handwritten because conversion from Glib::RefPtr<Gst::Buffer>& to
+  //GstBuffer** is difficult.
+  /** When pad is flushing this function returns Gst::FLOW_WRONG_STATE
+   * immediatly.  Calls the getrange function of pad.  If pad has no getrange
+   * function installed this function returns Gst::FLOW_NOT_SUPPORTED.
+   *
+   * This is a lowlevel function. Usually pull_range() is used.  This function
+   * is designed to be used with a source pad only.
+   *
+   * @param offset The start offset of the buffer.
+   * @param size The length of the buffer.
+   * @param buffer An unitialized Glib::RefPtr<> in which to store the
+   * Gst::Buffer.
+   * @return A Gst::FlowReturn from the pad (Gst::FLOW_NOT_SUPPORTED if pad is
+   * not a source pad). MT safe.
+   */
+  FlowReturn get_range(guint64 offset, guint size, Glib::RefPtr<Gst::Buffer>& buffer);
+  _IGNORE(gst_pad_get_range)
+
+  _WRAP_METHOD(bool query_accept_caps(const Glib::RefPtr<const Gst::Caps>& caps) const, gst_pad_query_accept_caps)
+  _WRAP_METHOD(bool proxy_query_caps(const Glib::RefPtr<Gst::Query>& query) const, gst_pad_proxy_query_caps)
+  _WRAP_METHOD(bool proxy_query_accept_caps(const Glib::RefPtr<Gst::Query>& query) const, gst_pad_proxy_query_accept_caps)
+  _WRAP_METHOD(bool peer_query_accept_caps(const Glib::RefPtr<const Gst::Caps>& caps) const, gst_pad_peer_query_accept_caps)
+  _WRAP_METHOD(bool peer_query_position(Gst::Format format, gint64& cur) const, gst_pad_peer_query_position)
+  _WRAP_METHOD(bool peer_query_duration(Gst::Format format, gint64& duration) const, gst_pad_peer_query_duration)
+  _WRAP_METHOD(FlowReturn push(Glib::RefPtr<Gst::Buffer>&& buffer), gst_pad_push)
+
+  _WRAP_METHOD(bool push_event(Glib::RefPtr<Gst::Event>&& event), gst_pad_push_event)
+
+  /// A push_event() convenience overload. Allows to re-use @a event parameter after function call.
+  bool push_event(const Glib::RefPtr<Gst::Event>& event);
+
+  /** Pulls a buffer from the peer pad.  This function will first trigger the
+   * pad block signal if it was installed.  This method works only on sink
+   * pads.
+   *
+   * When pad is not linked Gst::FLOW_NOT_LINKED is returned else this function
+   * returns the result of get_range() on the peer pad.
+   *
+   * @a buffer's caps must either be unset or the same as what is already
+   * configured on pad. Renegotiation within a running pull-mode pipeline is
+   * not supported.
+   *
+   * @param offset The start offset of the buffer.
+   * @param size The length of the buffer.
+   * @param buffer An uninitialized Glib::RefPtr<> in which to hold the
+   * Gst::Buffer.
+   * @return A Gst::FlowReturn from the peer pad (Gst::FLOW_ERROR if pad is not
+   * a sink pad). When this function returns Gst::FLOW_OK, buffer will contain
+   * a valid Gst::Buffer. @a buffer may not be used when any other return value
+   * than Gst::FLOW_OK is returned. MT safe.
+   */
+  FlowReturn pull_range(guint64 offset, guint size, Glib::RefPtr<Gst::Buffer>& buffer);
+  _IGNORE(gst_pad_pull_range)
+
+
+  _WRAP_METHOD(bool send_event(Glib::RefPtr<Gst::Event>&& event), gst_pad_send_event)
+
+  /// A send_event() convenience overload. Allows to re-use @a event parameter after function call.
+  bool send_event(const Glib::RefPtr<Gst::Event>& event);
+
+  _WRAP_METHOD(bool activate_mode(Gst::PadMode mode, bool active = true), gst_pad_activate_mode)
+  _WRAP_METHOD(bool event_default(const Glib::RefPtr<Gst::Object>& parent{?}, Glib::RefPtr<Gst::Event>&& event), gst_pad_event_default)
+  _WRAP_METHOD(bool query(const Glib::RefPtr<Gst::Query>& query) const, gst_pad_query)
+  _WRAP_METHOD(bool peer_query(const Glib::RefPtr<Gst::Query>& query) const, gst_pad_peer_query)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> peer_query_caps(const Glib::RefPtr<Gst::Caps>& filter) const, gst_pad_peer_query_caps)
+  _WRAP_METHOD(bool query_default(const Glib::RefPtr<Gst::Object>& parent{?}, const Glib::RefPtr<Gst::Query>& query) const, gst_pad_query_default)
+  _WRAP_METHOD(bool query_position(Format format, gint64& position) const, gst_pad_query_position)
+
+  /** Queries a pad for the stream position parsing only the format.
+   * @param format A reference to the Gst::Format asked for. On return contains
+   * the Gst::Format used.
+   * @return true if the query could be performed.
+   */
+  bool query_position(Format& format) const;
+
+  _WRAP_METHOD(bool query_duration(Format format, gint64& duration) const, gst_pad_query_duration)
+
+  /** Queries a pad for the total stream duration parsing only the format.
+   * @param format A reference to the Gst::Format asked for. On return contains
+   * the GstFormat used.
+   * @return true if the query could be performed.
+   */
+  bool query_duration(Format& format) const;
+
+  _WRAP_METHOD(bool query_convert(Format src_format, gint64 src_value, Format dst_format, gint64& dst_value) const, gst_pad_query_convert)
+
+
+   _WRAP_METHOD(bool peer_query_convert(Format src_format, gint64 src_value, Format dst_format, gint64& dst_value) const, gst_pad_peer_query_convert)
+
+  _WRAP_METHOD(Gst::Iterator<Gst::Pad> iterate_internal_links(), gst_pad_iterate_internal_links)
+  _WRAP_METHOD(Gst::Iterator<const Gst::Pad> iterate_internal_links() const, gst_pad_iterate_internal_links)
+  _WRAP_METHOD(Gst::Iterator<Gst::Pad> iterate_internal_links_default(const Glib::RefPtr<Gst::Object>& parent{?}), gst_pad_iterate_internal_links_default)
+  _WRAP_METHOD(Gst::Iterator<const Gst::Pad> iterate_internal_links_default(const Glib::RefPtr<Gst::Object>& parent{?}) const, gst_pad_iterate_internal_links_default)
+  _WRAP_METHOD(Gst::FlowReturn chain(Glib::RefPtr<Gst::Buffer>&& buffer), gst_pad_chain)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Caps> get_current_caps(), gst_pad_get_current_caps)
+  _WRAP_METHOD(bool pause_task() , gst_pad_pause_task)
+  _WRAP_METHOD(bool stop_task() , gst_pad_stop_task)
+  _WRAP_METHOD(bool set_active(bool active = true), gst_pad_set_active)
+
+  _WRAP_METHOD(Gst::FlowReturn get_last_flow_return() const, gst_pad_get_last_flow_return)
+
+  _WRAP_METHOD(Glib::RefPtr<Gst::Event> get_sticky_event(Gst::EventType event_type, guint idx) const, gst_pad_get_sticky_event)
+
+  static GstFlowReturn Pad_Chain_gstreamermm_callback(GstPad* pad, GstObject* parent, GstBuffer *buffer);
+  void set_chain_function(const SlotChain& slot);
+  _IGNORE(gst_pad_set_chain_function_full)
+  static gboolean Pad_Event_gstreamermm_callback(GstPad* pad, GstObject* parent, GstEvent* event);
+  void set_event_function(const SlotEvent& slot);
+  _IGNORE(gst_pad_set_event_full_function_full)
+  static gboolean Pad_Query_gstreamermm_callback(GstPad* pad, GstObject* parent, GstQuery* query);
+  void set_query_function(const SlotQuery& slot);
+  _IGNORE(gst_pad_set_query_function_full)
+  static gboolean Pad_Activate_gstreamermm_callback(GstPad* pad, GstObject* parent);
+  void set_activate_function(const SlotActivate& slot);
+  _IGNORE(gst_pad_set_activate_function_full)
+  static gboolean Pad_Activatemode_gstreamermm_callback(GstPad* pad, GstObject* parent, GstPadMode mode, gboolean active);
+  void set_activatemode_function(const SlotActivatemode& slot);
+  _IGNORE(gst_pad_set_activatemode_function_full)
+  static GstFlowReturn Pad_Getrange_gstreamermm_callback(GstPad* pad, GstObject* parent, guint64 offset, guint length, GstBuffer **buffer);
+  void set_getrange_function(const SlotGetrange& slot);
+  _IGNORE(gst_pad_set_getrange_function_full)
+
+    //C API specific pad callback setting functions are ignored.
+    _IGNORE()
+
+#m4 _CONVERSION(`GstPad*',`const Glib::RefPtr<Gst::Pad>&',`Glib::wrap($3, true)')
+
+  _WRAP_SIGNAL(void linked(const Glib::RefPtr<Gst::Pad>& peer_pad), "linked")
+
+  _WRAP_SIGNAL(void unlinked(const Glib::RefPtr<Gst::Pad>& peer_pad), "unlinked")
+
+  _WRAP_PROPERTY("caps", Glib::RefPtr<Gst::Caps>)
+  _WRAP_PROPERTY("direction", PadDirection)
+  _WRAP_PROPERTY("template", PadTemplate)
+  _WRAP_PROPERTY("offset", gint64)
+
+  /**
+   * Checks whether pad is a ghostpad.
+   */
+  bool is_ghost_pad() const;
+  bool is_proxy_pad() const;
+
+  /**
+   * Handle exceptions occuring in callback methods
+   */
+  void exception_handler();
+
+private:
+  SlotChain slot_chain;
+  SlotEvent slot_event;
+  SlotQuery slot_query;
+  SlotActivate slot_activate;
+  SlotActivatemode slot_activatemode;
+  SlotGetrange slot_getrange;
+};
+
+/*! A gstreamermm dynamic Gst::Pad example.
+ * @example basics/dynamic_pads.cc
+ */
+
+class PadProbeInfo
+{
+  _CLASS_GENERIC(PadProbeInfo, GstPadProbeInfo)
+
+public:
+  PadProbeInfo();
+  explicit PadProbeInfo(GstPadProbeInfo& castitem,
+      bool take_ownership = false);
+  explicit PadProbeInfo(GstPadProbeInfo* castitem,
+        bool take_copy = false);
+  PadProbeInfo(const PadProbeInfo& other);
+  virtual ~PadProbeInfo();
+
+  GstPadProbeInfo* gobj() { return gobj_; };
+
+  const GstPadProbeInfo* gobj() const { return gobj_; };
+
+  _MEMBER_GET(id, id, gulong, gulong)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Event> get_event(), gst_pad_probe_info_get_event, refreturn)
+  _WRAP_METHOD(const Glib::RefPtr<Gst::Event> get_event() const, gst_pad_probe_info_get_event, constversion, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Query> get_query(), gst_pad_probe_info_get_query)
+  _WRAP_METHOD(const Glib::RefPtr<Gst::Query> get_query() const, gst_pad_probe_info_get_query, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Gst::Buffer> get_buffer(), gst_pad_probe_info_get_buffer, refreturn)
+  _WRAP_METHOD(const Glib::RefPtr<Gst::Buffer> get_buffer() const, gst_pad_probe_info_get_buffer, refreturn, constversion)
+  _WRAP_METHOD(Glib::RefPtr<Gst::BufferList> get_buffer_list(), gst_pad_probe_info_get_buffer_list)
+  _WRAP_METHOD(const Glib::RefPtr<Gst::BufferList> get_buffer_list() const, gst_pad_probe_info_get_buffer_list, constversion)
+  
+  PadProbeType get_type() const;
+protected:
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  GstPadProbeInfo* gobj_;
+  bool take_ownership;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+};
+
+} // namespace Gst
+
+namespace Glib
+{
+Gst::PadProbeInfo wrap(GstPadProbeInfo* probe_info, bool take_copy);
+
+} // namespace Glib
+

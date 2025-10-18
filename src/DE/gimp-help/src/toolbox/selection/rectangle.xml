@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2015-12-27 j.h rewrite auto-shrink 
+  2008-03-19 JPL rewiewed & modified en
+  2006-06-12 changed Ctrl+Shift section by j.h
+  2005-12-06 replaced simplesect by sect3 by lexa
+  2005-12-06 replaced informalfigure by figure by lexa
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-tool-rect-select">
+  <title>Rectangle Selection</title>
+  <indexterm>
+    <primary>Tools</primary>
+    <secondary>Rectangle Selection</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Selection</primary>
+    <secondary>Rectangle selection</secondary>
+  </indexterm>
+
+  <para>
+    The Rectangle Selection tool is designed to select rectangular regions of
+    the active layer: it is the most basic of the selection tools, but very
+    commonly used. For information on selections and how they are used in GIMP
+    see <link linkend="gimp-concepts-selection">Selections</link>;
+    for information on features common to all selection tools see
+    <link linkend="gimp-tool-select">Selection Tools</link>.
+  </para>
+  <para>
+    This tool is also used for rendering a rectangle on an image. To render a
+    filled rectangle, create a rectangular selection, and then fill it using
+    the <link linkend="gimp-tool-bucket-fill">Bucket Fill tool</link>.
+    To create a rectangular outline, the simplest and most flexible approach
+    is to create a rectangular selection and then
+    <link linkend="gimp-selection-stroke">stroke</link> it.
+  </para>
+
+  <sect3>
+    <title>Activating the Tool</title>
+    <para>
+      There are different possibilities to activate the tool:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          From the main menu:
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guisubmenu>Selection Tools</guisubmenu>
+            <guimenuitem>Rectangle Select</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By clicking the tool icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-tool-rect-select.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          in the Toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By pressing the <keycap>R</keycap> keyboard shortcut.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+
+  <sect3>
+    <title>Key modifiers</title>
+    <xi:include href="about-common-select-modifiers.xml"/>
+    <variablelist>
+      <varlistentry>
+        <term>
+          <keycap>Ctrl</keycap>
+        </term>
+        <listitem>
+          <para>
+            Pressing the <keycap>Ctrl</keycap> key after starting
+            your selection, and holding it down until you are finished,
+            causes your starting point to be used as the center of the
+            selected rectangle, instead of a corner.  Note that if you
+            press the <keycap>Ctrl</keycap> key <emphasis>before</emphasis>
+            starting to make the selection, the resulting selection will be
+            subtracted from the existing selection. The cursor becomes
+            <guiicon>
+              <inlinemediaobject>
+                <imageobject>
+                  <imagedata
+                    fileref="images/toolbox/cursor-rect-select-modifier-minus.png"/>
+                </imageobject>
+              </inlinemediaobject>
+            </guiicon>
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>
+          <keycap>Shift</keycap>
+        </term>
+        <listitem>
+          <para>
+            If you press the <keycap>Shift</keycap> key
+            <emphasis>before</emphasis> starting the selection, the
+            resulting selection will be added to the existing one. The cursor
+            becomes
+            <guiicon>
+              <inlinemediaobject>
+                <imageobject>
+                  <imagedata
+                    fileref="images/toolbox/cursor-rect-select-modifier-plus.png"/>
+                </imageobject>
+              </inlinemediaobject>
+            </guiicon>
+          </para>
+          <para>
+            Pressing the <keycap>Shift</keycap> key <emphasis>after
+            </emphasis> starting your selection, toggles the <guilabel>Fixed
+            </guilabel> option, and holding it down until you are finished,
+            will constrain the selection to a square, if it is your first
+            selection. Later, with the default <guilabel>Aspect Ratio
+            </guilabel>, your selection will respect the aspect ratio of the
+            previous selection.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>
+          <keycombo>
+            <keycap>Ctrl</keycap>
+            <keycap>Shift</keycap>
+          </keycombo>
+        </term>
+        <listitem>
+          <para>
+            Pressing both keys after starting your selection
+            combines the two effects, giving you a square selection centered
+            on your starting point. Note that pressing these keys before
+            starting your selection intersects the resulting selection with
+            the existing one and the pointer change shape accordingly:
+            <guiicon>
+              <inlinemediaobject>
+                <imageobject>
+                  <imagedata
+                    fileref="images/toolbox/cursor-rect-select-modifier-intersect.png"/>
+                </imageobject>
+              </inlinemediaobject>
+            </guiicon>
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+
+  <sect3 id="tool-rect-select-manip">
+    <title>Tool manipulation</title>
+    <figure>
+      <title>Example of Rectangle Selection.</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/rectangle-selection.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <para>
+      When this tool is selected the mouse pointer is displayed like this:
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/toolbox/cursor-rect-select-mode-tool-crosshair.png"/>
+           </imageobject>
+        </inlinemediaobject>
+      </guiicon>
+      as soon as it is over the image. A drag and drop allows to get a
+      rectangular (or square) shape. When the mouse button is relaxed, a
+      dotted line
+      (<link linkend="glossary-marching-ants"><quote>marching ants</quote></link>)
+      outlines the selection. It's not necessary to adjust the selection with
+      care; you can resize it easily later.
+    </para>
+    <para>
+      When the pointer is moving on the canvas, the pointer and selection
+      aspects change:
+    </para>
+    <para>
+      - outside the selection it looks like previously; this allows to design
+      a new selection but will erase the existing one if this isn't combined
+      with an action on the relevant key to add or subtract another selection
+      as described in the previous paragraph.
+    </para>
+    <para>
+      - within selection peripheral parts, the mouse pointer changes into
+      various shapes when overflying rectangular sensitive and clearly marked
+      areas. These <emphasis>handles</emphasis> allow you to resize the
+      selection. In selection corners the pointer changes into a shape
+      according to the context; for instance in the low right corner it
+      becomes:
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/toolbox/cursor-rect-select-corner-bottom-right.png"/>
+          </imageobject>
+        </inlinemediaobject>
+      </guiicon>.
+      So, by click-and-dragging these areas, you can magnify or shrink the
+      selection size. Over median selection parts, lateral, low or up,
+      pointer is changed into appropriate shapes according to the context.
+      For instance, when the mouse pointer is over the median right side, the
+      pointer looks like:
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/toolbox/cursor-rect-select-side-right.png"/>
+          </imageobject>
+        </inlinemediaobject>
+      </guiicon>.
+      So you can click-and-drag to magnify or to shrink the selection size by
+      moving the chosen boundary.
+    </para>
+    <para>
+      - inside selection central area the mouse pointer looks like usual for
+      object manipulation, i.e.:
+      <guiicon>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              fileref="images/toolbox/cursor-rect-select-modifier-move.png"/>
+          </imageobject>
+        </inlinemediaobject>
+      </guiicon>.
+      So you can move the whole selection by a click-and-drag.
+    </para>
+    <para>
+      Moreover, if you have not unchecked the <guilabel>Highlight</guilabel>
+      option, your work will be easier because what is out the selection will be
+      darkest than what is in the selection, and then the selection seems
+      highlighted.
+    </para>
+    <tip>
+      <para>
+        If you use moving keys you can move the selection or modify its size
+        by one pixel step. If you use it in combination with
+        <keycap>Shift</keycap> you can move it by a 25 pixel step.
+      </para>
+    </tip>
+    <figure>
+      <title>Sensitive selection areas</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="images/toolbox/select-area.png" format="PNG"/>
+        </imageobject>
+        <caption>
+          <para>
+          Display of all possible pointers in function of their localization
+          with respect to the selection area.
+        </para>
+        </caption>
+      </mediaobject>
+    </figure>
+    <para>
+      After creating and modifying the selection, you will have to exit this
+      editing mode (and commit any changes). You can do this with a single
+      click inside the selection or by pressing the <keycap>Enter</keycap>
+      key. Or you can just use a non-selection tool and, for example, fill or
+      paint the selection.
+    </para>
+  </sect3>
+
+  <sect3 id="tool-rect-select-options">
+    <title>Options</title>
+    <figure>
+      <title>Tool Options Dialog</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/tool-options-rectangle-select.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <xi:include href="../about-common-options-display.xml"/>
+
+    <variablelist>
+      <varlistentry>
+        <term>Mode</term>
+        <term>Antialiasing</term>
+        <term>Feather edges</term>
+        <listitem>
+          <xi:include href="about-common-select-options.xml"/>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Rounded corners</term>
+        <listitem>
+          <para>
+            If you enable this option, a slider appears. You can use this to
+            adjust the radius that is used to round the corners of the
+            selection.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Expand from center</term>
+        <listitem>
+          <para>
+            If you enable this option, the point the selection is started by
+            pressing the mouse button is used as center of the selected area.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Fixed</term>
+        <listitem>
+          <para>
+            This menu allows you the option of constraining the shape of
+            the rectangle in different ways.
+          </para>
+          <variablelist>
+            <varlistentry>
+              <term>Aspect ratio</term>
+              <listitem>
+                <para>
+                  This option allows you to design and resize the selection
+                  while keeping the aspect ratio fixed and written within the
+                  relevant box. By default the ratio is 1:1 (so we have a
+                  square) but it can be changed. With the two little landscape
+                  and picture icons, you can invert this ratio.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Width</term>
+              <listitem>
+                <para>
+                  With this choice you can fix the width of the selection.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Height</term>
+              <listitem>
+                <para>
+                  With this choice you can fix the height of the selection.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Size</term>
+              <listitem>
+                <para>
+                  With this choice you can fix the width and height of the
+                  selection.
+                </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Position</term>
+        <listitem>
+          <para>
+            These two text fields contain the current horizontal and vertical
+            coordinates of the upper left corner of the selection. You can use
+            these fields to adjust the selection position precisely.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Size</term>
+        <listitem>
+          <para>
+            These two text fields contain the current width and height of
+            the selection. You can use these fields to adjust the selection
+            size precisely.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Highlight</term>
+        <listitem>
+          <para>
+            If you enable this option, the selected area is emphasized by a
+            surrounding mask to make visual selection much easier.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="composition-guides">
+        <term>Guides</term>
+        <listitem>
+          <indexterm>
+            <primary>Guides</primary>
+            <secondary>Selection guides</secondary>
+          </indexterm>
+          <indexterm>
+            <primary>Composition guides</primary>
+          </indexterm>
+          <para>
+            With this menu you can select the type of guides that is shown
+            within the selection to make the creation of a selection easier,
+            respecting <emphasis>Photo composition rules</emphasis>.
+          </para>
+          <para>
+            Six options are available:
+            <itemizedlist>
+              <listitem>
+                <para>No Guides</para>
+              </listitem>
+              <listitem>
+                <para>Center lines</para>
+              </listitem>
+              <listitem>
+                <para>Rule of thirds</para>
+              </listitem>
+              <listitem>
+                <para>Rule of fifths</para>
+              </listitem>
+              <listitem>
+                <para>Golden sections</para>
+              </listitem>
+              <listitem>
+                <para>Diagonal lines</para>
+              </listitem>
+            </itemizedlist>
+          </para>
+        </listitem>
+      </varlistentry>
+      
+      <varlistentry>
+        <term>Auto Shrink</term>
+        <listitem>
+          <para>
+            This option is active when a rectangle selection is drawn.
+            Clicking on the <guibutton>Auto Shrink Selection</guibutton> 
+            button will make the selection automatically shrink to the 
+            nearest rectangular shape including elements in the selection. 
+            The algorithm for finding the best rectangle to shrink to is
+            <quote>intelligent</quote>, which in this case means that it
+            sometimes does surprisingly sophisticated things, and sometimes
+            does surprisingly strange things. In any case, if the region
+            that you want to select has a solid-colored surround,
+            auto-shrinking will always pick it out correctly. Note that
+            the resulting selection does not need to have the
+            same shape as the one you sweep out.
+          </para>
+          <figure>
+            <title>Auto Shrink example</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/autoshrink-1.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Image with two distinct elements selected
+                </para>
+              </caption>
+            </mediaobject>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                  fileref="images/toolbox/autoshrink-2.png"/>
+              </imageobject>
+              <caption>
+                <para>
+                  Auto Shrink applied
+                </para>
+              </caption>
+            </mediaobject>
+          </figure>             
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>Shrink merged</term>
+        <listitem>
+          <para>
+            If <guilabel>Sample Merged</guilabel>
+            is also enabled, then Auto Shrink will use the pixel information
+            from the visible display of the image, rather than just from the
+            active layer.
+          </para>
+          <para>
+            For more information, see the
+            <link linkend="glossary-samplemerge">Glossary entry</link>.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

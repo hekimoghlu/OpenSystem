@@ -1,0 +1,83 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(pangommconfig.h)
+
+#include <glibmm/value.h>
+#include <pango/pango.h>
+
+_DEFS(pangomm,pango)
+
+namespace Pango
+{
+
+_WRAP_ENUM(Script, PangoScript, decl_prefix PANGOMM_API)
+
+/** A Pango::Language is used to represent a language.
+ */
+class PANGOMM_API Language
+{
+  _CLASS_BOXEDTYPE(Language, PangoLanguage, _pango_language_new, _pango_language_copy, _pango_language_free, PANGOMM_API)
+  _IGNORE(pango_language_get_sample_string) //This function is a bad hack for internal use by renderers and Pango (from pango/pango-utils.c)
+  _IGNORE(pango_language_to_string) //This is defined as a macro
+  _CUSTOM_DEFAULT_CTOR
+
+public:
+  /** Constructs an empty language tag.
+   */
+  Language();
+
+  /** Constructs a Pango::Language object from a RFC-3066 format language tag.
+   * This function first canonicalizes the string by converting it to lowercase,
+   * mapping '_' to '-', and stripping all characters other than letters and '-'.
+   */
+  Language(const Glib::ustring& language);
+
+  /** Gets a RFC-3066 format string representing the given language tag.
+   * @return A string representing the language tag. An empty string is returned if the language tag is empty.
+   */
+  Glib::ustring get_string() const;
+
+  _WRAP_METHOD(bool matches(const Glib::ustring & range_list) const, pango_language_matches)
+  _WRAP_METHOD(bool includes_script(Script script) const, pango_language_includes_script)
+
+  /** Determines the scripts used to write this language.
+   *
+   * If nothing is known about the language tag then an empty vector is returned.
+   * The list of scripts returned starts with the script that the
+   * language uses most and continues to the one it uses least.
+   *
+   * Most languages use only one script for writing, but there are
+   * some that use two (Latin and Cyrillic for example), and a few
+   * use three (Japanese for example). Applications should not make
+   * any assumptions on the maximum number of scripts returned
+   * though, except that it is a small number.
+   *
+   * The includes_script() function uses this function internally.
+   *
+   * @note While the return value is declared as `Pango::Script`, the
+   * returned values are from the `GUnicodeScript` enumeration, which
+   * may have more values. Callers need to handle unknown values.
+   *
+   * @result A vector of Script values.
+   *
+   * @newin{2,14}
+   */
+  std::vector<Script> get_scripts() const;
+  _IGNORE(pango_language_get_scripts)
+};
+
+} /* namespace Pango */

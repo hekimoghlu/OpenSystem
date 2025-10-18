@@ -1,0 +1,84 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+#include <gtkmm/cellarea.h>
+#include <gtkmm/treeview_private.h>
+
+using Sizing = Gtk::TreeViewColumn::Sizing;
+
+namespace Gtk
+{
+
+// Only necessary because of the templated ctor, see .hg file.
+const Glib::Class& TreeViewColumn::class_init_()
+{
+  return treeviewcolumn_class_.init();
+}
+
+TreeViewColumn::TreeViewColumn(const Glib::ustring& title)
+:
+  _CONSTRUCT("title", title.c_str())
+{}
+
+TreeViewColumn::TreeViewColumn(const Glib::ustring& title, Gtk::CellRenderer& cell)
+:
+  _CONSTRUCT("title", title.c_str())
+{
+  //This is equivalent to _gtk_tree_view_column_new_with_attributes().
+  //You will also need to call add_atrribute(), or set_renderer() a few times.
+
+  pack_start(cell, true);
+}
+
+void TreeViewColumn::add_attribute(Gtk::CellRenderer& cell, const Glib::ustring& property_name,
+                                   const TreeModelColumnBase& column)
+{
+  gtk_tree_view_column_add_attribute(gobj(),
+      (GtkCellRenderer*) cell.gobj(), property_name.c_str(), column.index());
+}
+
+void TreeViewColumn::add_attribute(const Glib::PropertyProxy_Base& property,
+                                   const TreeModelColumnBase& column)
+{
+  gtk_tree_view_column_add_attribute(gobj(),
+      (GtkCellRenderer*) property.get_object()->gobj(), property.get_name(), column.index());
+}
+
+void TreeViewColumn::set_renderer(Gtk::CellRenderer& renderer, const TreeModelColumnBase& column)
+{
+  add_attribute(renderer._property_renderable(), column);
+}
+
+
+void TreeViewColumn::set_cell_data_func(CellRenderer& cell_renderer, const SlotTreeCellData& slot)
+{
+  //Create a copy of the slot. A pointer to this will be passed through the callback's data parameter.
+  //It will be deleted when TreeView_Private::gtkmm_SignalProxy_CellData_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotTreeCellData(slot);
+
+  gtk_tree_view_column_set_cell_data_func(
+      gobj(), cell_renderer.gobj(),
+      &TreeView_Private::gtkmm_SignalProxy_CellData_gtk_callback, slot_copy,
+      &TreeView_Private::gtkmm_SignalProxy_CellData_gtk_callback_destroy);
+}
+
+void TreeViewColumn::unset_cell_data_func(CellRenderer& cell_renderer)
+{
+  gtk_tree_view_column_set_cell_data_func(gobj(), cell_renderer.gobj(), nullptr, nullptr, nullptr);
+}
+
+} // namespace Gtk

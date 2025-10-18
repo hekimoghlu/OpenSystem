@@ -1,0 +1,126 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gtkmm/orientable.h>
+#include <gtkmm/enums.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+//TODO: Derive from (and implement) AccessibleRange when we can break ABI.
+
+/** A widget with two adjustable panes.
+ *
+ * Gtk::Paned has two panes, arranged either
+ * horizontally or vertically. The division between
+ * the two panes is adjustable by the user by dragging
+ * a handle.
+ *
+ * Child widgets are added to the panes of the widget with
+ * set_start_child() and set_end_child().
+ * The division between the two children is set by default from the size
+ * requests of the children, but it can be adjusted by the user.
+ *
+ * A paned widget draws a separator between the two child widgets and a small
+ * handle that the user can drag to adjust the division. It does not draw any
+ * relief around the children or around the separator.  (The space
+ * in which the separator is called the gutter.) Often, it is useful to
+ * put each child inside a Gtk::Frame so that the gutter appears as a ridge.
+ * No separator is drawn if one of the children is missing.
+ *
+ * Each child has two options that can be set - resize and shrink. If resize is
+ * true, then when the GtkPaned is resized, that child will expand or shrink
+ * along with the paned widget. If shrink is true, then when that child can be
+ * made smaller than it's requisition. Setting shrink to false allows the
+ * application to set a minimum size. If resize is false for both children,
+ * then this is treated as if resize is true for both children.
+ *
+ * The application can set the position of the slider as if it were set by the
+ * user, by calling set_position().
+ *
+ * @ingroup Widgets
+ * @ingroup Containers
+ */
+class GTKMM_API Paned
+ : public Widget,
+   public Orientable
+{
+  _CLASS_GTKOBJECT(Paned, GtkPaned, GTK_PANED, Gtk::Widget, GtkWidget, , , GTKMM_API)
+  _IMPLEMENTS_INTERFACE(Orientable)
+
+public:
+
+  //Note that we try to use the same defaul parameter value as the default property value.
+  _WRAP_CTOR(Paned(Orientation orientation = Orientation::HORIZONTAL), gtk_paned_new)
+
+  _WRAP_METHOD(void set_start_child(Widget& child), gtk_paned_set_start_child)
+  /** Unsets the start child.
+   *
+   * @newin{4,16}
+   */
+  void unset_start_child();
+  _WRAP_METHOD(Widget* get_start_child(), gtk_paned_get_start_child)
+  _WRAP_METHOD(const Widget* get_start_child() const, gtk_paned_get_start_child, constversion)
+  _WRAP_METHOD(void set_resize_start_child(bool resize = true), gtk_paned_set_resize_start_child)
+  _WRAP_METHOD(bool get_resize_start_child() const, gtk_paned_get_resize_start_child)
+  _WRAP_METHOD(void set_shrink_start_child(bool resize = true), gtk_paned_set_shrink_start_child)
+  _WRAP_METHOD(bool get_shrink_start_child() const, gtk_paned_get_shrink_start_child)
+
+  _WRAP_METHOD(void set_end_child(Widget& child), gtk_paned_set_end_child)
+  /** Unsets the end child.
+   *
+   * @newin{4,16}
+   */
+  void unset_end_child();
+  _WRAP_METHOD(Widget* get_end_child(), gtk_paned_get_end_child)
+  _WRAP_METHOD(const Widget* get_end_child() const, gtk_paned_get_end_child, constversion)
+  _WRAP_METHOD(void set_resize_end_child(bool resize = true), gtk_paned_set_resize_end_child)
+  _WRAP_METHOD(bool get_resize_end_child() const, gtk_paned_get_resize_end_child)
+  _WRAP_METHOD(void set_shrink_end_child(bool resize = true), gtk_paned_set_shrink_end_child)
+  _WRAP_METHOD(bool get_shrink_end_child() const, gtk_paned_get_shrink_end_child)
+
+  _WRAP_METHOD(int get_position() const, gtk_paned_get_position)
+  _WRAP_METHOD(void set_position(int position), gtk_paned_set_position)
+
+  _WRAP_METHOD(void set_wide_handle(bool wide = true), gtk_paned_set_wide_handle)
+  _WRAP_METHOD(bool get_wide_handle() const, gtk_paned_get_wide_handle)
+
+  //Keybinding signals:
+  _IGNORE_SIGNAL("toggle_handle_focus")
+  _IGNORE_SIGNAL("move_handle")
+  _IGNORE_SIGNAL("cycle_handle_focus")
+  _IGNORE_SIGNAL("accept_position")
+  _IGNORE_SIGNAL("cancel_position")
+  _IGNORE_SIGNAL("cycle_child_focus")
+
+  _WRAP_PROPERTY("position", int)
+  _WRAP_PROPERTY("position-set", bool)
+  _WRAP_PROPERTY("min-position", int)
+  _WRAP_PROPERTY("max-position", int)
+  _WRAP_PROPERTY("wide-handle", bool)
+  _WRAP_PROPERTY("resize-start-child", bool)
+  _WRAP_PROPERTY("resize-end-child", bool)
+  _WRAP_PROPERTY("shrink-start-child", bool)
+  _WRAP_PROPERTY("shrink-end-child", bool)
+  _WRAP_PROPERTY("start-child", Widget*)
+  _WRAP_PROPERTY("end-child", Widget*)
+};
+
+} // namespace Gtk

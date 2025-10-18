@@ -1,0 +1,329 @@
+/* This file is part of GEGL
+ *
+ * GEGL is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * GEGL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with GEGL; if not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright 2006 Philip Lafleur
+ */
+
+#include "config.h"
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "gegl-matrix.h"
+
+#define EPSILON 1e-10
+
+#if 0
+static void 
+gegl_matrix3_debug (GeglMatrix3 *matrix)
+{
+  if (matrix)
+    {
+      gchar *str = gegl_matrix3_to_string (matrix);
+      g_print("%s\n", str);
+      g_free (str);
+    }
+  else
+    {
+      g_print("NULL matrix\n");
+    }
+}
+#endif
+
+GeglMatrix3 *
+gegl_matrix3_new (void)
+{
+  return g_new0(GeglMatrix3, 1);
+}
+
+GType
+gegl_matrix3_get_type (void)
+{
+  static GType matrix_type = 0;
+
+  if (!matrix_type) {
+    matrix_type = g_boxed_type_register_static ("GeglMatrix3",
+                                               (GBoxedCopyFunc) gegl_matrix3_copy,
+                                               (GBoxedFreeFunc) g_free);
+  }
+
+  return matrix_type;
+}
+
+void
+gegl_matrix3_identity (GeglMatrix3 *matrix)
+{
+  matrix->coeff [0][0] = matrix->coeff [1][1] = matrix->coeff [2][2] = 1.;
+
+  matrix->coeff [0][1] = matrix->coeff [0][2] = 0.;
+  matrix->coeff [1][0] = matrix->coeff [1][2] = 0.;
+  matrix->coeff [2][0] = matrix->coeff [2][1] = 0.;
+}
+
+void
+gegl_matrix3_round_error (GeglMatrix3 *matrix)
+{
+  gint r;
+
+  for (r = 0; r < 3; r++)
+    {
+      gint c;
+
+      for (c = 0; c < 3; c++)
+        {
+          gdouble x = matrix->coeff[r][c];
+          gdouble i = floor (x + 0.5);
+
+          if (fabs (x - i) < EPSILON)
+            matrix->coeff[r][c] = i;
+        }
+    }
+}
+
+gboolean
+gegl_matrix3_equal (const GeglMatrix3 *matrix1,
+                    const GeglMatrix3 *matrix2)
+{
+  gint x, y;
+
+  for (y = 0; y < 3; y++)
+    for (x = 0; x < 3; x++)
+      if (fabs (matrix1->coeff [y][x] - matrix2->coeff [y][x]) > EPSILON)
+        return FALSE;
+  return TRUE;
+}
+
+gboolean
+gegl_matrix3_is_identity (const GeglMatrix3 *matrix)
+{
+  GeglMatrix3 identity;
+  gegl_matrix3_identity (&identity);
+  return gegl_matrix3_equal (&identity, matrix);
+}
+
+gboolean
+gegl_matrix3_is_scale (const GeglMatrix3 *matrix)
+{
+  GeglMatrix3 copy;
+  gegl_matrix3_copy_into (&copy, matrix);
+  copy.coeff [0][0] = copy.coeff [1][1] = 1.;
+  copy.coeff [0][2] = copy.coeff [1][2] = 0.;
+  return gegl_matrix3_is_identity (&copy);
+}
+
+gboolean
+gegl_matrix3_is_translate (const GeglMatrix3 *matrix)
+{
+  GeglMatrix3 copy;
+  gegl_matrix3_copy_into (&copy, matrix);
+  copy.coeff [0][2] = copy.coeff [1][2] = 0.;
+  return gegl_matrix3_is_identity (&copy);
+}
+
+gboolean
+gegl_matrix3_is_affine (const GeglMatrix3 *matrix)
+{
+  return fabs (matrix->coeff[2][0])       <= EPSILON &&
+         fabs (matrix->coeff[2][1])       <= EPSILON &&
+         fabs (matrix->coeff[2][2] - 1.0) <= EPSILON;
+}
+
+void
+gegl_matrix3_copy_into (GeglMatrix3 *dst,
+                        const GeglMatrix3 *src)
+{
+  memcpy (dst->coeff [0], src->coeff [0], 3 * sizeof (gdouble));
+  memcpy (dst->coeff [1], src->coeff [1], 3 * sizeof (gdouble));
+  memcpy (dst->coeff [2], src->coeff [2], 3 * sizeof (gdouble));
+}
+
+GeglMatrix3 *
+gegl_matrix3_copy (const GeglMatrix3 *matrix)
+{
+#if GLIB_CHECK_VERSION(2,68,0)
+  return (GeglMatrix3 *) g_memdup2 (matrix, sizeof (GeglMatrix3));
+#else
+  return (GeglMatrix3 *) g_memdup (matrix, sizeof (GeglMatrix3));
+#endif
+}
+
+gdouble
+gegl_matrix3_determinant (const GeglMatrix3 *matrix)
+{
+  gdouble determinant;
+
+  determinant = matrix->coeff [0][0] * (matrix->coeff [1][1] * matrix->coeff [2][2] -
+                                 matrix->coeff [1][2] * matrix->coeff [2][1])
+              - matrix->coeff [0][1] * (matrix->coeff [1][0] * matrix->coeff [2][2] -
+                                 matrix->coeff [1][2] * matrix->coeff [2][0])
+              + matrix->coeff [0][2] * (matrix->coeff [1][0] * matrix->coeff [2][1] -
+                                 matrix->coeff [1][1] * matrix->coeff [2][0]);
+  return determinant;
+}
+
+void
+gegl_matrix3_invert (GeglMatrix3 *matrix)
+{
+  GeglMatrix3 copy;
+  gdouble coeff;
+
+  gegl_matrix3_copy_into (&copy, matrix);
+  coeff = 1 / gegl_matrix3_determinant (matrix);
+
+  matrix->coeff [0][0] = (copy.coeff [1][1] * copy.coeff [2][2] -
+                   copy.coeff [1][2] * copy.coeff [2][1]) * coeff;
+  matrix->coeff [1][0] = (copy.coeff [1][2] * copy.coeff [2][0] -
+                   copy.coeff [1][0] * copy.coeff [2][2]) * coeff;
+  matrix->coeff [2][0] = (copy.coeff [1][0] * copy.coeff [2][1] -
+                   copy.coeff [1][1] * copy.coeff [2][0]) * coeff;
+
+  matrix->coeff [0][1] = (copy.coeff [0][2] * copy.coeff [2][1] -
+                   copy.coeff [0][1] * copy.coeff [2][2]) * coeff;
+  matrix->coeff [1][1] = (copy.coeff [0][0] * copy.coeff [2][2] -
+                   copy.coeff [0][2] * copy.coeff [2][0]) * coeff;
+  matrix->coeff [2][1] = (copy.coeff [0][1] * copy.coeff [2][0] -
+                   copy.coeff [0][0] * copy.coeff [2][1]) * coeff;
+
+  matrix->coeff [0][2] = (copy.coeff [0][1] * copy.coeff [1][2] -
+                   copy.coeff [0][2] * copy.coeff [1][1]) * coeff;
+  matrix->coeff [1][2] = (copy.coeff [0][2] * copy.coeff [1][0] -
+                   copy.coeff [0][0] * copy.coeff [1][2]) * coeff;
+  matrix->coeff [2][2] = (copy.coeff [0][0] * copy.coeff [1][1] -
+                   copy.coeff [0][1] * copy.coeff [1][0]) * coeff;
+}
+
+
+void
+gegl_matrix3_multiply (const GeglMatrix3 *left,
+                       const GeglMatrix3 *right,
+                       GeglMatrix3 *product)
+{
+  GeglMatrix3 temp;
+  gint    i;
+
+  for (i = 0; i < 3; i++)
+    {
+      temp.coeff [i][0] = left->coeff [i][0] * right->coeff [0][0]
+                    + left->coeff [i][1] * right->coeff [1][0]
+                    + left->coeff [i][2] * right->coeff [2][0];
+      temp.coeff [i][1] = left->coeff [i][0] * right->coeff [0][1]
+                    + left->coeff [i][1] * right->coeff [1][1]
+                    + left->coeff [i][2] * right->coeff [2][1];
+      temp.coeff [i][2] = left->coeff [i][0] * right->coeff [0][2]
+                    + left->coeff [i][1] * right->coeff [1][2]
+                    + left->coeff [i][2] * right->coeff [2][2];
+    }
+
+  gegl_matrix3_copy_into (product, &temp);
+}
+
+void
+gegl_matrix3_originate (GeglMatrix3 *matrix,
+                        gdouble      x,
+                        gdouble      y)
+{
+  /* assumes last row is [0 0 1] (true for affine transforms) */
+  matrix->coeff [0][2] = matrix->coeff [0][0] * (-x) +
+                         matrix->coeff [0][1] * (-y) +
+                         matrix->coeff [0][2] + x;
+  matrix->coeff [1][2] = matrix->coeff [1][0] * (-x) +
+                         matrix->coeff [1][1] * (-y) +
+                         matrix->coeff [1][2] + y;
+}
+
+void
+gegl_matrix3_transform_point (const GeglMatrix3 *matrix,
+                              gdouble     *x,
+                              gdouble     *y)
+{
+  gdouble xp, yp, w;
+
+  w = (*x * matrix->coeff [2][0] + *y * matrix->coeff [2][1] + matrix->coeff [2][2]);
+
+  xp = (*x * matrix->coeff [0][0] + *y * matrix->coeff [0][1] + matrix->coeff [0][2]) / w;
+  yp = (*x * matrix->coeff [1][0] + *y * matrix->coeff [1][1] + matrix->coeff [1][2]) / w;
+
+  *x = xp;
+  *y = yp;
+}
+
+void
+gegl_matrix3_parse_string (GeglMatrix3 *matrix,
+                           const gchar *string)
+{
+  gegl_matrix3_identity (matrix);
+  if (strstr (string, "translate"))
+    {
+      gchar *p = strchr (string, '(');
+      gfloat a;
+      gfloat b;
+      if (!p) return;
+      p++;
+      a = g_ascii_strtod (p, &p);
+      if (!p) return;
+      p = strchr (string, ',');
+      if (!p) return;
+      p++;
+      b = g_ascii_strtod (p, &p);
+      if (!p) return;
+
+      matrix->coeff [0][2] = a;
+      matrix->coeff [1][2] = b;
+    }
+  else if (strstr (string, "matrix"))
+    {
+      gchar *p = strchr (string, '(');
+      gfloat a;
+      gint i,j;
+      if (!p) return;
+      p++;
+
+
+      for (i=0;i<3;i++)
+        for (j=0;j<3;j++)
+          {
+            a = g_ascii_strtod(p, &p);
+            matrix->coeff [j][i] = a;
+            if (!p) return;
+            p = strchr (p, ',');
+            if (!p) return;
+            p++;
+          }
+    }
+}
+
+gchar *
+gegl_matrix3_to_string (const GeglMatrix3 *matrix)
+{
+  gchar    dstring[G_ASCII_DTOSTR_BUF_SIZE];
+  GString *str = g_string_new ("matrix(");
+  gint     i, j;
+  gint     a = 0;
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++)
+      {
+        if (a != 0)
+          g_string_append (str, ",");
+        a = 1;
+        /* Do not use g_string_append_printf () or any other printf
+         * function because they are locale dependent.
+         */
+        g_ascii_dtostr (dstring, sizeof (dstring),
+                        matrix->coeff[j][i]);
+        g_string_append (str, dstring);
+      }
+  return g_string_free (str, FALSE);
+}

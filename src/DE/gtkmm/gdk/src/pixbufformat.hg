@@ -1,0 +1,65 @@
+/* Copyright (C) 2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_DEFS(gdkmm,gdk)
+
+#include <gdkmmconfig.h>
+#include <glibmm/value.h>
+#include <vector>
+
+namespace Gdk
+{
+ /** Contains information about the image format accepted by a module.
+ */
+class GDKMM_API PixbufFormat
+{
+  _CLASS_BOXEDTYPE(PixbufFormat, GdkPixbufFormat, NONE, gdk_pixbuf_format_copy, gdk_pixbuf_format_free, GDKMM_API)
+  _IGNORE(gdk_pixbuf_format_copy, gdk_pixbuf_format_free)
+
+public:
+  _CUSTOM_DEFAULT_CTOR
+  PixbufFormat();
+
+  _WRAP_METHOD(Glib::ustring get_name() const, gdk_pixbuf_format_get_name)
+  _WRAP_METHOD(Glib::ustring get_description() const, gdk_pixbuf_format_get_description)
+
+#m4 _CONVERSION(`gchar**',`std::vector<Glib::ustring>',`Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_mime_types() const, gdk_pixbuf_format_get_mime_types)
+  _WRAP_METHOD(std::vector<Glib::ustring> get_extensions() const, gdk_pixbuf_format_get_extensions)
+  _WRAP_METHOD(bool is_save_option_supported(const Glib::ustring& option_key) const, gdk_pixbuf_format_is_save_option_supported)
+  _WRAP_METHOD(bool is_writable() const, gdk_pixbuf_format_is_writable)
+
+  _WRAP_METHOD(bool is_scalable() const, gdk_pixbuf_format_is_scalable)
+  _WRAP_METHOD(bool is_disabled() const, gdk_pixbuf_format_is_disabled)
+  _WRAP_METHOD(void set_disabled(bool disabled = true), gdk_pixbuf_format_set_disabled)
+  _WRAP_METHOD(Glib::ustring get_license() const, gdk_pixbuf_format_get_license)
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+struct PixbufFormatTraits
+{
+  typedef PixbufFormat  CppType;
+  typedef const GdkPixbufFormat*      CType;
+  typedef GdkPixbufFormat*            CTypeNonConst;
+
+  static CType   to_c_type      (const CppType& obj) { return obj.gobj();     }
+  static CType   to_c_type      (CType          ptr) { return ptr;                   }
+  static CppType to_cpp_type    (CType          ptr) { return PixbufFormat(const_cast<GdkPixbufFormat*>(ptr), true); }
+  static void    release_c_type (CType          /* ptr */) { /* Doesn't happen */ }
+};
+#endif //DOXYGEN_SHOULD_SKIP_THIS
+
+} // namespace Gdk

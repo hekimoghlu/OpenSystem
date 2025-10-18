@@ -1,0 +1,2037 @@
+2009-03-22  Morten Welinder <terra@gnome.org>
+
+	* Release 1.9.5
+
+2009-03-20  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-widget.c (sheet_widget_radio_button_create_widget):
+	Set label.
+	(sheet_widget_adjustment_get_ref, sheet_widget_checkbox_get_ref,
+	sheet_widget_list_base_get_ref): Remove.
+	(so_get_ref): New generic function replacing the above.
+	(sheet_widget_adjustment_clear_sheet, sheet_widget_checkbox_clear_sheet,
+	sheet_widget_radio_button_clear_sheet, sheet_widget_list_base_clear_sheet):
+	Remove.
+	(so_clear_sheet): New generic function replacing the above.
+
+2009-03-19  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (gnumeric_reqs): Require glib 2.12 for
+	g_hash_table_remove_all.
+
+2009-03-18  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (warn_about_ancient_gnumerics): Remove --
+	it last served a useful purpose 6-8 years ago.
+
+2009-03-17  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Reconnect the no-splash and
+	no-warnings flags.
+
+	* src/wbc-gtk.c (sheet_menu_label_run): Toss the sheets into a
+	submenu and display it regardless of how many sheets we have.
+
+2009-03-16  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (datetime_locale_setup): Handle the nb_NO
+	case where abbreviated months end in a period by making that
+	period optional on entry.
+
+2009-03-15  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (format_match): Use
+	go_format_default_accounting.
+
+	* src/wbc-gtk-actions.c (cb_format_as_accounting): Ditto.
+
+2009-03-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (gnm_format_frob_slashes): Import from
+	number-match and make public.  Rename from frob_slashes.  All
+	callers changed.
+	(gnm_format_for_date_editing): Change slashes to whatever the
+	locale uses.
+
+2009-03-14  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/ssgrep.c (string-table-count): correct option description
+	  [#575360]
+
+2009-03-14  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: check if goffice uses gconf and make gconf use
+	independent from the with-gnome option. [#574813]
+	* schemas/Makefile.am: ditto.
+
+2009-03-13  Jody Goldberg <jody@gnome.org>
+
+	* po/LINGUAS : rename sr@Latn -> sr@latin to maintain compatibility
+	  with gtk and simplify win32 packaging.
+
+2009-03-13  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (frob_slashes): New function to replace
+	hardcoded slashes with whatever the locale uses for date
+	separation.
+	(format_match_datetime): Call frob_slashes as needed.  Free
+	date_format as needed.
+
+	* src/cell.c (gnm_cell_set_format): Improve precondition.
+
+2009-03-12  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-gui.c (scg_drag_data_get): Handle
+	GNUMERIC_SHEET target too.  Fixes #574763, caused by patch from
+	#523033.
+
+2009-03-13  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_realize) : clear the 'im_block_edit_start' flag.
+	(gnm_pane_unrealize) : set the flag.
+
+	* src/application.c (gnm_app_add_extra_ui) : take a group name.
+	(gnm_app_remove_extra_ui) : patch minor leak.
+	* src/gnm-plugin.c (plugin_service_ui_activate) : use the supplied
+	  group name rather than a static name that is shared between all
+	  custom ui.
+
+2009-03-11  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (cb_file_sendto): Import from
+	wb_view_sendto and use go_gtk_url_show.  Plug leak.
+
+	* src/workbook-view.c (wb_view_save_to_uri): Rename from
+	wbv_save_to_uri and make public.
+	(wb_view_sendto): Remove.
+
+2009-03-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_cell_gtk): shift rotated text into the 
+	  correct position! Fixes #574813
+
+2009-03-10  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.h (cmd_so_set_value): add Sheet* argument. 
+	  Fixes #574734
+
+	* src/commands.c (cmd_so_set_value): use new Sheet* argument
+	  that gives the sheet of the widget rather than the sheet of the
+	  associated cell
+
+	* src/sheet-object-widget.c: adjust all callers of cmd_so_set_value
+
+2009-03-10  Morten Welinder  <terra@gnome.org>
+
+	* Makefile.am (gnumeric.desktop): Always use URIs.  Fixes #574816.
+
+2009-03-06  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/func.c (function_def_get_arg_name): don't translate an
+	  empty argument name since you wouldn't get what you expect.
+
+2009-03-05  Morten Welinder  <terra@gnome.org>
+
+	* src/item-cursor.c (struct _ItemCursor): Track last (x,y) for
+	mouse.
+	(item_cursor_event): Set (x,y).
+	(item_cursor_tip_setlabel): Use (x,y) for position.
+
+	* src/item-grid.c (struct _ItemGrid): Track last (x,y) for mouse.
+	(cb_cursor_come_to_rest): Use last (x,y) to position the tip.
+
+	* src/gui-util.c (gnumeric_create_tooltip): Take a reference
+	widget instead of a GdkScreen.  All callers changed.
+	(gnumeric_position_tooltip): Get position as argument instead of
+	asking where the mouse cursor is by the time we get here.  All
+	callers changed.
+
+2009-03-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet.c (sheet_get_printarea): If the print area has been set 
+	  to something other than the full sheet, always use the whole
+	  print area.
+
+2009-02-28  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (gtk+): Require 2.12 for
+	gtk_tree_view_convert_bin_window_to_widget_coords.
+
+2009-02-25  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-gui.c (scg_drag_receive_same_process): Make it
+	clear we are only getting the modifier mask.
+
+	* src/gui-util.c (gnumeric_position_tooltip): Make this multihead
+	safe too.
+
+2009-02-24  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_create_tooltip): Add extra screen
+	argument so we can pop up on the right screen.  All callers
+	changed.
+
+	* src/gnm-pane.c (gnm_pane_display_obj_size_tip): Make this
+	multihead safe.
+
+	* src/wbc-gtk.c (cb_sheet_label_drag_begin): Pop up the arrow on
+	the right screen.
+
+	* src/sheet-control-gui.c (scg_comment_display): Pop up the cell
+	comment on the right screen and at coordinates relating to that
+	screen.
+
+2009-02-22  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post release version bump
+
+2009-02-22  Morten Welinder <terra@gnome.org>
+
+	* Release 1.9.4
+
+2009-02-21  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.c (colrow_reset_defaults): Retry this mess.
+
+2009-02-19  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (convert): Don't complain over multiple sheets
+	when there is only one.  Fixes #572448.
+
+	* src/wbc-gtk.c (set_toolbar_style_for_position): The GTK+
+	busy-bodies have deprecated gtk_toolbar_set_orientation in favour
+	of gtk_orientable_set_orientation.  Attempt (blindly!) to switch
+	if we have gtk_orientable_set_orientation.
+
+	* configure.in (with_corba): Disable.  Fixes #572356.
+
+	* src/colrow.c (colrow_reset_defaults): Toughen this up a bit to
+	avoid situations like 568010.
+
+2009-02-13  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_general): Flag row overflow.
+
+	* src/stf.c (stf_read_workbook_auto_csvtab): Check for row
+	overflow too.  Fixes #517603.
+
+2009-02-11  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (gnm_dep_container_dump): Take sheet too, so
+	redundant sheet names in output can be suppressed.
+	(dump_single_dep, dump_range_dep): Ditto.
+	(dependent_debug_name_for_sheet): New function.
+
+	* src/expr.c (gnm_expr_eval): Make sure parentheses do not take up
+	stack space.
+
+	* src/stf-parse.c (stf_cell_set_text): New function.
+	(stf_parse_sheet): Use stf_cell_set_text, not gnm_cell_set_text.
+	Fixes #571129.
+
+	* src/gui-clipboard.c (table_content_received): Check both windows
+	and unix versions of target atoms.  Fixes #564166.
+
+2009-02-10  Morten Welinder  <terra@gnome.org>
+
+	* gnumeric.desktop.in (MimeType): Do not advertise deprecated
+	comma-separated-values mime type.  Fixes #571073.
+
+	* src/stf.c (stf_init): Ditto.
+
+2009-02-05  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (x_targets_received): Activate debugging
+	code, see http://bugzilla.gnome.org/show_bug.cgi?id=564166#c4
+
+2009-02-04  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Set UTF-8 for gnumeric-functions
+	too.
+
+2009-02-02  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_regcomp_XL): Take new argument "full" for
+	indicating that the match must be for the full string.  All
+	callers changed.
+
+2009-01-31  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (build_range_ctor): Use gnm_expr_new_range_ctor,
+	not build_binop.
+
+	* src/expr.c (gnm_expr_new_range_ctor): New function.
+
+2009-01-30  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Change the help strings not to have curly braces in
+	them ("--{with,without}-foo") as this caused newer versions of aclocal
+	to fail.
+
+2009-01-30  Diego E. Flameeyes Pettenò   <flameeyes@gentoo.org>
+
+	* configure.in: Fix help strings.  (#569842)
+
+2009-01-29  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_add_custom_ui): Handle merge failure.  Work
+	around bug #569724.
+
+	* src/parse-util.c (rangeref_parse): Fix parsing problem for
+	"a12:indirect(...)".  Fixes #569730.
+
+2009-01-29  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/selection.c: (sv_selection_to_plot): really share x values.
+
+2009-01-28  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gnm_regcomp_XL): Simplify and fixing quoting of ?.
+
+2009-01-26  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (sheet_menu_label_run): If there are more sheets
+	than we can show, put a list of sheets into the menu.
+
+2009-01-25  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (link_range_dep, unlink_range_dep): Restrict the
+	range that goes into the bucket to the intersection of the source
+	range and the bucket area.  This improves dependency search
+	efficiency markedly when a large number of large ranges are in
+	play.  Fixes performance part of #567389.
+
+2009-01-24  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_group): use g_warning rather than 
+	g_return_val_if_fail. Fixes 568991.
+
+2009-01-24  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (running_in_tree): Make this a separate function.
+	Fix for ssconvert and friends.
+
+2009-01-22  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (select_range): If the sheet and wbc are for
+	different workbooks, do nothing.  Fixes #568634.
+
+2009-01-20  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (dependent_eval): Clear GNM_CELL_HAS_NEW_EXPR
+	here.  Otherwise expressions loaded from files will appear to have
+	new expressions even after they were recalculated.
+
+	* src/func.c (function_call_with_exprs): If we are not doing
+	implicit iteration, use gnumeric_if instead of gnumeric_if2.
+	Fixes #326595.
+
+	* src/func-builtin.c (gnumeric_if): Import from fn-logical.
+	Change help to new style.
+	(gnumeric_if2): Variant that takes the argument un-eval'd.
+
+2009-01-16  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (gnumeric_reqs): Require glib 2.10.
+
+2009-01-16  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-pane.c: (cb_sheet_object_canvas_event): do not select an
+	existing sheet object when creating a new graph. [#151789]
+
+2009-01-12  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_eval): Set value format properly.
+
+	* src/value.h (VALUE_FMT): Make result const and an r-value.  All
+	users changed as needed.
+	* src/number-match.h (format_match, format_match_number): Make the
+	cur_fmt argument const.
+	* src/mstyle.c (gnm_style_set_format): Make the format argument
+	const.
+	* src/parse-util.c (parse_text_value_or_expr): Make the cur_fmt
+	argument const.
+	* src/cell.c (gnm_cell_get_format): Make the result const.  All
+	callers changed as needed.
+
+2009-01-12  Morten Welinder  <terra@gnome.org>
+
+	* src/cell.c (gnm_cell_get_entered_text): Apply cell format as
+	well as value format.  Applying only value format is certainly
+	wrong.
+
+2009-01-11  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gutils_init): Make detection of in-tree running
+	work with newer libtools.
+
+2009-01-11  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* src/xml-sax-read.c: (xml_sax_attr_range, xml_sax_style_region_start):
+	Don't crash on old gnumeric files which have gnm:StyleRegion tags
+	without attributes in them. (Debian #510929)
+
+2009-01-09  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.c: (gnm_go_data_vector_get_str): set -1 as format length.
+	[#552721]
+
+2008-12-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/graph.h: add widgets to force using rows/columns as chart series,
+	and to use first row/column as shared x values in scatter plots.
+	* src/selection.c: (sv_selection_to_plot): ditto.
+	* src/sheet-object-graph.c: (cb_graph_data_closure_done),
+	(cb_selection_mode_changed), (cb_shared_mode_changed),
+	(sheet_object_graph_guru): ditto.
+
+2008-12-30  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (LIBS): Up pango requirement modestly.
+	* src/main-application.c (main): Drop check for old pango bug.
+
+	* src/main-application.c (main): Conditionalize closing of
+	displays.  Set GNM_DEBUG=close-displays.
+
+2008-12-28  Morten Welinder  <terra@gnome.org>
+
+	* src/libgnumeric.c (gnm_pre_parse_init): Call g_type_init here
+	too.  libgoffice_init currently assumes it indirectly.
+
+2008-12-19  Morten Welinder  <terra@gnome.org>
+
+	* src/search.c (gnm_search_replace_query_fail,
+	gnm_search_replace_query_cell, gnm_search_replace_query_comment):
+	New functions to hide the details of how to query.
+
+	* src/commands.c (cmd_search_replace_do_cell): Simplify using
+	gnm_search_replace_query_fail, gnm_search_replace_query_cell, and
+	gnm_search_replace_query_comment.
+
+2008-12-15  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-datetime.c (gnm_datetime_allow_negative): New function.
+	(datetime_value_to_serial_raw): Err on negative date numbers
+	unless goffice supports them.
+
+2008-12-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-datetime.c (datetime_value_to_serial): Handle overflow.
+	(datetime_value_to_g): Use G_MAXINT for errors.
+	(datetime_value_to_serial_raw): Make static.  Return G_MAXINT for
+	errors.
+	Fixes #564502.
+
+2008-12-13  Emmanuel Pacaud <emmanuel@gnome.org>
+
+	Add a workaround for the murrine theme warnings.
+
+	* src/item-bar.c (ib_draw_cell): here.
+	* src/sheet-control-gui.c (cb_select_all_btn_expose): here.
+
+2008-12-13  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_number_system): New function to
+	dump information on the number system used.
+	(xml_write_calculation): Call xml_write_number_system.
+	(gnm_cellregion_to_xml): Call xml_write_number_system.
+	(gnm_xml_file_save): Move call to xml_write_calculation before the
+	sheets.
+
+	* src/parse-util.c (gnm_conventions_new_full): Default value
+	GNM_DIG for new field output.decimal_digits.
+
+	* src/value.c (value_get_as_gstring): Use number of digits from
+	output.decimal_digits.
+
+	* src/xml-sax-write.c (gnm_xml_io_conventions): Increase the
+	number of decimal digits used for output to avoid rounding errors
+	and overflow.  Fixes #552464.
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Turn expressions that
+	do not parse into strings.
+
+2008-12-12  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_options_guess_csv): New function.
+
+	* src/stf.c (stf_read_workbook_auto_csvtab): If the filename
+	suggest a scv file, use stf_parse_options_guess_csv.
+
+2008-12-11  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (cb_flag_windows_changed): Don't send the
+	signal if Elvis has left the building.
+
+	* src/parser.y (unregister_allocation): Check the whole stack if
+	we have to.  Fixes #564077.
+
+2008-12-09  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_sheet_remove_all): Kill the current scg
+	last.
+	(wbc_gtk_setup_icons): Shut down the icon factory on exit.
+	(add_icon): Plug leaks.
+
+2008-12-08  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_conf_shutdown): Plug leaks.
+
+	* src/gnm-plugin.c (plugin_service_ui_activate): Plug leak.
+
+	* src/ssgrep.c (main): Plug leak.
+	* src/ssconvert.c (main): Plug leak.
+	* src/ssindex.c (main): Plug leak.
+
+2008-12-04  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (gnm_cellregion_to_xml): Set state.sheet so
+	we can init parse positions later.
+
+	* src/xml-io.c (xml_cellregion_read): Copy the string.  It need
+	not be null terminated.  Assign ctxt->sheet.
+	(xml_read_sheet_object): New argument, assign, to explicitly
+	control whether to assign the object to the sheet.  Fixes #556561.
+
+2008-12-02  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (is_signed): New function.
+	(yylex/^): If left side is negated, add a parenthesis.
+	Fixes last part of #115941.
+
+2008-11-30  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_sheet_remove_all): Don't destroy the
+	notebook -- we will need it later when we replace a pristine
+	workbook with a new.  Fixes #562662.
+
+2008-11-26  Morten Welinder  <terra@gnome.org>
+
+	* src/dependent.c (link_expr_dep): Treat GNM_EXPR_OP_RANGE_CTOR
+	and GNM_EXPR_OP_INTERSECT as any other binary operator.  Fixes
+	#562363.
+
+	Enable drag of whole sheets to other apps.  #523033, initial patch
+	by Lutz Mueller.
+
+	* src/wbc-gtk.c (cb_sheet_label_drag_data_get): Use
+	scg_drag_data_get.
+	(wbcg_sheet_add): Add more drag types.
+
+	* src/sheet-control-gui.c (scg_drag_send_text): New function.
+	(scg_drag_data_get): Protect against null scg->selected_objects.
+	(scg_drag_data_get): Handle UTF8_STRING.
+
+2008-11-26  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Define GNUMERIC_PLUGIN_LDFLAGS after
+	  GNUMERIC_LIBS is defined.
+
+2008-11-24  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_detachable_toolbars): New function.
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): Use
+	gnm_app_detachable_toolbars.
+
+	* src/gnumeric-gconf.c (gnm_conf_init_essential): Setup
+	->detachable_toolbars.
+
+2008-11-23  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_sheet_add): Add a SHEET_CONTROL_KEY for the
+	labels too.
+	(get_scg): New function to retrieve and scg for a tab label or
+	sheet table widget.  Simplify drag handling code using this.
+	(wbcg_sheet_remove_all): Make sure disconnection happens for sheet
+	signals, even when we shut down the wbcg.
+	(wbcg_set_direction): Split from cb_direction_change.  Change
+	direct callers of cb_direction_change to use wbcg_set_direction.
+	(wbcg_sheet_add): Don't init scg->label here.
+	(wbcg_set_end_mode): Translate "END".
+	(wbcg_get_n_scg): New function.
+
+	* src/sheet-control-gui.c (sheet_control_gui_new): Keep a ref for
+	->table and ->label.  Init ->label here.
+	(scg_finalize): Unref here.
+
+	* src/wbc-gtk-impl.h (struct _WBCGtk): Add a paned for sheet tabs
+	and the progress bar.  Split notebook into ->snotebook (for the
+	sheet tables) and ->bnotebook for the tabs.  Make the latter a
+	GnmNotebook.  All users changed accordingly.
+
+2008-11-22  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-priv.h (struct _SheetControl): Remove sheet
+	member.  All users changed to use view.
+
+2008-11-20  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_menu_state_sheet_count,
+	sheet_menu_label_run): Count visible sheets only.
+	(cb_sheet_visibility_change): Attach with wbcg as data and call
+	wbcg_menu_state_sheet_count.
+
+2008-11-05  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Remove check for gcc 2.96.  Remove gb support.
+	Clean up.  Make non-gnome the default.
+
+2008-11-04  Morten Welinder  <terra@gnome.org>
+
+	* */*.c: Fix problem with formats. Patch from Hib Eris, #559291.
+
+	* src/wbc-gtk.c (toolbar_context_menu): Deal with the
+	non-handle-bar case.  Patch from Hib Eris, #559249.
+
+2008-11-02  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (gnumeric_gnome_reqs): libgnomeui is a gnome dep,
+	not a gtk dep.
+
+	* src/main-application.c (main): Add a signal handler on the
+	application object to terminate the mainloop when the last
+	workbook is removed.  Also, only warn about ancient non-stable
+	Gnumeric binaries.
+
+	* src/workbook.c (workbook_finalize): Don't try to terminate the
+	mainloop here.
+
+2008-11-01  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (call_gnome_authentication_manager_init):
+	Call gnome_authentication_manager_init only if someone linked it
+	in.
+
+	* src/libgnumeric.c (call_gnome_vfs_init): Call gnome_vfs_init
+	only if someone linked it in.
+
+2008-10-31  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/selection.c: (sv_selection_to_plot): fix selection for contour
+	 and surface plots.
+
+2008-10-28  Morten Welinder  <terra@gnome.org>
+
+	* src/style.c (gnm_font_shutdown): Workaround for 558100 and
+	558254.  Thanks to Hib Eris and Behdad for debugging.
+
+2008-10-26  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_hyperlink_finalize): Don't check for NULL
+	before g_free.
+
+2008-10-25  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_conf_shutdown): Free even more.
+
+	* src/main-application.c (main): Close all displays on exit.
+
+	* src/gnumeric-gconf.c (gnm_conf_shutdown): Free more, zero whole
+	prefs, NULL gnm_app_prefs.
+
+2008-10-24  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbc_gtk_finalize): Massive leak fix.
+	* configure.in (libspreadsheet_reqs): Bump goffice req to avoid
+	criticals.
+
+2008-10-23  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (schedule_reapply_filters): New function.
+	(sheet_insert_cols, sheet_insert_rows, sheet_delete_cols,
+	sheet_delete_rows): Make sure filters get reapplied on undo after
+	we put the contents back in.
+
+	* src/sheet-filter.c (gnm_filter_condition_free): Rename from
+	gnm_filter_condition_unref.  Actually free the condition.  Make
+	static.
+	(gnm_filter_condition_dup): Make static.
+	(gnm_filter_combo_index): New function.
+	(gnm_filter_add_field): Hold onto a reference to the fcombo.
+	(gnm_filter_free): Free the fcombo reference.
+	(gnm_sheet_filter_insdel_colrow): Handle fcombo references.
+	Reapply filter when fields are removed.,
+	(gnm_filter_reapply, gnm_filter_update_active): Extract from
+	gnm_filter_set_condition.
+
+	* src/sheet.c (sheet_delete_cols, sheet_delete_rows): Make sure
+	auto-filter objects do not get kept by sheet object undo.  This
+	fixes the crash in #557591.
+
+	* src/sheet-filter.c (gnm_sheet_filter_insdel_colrow): Insert new
+	filters left-to-right so anchors get set right.  Fixes #557237.
+	Avoid expensive updates if no filter changes.
+
+2008-10-22  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (xml_cellregion_read): Copy the string.  It need
+	not be null terminated.  Assign ctxt->sheet.
+	(xml_read_sheet_object): New argument, assign, to explicitly
+	control whether to assign the object to the sheet.  Fixes #556561.
+
+2008-10-19  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : version bump.
+
+2008-10-18  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.9.3
+
+2008-10-18  Jody Goldberg <jody@gnome.org>
+
+	* tools/win32/moduleset : use the latestest shiniest glib/gtk
+
+	* configure.in : add a GOFFICE_API_VER for use in the .pc file.
+	* libspreadsheet.pc.in : drop the old mising LIBGOFFICE variables, and
+	  use the new tidy ones.
+
+2008-10-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/item-cursor.c (item_cursor_target_region_ok): delete
+	(item_cursor_do_action): don't bother to call 
+	  item_cursor_target_region_ok
+
+2008-10-18  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (set_clipman_targets): Plug leak.
+
+2008-10-17  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (workbook names): Fix cut-and-paste problem in
+	error reporting, see #552750, comments 8-9.
+
+2008-10-15  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_style_region_end): Apply partial
+	mstyles like in xml-io.c
+	(xml_sax_style_region_start): Undo last change.
+
+2008-10-16  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: added Kaplan-Meier tool menu item
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/wbc-gtk-actions.c: added ToolsKaplanMeier
+
+2008-10-15  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_style_region_start) : always init the
+	  full style just in case some ancient file comes along. [#555933]
+	Add a stub for PrintUnit while we are here.
+
+2008-10-01  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (gnm_sheet_foreach_name): New function.
+
+	* src/workbook.c (workbook_foreach_name): New function.
+
+	* src/expr-name.c (gnm_named_expr_collection_foreach): New
+	function.
+
+2008-10-14  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/gnumeric.c: cleaned includes list and removed unused
+	local variables.
+
+2008-10-14  Jody Goldberg <jody@gnome.org>
+
+	* src/main-application.c (main) : warning suppression on win32.
+
+	* src/gutils.c (gutils_init) : replace deprecated function
+	  g_win32_get_package_installation_directory with
+	  g_win32_get_package_installation_directory_of_module
+
+	* src/gnm-plugin.h (gnm_plugin_loader_module_get_type) : make public.
+
+	* component/gnumeric.c : do not add magic 'extern' references.
+
+2008-10-12  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* component/Gnumeric-embed.xml.in: added frequency tool menu item
+	* src/GNOME_Gnumeric-gtk.xml.in: ditto
+	* src/HILDON_Gnumeric-gtk.xml.in: ditto
+	* src/wbc-gtk-actions.c: added ToolsFrequency
+
+2008-10-10  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (cb_gnm_pane_preedit_changed) :
+	  s/reseting_im/im_block_edit_start/ to clarify the intent, and to
+	  reuse it for the initial focus problem.
+	(gnm_pane_key_press) : move the explainitory comment here, where we
+	  toggle im_block_edit_start rather than below when it happens.
+	(gnm_pane_focus_in) : use it here too with the new im_first_focus.
+
+2008-10-08  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: Call IT_PO_SUBDIR for po-functions.
+	* autogen.sh: Don't try to distribute po-functions/LINGUAS
+
+2008-10-09  Jody Goldberg <jody@gnome.org>
+
+	* src/mstyle.c (gnm_style_new_merged) : support merging incomplete
+	  styles, and clean up the docs.
+	(gnm_style_merge) : avoid problems if someone does something silly.
+
+2008-10-07  Morten Welinder  <terra@gnome.org>
+
+	* configure.in: switch to new LINGUAS scheme.  Fixes #554348.
+	* autogen.sh: ditto.
+	
+2008-10-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/gnumeric.c: render sheet objects using
+	gnm_print_sheet_objects, and fixed cap for cell borders.
+	* src/print-cell.c: removed the unused GtkPrintContext* argument.
+	* src/print-cell.h: ditto.
+	* src/print.c: renamed print_sheet_objects to gnm_print_sheet_objects,
+	made it public, removed the unused GtkPrintContext* argument, and
+	fixed objects position in layout (#554993).
+	* src/print.h: ditto.
+
+2008-10-04  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* component/gnumeric.c: (go_gnm_component_render): also render sheet
+	objects.
+
+2008-10-03  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (float_range_function2d): New function.
+	(float_range_function2): Implement in terms on
+	float_range_function2d.
+
+2008-10-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	Fix for #553342
+	* src/workbook-view.c (wb_view_selection_desc): add translator
+	  comments
+	
+2008-10-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	Fix for #554818
+	* src/stf.c (stf_text_to_columns): don't use markup
+	  in the error message
+
+2008-10-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* Makefile.am: reimplemented the gnumeric goffice component.
+	* component/gnumeric.c: ditto.
+	* configure.in: ditto.
+
+2008-09-30  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.c (colrow_make_state): Remove.
+
+2008-09-22  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	Fix for #55338
+	* src/sheet.c (gnm_sheet_class_init): remove extra space
+	
+2008-09-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	Fix for #535015
+	* src/hlink.c (gnm_hlink_external_activate): complete code
+
+2008-09-18  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/commands.c (CmdAnalysis_Tool): add field
+	(cmd_analysis_tool_undo): delete associated sheet objects
+	(cmd_analysis_tool_draw_old_so): new
+	(cmd_analysis_tool_redo): use the above
+	(cmd_analysis_tool_finalize): handle new fields
+
+2008-09-17  Jody Goldberg <jody@gnome.org>
+
+	* src/mathfunc.c (random_landau) : Use 'I' not 'i' as per original
+	  libgsl code. [Coverity 259].
+
+2008-09-14  Jody Goldberg <jody@gnome.org>
+
+	* src/selection.c (sv_selection_apply_in_order) : suppress warning.
+
+2008-09-13  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	Fix for #152617
+	* commands.h (cmd_selection_hyperlink): new
+	* commands.c (cmd_selection_hyperlink): new
+	(cmd_hyperlink_repeat): new
+	(cmd_hyperlink_undo): new
+	(cmd_hyperlink_redo): new
+	(cmd_hyperlink_finalize): new
+	(cb_cmd_hyperlink_find_cells): new
+
+2008-09-11  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-write.c (gnm_cellregion_to_xml) : add protection.
+	  [Coverity 68]
+
+2008-09-11  Morten Welinder  <terra@gnome.org>
+
+	* src/func-builtin.c (gnumeric_table): Remove dead code.
+
+	* src/print.c (gnm_print_sheet): Fix error check.
+
+	* src/mathfunc.c (random_landau): Fix off-by-one.  I hope.
+
+2008-09-07  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/expr.h (gnm_expr_new_funcall4): new
+	* src/expr.c (gnm_expr_new_funcall4): new
+
+2008-09-07  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_scale_changed) : split from.
+	(sheet_set_zoom_factor) : here.
+	(sheet_set_display_formulas) : used here.
+
+	* src/print-cell.c (gnm_gtk_print_cell_range) : handle the doubling of
+	  column width during 'display forumla' mode.
+
+	* src/expr.c (gnm_expr_top_is_array) : new.
+
+	* src/rendered-value.c (gnm_rendered_value_new) : Use a simpler syntax
+	  to denote arrays.  The full form used in the entry is too verboase.
+
+2008-09-02  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Fix of #516052
+	* src/selection.c (sv_selection_apply_in_order): new
+	(selection_to_string): call sv_selection_apply_in_order
+	  rather than sv_selection_apply
+
+2008-09-02  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Fix of #539734 (slight adjustment to Jean's patch)
+	* src/print-cell.c (print_cell_gtk): anchor the lines of
+	  rotated text correctly.
+
+2008-09-02  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Fix of #153578
+	* src/print-cell.c: remove pcontext in whole file 
+	(print_cell_gtk): do not use a new pango context, the old one will
+	  work much better.
+
+2008-09-01  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Partial fix of #153578
+	* src/print-cell.c (print_cell_gtk): adjust for differences between
+	  pixels and points.
+
+2008-09-02  Jody Goldberg <jody@gnome.org>
+
+	* src/search.c (gnm_search_replace_class_init) : add a property to be
+	  used to search scripts.  NOT ENABLED yet.
+
+	* src/ssgrep.c (search_string_table) : restore the old logic, and
+	  extend it to agregate multiple matches and to search in VBA code if
+	  available.
+	(ssgrep) : enable search_string_table if -C/--string-table-count is
+	  enabled.
+
+2008-09-01  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* src/stf.c (csv_tsv_probe), src/stf-parse.c (stf_parse_general):
+	Ignore / skip over byte-order mark. Fixes #549743.
+	* src/stf-parse.c (stf_parse_general): data is arbitrary binary data
+	(may contain nul bytes and need not be nul-terminated); call
+	g_utf8_validate with appropriate parameters to handle arbitrary binary
+	data.
+
+2008-08-30  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Implementation of #525368
+	* src/print.c (PrintingInstance): add button_print_hidden_sheets
+	(compute_pages): Include PRINT_ALL_SHEETS_INCLUDING_HIDDEN and exclude
+	  hidden sheets from  PRINT_ALL_SHEETS. Rewrite  PRINT_SHEET_RANGE
+	(workbook_visible_sheet_count): new
+	(gnm_create_widget_cb): add checkbox
+	(gnm_custom_widget_apply_cb): handle new checkbox
+	* src/print.h (PrintRange): add PRINT_ALL_SHEETS_INCLUDING_HIDDEN
+
+2008-08-30  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Post release version bump
+
+2008-08-29  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.9.2
+
+2008-08-29  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-format.c (gnm_format_import): Support-function to handle
+	broken 1.6 formats.  Fixes #548414.
+
+	* src/xml-sax-read.c (make_format): Handle broken 1.6 formats.
+
+2008-08-29  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* gnumeric.desktop.in: Add a Version field; drop obsoleted
+	"Application" from Categories field; changed DocPath field to
+	X-GNOME-DocPath. The resulting gnumeric.desktop now validates without
+	warnings using desktop-file-utils 0.15's desktop-file-validate.
+	Fixes #512011.
+
+2008-08-26  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (value_is_error): Check for '#' here.
+	(format_match_simple): Not here.
+	(format_match): If matching fails in the existing-format case, try
+	errors too.  Fixes #546759.
+
+2008-08-25  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Fix for #549247
+	* src/print.c (print_page): fix caclulation of footer location
+
+2008-08-25  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (insert_date_time_common): Make sure cell
+	exists so gnm_format_for_date_editing can get the format.  Fixes
+	#540198.
+
+2008-08-25  Jody Goldberg <jody@gnome.org>
+
+	* src/ssgrep.c (main) : move the gnm_init up to init goffice and gsf
+	  before opening a file.
+	    *
+2008-08-24  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add check for gsf_infile_msvba_steal_modules.
+
+2008-08-23  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c (gnm_pango_context_get) : handle recent pango
+	  deprecation.
+
+2008-08-21  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c: (gnm_so_filled_read_xml_dom),
+	(gnm_so_filled_write_xml_sax), (sof_sax_style): use GOPersist.
+	* src/gnm-so-line.c: (gnm_so_line_read_xml_dom),
+	(gnm_so_line_write_xml_sax), (sol_sax_style): ditto.
+
+2008-08-20  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.desktop.in : We should really auto generate this.  For now,
+	  add some dbf mime types to see if that helps the ubuntu folk. #542780
+
+2008-08-11  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/xml-sax-read.c: (xml_sax_colrow): accept any order for attributes
+	for ColRowInfo. [#547183]
+
+2008-08-03  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Bumped goffice dependency as the sax export now uses
+	the two-argument form of go_doc_init_write which is new.
+
+2008-08-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/xml-sax-read.c: (xml_sax_go_doc), (gnm_xml_file_open):
+	save images used as background in charts. [#348780]
+	* src/xml-sax-write.c: (gnm_xml_file_save),
+	(gnm_cellregion_to_xml): load images used as background in charts.
+
+2008-07-25  Morten Welinder  <terra@gnome.org>
+
+	[Initial patch from Nick Lamb, see bug 69813.]
+
+	* src/expr.h (enum GnmExprOp): Add new GNM_EXPR_OP_PAREN for
+	parentheses.
+
+	* src/parser.y: Create GNM_EXPR_OP_PAREN node.
+
+	* src/auto-format.c (do_af_suggest): Handle GNM_EXPR_OP_PAREN.
+	* src/expr.c (gnm_expr_eval): Ditto.
+
+2008-07-23  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (collect_floats): When requested, sort.
+
+2008-07-19  Jody Goldberg <jody@gnome.org>
+
+	* tools/win32/gnumeric.nsi.in : enclose the gnumeric path in
+	  quotes too. [#542872]
+
+2008-07-10  Morten Welinder  <terra@gnome.org>
+
+	* src/ssgrep.c (main): Support -v and --print-type.
+
+	* src/search.c (gnm_search_filter_matching): Handle new invert
+	flag.
+
+2008-07-09  Morten Welinder  <terra@gnome.org>
+
+	* src/ssgrep.c (main): Support -q -c -i -w -h -H -n -l -L -F.
+
+2008-07-08  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-widget.c: (sheet_widget_button_prep_sax_parser):
+	use the correct property name, i.e. "text" instead of "label".
+
+2008-07-02  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add a test for gsf_open_pkg_foreach_rel to avoid
+	  bumping libgsf version req yet.  It will be updated for the next
+	  STABLE release, but this will give the update time to percolate
+	  through the distros.
+
+2008-06-29  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-datetime.c (yearfrac): Guard against invalid dates.
+
+2008-06-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-datetime.c (gnm_date_add_days, gnm_date_add_months): New
+	functions.
+
+	* src/sheet-autofill.c (afm_compute): Simplify using
+	gnm_date_add_months.
+
+2008-06-25  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (phyper): Short-circuit x>=NR case.  Fixes
+	#540211.
+
+2008-06-25  Jody Goldberg <jody@gnome.org>
+
+	* doc/C/Makefile.am : ship ssgrep.1 and gnumeric-C.omf
+
+2008-06-25  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.9.1
+
+2008-06-23  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-datetime.c (datetime_value_to_g): Clear date in case of
+	failure.  Fixes #539808.
+
+2008-06-22  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_direction_change) : Only change the direction for
+	  the current scg. [#499910]
+
+2008-06-22  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_expr_cursor_bound_set) : use blue instead
+	  of red for default range selector cursor.
+	* src/item-cursor.c (item_cursor_expr_range_event) : new.
+
+2008-06-22  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/sheet-object-graph.c: (sog_datas_set_sheet): set the workbook
+	as the graph document to support the new image framework.
+	* src/workbook-control.c: (wb_control_set_view): set the document for
+	the underlying GOControlDoc.
+
+2008-06-21  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_header_init) : Add a GtkAlignment wrapper
+	  to the col/row headers to avoid problems when scaling to very small
+	  sizes with group buttons. [#154687]
+
+2008-06-21  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_mode_edit) : unselect objects even
+	  during destruction.
+
+2008-06-19  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (wbcg_error_error_info): Quote markup.  Fixes
+	#386412.
+
+2008-06-19  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (scg_get_nth_scg) : new convenience routine to
+	  localize use of SHEET_CONTROL_KEY, and add some safety checks.
+	(wbcg_get_scg) : Use it.
+	(cb_sheet_label_drag_data_get) : ditto.
+	(cb_notebook_switch_page) : ditto.
+	(wbcg_sheet_order_changed) : ditto.
+	(wbcg_focus_cur_scg) : ditto.
+	(wbc_gtk_init) : Move new_object from scg -> wbcg.
+	(wbcg_update_action_sensitivity) : ditto.
+	(wbcg_menu_state_update) : ditto.
+
+	* src/wbc-gtk-edit.c (wbcg_insert_object) : moved from
+	  wbcg_insert_object and made smarter to walk through all scgs and
+	  setting cursor visibilty, and unanting.
+	(wbcg_insert_object_clear) : reworked from scg_mode_clear and made
+	  smarter.
+
+	* src/wbc-gtk-actions.c (cb_insert_image) : Use wbcg_insert_object.
+	(cb_add_graph) : ditto.
+	(create_object) : ditto, and remove the sheet_update/recalc.  It does
+	  not belong here.
+
+	* src/sheet-control-gui.c (scg_cursor_visible) : make public.
+	(scg_mode_clear) : moved into wbcg_insert_object_clear, and
+	  simplified.
+	(scg_mode_create_object) : reworked as wbcg_insert_object.
+	(scg_mode_edit) : Use the new wbcg_insert_object_clear and simplify.
+	(scg_object_select) : Adapt to moving new_object from SCG -> WBCG
+	(scg_objects_nudge) : ditto.
+	(scg_set_display_cursor) :  ditto.
+	* src/gnm-pane.c (gnm_pane_key_press) : ditto.
+	* src/item-bar.c (item_bar_draw) : ditto.
+	* src/item-grid.c (item_grid_draw) : ditto.
+	(ig_obj_create_begin) : ditto.
+	(item_grid_button_press) : ditto.
+
+2008-06-18  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (MATHLIB_ERROR): Return a NaN instead of
+	aborting.  Fixes #534475.
+
+2008-06-17  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_create_opener_filter): Suffix
+	patterns should match upper and lower case file names.  Fixes
+	#510036.
+
+2008-06-17  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.c (print_info_set_page_setup) : fix a life cycle
+	  error and document.  Fixes page setup on win32.
+
+2008-06-16  Jody Goldberg <jody@gnome.org>
+
+	* src/item-edit.c (item_edit_dispose) : delete the feedback ranges.
+	  Don't disable their creation into the future.
+
+2008-06-16  Jody Goldberg <jody@gnome.org>
+
+	* tools/win32/gnumeric.nsi.in : Make the default install set
+	  'Standard' and do not overwrite the common type (Excel/OOo).  [#534231]
+
+2008-06-13  Jody Goldberg <jody@gnome.org>
+
+	* src/wbc-gtk.c (cb_regenerate_window_menu) : we need to remove the
+	  action group from the UI, not just unref it.
+	(wbc_gtk_reload_recent_file_menu) : ditto.
+
+2008-05-27  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-export.c (try_auto_date): Don't generate an invalid time
+	format.  Fixes #534514.  Fix detection of fractional seconds.
+
+2008-05-21  Morten Welinder  <terra@gnome.org>
+
+	* src/value-sheet.c (value_area_foreach): Always NULL ->cell_iter.
+
+	* src/parser.y: Further parser fixes.  Clarify the error handling
+	rules.  Fixes #534131.
+
+2008-05-20  Morten Welinder  <terra@gnome.org>
+
+	* src/value-sheet.c (value_area_get_x_y): Make sure to return an
+	empty value, not NULL, when a cell in a range isn't there.  Fixes
+	#533953.
+
+	* src/mathfunc.c (random_exppow): Add domain check.  Fixes
+	#533965.
+
+2008-05-19  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (fold_positive_constant, fold_negative_constant,
+	build_unary_op, build_binop, build_logical, build_not,
+	build_intersect, build_set): Propagate errors.  Fixes #533951.
+
+	* src/stf.c (stf_read_workbook_auto_csvtab): Don't assume that the
+	command context is a gui.  Fixes #533511.
+
+	* src/expr.c (value_intersection): Handle empty array.  [#533516]
+	Fix from Jean.
+
+2008-05-19  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (r1c1_get_index) : handle =RC-10 as
+	      <ref "RC"><unary-><10> #533943
+
+2008-05-17  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (qpois): Return nan on invalid lambda.  Fixes
+	#533515.
+	(discpfuncinverter): Handle overflow when searching for missing
+	side better.  Also fixes #533515.
+
+2008-05-16  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (tokenized_help_new): Translate old-style help texts.
+	fixes part of #533193.
+
+2008-05-15  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (random_gamma): Handle overflow and bogus
+	arguments.  Fixes #533288.
+
+2008-05-12  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: request libgoffice-0.8 >= 0.7.0.
+	* src/Makefile.am: removed obsolete (moved to goffice) files.
+	* src/gnm-conf-gconf.c: ditto.
+	* src/gnm-conf-keyfile.c: ditto.
+	* src/gnm-conf-win32.c: ditto.
+	* src/gnumeric-gconf.c: ditto.
+	* src/gnumeric-gconf.h: ditto.
+
+2008-05-07  Jody Goldberg <jody@gnome.org>
+
+	Merge patch from Seán de Búrca [#450444]
+	* configure.in : add the new icon dirs.
+	* gnumeric.desktop.in : remove icon suffix.
+	* icons/Makefile.am : deploy the icons, and do some cleanup.
+	* src/wbc-gtk.c (wbc_gtk_class_init) : Now we can use the nice simple
+	  gtk_window_set_default_icon_name.
+
+2008-05-04  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump.
+
+2008-05-04  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.9.0
+
+2008-05-04  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk.c (cb_notebook_switch_page): When selecting a range
+	for a dialog, do sheet changes fully.  Fixes #529309.
+
+2008-05-02  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wbv_save_to_uri): Zap this meesage too.
+
+2008-05-02  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : add ssgrep.
+	* src/Makefile.am : ditto.
+	* src/.gitignore : ditto.
+
+	* src/str.c (gnm_string_foreach) : new wrapper to make it easier to
+	  walk all available strings.
+
+	* src/workbook-view.c (wb_view_new_from_uri) : turn off the info spew.
+
+2008-04-29  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_sheet_names): Write sheet sizes.
+
+	* src/ranges.c (range_is_sane): Fix escaped G_MAXINT/2.  We're not
+	ready for that just yet.
+	(range_init_full_sheet): Ditto.
+
+2008-04-28  Morten Welinder  <terra@gnome.org>
+
+	* src/colrow.h (colrow_max): Take a sheet argument too.  All
+	callers changed.
+
+	* */*.c: Use gnm_sheet_get_max_cols for SHEET_MAX_COLS and
+	gnm_sheet_get_max_rows for SHEET_MAX_ROWS in most cases.  (Adapted
+	from Jean's patch in #168875.)
+
+	* src/wbc-gtk-actions.c (cb_calc_decs): Use rendered value, if
+	available.
+
+2008-04-24  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* libspreadsheet.pc.in: fixed the plugins dir definition so tht it can
+	be used.
+
+2008-04-22  Morten Welinder  <terra@gnome.org>
+
+	* src/number-match.c (handle_float): Don't initialize
+	twice.  [#529297, Hiroyuki Ikezoe]
+
+2008-04-16  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Use dolt when possible.
+	* acinclude.m4 : create, and add dolt.m4
+
+2008-04-14  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-object-image.c (gnm_soi_default_size,
+	gnm_soi_draw_cairo): Protect against a NULL pixbuf.
+
+2008-04-11  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (close_to_int): Add missing abs case causing
+	lots of trouble.
+	(guess_time_format): Return the format, not a string.  Deduce
+	GOFormat's limit of decimals.
+	(guess_time_format): Improve handling of elapsed time format.
+
+2008-04-10  Morten Welinder  <terra@gnome.org>
+
+	* src/clipboard.c (paste_cell): Translate dates if required.
+	Fixes #490419.
+	(cellregion_new): Setup new date_conv field from sheet.
+
+	* src/xml-io.c (xml_cellregion_read): Set of date_conv field from
+	xml.
+	(xml_read_clipboard_cell): Use date_conv from cell region, not
+	workbook.
+
+	* src/commands.c (warn_if_date_trouble): New function.
+	(cmd_paste_copy): Call warn_if_date_trouble.
+
+2008-04-08  Morten Welinder  <terra@gnome.org>
+
+	* src/mathfunc.c (gnm_float_hash, gnm_float_equal): Moved from
+	rangefunc.c.  Made public.
+
+	* src/dependent.c (workbook_recalc): If we recalculated anything,
+	emit recalc-finished on the application.
+
+	* src/application.c (gnm_app_class_init): Install new
+	"recalc-finished" signal.
+
+	* src/ranges.c (gnm_sheet_range_dup, gnm_sheet_range_equal,
+	gnm_sheet_range_hash, gnm_range_hash, gnm_range_equal): New
+	functions.
+
+	* src/collect.c (gnm_strip_missing): Don't return a value; take
+	list directly, not as reference; make O(n) instead of O(n^2).  All
+	callers changed.
+
+2008-04-06  Morten Welinder  <terra@gnome.org>
+
+	* src/collect.c (collect_strings): Change return type to GPtrArray
+	so we can actually tell if there was an error.  All callers
+	changed.  Fixes CONCATENATE.
+	(string_range_function): Make the subject function take a
+	GPtrArray for simplicity.  All callers changed.
+
+2008-03-30  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (x_targets_received): Request text if holder
+	of clipboard doesn't offer any target we understand. Broken apps,
+	including jedit, have been seen to return a bogus list of targets,
+	but nonetheless return text when asked.
+	(utf8_content_received): New function. Passes text received from
+	clipboard to text_to_cell_Region.
+
+2008-03-30  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/stf.c: (stf_read_workbook), (stf_read_workbook_auto_csvtab):
+	call workbook_recalc_all instead or workbook_recalc to ensure 
+	formula evaluation. [#525107]
+
+2008-03-28  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_top_is_array_elem): Take extra arguments
+	for storing coordinates.  All callers changed.
+
+2008-03-27  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_edit_line_set): Use more API
+	instead of peeking inside expression implementation details so
+	much.
+
+	* src/expr.c (gnm_expr_top_is_array_corner): New function.  (I
+	have plans for gnm_expr_top_get_array_corner.)
+
+2008-03-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-file.c (gui_file_open): Allow selection of multiple
+	files.  [#524479]
+
+2008-03-20  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (criteria_test_equal, criteria_test_unequal,
+	criteria_test_less, criteria_test_less_or_equal,
+	criteria_test_greater, criteria_test_greater_or_equal): Handle
+	string values that can be interpreted as numbers.  Take extra
+	date_conv argument.  All callers changed.
+
+2008-03-12  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (make_format): New function to handle invalid
+	formats.
+	(xml_sax_style_start, xml_sax_cell): Use make_format.
+
+	* src/value.c (value_new_bool): Don't allocate memory for bools.
+	There are only two different ones.
+	(value_release): Consequently don't release memory.
+	(value_set_fmt): Don't allow setting formats for empty and bool.
+
+2008-03-10  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (inc_dec): New function to do something
+	vaugely sensible when inc/dec decimals is requested for General.
+	Fixes #510252.
+
+	* configure.in (ALL_LINGUAS): Undo last change.  It breaks the
+	build.
+
+	* src/wbc-gtk.c (cb_add_menus_toolbars): Honour
+	/desktop/gnome/interface/toolbar_detachable.  Patch from Nick
+	Lamb.  Fixes #321867.
+
+2008-03-10 Chao-Hsiung Liao  <j_h_liau@yahoo.com.tw>
+
+        * configure.in: Added "zh_HK" to ALL_LINGUAS.
+
+2008-03-06  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (insert_date_time_common): Fix the time
+	cases.
+
+2008-03-02  Jody Goldberg <jody@gnome.org>
+
+	Patches for cygwin build [#506366]
+	* configure.in : differentiate between cygwin, and native win32.
+	* tools/Makefile.am : Registry mapper is not needed under cygwin.
+	* schemas/Makefile.am : ditto.
+	* src/Makefile.am : -mwindows and -mconsole are only required for
+	  native windows.
+
+2008-03-01  Jody Goldberg <jody@gnome.org>
+
+	* src/Makefile.am : build ssconvert & ssindex with -mconsole and
+	  without -mwindows
+
+	* src/workbook-view.c (gnm_mailto_url_show) : Add a win32 version of
+	  mailto support.
+
+	* schemas/Makefile.am : Don't create a dir if built without gconf
+	  autoconf macros.
+
+2008-03-01  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Ref shared
+	expressions before inserting them into the hash.
+	(gnm_xml_file_open): Register a value-free function for the shared
+	expression hash.  Fixes #519761.
+
+	* src/sheet-autofill.c (afm_teach_cell): Fix end-of-month problem.
+	Fixes #519680.
+	(auto_filler_month): Initialize ->end_of_month.
+
+2008-03-01  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c : drop use of pangoft2 as a hard coded fallback use
+	  pangocairo instead.
+
+	* src/wbc-gtk-actions.c (cb_help_docs) : add a warning if help viewer
+	  fails.
+
+2008-02-29  Morten Welinder  <terra@gnome.org>
+
+	* src/mstyle.c (link_border_colors): Handle NULL border which is
+	advertised as being ok.  Fixes #519451.
+
+2008-02-28  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (maybe_convert): Handle memory allocation failure
+	nicely.  Fixes #519319.
+
+	* src/xml-sax-read.c (maybe_convert): Handle memory allocation
+	failure nicely.
+
+2008-02-21  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-autofill.c (sheet_autofill_dir): Handle merged cells
+	better.  Fixes #504191.
+
+2008-02-19  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c: Handle <control>KP_Subtract as
+	<control>minus.  Fixes #516358.  Ditto KP_Add.
+
+2008-02-05  Morten Welinder  <terra@gnome.org>
+
+	* src/clipboard.c (cellregion_to_string): Fix col/row confusion.
+	Fixes #514438.
+
+2008-02-04  Morten Welinder  <terra@gnome.org>
+
+	* src/func.c (functions_shutdown): Handle leftover place holders
+	better.  Fixes #514295.  (Also fixed in importer.)
+
+2008-02-02  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Call pathetic_qt_workaround early
+	to handle the theme corruption at the time the splash screen is
+	constructed.
+
+2008-02-01  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (pathetic_qt_workaround): Work around
+	Qt-theme (or Qt-library) bug.
+	(main): Install pathetic_qt_workaround.  Fixes #512752.
+
+	* src/expr.c (gnm_expr_eval): Fix FMRs for circular array
+	formulas.
+
+	* src/sheet-autofill.c (add_item): Plug leak.
+
+2008-01-31  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_eval): Handle the case of no value
+	calculated for the array.  [#513559]
+
+2008-01-28  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_solver_start): New function.
+	(gnm_xml_attr_bool): Renamed from xml_sax_attr_bool and made
+	public.
+
+2008-01-26  Morten Welinder  <terra@gnome.org>
+
+	* src/gutils.c (gutils_init): If we appear to be running out of
+	the source tree, then adjust libdir (for plugins) accordingly.
+
+2008-01-24  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/clipboard.c (paste_object): Fix paste-graph
+	problem.  [#507342]
+
+2008-01-24  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_move_range): Fix sanity check.  [#511706]
+
+2008-01-16  Morten Welinder  <terra@gnome.org>
+
+	* src/stf-parse.c (stf_parse_csv_line): Allocate from the string
+	chunk so we don't leak items.  Reduce the number of GString
+	allocations while we're at it.
+
+2008-01-10  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Use
+	gnm_format_for_date_editing.
+
+	* src/wbc-gtk-actions.c (insert_date_time_common): New function to
+	format numbers according to cell's format when appropriate.
+	Fixes 508237.
+
+	* src/gnm-format.c (gnm_format_for_date_editing): New function.
+
+2008-01-15  Morten Welinder  <terra@gnome.org>
+
+	* src/value.c (parse_database_criteria): Verify that we have a
+	cellrange which is the only cases handled.  Part of fix for
+	509427.
+
+2008-01-14  Morten Welinder  <terra@gnome.org>
+
+	* Makefile.am (DISTCLEANFILES): Get rid of the versioned .pc file
+	too.
+
+2008-01-14  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (GNM_PY_LDFLAGS): Fix assumptions about directory
+	layout.  [#509023]  [508988]
+
+2007-12-29  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release version bump
+
+2007-12-21  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.8.0
+
+2007-12-17  Morten Welinder  <terra@gnome.org>
+
+	* src/gnumeric-gconf.c: Quiet the debug code.
+
+2007-12-15  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c: (sof_default_style),
+	(cb_gnm_so_filled_style_changed): replace 0 and 1 for line styles
+	by GO_LINE_NONE and GO_LINE_SOLID.
+	* src/gnm-so-line.c: (so_line_view_set_bounds),
+	(sol_default_style), (cb_gnm_so_line_changed),
+	(gnm_so_line_draw_cairo): ditto.
+	* src/gnm-so-polygon.c: (sop_default_style),
+	(cb_gnm_so_polygon_style_changed): ditto.
+
+2007-12-15  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (clipboard_paste_region) : A region is not empty if
+	  there are merges or styles. [#503634]
+
+2007-12-13  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-io.c (xml_sheet_read) : support grid colour.
+	* src/xml-sax-read.c (xml_sax_sheet_start) : ditto.
+	(xml_sax_sheet_name) : ditto.
+	* src/xml-sax-write.c (xml_write_sheet) : ditto.
+	* gnumeric.xsd : ditto.
+
+2007-12-13  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-cell-comment.c (comment_view_set_bounds) : remove
+	  kludge that altered the anchor.  That makes it impossible to look
+	  the comment up.
+	* src/colrow.c (colrow_set_sizes) : instead, just reposition all
+	  objects when cols resize.
+
+	* src/clipboard.c (paste_object) : Add support for a magic new flag
+	  PASTE_IGNORE_COMMENTS_AT_ORIGIN for use by.
+
+	* src/commands.c (cmd_merge_cells_undo) : Used here so that when we
+	  paste the old content back into the merged region we do not
+	  duplicate a comment that existed in the cell.  [#503392]
+
+2007-12-10  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	Fix for #502206
+	* src/sheet.c (sheet_get_nominal_printarea): fix invalid printarea
+
+2007-12-10  Morten Welinder  <terra@gnome.org>
+
+	* src/expr.c (gnm_expr_relocate): Access the right union member.
+	Fixes #502781.
+
+2007-12-01  Morten Welinder  <terra@gnome.org>
+
+	Fixes for #470089.
+	* src/sheet.c (sheet_cell_set_text): Adjust markup if text was
+	quoted.
+
+	* src/commands.c (cmd_set_text): Don't compare markups if we don't
+	extract them.  Map empty markup to no markup.
+	(gnm_pango_attr_list_equal): Take into account that
+	pango_attribute_equal does not compare indices.
+
+	* src/wbc-gtk-edit.c (gnm_pango_attr_list_splice): Export to
+	Goffice.  .  Let caller do the splice.
+	(wbcg_edit_start): Adjust markup if we quoted the string.
+	(wbcg_edit_finish): Free cell_attrs if needed.
+	(wbcg_edit_add_markup): Unset attributes if the desired result
+	matches cell_attrs.
+	(wbcg_edit_init_markup): Initialize cell_attrs.
+
+2007-11-30  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet) : enter_moves_dir == NONE
+	  should not move anywhere.
+
+2007-12-03  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump.  Hopefully last before 1.8
+
+2007-12-03  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.7.91
+
+2007-11-28  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-view.c (wb_view_dispose): New function extracted
+	from wb_view_finalize to handle viewe-control disentanglement.
+	* src/workbook-control.c (wbc_dispose): Renamed from wbc_finalize
+	and hooked up accordingly.  Fixes #499680.
+
+2007-11-28  Jon K Hellan  <hellan@acm.org>
+
+	* src/print.c (gnm_begin_print_cb, gnm_request_page_setup_cb):
+	Silence warnings about gtk+ workarounds.
+
+2007-11-27  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_sheet_objects): print the sheet objects in 
+	  reverse order
+
+2007-11-27  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_unrealize): Fix critical.  [#499905]
+
+2007-11-26  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-actions.c (common_cell_goto): Don't try to go to an
+	invisible sheet.  Fixes the part of 499723 that Sum1 hasn't even
+	found yet.
+
+	* src/workbook.c (workbook_cells): Considers cells in sheets only
+	if they are sufficiently visible.
+	* src/search.c (gnm_search_collect_cells): Don't collect cells in
+	deeply hidden sheets.
+
+2007-11-26  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control.c (wb_control_parse_and_jump): Make target
+	absolute.  Fixes #499722.
+
+2007-11-25  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* print-info.c (print_hf_new): use empty strings rather than NULL
+
+2007-11-25  Jody Goldberg <jody@gnome.org>
+
+	* src/style-conditions.c (gnm_style_cond_is_valid) : make public.
+
+2007-11-24  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-write.c (xml_write_breaks) : new.  Manual enum handling
+	  for performance.
+	(xml_write_print_info) : use it here.
+
+	* src/xml-sax-read.c (xml_sax_attr_enum) : Use class_ref/class_unref
+	  to force the enum to complete.
+	(xml_sax_page_break) : new with manual enum handling for performance.
+	(xml_sax_page_breaks_begin) : new.
+	(xml_sax_page_breaks_end) : new.
+
+2007-11-20  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_insert_cols, sheet_insert_rows,
+	sheet_delete_cols, sheet_delete_rows): Initialize reloc_info.pos.
+	* src/dependent.c (dependents_relocate): When handling names, get
+	a list of the names as the hash will change during the process.
+	Fixes #498347.
+
+2007-11-19  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : post release bump to 1.7.91-rc2
+
+2007-11-19  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.7.90
+
+2007-11-18  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (gnm_draw_page_cb): set up HFRenderInfo
+	* src/print-info.c (render_cell): handle relative addresses
+	
+2007-11-17  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print-info.c (render_cell): use rangeref_parse to also handle
+	  other sheets.
+
+2007-11-17  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print-info.h (HFRenderInfo): add page area info
+	* src/print-info.c (render_cell): new
+	(render_ops): add cell record
+	(hf_render_info_new): initialize page area info
+
+2007-11-16  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print-cell.c (print_merged_range_gtk): print the 
+	  background behind the cell.
+
+2007-11-16  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c: use the recent manager to received
+	notifications of changes and tell GnmApp watchers.
+
+	* src/gnumeric-gconf.c: Check the right symbol for backend.
+
+	* src/clipboard.c (cellregion_to_string): Fix cut-and-paste-code
+	bug.
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Explicitly clear force
+	rel/abs flags.
+
+2007-11-15  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_release_pref_dialog,
+	gnm_app_get_pref_dialog, gnm_app_set_pref_dialog): Remove.
+
+2007-11-15  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (set_clipman_targets): New. Restrict the
+	set of formats offered to clipboard manager.
+	(x_claim_clipboard): Use it.
+
+2007-11-15  Jody Goldberg <jody@gnome.org>
+
+	* src/clipboard.c (cb_cellregion_extent) : new.
+	(cellregion_extent) : new.  currently internal.  Might be useful
+	 externally.
+	(cellregion_to_string) : check the extent of the content.
+
+2007-11-14  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/pixmaps/hf_date.png: new (temporary) icon
+	* src/pixmaps/hf_page.png: ditto
+	* src/pixmaps/hf_pages.png: ditto
+	* src/pixmaps/hf_cell.png: ditto
+	* src/pixmaps/hf_time.png: ditto
+	* src/pixmaps/hf_sheet.png: ditto
+	* src/pixmaps/Makefile.am: adjust for new icon files
+	* src/wbc-gtk.c (wbc_gtk_setup_icons): add new icons
+
+2007-11-14  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-clipboard.c (debug_clipboard): New function.
+	(x_clipboard_get_cb): Add conditional debug statements.
+
+	* src/wbc-gtk.c (wbcg_sheet_focus): Make sure direction is right,
+	see #496304, comment 3 onwards.
+
+2007-11-13  Morten Welinder  <terra@gnome.org>
+
+	* src/gui-util.c (gnumeric_keyed_dialog): Tentatively persist zoom
+	dialog window size within session.
+
+2007-11-13  Jon K Hellan  <hellan@acm.org>
+
+	* src/commands.c (cmd_define_name): Fix typo. Fixes #496334.
+
+2007-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/workbook-control.c (wb_control_jump): Simplify.  Return
+	error indicator and take simpler arguments.  Caller fixed.  Refuse
+	to jump to invisible sheet.  Fixes #496304.
+
+	* src/sheet.c (sheet_cell_set_text): Fix interaction between
+	spanning and manual recalc.  Fixes #495879.
+
+	* src/parse-util.c (rangeref_parse): Don't allow workbook without
+	sheet.
+
+	* src/rendered-value.c (gnm_rendered_value_new): Don't test
+	cell->value too soon.
+
+2007-11-12  Jon K Hellan  <hellan@acm.org>
+
+	* src/gui-clipboard.c (table_cellregion_write): Paste as values so
+	that we don't care about array boundaries. Fixes #496187.
+
+2007-11-12  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (gnm_print_sheet): Handle more
+	gtk_print_operation_run result codes.  Fix leak.
+
+	* src/workbook-control.c (wb_control_jump): Add missing
+	inititialization of r.  Fixes #496071.
+
+2007-11-09  Morten Welinder  <terra@gnome.org>
+
+	* src/commands.c (cmd_define_name): Validate name.
+
+	* src/workbook-control.c (wb_control_parse_and_jump): Parse with
+	respect to edit position.
+
+	* src/value.c (value_new_cellrange_parsepos_str): New function
+	split form value_new_cellrange_str.
+	(value_new_cellrange_str): Simplify using
+	value_new_cellrange_parsepos_str.
+
+	* src/workbook-control.c (wb_control_jump): Split from
+	wb_control_parse_and_jump.
+	* src/position.c (eval_pos_init_editpos): New function.
+	See #494318.
+
+2007-11-08  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* gnumeric.xsd: add do_not_print field
+
+2007-11-08  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_do_not_print): new
+	* src/xml-sax-write.c (xml_write_print_info): write do_not_print 
+	  field
+	* src/xml-io.c (xml_read_print_info): read do_not_print field
+	* src/print-info.c (print_info_new): initialize do_not_print
+	
+2007-11-08  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet.c (sheet_move_range): Initialize reloc_info.pos.
+	Otherwise we get UMRs in gnm_expr_top_relocate.
+
+2007-11-07  Morten Welinder  <terra@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_dispose): Get rid of ->im_context here,
+	not in gnm_pane_finalize.  First disconnect signals and window.
+	This fixes FMR during workbook destruction.
+	(gnm_pane_finalize): Delete.
+
+2007-11-06  Morten Welinder  <terra@gnome.org>
+
+	* src/wbc-gtk-edit.c (wbcg_edit_start): Use yyyy-m-d format for
+	date entry when appropriate.
+
+	* src/gnm-format.c (gnm_format_month_before_day): Update return
+	value like for go_format_month_before_day.
+
+2007-11-06  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (PrintingInstance): add HFRenderInfo
+	(printing_instance_new): handle HFRenderInfo field
+	(printing_instance_destroy): ditto
+	(ensure_decoration_layout): rewrite for gtkprint
+	(print_hf_element): ditto
+	(print_hf_line): ditto
+	(print_headers): delete
+	(print_footers): delete
+	(print_page): also print headers and footers
+
+2007-11-06  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_hf): new
+	(PRINT_HEADER): hook up xml_sax_print_hf
+	(PRINT_FOOTER): ditto
+
+2007-11-06  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (pdf_write_workbook): Set do_not_print flags to
+	relects sheet selection.
+
+	* src/print.c (compute_pages): Do not print sheets marked
+	do_not_print.
+
+2007-11-06  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/gnm-so-filled.c: (gnm_so_filled_draw_cairo): use cairo_t*
+	as arg for draw_cairo instead of gpointer.
+	* src/gnm-so-line.c: (gnm_so_line_draw_cairo): ditto.
+	* src/gnm-so-polygon.c: (gnm_so_polygon_draw_cairo): ditto.
+	* src/sheet-object-graph.c: (gnm_sog_draw_cairo): ditto.
+	* src/sheet-object-impl.h: ditto.
+	* src/sheet-object.c: (sheet_object_draw_cairo): ditto.
+	* src/sheet-object.h: ditto.
+	* src/sheet-object-image.c: (gnm_soi_draw_cairo),
+	(gnm_soi_class_init): implement draw_cairo (for printing).
+
+2007-11-05  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (pdf_write_workbook): Prepare for printing
+	selected sheets.  Note: doesn't actually work yet.
+	(cb_set_pdf_option): Parse sheets to be printing.
+
+2007-11-05  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_scale_fit_to): new arguments to pass
+	  through to paginate. Also calculate extent internally.
+	(compute_sheet_pages): pass more info to compute_scale_fit_to
+
+2007-11-05  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_n_pages): deleted
+	(compute_scale_fit_to): use paginate rather than compute_n_pages
+	(compute_sheet_pages_add_range): change expected argument order to 
+	  match how you are called.
+	(paginate): drop unneeded arguments
+	
+2007-11-05  Morten Welinder  <terra@gnome.org>
+
+	* src/print-info.c (print_init): Hook up options parsing for pdf
+	export.
+	(page_setup_set_paper): Return an error code.
+	(print_info_set_paper): Ditto.
+
+	* src/stf-export.c (gnm_stf_export_options_sheet_list_clear): Hold
+	a weak sheet reference only.
+
+2007-11-04  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_range_used_units): deleted
+	(print_job_info_init_sheet): deleted
+	(paginate): simplify arguments
+	(compute_sheet_pages): use simplified arguments for paginate
+	
+2007-11-04  Andreas Guelzow  <aguelzow@pyrshep.ca>
+
+	* src/print.c (compute_sheet_pages_down_then_across): use
+	  new pagination info
+	(compute_sheet_pages_across_then_down): ditto
+	(paginate): new
+	(compute_sheet_pages): first paginate and only then create page list.
+
+2007-11-04  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

@@ -1,0 +1,26 @@
+Abyss policy
+------------
+
+Pixels are read from and written to a `GeglBuffer` using the functions
+`gegl_buffer_get()` and `gegl_buffer_set()`. Both functions take an
+array of pixels and write/read data from tiles according to the region
+of interest.
+
+The abyss is the rectangle that defines the part of the buffer that is
+readable. The abyss policy determines how the values of pixels within
+the buffer but outside the abyss are interpreted. It is applied when
+`gegl_buffer_get()` is called. Each policy has a separate iterator
+function that reads data to the array. If the region of interest is
+inside the abyss rectangle a simple read function is used to avoid the
+overhead of dealing with abyss. Abyss policy also affects samplers since
+they use `gegl_buffer_get()`.
+
+There are 5 abyss policies represented by the following enums:
+
+* `GEGL_ABYSS_NONE` - abyss pixels are zeroed
+* `GEGL_ABYSS_WHITE` - abyss pixels are white
+* `GEGL_ABYSS_BLACK` - abyss pixels are black
+* `GEGL_ABYSS_CLAMP` - each pixel's coordinates are clamped to the abyss
+    rectangle
+* `GEGL_ABYSS_LOOP` - each pixel's coordinates wrap when exceeding the
+    abyss rectangle (the buffer is essentially tiled)

@@ -1,0 +1,38 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+_PINCLUDE(gstreamermm/private/miniobject_p.h)
+#include <gstreamermm/allocator.h>
+
+namespace Gst
+{
+
+Glib::RefPtr<Gst::Memory> Memory::create(Gst::MemoryFlags flags, gpointer data, gsize maxsize, gsize offset, gsize size)
+{
+    return Glib::RefPtr<Memory>(reinterpret_cast<Memory*>(gst_memory_new_wrapped(GstMemoryFlags(flags), data, maxsize, offset, size, 0, 0)));
+}
+
+Glib::RefPtr<Gst::Memory> Memory::make_mapped(Gst::MapInfo& info, Gst::MapFlags flags)
+{
+  reference();
+  GstMemory* new_mem = gst_memory_make_mapped(gobj(), info.gobj(), static_cast<GstMapFlags>(flags));
+  return Glib::wrap(new_mem, gobj() != new_mem);
+}
+
+}

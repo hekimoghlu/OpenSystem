@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<interface>
+  <template class="SeahorseGpgmeAddUid" parent="GtkApplicationWindow">
+    <property name="title" bind-source="window_title" bind-property="title" bind-flags="sync-create|bidirectional" />
+    <property name="default-width">400</property>
+
+    <child>
+      <object class='GtkShortcutController'>
+        <child>
+          <object class='GtkShortcut'>
+            <property name='trigger'>Escape</property>
+            <property name='action'>action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+        <property name="show-title-buttons">False</property>
+
+        <child>
+          <object class="GtkButton">
+            <property name="label" translatable="yes">_Cancel</property>
+            <property name="use-underline">True</property>
+            <property name="action-name">window.close</property>
+          </object>
+        </child>
+
+        <property name="title-widget">
+          <object class="AdwWindowTitle" id="window_title">
+            <property name="title" translatable="yes">Add User ID</property>
+          </object>
+        </property>
+
+        <child type="end">
+          <object class="GtkButton">
+            <property name="label" translatable="yes">_Add</property>
+            <property name="use-underline">True</property>
+            <property name="tooltip_text" translatable="yes">Create the new user ID</property>
+            <property name="action-name">add-uid</property>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwPreferencesPage">
+        <child>
+          <object class="AdwPreferencesGroup">
+            <child>
+              <object class="AdwEntryRow" id="name_row">
+                <property name="title" translatable="yes" comments="Full name of the key, usually the name of the user.">Full _Name</property>
+                <property name="use-underline">True</property>
+                <property name="tooltip-text" translatable="yes">Must be at least 5 characters long</property>
+                <signal name="changed" handler="on_name_row_changed"/>
+              </object>
+            </child>
+            <child>
+              <object class="AdwEntryRow" id="email_row">
+                <property name="title" translatable="yes">_Email Address</property>
+                <property name="use-underline">True</property>
+                <property name="tooltip-text" translatable="yes">Optional email address</property>
+                <property name="input-purpose">email</property>
+                <signal name="changed" handler="on_email_row_changed"/>
+              </object>
+            </child>
+            <child>
+              <object class="AdwEntryRow" id="comment_row">
+                <property name="title" translatable="yes">Key Co_mment</property>
+                <property name="use-underline">True</property>
+                <property name="tooltip-text" translatable="yes">Optional comment describing key</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

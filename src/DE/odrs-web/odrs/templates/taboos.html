@@ -1,0 +1,55 @@
+{% extends "default.html" %}
+{% block title %}Taboos{% endblock %}
+
+{% block content %}
+
+<h2>Taboos</h2>
+
+{% if taboos|length == 0 %}
+<p>
+  There are no taboos stored.
+</p>
+{% else %}
+<form method="post" action="{{url_for('admin_taboo_add')}}" class="form">
+<input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
+<table class="table table-hover table-responsive">
+  <tr class="row">
+    <th class="col-sm-1">Locale</th>
+    <th class="col-sm-2">Value</th>
+    <th class="col-sm-1">Severity</th>
+    <th class="col-sm-7">Description</th>
+    <th class="col-sm-2">&nbsp;</th>
+  </tr>
+{% for taboo in taboos %}
+  <tr class="row">
+    <td>{{taboo.locale}}</td>
+    <td>{{taboo.value}}</td>
+    <td>{{taboo.severity}}</td>
+    <td>{{taboo.description}}</td>
+    <td>
+      <a class="btn btn-danger btn-block" href="{{url_for('.admin_taboo_delete', taboo_id=taboo.taboo_id)}}">Delete</a>
+    </td>
+  </tr>
+{% endfor %}
+  <tr class="row">
+    <td>
+      <input type="text" class="form-control" name="locale" required/>
+    </td>
+    <td>
+      <input type="text" class="form-control" name="value" required/>
+    </td>
+    <td>
+      <input type="number" class="form-control" name="severity" required/>
+    </td>
+    <td>
+      <input type="text" class="form-control" name="description" required/>
+    </td>
+    <td>
+      <button class="btn btn-action btn-block" type="submit">Add</button>
+    </td>
+  </tr>
+</table>
+</form>
+{% endif %}
+
+{% endblock %}

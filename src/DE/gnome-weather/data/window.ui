@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <menu id="primary-menu">
+    <section>
+      <attribute translatable="yes" name="label">Temperature Unit</attribute>
+      <item>
+        <attribute translatable="yes" name="label">_Celsius</attribute>
+        <attribute name="action">app.temperature-unit</attribute>
+        <attribute name="target">centigrade</attribute>
+      </item>
+      <item>
+        <attribute translatable="yes" name="label">_Fahrenheit</attribute>
+        <attribute name="action">app.temperature-unit</attribute>
+        <attribute name="target">fahrenheit</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="action">win.about</attribute>
+        <attribute name="label" translatable="yes">_About Weather</attribute>
+      </item>
+    </section>
+  </menu>
+  <template class="Gjs_MainWindow">
+    <property name="default_width">1050</property>
+    <property name="default_height">650</property>
+    <child>
+      <object class="GtkStack" id="stack">
+        <property name="transition_type">crossfade</property>
+        <child>
+          <object class="AdwToolbarView" id="searchView">
+            <child type="top">
+              <object class="AdwHeaderBar">
+                <property name="show-title">False</property>
+                <child type="end">
+                  <object class="GtkMenuButton">
+                    <property name="valign">center</property>
+                    <property name="menu_model">primary-menu</property>
+                    <property name="icon_name">open-menu-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <property name="content">
+              <object class="AdwStatusPage" id="searchViewStatus">
+                <property name="title" translatable="yes">Welcome to Weather!</property>
+                <property name="description" translatable="yes">To get started, select a location.</property>
+                <child>
+                  <object class="GtkMenuButton" id="searchButton">
+                    <property name="hexpand">False</property>
+                    <property name="halign">center</property>
+                    <property name="width-request">146</property>
+                    <property name="label" translatable="yes">Search for a city or country</property>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+
+        <child>
+          <object class="AdwToolbarView" id="cityBox">
+            <child type="top">
+              <object class="AdwHeaderBar" id="header">
+                <property name="centering_policy">strict</property>
+                <child type="start">
+                  <object class="GtkRevealer" id="refreshRevealer">
+                    <property name="transition_type">crossfade</property>
+                    <property name="child">
+                      <object class="GtkButton" id="refresh">
+                        <property name="valign">center</property>
+                        <property name="tooltip-text" translatable="yes">Refresh</property>
+                        <property name="action_name">win.refresh</property>
+                        <property name="icon_name">view-refresh-symbolic</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child type="title">
+                  <object class="AdwViewSwitcherTitle" id="forecastStackSwitcher">
+                    <property name="title" translatable="yes">Weather</property>
+                  </object>
+                </child>
+                <child type="end">
+                  <object class="GtkMenuButton">
+                    <property name="tooltip-text" translatable="yes">Main Menu</property>
+                    <property name="valign">center</property>
+                    <property name="menu_model">primary-menu</property>
+                    <property name="icon_name">open-menu-symbolic</property>
+                    <property name="primary">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <property name="content">
+              <object class="AdwBin" id="cityBin"/>
+            </property>
+            <child type="bottom">
+              <object class="AdwViewSwitcherBar" id="forecastStackSwitcherBar">
+                <property name="reveal" bind-source="forecastStackSwitcher" bind-property="title-visible" bind-flags="sync-create" />
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

@@ -1,0 +1,179 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+
+extern "C"
+{
+static gboolean SignalProxy_Visible_gtk_callback(GtkTreeModel* model, GtkTreeIter* iter, gpointer data)
+{
+  auto the_slot = static_cast<Gtk::TreeModelFilter::SlotVisible*>(data);
+
+  try
+  {
+    return (*the_slot)( Gtk::TreeModel::const_iterator(model, iter) );
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return FALSE; //An arbitary default, just to avoid the compiler warning.
+}
+
+static void SignalProxy_Visible_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::TreeModelFilter::SlotVisible*>(data);
+}
+
+static void SignalProxy_Modify_gtk_callback(GtkTreeModel* model, GtkTreeIter* iter, GValue* value, int column, gpointer data)
+{
+  auto the_slot = static_cast<Gtk::TreeModelFilter::SlotModify*>(data);
+
+  try
+  {
+    //Initialize the input parameter with the appropriate type for this column.
+    //Then the C++ handler can just use operator==() without calling init on the value output arg:
+    Glib::ValueBase cppValue;
+    auto column_type = gtk_tree_model_get_column_type(model, column);
+    cppValue.init(column_type);
+
+    (*the_slot)( Gtk::TreeModel::iterator(model, iter), cppValue, column );
+
+    //GTK+ has already done this for us: g_value_init(value, column_type);
+
+    //If the C++ handler has inited value with an inappropriate GType, then this will fail,
+    //but they should not do that because it makes no sense.
+    g_value_copy(cppValue.gobj() /* source */, value /* destination */);
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+static void SignalProxy_Modify_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::TreeModelFilter::SlotModify*>(data);
+}
+} // extern "C"
+
+using Path = Gtk::TreeModel::Path; //So that the generated method implementations can use this as a return type.
+
+namespace Gtk
+{
+
+TreeModelFilter::TreeModelFilter(const Glib::RefPtr<TreeModel>& child_model)
+:
+  _CONSTRUCT("child_model", child_model->gobj())
+{
+}
+
+TreeModelFilter::TreeModelFilter(const Glib::RefPtr<TreeModel>& child_model, const TreeModel::Path& virtual_root)
+:
+  _CONSTRUCT("child_model", child_model->gobj(), "virtual_root", (virtual_root.empty() ? nullptr : const_cast<GtkTreePath*>((virtual_root).gobj())) )
+{
+}
+
+void TreeModelFilter::set_visible_func(const SlotVisible& slot)
+{
+  // Create a copy of the slot.  A pointer to this will be passed
+  // through the callback's data parameter.  It will be deleted
+  // when SignalProxy_Visible_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotVisible(slot);
+
+  gtk_tree_model_filter_set_visible_func(gobj(),
+      &SignalProxy_Visible_gtk_callback, slot_copy,
+      &SignalProxy_Visible_gtk_callback_destroy);
+}
+
+
+TreeModel::iterator TreeModelFilter::convert_child_iter_to_iter(const iterator& child_iter)
+{
+  iterator filter_iter(this);
+
+  gtk_tree_model_filter_convert_child_iter_to_iter(gobj(), filter_iter.gobj(),
+      const_cast<GtkTreeIter*>(child_iter.gobj()));
+
+  return filter_iter;
+}
+
+TreeModel::const_iterator TreeModelFilter::convert_child_iter_to_iter(const const_iterator& child_iter) const
+{
+  const_iterator filter_iter(const_cast<TreeModelFilter*>(this));
+
+  gtk_tree_model_filter_convert_child_iter_to_iter(
+      const_cast<GtkTreeModelFilter*>(gobj()), filter_iter.gobj(),
+      const_cast<GtkTreeIter*>(child_iter.gobj()));
+
+  return filter_iter;
+}
+
+TreeModel::iterator TreeModelFilter::convert_iter_to_child_iter(const iterator& filter_iter)
+{
+  const auto child_model = gtk_tree_model_filter_get_model(gobj());
+
+  iterator child_iter(dynamic_cast<TreeModel*>(Glib::wrap_auto((GObject*)child_model, false)));
+
+  gtk_tree_model_filter_convert_iter_to_child_iter(gobj(), child_iter.gobj(),
+      const_cast<GtkTreeIter*>(filter_iter.gobj()));
+
+  return child_iter;
+}
+
+TreeModel::const_iterator TreeModelFilter::convert_iter_to_child_iter(const const_iterator& filter_iter) const
+{
+  const auto child_model = gtk_tree_model_filter_get_model(const_cast<GtkTreeModelFilter*>(gobj()));
+
+  const_iterator child_iter(dynamic_cast<TreeModel*>(Glib::wrap_auto((GObject*)child_model, false)));
+
+  gtk_tree_model_filter_convert_iter_to_child_iter(
+      const_cast<GtkTreeModelFilter*>(gobj()), child_iter.gobj(),
+      const_cast<GtkTreeIter*>(filter_iter.gobj()));
+
+  return child_iter;
+}
+
+void TreeModelFilter::set_modify_func(const TreeModelColumnRecord& columns, const SlotModify& slot)
+{
+  // Create a copy of the slot.  A pointer to this will be passed
+  // through the callback's data parameter.  It will be deleted
+  // when SignalProxy_Modify_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotModify(slot);
+
+  gtk_tree_model_filter_set_modify_func(gobj(),
+    columns.size(), const_cast<GType*>(columns.types()),
+    &SignalProxy_Modify_gtk_callback, slot_copy,
+    &SignalProxy_Modify_gtk_callback_destroy);
+}
+
+void TreeModelFilter::set_value_impl(const iterator& row, int column, const Glib::ValueBase& value)
+{
+  // Avoid two extra ref/unref cycles -- we don't store the child
+  // model pointer anywhere, so it's OK to do this _internally_.
+
+  const auto child_model = dynamic_cast<TreeModel*>(
+      Glib::wrap_auto((GObject*) gtk_tree_model_filter_get_model(gobj()), false));
+
+  iterator child_iter(child_model);
+
+  gtk_tree_model_filter_convert_iter_to_child_iter(
+      gobj(), child_iter.gobj(), const_cast<GtkTreeIter*>(row.gobj()));
+
+  child_model->set_value_impl(child_iter, column, value);
+}
+
+} // namespace Gtk

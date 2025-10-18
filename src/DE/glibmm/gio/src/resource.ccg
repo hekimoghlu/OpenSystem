@@ -1,0 +1,89 @@
+/* Copyright (C) 2012 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+
+namespace Gio
+{
+// Hand-coded because we want Flags& instead of guint32&.
+void
+Resource::get_info(const std::string& path, gsize& size, Flags& flags,
+  LookupFlags lookup_flags) const
+{
+  guint32 file_flags = 0;
+  GError* gerror = nullptr;
+  // Ignore the gboolean return value from g_resource_get_info().
+  // gerror is set if and only if the return value is FALSE.
+  g_resource_get_info(const_cast<GResource*>(gobj()), path.c_str(),
+    (GResourceLookupFlags)lookup_flags, &size, &file_flags, &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  flags = static_cast<Flags>(file_flags);
+}
+
+void
+Resource::get_file_exists(const std::string& path, LookupFlags lookup_flags) const
+{
+  GError* gerror = nullptr;
+  g_resource_get_info(const_cast<GResource*>(gobj()), path.c_str(),
+    (GResourceLookupFlags)lookup_flags, nullptr, nullptr, &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+}
+
+bool
+Resource::get_file_exists_nothrow(const std::string& path, LookupFlags lookup_flags) const
+{
+  return g_resource_get_info(const_cast<GResource*>(gobj()), path.c_str(),
+    (GResourceLookupFlags)lookup_flags, nullptr, nullptr, nullptr);
+}
+
+// Hand-coded because we want Flags& instead of guint32&.
+// static
+void
+Resource::get_info_global(
+  const std::string& path, gsize& size, Flags& flags, LookupFlags lookup_flags)
+{
+  guint32 file_flags = 0;
+  GError* gerror = nullptr;
+  // Ignore the gboolean return value from g_resources_get_info().
+  // gerror is set if and only if the return value is FALSE.
+  g_resources_get_info(
+    path.c_str(), (GResourceLookupFlags)lookup_flags, &size, &file_flags, &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+  flags = static_cast<Flags>(file_flags);
+}
+
+// static
+void
+Resource::get_file_exists_global(const std::string& path, LookupFlags lookup_flags)
+{
+  GError* gerror = nullptr;
+  g_resources_get_info(path.c_str(), (GResourceLookupFlags)lookup_flags, nullptr, nullptr, &gerror);
+  if (gerror)
+    ::Glib::Error::throw_exception(gerror);
+}
+
+// static
+bool
+Resource::get_file_exists_global_nothrow(const std::string& path, LookupFlags lookup_flags)
+{
+  return g_resources_get_info(
+    path.c_str(), (GResourceLookupFlags)lookup_flags, nullptr, nullptr, nullptr);
+}
+
+} // namespace Gio

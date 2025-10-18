@@ -1,0 +1,166 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Net::FTP;
+use Time::Local;
+
+my $manifestfile = $ARGV[0];
+my $secretfile = $ENV{'HOME'} . "/.www-gnumeric-org";
+my $time_offset = -7 * 3600;
+
+my @manifest;
+{
+    local (*M);
+    open (M, "< $manifestfile") or
+	die "$0: Cannot read $manifestfile: $!\n";
+    while (<M>) {
+	foreach my $fn (split (' ')) {
+	    die "$0: Cannot read $fn\n" unless -r $fn;
+	    push @manifest, [$fn, (stat _)[7], (stat _)[9]];
+	}
+    }
+}
+
+# -----------------------------------------------------------------------------
+
+my $secret = `cat $secretfile 2>/dev/null`;
+
+die "$0: missing host in $secretfile\n"
+    unless $secret =~ /^\s*open\s+(\S+)\s*$/m;
+my $host = $1;
+
+die "$0: missing username/password in $secretfile\n"
+    unless $secret =~ /^\s*user\s+(\S+)\s+(.*)$/m;
+my $username = $1;
+my $password = $2;
+
+die "$0: missing root directory in $secretfile\n"
+    unless $secret =~ /^\s*cd\s+(\S+)\s*$/m;
+my $root = $1;
+
+# -----------------------------------------------------------------------------
+
+my $ftp = Net::FTP->new ($host, Passive => 1) or
+    die "$0: Cannot connect to $host: $@";
+$ftp->login ($username, $password) or
+    die "$0: Cannot login ", $ftp->message;
+$ftp->cwd ($root) or
+    die "Cannot change working directory ", $ftp->message;
+my $mode = '?';
+
+my @lines = $ftp->dir ("-R");
+my $dir = ".";
+my %dirs = ($dir => 1);
+my %files = ();
+foreach my $l (@lines) {
+    if ($l =~ /^(.*):$/) {
+	$dir = $1;
+	$dirs{$dir} = 1;
+	next;
+    }
+
+    if ($l =~ /^d[-r][-w][-x][-r][-w][-x][-r][-w][-x]\s/) {
+	next;
+    }
+
+    # print "$l\n";
+
+    if ($l =~ /^-[-r][-w][-x][-r][-w][-x][-r][-w][-x]\s/) {
+	my @f = split (' ', $l, 9);
+	my $size = $f[4];
+	my $filename = $f[8];
+	my ($mtime,$mtime_res) = &decode_time ($f[5], $f[6], $f[7]);
+
+	my $full = "$dir/$filename";
+	$full =~ s{^\./+}{};
+	$files{$full} = [$size,$mtime,$mtime_res];
+	print STDERR "Have $full\n";
+    }
+}
+
+foreach my $p (@manifest) {
+    my ($fn,$size,$mtime) = @$p;
+
+    my $reason = 'new';
+    if (exists $files{$fn}) {
+	# print "We already have $fn\n";
+	my ($usize,$umtime,$umtime_res) = @{$files{$fn}};
+
+	my $same = 1;
+	$same &= ($usize == $size);
+	$same &= ($mtime < $umtime);
+	next if $same;
+
+	$reason = 'change:';
+	$reason .= " size" if $size != $usize;
+	$reason .= " time" if $mtime != $umtime;
+    }
+
+    print "We need to upload $fn [$reason]\n";
+
+    my $thismode = &guess_mode ($fn);
+    if ($thismode ne $mode) {
+	$mode = $thismode;
+	if ($mode eq 'ascii') {
+	    $ftp->ascii();
+	} else {
+	    $ftp->binary();
+	}
+    }
+
+    my $dir = "./$fn";
+    $dir =~ s|/[^/]+$||;
+    if (!exists $dirs{"$dir"}) {
+	$dir =~ s|^\./||;
+	$ftp->mkdir ($dir, 1) or
+	    die "Cannot create directory $dir ", $ftp->message;
+    }
+
+    $ftp->put ($fn, $fn) or
+	die "Cannot upload file $fn ", $ftp->message;
+}
+
+$ftp->quit ();
+
+# -----------------------------------------------------------------------------
+
+sub decode_time {
+    my ($a,$b,$c) = @_;
+
+    my ($sec,$min,$hour,$mday,$mon,$year);
+
+    my %months = ('jan' => 1,  'feb' => 2,  'mar' => 3,
+		  'apr' => 4,  'may' => 5,  'jun' => 6,
+		  'jul' => 7,  'aug' => 8,  'sep' => 9,
+		  'oct' => 10, 'nov' => 11, 'dec' => 12);
+    return (undef,undef) unless exists $months{lc $a};
+    $mon = $months{lc $a} - 1;
+    $mday = $b;
+
+    if ($c =~ /^(\d+):(\d+)$/) {
+	$hour = $1;
+	$min = $2;
+	$sec = 0;
+	$year = (localtime())[5] + 1900;
+    } else {
+	$hour = $min = $sec = 0;
+	$year = $c;
+    }
+
+    for (my $dy = 0; $dy < 2; $dy++) {
+	 my $t = timelocal ($sec,$min,$hour,$mday,$mon,$year) + $time_offset;
+	 # print STDERR "[$sec,$min,$hour,$mday,$mon,$year,$t]\n";
+	 return ($t, 60) if ($t <= time);
+	 $year--;
+    }
+
+    return (undef, undef);
+}
+
+sub guess_mode {
+    my ($f) = @_;
+    return 'bin' if $f =~ /\.(png|gnumeric)$/;
+    return 'ascii';
+}
+
+# -----------------------------------------------------------------------------

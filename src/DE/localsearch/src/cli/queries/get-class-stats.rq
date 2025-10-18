@@ -1,0 +1,20 @@
+SELECT ?g ?class ?count {
+  {
+    SELECT (tracker:FileSystem AS ?g) ?class (COUNT (?elem) AS ?count) {
+      GRAPH tracker:FileSystem {
+        ?elem a ?class .
+      }
+    }
+    GROUP BY ?class ?g
+    ORDER BY DESC ?count
+  } UNION {
+    SELECT ?g ?class (COUNT (?elem) AS ?count) {
+      GRAPH ?g {
+        ?elem a ?class .
+      }
+      FILTER (?g != tracker:FileSystem)
+    }
+    GROUP BY ?class ?g
+    ORDER BY ASC ?g DESC ?count
+  }
+}

@@ -1,0 +1,169 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+# The invoke code is compiled on the app side.
+# The invoke code must assign to each result var
+
+
+$pattern_arg_spec = { name => 'pattern', type => 'pattern', non_empty => 1,
+  desc => 'The pattern' };
+
+
+sub pattern_get_by_name {
+    $blurb = "Returns the pattern with the given name.";
+    $help  = <<HELP;
+Returns an existing pattern having the given name.
+Returns %NULL when no pattern exists of that name.
+HELP
+
+    &mitch_pdb_misc('2023', '3.0');
+
+    @inargs = (
+      { name => 'name', type => 'string', non_empty => 1,
+        desc => 'The name of the pattern' }
+    );
+
+    @outargs = (
+      { name => 'pattern',
+        type => 'pattern',
+        desc => 'The pattern',
+        none_ok => 1 }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  pattern = GIMP_PATTERN (gimp_pdb_get_resource (gimp, GIMP_TYPE_PATTERN, name, GIMP_PDB_DATA_ACCESS_READ, error));
+
+  /* Ignore "not found" error, just return NULL. */
+  g_clear_error (error);
+}
+CODE
+    );
+}
+
+sub pattern_get_info {
+    $blurb = 'Gets information about the pattern.';
+
+    $help = <<'HELP';
+Gets information about the pattern:
+the pattern extents (width and height) and bytes per pixel.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+
+    @inargs = (
+      ${pattern_arg_spec}
+    );
+
+    @outargs = (
+      { name => 'width', type => 'int32', void_ret => 1,
+        desc => "The pattern width" },
+      { name => 'height', type => 'int32',
+        desc => "The pattern height" },
+      { name => 'bpp', type => 'int32',
+        desc => "The pattern bpp" }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  const Babl *format;
+
+  format = gimp_babl_compat_u8_format (
+    gimp_temp_buf_get_format (pattern->mask));
+
+  width  = gimp_temp_buf_get_width  (pattern->mask);
+  height = gimp_temp_buf_get_height (pattern->mask);
+  bpp    = babl_format_get_bytes_per_pixel (format);
+}
+CODE
+    );
+}
+
+sub pattern_get_pixels {
+    $blurb = <<'BLURB';
+Gets information about the pattern (including pixels).
+BLURB
+
+    $help = <<'HELP';
+Gets information about the pattern:
+the pattern extents (width and height), its bpp, and its pixel data.
+HELP
+
+    &mitch_pdb_misc('2004', '2.2');
+    $lib_private = 1;
+
+    @inargs = (
+      ${pattern_arg_spec}
+    );
+
+    @outargs = (
+      { name => 'width', type => 'int32', void_ret => 1,
+        desc => "The pattern width" },
+      { name => 'height', type => 'int32',
+        desc => "The pattern height" },
+      { name => 'bpp', type => 'int32',
+        desc => "The pattern bpp" },
+      { name => 'color_bytes', type => 'bytes',
+        desc => 'The pattern data.' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+
+  const Babl *format;
+  gpointer    data;
+
+  format = gimp_babl_compat_u8_format (
+    gimp_temp_buf_get_format (pattern->mask));
+  data   = gimp_temp_buf_lock (pattern->mask, format, GEGL_ACCESS_READ);
+
+  width           = gimp_temp_buf_get_width  (pattern->mask);
+  height          = gimp_temp_buf_get_height (pattern->mask);
+  bpp             = babl_format_get_bytes_per_pixel (format);
+  color_bytes     = g_bytes_new (data, gimp_temp_buf_get_data_size (pattern->mask));
+
+  gimp_temp_buf_unlock (pattern->mask, data);
+}
+CODE
+    );
+}
+
+
+@headers = qw(<string.h>
+              "gegl/gimp-babl-compat.h"
+              "core/gimpcontext.h"
+              "core/gimpdatafactory.h"
+              "core/gimppattern.h"
+              "core/gimptempbuf.h"
+              "gimppdb-utils.h");
+
+@procs = qw(pattern_get_by_name
+            pattern_get_info
+            pattern_get_pixels);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Pattern';
+$doc_title = 'gimppattern';
+$doc_short_desc = 'Installable object used by fill and clone tools.';
+$doc_long_desc =  'Installable object used by fill and clone tools.';
+
+1;

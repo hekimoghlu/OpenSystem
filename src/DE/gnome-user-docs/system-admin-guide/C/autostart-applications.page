@@ -1,0 +1,54 @@
+<page xmlns="http://projectmallard.org/1.0/"
+        type="topic" style="task"
+        id="autostart-applications">
+
+  <info>
+    <link type="guide" xref="software#management" />
+    <revision pkgversion="3.30" date="2019-02-08" status="draft"/>
+
+    <credit type="author copyright">
+      <name>Jana Svarova</name>
+      <email>jana.svarova@gmail.com</email>
+      <years>2013</years>
+    </credit>
+    <credit type="author copyright">
+      <name>Petr Kovar</name>
+      <email>pknbe@volny.cz</email>
+      <years>2014</years>
+    </credit>
+
+    <include href="legal.xml" xmlns="http://www.w3.org/2001/XInclude"/>
+
+    <desc>How can I add an autostart application for all users?</desc>
+  </info>
+
+  <title>Add an autostart application for all users</title>
+
+  <p>To start an application automatically when the user logs in,
+  you need to create a <file>.desktop</file> file for that application in the
+  <file>/etc/xdg/autostart/</file> directory.</p>
+
+<steps>
+  <title>To add an autostart application for all users:</title>
+  <item><p>Create a <file>.desktop</file> file in the
+  <file>/etc/xdg/autostart/</file> directory:</p>
+<code>[Desktop Entry]
+Type=Application
+Name=<var>Files</var>
+Exec=<var>nautilus -n</var>
+OnlyShowIn=GNOME;
+AutostartCondition=<var>GSettings org.gnome.desktop.background show-desktop-icons</var></code>
+  </item>
+  <item><p>Replace <var>Files</var> with the name of the application.</p></item>
+  <item><p>Replace <var>nautilus -n</var> with the command you wish to use to
+  run the application.</p></item>
+  <item><p>You can use the <code>AutostartCondition</code> key to check for a
+  value of a GSettings key.</p>
+  <p>The session manager runs the application automatically if the key's value
+  is true. If the key's value changes in the running session, the session
+  manager starts or stops the application, depending on what the previous value
+  for the key was.</p>
+</item>
+</steps>
+
+</page>

@@ -1,0 +1,524 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+// This is for including the config header before any code (such as
+// the #ifndef GDKMM_DISABLE_DEPRECATED in deprecated classes) is generated:
+_CONFIGINCLUDE(gdkmmconfig.h)
+
+#include <vector>
+
+#include <gdkmm/pixbufformat.h>
+#include <giomm/inputstream.h>
+#include <giomm/icon.h>
+#include <giomm/loadableicon.h>
+#include <cairomm/surface.h>
+#include <glibmm/error.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(glibmm/private/object_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+// So we can use deprecated functions in our deprecated methods.
+//#undef GDK_PIXBUF_DISABLE_DEPRECATED
+#m4 _POP()
+
+namespace Gdk
+{
+
+_CC_INCLUDE(gdk-pixbuf/gdk-pixbuf.h)
+_WRAP_ENUM(Colorspace, GdkColorspace, decl_prefix GDKMM_API)
+_WRAP_ENUM(InterpType, GdkInterpType, decl_prefix GDKMM_API)
+
+/** Exception class for Gdk::Pixbuf errors.
+ */
+_WRAP_GERROR(PixbufError,GdkPixbufError,GDK_PIXBUF_ERROR, decl_prefix GDKMM_API)
+
+/** A pixel buffer.
+ *
+ * `%Gdk::Pixbuf` contains information about an image's pixel data,
+ * its color space, bits per sample, width and height, and the
+ * rowstride (the number of bytes between the start of one row
+ * and the start of the next).
+ *
+ * ## Creating new Gdk::Pixbuf
+ *
+ * The most basic way to create a pixbuf is to wrap an existing pixel
+ * buffer with a %Gdk::Pixbuf instance. You can use the
+ * create_from_data() function to do this.
+ *
+ * When you create a new `%Gdk::Pixbuf` instance for some data, you
+ * can specify a callback slot that will be
+ * called when the data buffer needs to be freed; this will happen when
+ * a `%Gdk::Pixbuf` is finalized by the reference counting functions. If
+ * you have a chunk of static data compiled into your application, you
+ * can call the create_from_data() overload without a slot parameter
+ * so that the data will not be freed.
+ *
+ * The create(Colorspace colorspace, bool has_alpha, int bits_per_sample,
+ * int width, int height) constructor function can be used
+ * as a convenience to create a pixbuf with an empty buffer; this is
+ * equivalent to allocating a data buffer and then
+ * wrapping it with create_from_data(). The create(Colorspace colorspace,
+ * bool has_alpha, int bits_per_sample, int width, int height)
+ * function will compute an optimal rowstride so that rendering can be
+ * performed with an efficient algorithm.
+ *
+ * As a special case, you can use the create_from_xpm_data()
+ * function (deprecated) to create a pixbuf from inline XPM image data.
+ *
+ * You can also copy an existing pixbuf with the copy()
+ * function. This is not the same as just acquiring a reference to
+ * the old pixbuf instance: the copy function will actually duplicate
+ * the pixel data in memory and create a new pixbuf instance for it.
+ *
+ * ## Image Data
+ *
+ * Image data in a pixbuf is stored in memory in an uncompressed,
+ * packed format. Rows in the image are stored top to bottom, and
+ * in each row pixels are stored from left to right.
+ *
+ * There may be padding at the end of a row.
+ *
+ * The "rowstride" value of a pixbuf, as returned by get_rowstride(),
+ * indicates the number of bytes between rows.
+ *
+ * **NOTE**: If you are copying raw pixbuf data, note that the
+ * last row in the pixbuf may not be as wide as the full rowstride, but rather
+ * just as wide as the pixel data needs to be; that is: it is unsafe to
+ * copy rowstride * height bytes to copy a whole pixbuf. Use
+ * copy() instead.
+ *
+ * The same rule applies when iterating over each row of a `%Gdk::Pixbuf` pixels
+ * array.
+ *
+ * ## Loading images
+ *
+ * The `%Gdk::PixBuf` class provides a simple mechanism for loading
+ * an image from a file.
+ *
+ * Additionally, there is the Gdk::PixbufLoader API for progressive image loading.
+ *
+ * ## Saving images
+ *
+ * The `%Gdk::Pixbuf` class provides methods for saving image data in
+ * a number of file formats. The formatted data can be written to a
+ * file or to a memory buffer.
+ */
+class GDKMM_API Pixbuf
+  : public Glib::Object,
+    public Gio::Icon,
+    public Gio::LoadableIcon
+{
+  _CLASS_GOBJECT(Pixbuf, GdkPixbuf, GDK_PIXBUF, Glib::Object, GObject, , , GDKMM_API)
+  _IMPLEMENTS_INTERFACE(Gio::Icon)
+  _IMPLEMENTS_INTERFACE(Gio::LoadableIcon)
+  _IGNORE(gdk_pixbuf_ref, gdk_pixbuf_unref,  gdk_pixbuf_non_anim_new)
+
+protected:
+_DEPRECATE_IFDEF_START
+  /** Transfers image data from a Cairo::Surface and converts it to an RGB(A)
+   * representation inside a Gdk::Pixbuf. This allows you to efficiently read
+   * individual pixels from cairo surfaces.
+   *
+   * This will create an RGB pixbuf with 8 bits per channel.
+   * The pixbuf will contain an alpha channel if the surface contains one.
+   *
+   * @param src Surface to copy from.
+   * @param src_x Source X coordinate within the surface.
+   * @param src_y Source Y coordinate within the surface.
+   * @param width Width in pixels of region to get.
+   * @param height Height in pixels of region to get.
+   *
+   * @throw Gdk::PixbufError
+   *
+   * @deprecated 4.12: Use Gdk::Texture and subclasses instead of
+   *                   cairo surfaces and pixbufs.
+   */
+  Pixbuf(const ::Cairo::RefPtr< ::Cairo::Surface>& src,
+         int src_x, int src_y, int width, int height);
+_DEPRECATE_IFDEF_END
+
+  _IGNORE(gdk_pixbuf_get_from_surface)
+  _IGNORE(gdk_pixbuf_get_from_texture)dnl// should not be used in newly written code
+
+public:
+  // Used only internally in gdk-pixbuf: _WRAP_ENUM(AlphaMode, GdkPixbufAlphaMode)
+  _WRAP_ENUM(Rotation, GdkPixbufRotation, decl_prefix GDKMM_API)
+
+  using SlotDestroyData = sigc::slot<void(const guint8*)>;
+
+_DEPRECATE_IFDEF_START
+  /** Transfers image data from a Cairo::Surface and converts it to an RGB(A)
+   * representation inside a Gdk::Pixbuf. This allows you to efficiently read
+   * individual pixels from cairo surfaces.
+   *
+   * This will create an RGB pixbuf with 8 bits per channel.
+   * The pixbuf will contain an alpha channel if the surface contains one.
+   *
+   * @param src Surface to copy from.
+   * @param src_x Source X coordinate within the surface.
+   * @param src_y Source Y coordinate within the surface.
+   * @param width Width in pixels of region to get.
+   * @param height Height in pixels of region to get.
+   *
+   * @throw Gdk::PixbufError
+   *
+   * @deprecated 4.12: Use Gdk::Texture and subclasses instead of
+   *                   cairo surfaces and pixbufs.
+   */
+  static Glib::RefPtr<Pixbuf> create(const ::Cairo::RefPtr< ::Cairo::Surface>& src,
+    int src_x, int src_y, int width, int height);
+_DEPRECATE_IFDEF_END
+
+  _WRAP_METHOD(Glib::RefPtr<Pixbuf> copy() const, gdk_pixbuf_copy)
+
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create(
+                   Colorspace colorspace, bool has_alpha,
+                   int bits_per_sample, int width, int height),
+               gdk_pixbuf_new)
+
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_subpixbuf(
+                  const Glib::RefPtr<Pixbuf>& src_pixbuf,
+                  int src_x, int src_y, int width, int height),
+               gdk_pixbuf_new_subpixbuf)
+
+  /** Creates a new pixbuf by loading an image from a file. The file format is detected automatically.
+   * @param filename The path to the pixbuf file.
+   *
+   * @throw Glib::FileError
+   * @throw Gdk::PixbufError
+   */
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_file(const std::string& filename), gdk_pixbuf_new_from_file, errthrow)
+
+  /** Creates a new pixbuf by loading an image from a file. The file format is detected automatically.
+   * The image will be scaled to fit in the requested size.
+   * @param filename The path to the pixbuf file.
+   * @param width The desired width
+   * @param height The desired height
+   * @param preserve_aspect_ratio Whether the image's aspect ratio will be preserved when scaling.
+   *
+   * @throw Glib::FileError
+   * @throw Gdk::PixbufError
+   */
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_file(const std::string& filename, int width, int height, bool preserve_aspect_ratio = true), gdk_pixbuf_new_from_file_at_scale, errthrow)
+  _IGNORE(gdk_pixbuf_new_from_file_at_size) //gdk_pixbuf_new_from_file_at_size() just calls gdk_pixbuf_new_from_file_at_scale().
+
+
+  /** Creates a new pixbuf by loading an image from a resource. The file format is detected automatically.
+   * @param resource_path The path of the resource file.
+   *
+   * @throw Gio::ResourceError
+   * @throw Gdk::PixbufError
+   *
+   * @newin{3,12}
+   */
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_resource(const std::string& resource_path), gdk_pixbuf_new_from_resource, errthrow)
+
+  /** Creates a new pixbuf by loading an image from a resource. The file format is detected automatically.
+   * The image will be scaled to fit in the requested size, optionally
+   * preserving the image's aspect ratio. When preserving the aspect ratio,
+   * a @a width of -1 will cause the image to be scaled to the exact given
+   * height, and a @a height of -1 will cause the image to be scaled to the
+   * exact given width. When not preserving aspect ratio, a @a width or
+   * @a height of -1 means to not scale the image at all in that dimension.
+   * @param resource_path The path of the resource file.
+   * @param width The desired width
+   * @param height The desired height
+   * @param preserve_aspect_ratio Whether the image's aspect ratio will be preserved when scaling.
+   *
+   * @throw Gio::ResourceError
+   * @throw Gdk::PixbufError
+   *
+   * @newin{3,12}
+   */
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_resource(const std::string& resource_path, int width, int height, bool preserve_aspect_ratio = true), gdk_pixbuf_new_from_resource_at_scale, errthrow)
+
+
+  /** Creates a new Gdk::Pixbuf out of in-memory image data.
+   * Currently only RGB images with 8 bits per sample are supported.
+   *
+   * @param data %Image data in 8-bit/sample packed format.
+   * @param colorspace Colorspace for the image data.
+   * @param has_alpha Whether the data has an opacity channel.
+   * @param bits_per_sample Number of bits per sample.
+   * @param width Width of the image in pixels.
+   * @param height Height of the image in pixels.
+   * @param rowstride Distance in bytes between rows.
+   * @return A newly-created Gdk::Pixbuf object.
+   */
+  static Glib::RefPtr<Pixbuf> create_from_data(const guint8* data, Colorspace colorspace,
+                                               bool has_alpha, int bits_per_sample,
+                                               int width, int height, int rowstride);
+
+  /** Creates a new Gdk::Pixbuf out of in-memory image data.
+   * Currently only RGB images with 8 bits per sample are supported.
+   *
+   * @param data %Image data in 8-bit/sample packed format.
+   * @param colorspace Colorspace for the image data.
+   * @param has_alpha Whether the data has an opacity channel.
+   * @param bits_per_sample Number of bits per sample.
+   * @param width Width of the image in pixels.
+   * @param height Height of the image in pixels.
+   * @param rowstride Distance in bytes between rows.
+   * @param destroy_slot Slot used to free the data when the pixbuf's
+   * reference count drops to zero.
+   * @return A newly-created Gdk::Pixbuf object.
+   */
+  static Glib::RefPtr<Pixbuf> create_from_data(const guint8* data, Colorspace colorspace,
+                                               bool has_alpha, int bits_per_sample,
+                                               int width, int height, int rowstride,
+                                               const SlotDestroyData& destroy_slot);
+
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_xpm_data(const char *const * data), gdk_pixbuf_new_from_xpm_data,
+    deprecated "4.20: Use create_from_stream() with a Gio::MemoryInputStream, making sure to handle errors in case the XPM format loader is not available.")
+
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_stream(const Glib::RefPtr<Gio::InputStream>& stream, const Glib::RefPtr<Gio::Cancellable>& cancellable), gdk_pixbuf_new_from_stream, errthrow)
+  static Glib::RefPtr<Pixbuf> create_from_stream(const Glib::RefPtr<Gio::InputStream>& stream);
+
+  _WRAP_METHOD(static Glib::RefPtr<Pixbuf> create_from_stream_at_scale(const Glib::RefPtr<Gio::InputStream>& stream, int width, int height, bool preserve_aspect_ratio, const Glib::RefPtr<Gio::Cancellable>& cancellable), gdk_pixbuf_new_from_stream_at_scale, errthrow)
+  static Glib::RefPtr<Pixbuf> create_from_stream_at_scale(const Glib::RefPtr<Gio::InputStream>& stream, int width, int height, bool preserve_aspect_ratio);
+
+
+  _WRAP_METHOD(Colorspace get_colorspace() const, gdk_pixbuf_get_colorspace)
+
+  _WRAP_METHOD(int get_n_channels() const, gdk_pixbuf_get_n_channels)
+  _WRAP_METHOD(bool get_has_alpha() const, gdk_pixbuf_get_has_alpha)
+  _WRAP_METHOD(int get_bits_per_sample() const, gdk_pixbuf_get_bits_per_sample)
+
+  // Note that the const version uses gdk_pixbuf_read_pixels, not gdk_pixbuf_get_pixels(),
+  // because gdk_pixbuf_get_pixels() is documented as sometimes copying data internally
+  // so the caller can make changes, but a const version wouldn't ever do that.
+  _WRAP_METHOD(guint8* get_pixels(), gdk_pixbuf_get_pixels)
+  _WRAP_METHOD(const guint8* get_pixels() const, gdk_pixbuf_read_pixels)
+
+  _WRAP_METHOD(guint8* get_pixels(guint& length), gdk_pixbuf_get_pixels_with_length)
+
+  // We hand-code this because there is no gdk_pixbuf_read_pixels_with_length().
+  const guint8* get_pixels(guint& length) const;
+
+  _WRAP_METHOD(int get_width() const, gdk_pixbuf_get_width)
+  _WRAP_METHOD(int get_height() const, gdk_pixbuf_get_height)
+  _WRAP_METHOD(int get_rowstride() const, gdk_pixbuf_get_rowstride)
+  _WRAP_METHOD(gsize get_byte_length() const, gdk_pixbuf_get_byte_length)
+
+
+  _WRAP_METHOD(void fill(guint32 pixel), gdk_pixbuf_fill)
+
+  /** Saves pixbuf to a file in format @a type.
+   * By default, "jpeg", "png", "ico" and "bmp" are possible file formats to
+   * save in, but more formats may be installed. The list of all writable
+   * formats can be determined by using get_formats() with is_writable().
+   *
+   * @newin{3,6}
+   *
+   * @param filename The path of the file to be created.
+   * @param type The file type.
+   *
+   * @throw Glib::FileError
+   * @throw Gdk::PixbufError
+   */
+  void save(const std::string& filename, const Glib::ustring& type) const;
+  _IGNORE(gdk_pixbuf_save)
+
+  /** Saves pixbuf to a file in format @a type.
+   * By default, "jpeg", "png", "ico" and "bmp" are possible file formats to save in, but more formats may be installed.
+   * TThe list of all writable formats can be determined by using get_formats() with
+   * Gdk::PixbufFormat::is_writable().
+   *
+   * The @a option_keys and @a option_values, if not empty, should contain pairs of strings that modify the save parameters.
+   * For example,  "quality", "100".
+   *
+   * Currently only a few parameters exist. JPEG images can be saved with a "quality" parameter;
+   * its value should be in the range [0,100]. Text chunks can be attached to PNG images by specifying parameters of the
+   * form "tEXt::key", where key is an ASCII string of length 1-79. The values are UTF-8 encoded strings. ICO images can be
+   * saved in depth 16, 24, or 32, by using the "depth" parameter. When the ICO saver is given "x_hot" and "y_hot"
+   * parameters, it produces a CUR instead of an ICO.
+   *
+   * @newin{3,6}
+   *
+   * @param filename The path of the file to be created.
+   * @param type The file type.
+   * @param option_keys
+   * @param option_values
+   *
+   * @throw Glib::FileError
+   * @throw Gdk::PixbufError
+   */
+  void save(const std::string& filename, const Glib::ustring& type,
+            const std::vector<Glib::ustring>& option_keys,
+            const std::vector<Glib::ustring>& option_values) const;
+  _IGNORE(gdk_pixbuf_savev)
+
+#if 0 //TODO:
+  typedef sigc::slot<const char*(gsize)> SlotSave;
+
+  /** @throws TODO
+   */
+  void save(const SlotSave& slot, const std::string& type);
+
+
+  /** A map of option keys to option values.
+   */
+  typepdef std::map<Glib::ustring, Glib::ustring> SaveValuesMap;
+
+  void save(const SlotSave& slot, const std::string& type, const SaveValuesMap& options);
+#endif
+
+/* TODO:
+typedef gboolean (*GdkPixbufSaveFunc)   (const gchar *buf,
+					 gsize count,
+					 GError **error,
+					 gpointer data);
+
+gboolean gdk_pixbuf_save_to_callback    (GdkPixbuf  *pixbuf,
+					 GdkPixbufSaveFunc save_func,
+					 gpointer user_data,
+					 const char *type,
+					 GError    **error,
+					 ...);
+
+gboolean gdk_pixbuf_save_to_callbackv   (GdkPixbuf  *pixbuf,
+					 GdkPixbufSaveFunc save_func,
+					 gpointer user_data,
+					 const char *type,
+					 char      **option_keys,
+					 char      **option_values,
+					 GError    **error);
+
+*/
+
+  /** Saves the pixbuf to a new buffer in format @a type.
+   * Note that the buffer is not nul-terminated and may contain embedded nulls.
+   * @see save().
+   *
+   * @newin{3,6}
+   *
+   * @param buffer This will be set to the address of a new buffer.
+   * @param buffer_size This will be set to the size of the @a buffer.
+   * @param type Currently "jpeg", "png", "ico" or "bmp".
+   *
+   * @throw Glib::FileError
+   * @throw Gdk::PixbufError
+   */
+  void save_to_buffer(gchar*& buffer, gsize& buffer_size,
+                      const Glib::ustring& type = "png") const;
+
+  /** Saves the pixbuf to a new buffer in format @a type.
+   * Note that the buffer is not nul-terminated and may contain embedded nulls.
+   * @see save().
+   *
+   * @newin{3,6}
+   *
+   * @param buffer This will be set to the address of a new buffer.
+   * @param buffer_size This will be set to the size of the @a buffer.
+   * @param type Currently "jpeg", "png", "ico" or "bmp".
+   * @param option_keys Names of options to set.
+   * @param option_values Values for named options.
+   *
+   * @throw Glib::FileError
+   * @throw Gdk::PixbufError
+   */
+  void save_to_buffer(gchar*& buffer, gsize& buffer_size,
+                      const Glib::ustring& type,
+                      const std::vector<Glib::ustring>& option_keys,
+                      const std::vector<Glib::ustring>& option_values) const;
+  _IGNORE(gdk_pixbuf_save_to_bufferv, gdk_pixbuf_save_to_buffer)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Pixbuf> add_alpha(
+                   bool substitute_color, guint8 r, guint8 g, guint8 b) const,
+               gdk_pixbuf_add_alpha)
+
+  _WRAP_METHOD(void copy_area(
+                   int src_x, int src_y, int width, int height,
+                   const Glib::RefPtr<Gdk::Pixbuf>& dest_pixbuf,
+                   int dest_x, int dest_y) const,
+               gdk_pixbuf_copy_area)
+
+  _WRAP_METHOD(void saturate_and_pixelate(
+                   const Glib::RefPtr<Gdk::Pixbuf>& dest,
+                   float saturation, bool pixelate) const,
+               gdk_pixbuf_saturate_and_pixelate)
+
+
+  _WRAP_METHOD(void scale(const Glib::RefPtr<Gdk::Pixbuf>& dest,
+                          int    dest_x,      int    dest_y,
+                          int    dest_width,  int    dest_height,
+                          double offset_x,    double offset_y,
+                          double scale_x,     double scale_y,
+                          InterpType interp_type) const,
+               gdk_pixbuf_scale)
+
+  _WRAP_METHOD(void composite(const Glib::RefPtr<Gdk::Pixbuf>& dest,
+                              int    dest_x,      int    dest_y,
+                              int    dest_width,  int    dest_height,
+                              double offset_x,    double offset_y,
+                              double scale_x,     double scale_y,
+                              InterpType interp_type,
+                              int overall_alpha) const,
+               gdk_pixbuf_composite)
+
+  _WRAP_METHOD(void composite_color(const Glib::RefPtr<Gdk::Pixbuf>& dest,
+                                    int    dest_x,      int    dest_y,
+                                    int    dest_width,  int    dest_height,
+                                    double offset_x,    double offset_y,
+                                    double scale_x,     double scale_y,
+                                    InterpType interp_type,
+                                    int overall_alpha,
+                                    int check_x, int check_y,
+                                    int check_size,
+                                    guint32 color1, guint32 color2) const,
+               gdk_pixbuf_composite_color)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Pixbuf> scale_simple(
+                   int dest_width, int dest_height,
+                   InterpType interp_type) const,
+               gdk_pixbuf_scale_simple)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Pixbuf> composite_color_simple(
+                   int dest_width, int dest_height,
+                   InterpType interp_type,
+                   int overall_alpha, int check_size,
+                   guint32 color1, guint32 color2) const,
+               gdk_pixbuf_composite_color_simple)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Pixbuf> rotate_simple(Rotation angle) const, gdk_pixbuf_rotate_simple)
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Pixbuf> flip(bool horizontal = true) const, gdk_pixbuf_flip)
+
+  _WRAP_METHOD(Glib::ustring get_option(const Glib::ustring& key) const, gdk_pixbuf_get_option)
+  _WRAP_METHOD(bool set_option(const Glib::ustring& key, const Glib::ustring& value), gdk_pixbuf_set_option)
+  _WRAP_METHOD(bool remove_option(const Glib::ustring& key), gdk_pixbuf_remove_option)
+  _WRAP_METHOD(bool copy_options(const Glib::RefPtr<Pixbuf>& dest_pixbuf) const, gdk_pixbuf_copy_options)
+
+  //This creates a new GdkPixbuf or returns the original with a reference.
+  _WRAP_METHOD(Glib::RefPtr<Pixbuf> apply_embedded_orientation(), gdk_pixbuf_apply_embedded_orientation)
+
+  /** Obtains the available information about the image formats supported by GdkPixbuf.
+   * @result A list of PixbufFormats describing the supported image formats.
+   */
+  static std::vector<PixbufFormat> get_formats();
+  _IGNORE(gdk_pixbuf_get_formats)
+
+  _WRAP_PROPERTY("colorspace", Colorspace)
+  _WRAP_PROPERTY("n-channels", int)
+  _WRAP_PROPERTY("has-alpha", bool)
+  _WRAP_PROPERTY("bits-per-sample", int)
+  _WRAP_PROPERTY("width", int)
+  _WRAP_PROPERTY("height", int)
+  _WRAP_PROPERTY("rowstride", int)
+  _WRAP_PROPERTY("pixels", void*)
+};
+
+} // namespace Gdk

@@ -1,0 +1,102 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PpsAnnotationPropertiesDialog: Adw.Dialog {
+  title: C_("Title of the dialog shown to edit properties of a given annotation.", "Annotation Properties");
+  content-width: 360;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup {
+        Adw.ActionRow {
+          title: _("_Color");
+          use-underline: true;
+          activatable-widget: color;
+
+          ColorDialogButton color {
+            dialog: ColorDialog {};
+
+            margin-start: 6;
+            margin-top: 6;
+            margin-bottom: 6;
+            notify::rgba => $property_changed() swapped;
+          }
+        }
+
+        Adw.SpinRow opacity {
+          title: _("_Opacity");
+          use-underline: true;
+
+          adjustment: Adjustment {
+            lower: 0;
+            upper: 100;
+            value: 100;
+            page-increment: 10;
+            step-increment: 1;
+          };
+
+          notify::value => $property_changed() swapped;
+        }
+
+        Adw.ComboRow icon {
+          visible: false;
+          title: _("_Icon");
+          use-underline: true;
+
+          model: StringList {
+            strings [
+              _("Note"),
+              _("Comment"),
+              _("Key"),
+              _("Help"),
+              _("New Paragraph"),
+              _("Paragraph"),
+              _("Insert"),
+              _("Cross"),
+              _("Circle"),
+              _("Unknown"),
+            ]
+          };
+
+          selected: 0;
+          notify::selected => $property_changed() swapped;
+        }
+
+        Adw.ComboRow markup_type {
+          visible: false;
+          title: _("_Markup Type");
+          use-underline: true;
+
+          model: StringList {
+            strings [
+              _("Highlight"),
+              _("Strike out"),
+              _("Underline"),
+              _("Squiggly"),
+            ]
+          };
+
+          selected: 0;
+          notify::selected => $property_changed() swapped;
+        }
+
+        Adw.EntryRow author {
+          title: _("_Author");
+          use-underline: true;
+          show-apply-button: true;
+          apply => $property_changed() swapped;
+        }
+
+        Adw.SwitchRow popup_state {
+          title: _("Auto-Reveal on _Scroll");
+          use-underline: true;
+          subtitle: _("Pop up note while scrolling the document");
+          notify::active => $property_changed() swapped;
+        }
+      }
+    };
+  };
+}

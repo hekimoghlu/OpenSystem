@@ -1,0 +1,66 @@
+# 2025-02-13: ubuntu:latest = 24.04, ubuntu:rolling = 24.10, ubuntu:devel = 25.04
+# See https://hub.docker.com/_/ubuntu
+
+# gitlab.gnome.org/GNOME/citemplates/release-service is not included.
+# This module is never released.
+
+image: ubuntu:rolling
+
+stages:
+  - validate
+  - build
+  - deploy
+
+variables:
+  # If docbook-xsl-ns is installed, the xsltproc command reads
+  # stylesheets from local files instead of http://docbook.sourceforge.net.
+  # Faster and safer. Reading from docbook.sourceforge.net sometimes fails.
+  DEPENDENCIES:
+    meson
+    ninja-build
+    python3-setuptools
+    yelp-tools
+    gettext
+    itstool
+    libxml2-utils
+    xsltproc
+    docbook5-xml
+    docbook-xsl-ns
+
+.build_default:
+  before_script:
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt update && apt -y upgrade && apt -y install $DEPENDENCIES
+
+website_validate:
+  extends: .build_default
+  stage: validate
+  script:
+    - mkdir _build && cd _build
+    - meson setup --prefix=/usr -Dvalidation=true -Dbuild-translations=false -Dallow-network-access=false
+    - meson compile
+  allow_failure: true
+
+website_build:
+  extends: .build_default
+  stage: build
+  script:
+    - mkdir _build && cd _build
+    - meson setup --prefix=/usr
+    - meson compile
+  artifacts:
+    paths:
+      - _build/docs/html
+
+# Publish the gtkmm website at gnome.pages.gitlab.gnome.org/gnomemm-website
+pages:
+  stage: deploy
+  needs: ["website_build"]
+  script:
+    - mkdir public
+    - mv _build/docs/html/* public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

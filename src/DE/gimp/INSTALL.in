@@ -1,0 +1,493 @@
+--------------------------------------
+Installation instructions for GIMP @GIMP_APP_VERSION@
+--------------------------------------
+
+There are some basic steps to building and installing GIMP.
+
+GIMP @GIMP_APP_VERSION@ replaces earlier GIMP versions. It is advised to uninstall
+them before installing GIMP @GIMP_APP_VERSION@. Since libgimp* libraries and data
+are all versioned anyway, it is possible to keep your older GIMP 2.x
+or 3.x installations in parallel to GIMP @GIMP_APP_VERSION@ on a same prefix.
+
+GIMP @GIMP_APP_VERSION@ is not backward compatible with GIMP 2.10 and earlier
+versions. Plug-ins and scripts written for GIMP 2.10, 2.8, 2.6 or
+earlier GIMP 2.x versions will not work because the API changed in
+GIMP 3.0.
+
+The most important part is to make sure the requirements for a build
+are fulfilled. We depend on a number of tools and libraries which are
+listed below. For libraries this means you need to also have the
+header files installed.
+
+This file is generated (versions are filled by our build system) and
+focuses on keeping an up-to-date list of dependencies intended to
+packagers, contributors or whoever wants to compile GIMP from source.
+Building and running self-built software often requires more setup, in
+particular environment variables so that your system knows where to
+find the various pieces of the software. The following document can
+help in that regard:
+
+  https://developer.gimp.org/core/setup/build/
+
+
+  ******************************************************************
+  * Unless you are experienced with building software from source, *
+  * you should not attempt to build all these libraries yourself!  *
+  * We suggest that you check if your distributor has development  *
+  * packages of them and use these instead.                        *
+  ******************************************************************
+
+
+  1. You need to have installed a recent version of pkg-config available from:
+
+       https://www.freedesktop.org/software/pkgconfig/
+
+     The compatible pkgconf utility would also work.
+
+  2. You need gettext version 0.19.8 or newer. Older versions did not have support yet
+     for certain file formats.
+
+  3. You need to have GEGL version @GEGL_REQUIRED_VERSION@ or newer and babl version
+     @BABL_REQUIRED_VERSION@ or newer. You can get them from https://gegl.org/ or clone
+     them from the GNOME git repository:
+
+       https://gitlab.gnome.org/GNOME/babl.git
+       https://gitlab.gnome.org/GNOME/gegl.git
+
+     GEGL must be built with Cairo support, i.e. -Dcairo=enabled option (required
+     for some mandatory operations such as "gegl:npd").
+
+     Introspection must be enabled for both babl and GEGL with -Denable-gir=true
+     and -Dintrospection=true respectively. The only case where we don't build
+     GIR data is when cross-compiling because of the difficulty to make cross-tools
+     for GObject Introspection.
+     Nevertheless if you have working GIR cross-tools, you can force the expected
+     behavior with GIMP's meson option -Dcan-crosscompile-gir=true
+
+     Optional:
+
+     - build GEGL with libumfpack (SuiteSparse) (`-Dumfpack=enabled`)
+       for alternative Matting engine "gegl:matting-levin" and OpenEXR
+       library (`-Dopenexr=enabled`) for OpenEXR format support.
+     - build GEGL with maxflow (https://github.com/gerddie/maxflow) and
+       the option -Dworkshop=true in order to be able to select the
+       experimental Paint Select tool in the Playground (operation
+       "gegl:paint-select" is needed).
+     - The "Show Image Graph" item in the "Debug" menu (hidden by
+       default on stable release) requires the GEGL operation
+       "gegl:introspect" which is always built but deactivated unless
+       the `dot` tool from graphviz is available (runtime dependency).
+
+  4. You need to have installed GTK version @GTK_REQUIRED_VERSION@ or newer.
+     GIMP also needs a recent version of GLib (>= @GLIB_REQUIRED_VERSION@), GDK-Pixbuf
+     (>= @GDK_PIXBUF_REQUIRED_VERSION@), and Pango (>= @PANGO_REQUIRED_VERSION@). Sources for these can be grabbed
+     from https://download.gnome.org/sources/.
+
+  5. We use cairo >= @CAIRO_REQUIRED_VERSION@, which is hosted at
+     https://www.cairographics.org/.
+
+  6. We require PangoCairo, a Pango backend using Cairo. Make sure you
+     have Cairo, FreeType2 and fontconfig installed before you compile
+     Pango. GIMP depends on freetype2 being newer than version @FREETYPE2_REQUIRED_VERSION@
+     and fontconfig @FONTCONFIG_REQUIRED_VERSION@ or newer. Older versions are known to have
+     bugs that seriously affect the stability of GIMP.
+
+     On Windows, we recommend fontconfig 2.13.95 (or over) where support
+     of fonts in user directory (Windows 1809 feature) appeared.
+
+     We also require HarfBuzz @HARFBUZZ_REQUIRED_VERSION@ or newer, an OpenType text shaping
+     tool. As this is a dependency for Pango, you will likely have it
+     installed, but you may have to install a development package for
+     the headers.
+
+  7. The file-compressor plug-in requires zlib, libbzip2, and liblzma to
+     be installed. All these libraries are required dependencies.
+
+  8. For metadata access GIMP requires the gexiv2 @GEXIV2_REQUIRED_VERSION@ or newer library.
+     It is hosted at: https://gitlab.gnome.org/GNOME/gexiv2/
+
+  9. libpng, libjpeg, libtiff, librsvg and lcms are hard dependencies
+     that can not be disabled. poppler is also a hard dependency because
+     PDF is too common nowadays for it to be an option (at least for
+     import); and poppler-data (CJK and Cyrillic support in PDF) is also
+     required because no languages should be considered "second class
+     citizen". If we support PDF, let's support it properly, i.e.
+     exhaustively.
+
+     There might be some issues with librsvg, based on the fact newer
+     versions are in Rust which is not buildable on all platforms. Yet
+     SVG support was deemed too important to be considered "optional"
+     for a decent graphics activity. Nevertheless a packager really
+     intent to have GIMP running on an architecture with no Rust support
+     could still:
+
+     1) easily patch out the file-svg plug-in from build system;
+     2) build GIMP with -Dvector-icons=false. Ironically librsvg is
+     needed at build time for this option, in order to create PNG
+     variants of icons (making librsvg unneeded at runtime). So all it
+     takes is to have a build machine with librsvg to create the PNG
+     icons, package and deliver them for machines without librsvg.
+
+     This is the compromise we came with, i.e. officially making SVG a
+     first-class file format, yet explaining how you could ignore it if
+     you really wanted or needed to.
+
+ 10. For MyPaint brushes, brushlib (libmypaint) @LIBMYPAINT_REQUIRED_VERSION@ is used.
+     The libmypaint repository is hosted at:
+
+        https://github.com/mypaint/libmypaint
+
+     If installing from repository, do not install the master branch!
+     Checkout the last tag "v1.y.z" from `libmypaint-v1` branch instead
+     (for instance "v1.6.1" tag at time of writing), or simply install
+     from a tarball or from your favorite package manager.
+
+     In particular, do NOT install tags or release tarballs versioned
+     "v2.y.z". GIMP depends on the version 1 of libmypaint and is
+     incompatible with the version 2 (which is still experimental anyway
+     and has no stable release at time of writing).
+
+ 11. We also need the mypaint-brushes v2 data package:
+
+        https://github.com/mypaint/mypaint-brushes
+
+     Note that this is a data packages and therefore it will install the
+     pkg-config file inside `$PREFIX/share/pkgconfig/`. If you install
+     mypaint-brushes from repository in a non-standard prefix, you will
+     have to make sure your $PKG_CONFIG_PATH environment variable also
+     lists `$PREFIX/share/pkgconfig/`.
+
+ 12. GIMP uses GLib's GIO library to handle file URIs and any I/O in
+     general, transparently, regardless where the file is stored, i.e.
+     locally, remotely, with which scheme, and so on. GIO in turn
+     supports various backends through modules. We don't know all the
+     modules available but since HTTP and HTTPS are so pervasive
+     nowadays, we kind of consider a least GIO modules for these schemes
+     mandatory (it allows to open from a pasted URL or just drag'n drop
+     from e.g. a browser).
+
+     For HTTP support (and many other schemes), on Linux at least, you
+     should install `gvfs`:
+
+        https://gitlab.gnome.org/GNOME/gvfs/
+
+     It is unclear whether `gvfs` can be built and installed on other
+     platforms such as Windows and macOS.
+
+     For HTTPS support, you should install `glib-networking`:
+
+        https://gitlab.gnome.org/GNOME/glib-networking
+
+     Of course there might be more modules providing support of more
+     storage backends. Ideally GIMP would have support to load from any
+     backend so packaging together with more GIO modules or recommending
+     them in a package manager would be ideal. In any case, installing
+     the ones for HTTP and HTTPS seems like the minimum nowadays.
+
+ 13. You may want to install other third party libraries or programs
+     that are needed for some of the available plug-ins. We recommend
+     to check that the following libraries are installed: openjpeg,
+     libmng, libwmf, libaa and libgs (Ghostscript).
+
+ 14. HEIF support depends on the libheif library. If you don't have
+     access to pre-built packages, the code is available at:
+
+        https://github.com/strukturag/libheif
+
+     GIMP supports several HEIF variants (different coding formats in
+     the HEIF container), so you should make sure you build libheif with
+     proper encoders and decoders for these:
+
+     * HEIC: e.g. libde265 and libx265 support (for
+             respectively decoding and encoding of HEVC).
+     * AVIF: e.g. libaom decoder and encoder (for AV1 encoding and
+             decoding), preferred over rav1e.
+     * HEJ2: OpenJPEG (for JPEG2000 inside HEIF).
+
+     If you don't compile libheif with the correct flags (see libheif
+     README which has a table of supported codecs), the plug-in is
+     mostly useless.
+     If HEIF support doesn't look like it works on relocatable
+     environments, the environment variable LIBHEIF_PLUGIN_PATH may be
+     what you are looking for.
+
+ 15. GObject Introspection requires the following dependencies to be
+     built and installed with introspection as well: babl, cairo,
+     GdkPixbuf, GEGL, GIO, GLib, GObject and GTK.
+
+ 16. Windows builds can now generate backtrace logs upon a crash.
+     The logs will be available in: %APPDATA%\GIMP\@GIMP_APP_VERSION@\CrashLog\
+     The feature depends on Dr.MinGW's ExcHndl library:
+
+        https://github.com/jrfonseca/drmingw
+
+ 17. Optional step if compiling GIMP from git (unneeded from tarball): you need
+     to initialize submodules with command `git submodule update --init`.
+
+ 18. Configure GIMP by running `meson _build`. You may want to pass some
+     options to it, see below.
+
+ 19. Build GIMP by running `ninja -C _build'.
+
+ 20. Install GIMP by running `ninja -C _build install'. In order to
+     avoid clashes with other versions of GIMP, we install a binary
+     called gimp-@GIMP_APP_VERSION@. By default there's also a link created so that
+     you can type 'gimp' to start gimp-@GIMP_APP_VERSION@.
+
+ 21. Summary of required packages and what version you need:
+
+     Package Name         Version
+
+     appstream            @APPSTREAM_REQUIRED_VERSION@
+     ATK                  @ATK_REQUIRED_VERSION@
+     babl                 @BABL_REQUIRED_VERSION@
+     cairo                @CAIRO_REQUIRED_VERSION@
+     Fontconfig           @FONTCONFIG_REQUIRED_VERSION@
+     freetype2            @FREETYPE2_REQUIRED_VERSION@
+     GDK-PixBuf           @GDK_PIXBUF_REQUIRED_VERSION@
+     GEGL                 @GEGL_REQUIRED_VERSION@
+     gexiv2               @GEXIV2_REQUIRED_VERSION@
+     GIO
+     GLib                 @GLIB_REQUIRED_VERSION@
+     glib-networking
+     GTK                  @GTK_REQUIRED_VERSION@
+     gvfs (on Linux)
+     HarfBuzz             @HARFBUZZ_REQUIRED_VERSION@
+     json-glib            @JSON_GLIB_REQUIRED_VERSION@
+     libarchive
+     libbzip2
+     libjpeg
+     liblzma              @LIBLZMA_REQUIRED_VERSION@
+     libmypaint           @LIBMYPAINT_REQUIRED_VERSION@
+     libpng               @LIBPNG_REQUIRED_VERSION@
+     libpoppler-glib      @POPPLER_REQUIRED_VERSION@
+     librsvg              @RSVG_REQUIRED_VERSION@
+     libtiff              @LIBTIFF_REQUIRED_VERSION@
+     Little CMS           @LCMS_REQUIRED_VERSION@
+     mypaint-brushes-2.0
+     pangocairo           @PANGO_REQUIRED_VERSION@
+     poppler-data         @POPPLER_DATA_REQUIRED_VERSION@
+     PyGObject
+     Python               @PYTHON3_REQUIRED_VERSION@
+     zlib
+
+ 22. Summary of optional packages:
+
+     Package Name        Version        Feature
+
+     bison               -              Image Map plug-in
+     cairo-pdf           @CAIRO_PDF_REQUIRED_VERSION@         PDF export
+     cfitsio             -              FITS
+     iso-codes           -              Language selection
+     ExcHndl             -              Crash logs on Windows with Dr. MinGW
+     flex                -              Image Map plug-in
+     gs                  -              ghostscript
+     libaa               -              ASCII art
+     libheif             @LIBHEIF_REQUIRED_VERSION@         HEIF (HEIC, AVIF)
+     libilbm             -              Amiga IFF/ILBM
+     libjxl              @LIBJXL_REQUIRED_VERSION@          JPEG XL
+     libmng              -              MNG
+     libwebp             @WEBP_REQUIRED_VERSION@          WebP (built with --enable-libwebpmux and --enable-libwebpdemux)
+     libwmf              @WMF_REQUIRED_VERSION@          WMF
+     libXcursor          -              X11 Mouse Cursor
+     libxpm              -              XPM
+     openexr             @OPENEXR_REQUIRED_VERSION@          OpenEXR
+     OpenJPEG            @OPENJPEG_REQUIRED_VERSION@          JPEG 2000
+     qoi                 -              QOI
+     webkit              @WEBKITGTK_REQUIRED_VERSION@         Help browser & webpage
+     vala                -              Vala plug-ins
+
+ 23. Summary of optional runtime dependencies:
+
+     darktable >= 1.7, with lua support enabled for raw loading
+     RawTherapee >= 5.2 for raw loading
+     xdg-email for sending emails
+     sendmail for sending emails if --with-sendmail enabled
+     gdb or lldb for our new bug-reporting dialog
+     "gegl:matting-levin" GEGL operation for alternative matting engine
+     GJS for Javascript plug-ins
+     dot for "Show Image Graph" (unstable branches)
+     xdg-desktop-portal implemented for your desktop for various D-Bus API (screenshot, color-picking…)
+
+ 24. Summary of experimental or unmaintained dependencies:
+
+     Lua 5.1 (or LuaJIT) and LGI: Lua plug-in example is disabled by
+       default because of stability issues with the Lua binding.
+
+     Webkit-GTK @WEBKITGTK_REQUIRED_VERSION@: the Help Browser and Webpage
+       plug-ins are disabled for lack of maintenance and issues with
+       Webkit-GTK
+
+
+
+Generic instructions for configuring and compiling auto-configured
+packages are included below. Here is an illustration of commands that
+might be used to build and install GIMP. The actual configuration,
+compilation and installation output is not shown.
+
+  % tar xvf gimp-@GIMP_VERSION@.tar.xz   # unpack the sources
+  % cd gimp-@GIMP_VERSION@               # change to the toplevel directory
+  % meson setup _build              # `configure' step
+  % ninja -C _build                 # build GIMP
+  % ninja -C _build install         # install GIMP
+
+
+The `configure' step examines your system, and adapts GIMP to run on
+it. The script has many options, some of which are described in the
+generic instructions included at the end of this file. All of the
+options can be listed using the command `meson configure' if you
+successfully configured already, or by reading the file `meson_options.txt`.
+There are several special options the GIMP configure script recognizes.
+These are:
+
+  -Dvector-icons=false  This option installs raster icons instead of
+     vector icons.
+
+  -Drelocatable-bundle=yes  This option forces GIMP to search some
+     resources (e.g. MyPaint brushes or libwmf fonts) relatively to the
+     running prefix, rather than using build-time paths.
+
+  -Dansi=true  This option causes stricter ANSI C checking to be
+     performed when compiling with GCC. The default is for strict
+     checking to be disabled. NOTE: This option is intended primarily as
+     a convenience for developers.
+
+  -Dgimpdir=DIR.  This option changes the default directory GIMP uses to
+     search for its configuration files from $XDG_CONFIG_HOME/GIMP/@GIMP_APP_VERSION@/
+     (per XDG Base Directory Specification, $XDG_CONFIG_HOME defaults to
+     the directory .config/ in the user's home directory) to
+     $XDG_CONFIG_HOME/DIR/@GIMP_APP_VERSION@/.
+     If DIR is an absolute path, the directory will be changed to DIR.
+
+  -Dshmem-type=[none|sysv|posix|win32|auto].  This option allows you to
+     specify how image data is transported between the core and plug-ins.
+     Usually the best way to do this is detected automatically.
+
+  -Daa=disabled  The AA plug-in needs libaa and configure checks for
+     its presence. Use -Daa=disabled if you run into problems.
+
+  -Dxpm=disabled  The XPM plug-in needs libxpm and configure checks
+     for its presence. If for some reason you don't want to build the
+     XPM plug-in even though the library is installed, use
+     -Dxpm=disabled to disable it explicitly.
+
+  -Dmng=disabled  The MNG plug-in needs libmng and configure checks
+     for its presence. If for some reason you don't want to build the
+     MNG plug-in even though the library is installed, use
+     -Dmng=disabled to disable it explicitly.
+
+  -Dwmf=disabled  The WMF plug-in needs libwmf2 and configure checks for
+     its presence. Use -Dwmf=disabled if you run into problems.
+
+  -Dwebkit-unmaintained=true  We do not recommend to install the Help
+     browser and Webpage plug-ins anymore. If for some reason you want
+     these anyway, you can force the build with this explicit option.
+
+  -Dprint=false  If for some reason you don't want to build the Print
+     plug-in based on the GtkPrint API, you can build with -Dprint=false.
+
+  -Dalsa=disabled  If you don't want to compile ALSA support into the
+     MIDI input controller module, you can use the -Dalsa=disabled option.
+
+  -Dlinux-input=disabled  If you don't want to compile the Linux Input
+     controller module, you can use the -Dlinux-input=disabled option.
+
+  -Dgi-docgen=enabled|disabled  This option controls whether the libgimp
+     C API references will be created using gi-docgen.
+
+  -Denable-multiproc=false This option allows you to disable support for
+     multiple processors. It is enabled by default.
+
+  -Dwith-sendmail[=PATH] This option is used to tell GIMP to send email
+     through sendmail instead of xdg-email. You can optionally indicate
+     where to find the sendmail command. Otherwise sendmail will simply
+     be searched in your $PATH at runtime.
+
+  -Denable-default-bin=false  Use this option if you don't want to make
+     gimp-@GIMP_APP_VERSION@ the default GIMP installation. Otherwise a link called
+     gimp pointing to the gimp-@GIMP_APP_VERSION@ executable will be installed.
+
+  -Denable-console-bin=false  Use this option if you don't want the
+     gimp-console binary to be built in addition to the standard binary.
+     gimp-console is useful for command-line batch mode or as a server.
+
+  -Djavascript=disabled  If for some reason you don't want to install the
+     JavaScript plug-ins, you can use -Djavascript=false.
+
+  -Dlua=true  Lua binding is experimental because of stability issues.
+     You may test the feature by enabling it.
+
+  -Dvala-plugins=disabled  If for some reason you don't want to install the
+     Vala plug-ins, you can use -Dvala-plugins=disabled.
+
+
+This list is manually maintained. To get an exhaustive listing of options,
+read `meson_options.txt'.
+Additionally meson supports a wide range of common built-in options. See
+documentation: https://mesonbuild.com/Builtin-options.html
+
+The `ninja' command builds several things:
+ - A bunch of public libraries in the directories starting with 'libgimp'.
+ - The plug-in programs in the 'plug-ins' directory.
+ - Some modules in the 'modules' subdirectory.
+ - The main GIMP program 'gimp-@GIMP_APP_VERSION@' in `app'.
+
+The `ninja install' command installs the GIMP header files associated
+with the libgimp libraries, the plug-ins, some data files and the GIMP
+executable. After running `ninja install' and assuming the build process
+was successful you should be able to run `gimp'.
+
+
+When configure fails
+======================
+
+The most important is to read the error output displayed by meson, as it
+will very likely tell you the exact problem.
+
+A detailed log of the meson output is written to the file meson-logs/meson-log.txt.
+This may help diagnose problems.
+
+The configuration step verify that various tools are installed, such as:
+C and C++ compilers, pkg-config or pkgconf (tools that replaces the old
+foo-config scripts), and more. Make sure these are installed.
+
+Then it will try to search for various libraries, by looking up a `.pc`
+file (used to get information on installation details). For instance if
+pkg-config could not find the file 'gtk+-3.0.pc' that gets installed
+with GTK, verify that the development package of GTK+3 is installed or
+that you have a version equal or higher than the required version.
+
+If you installed a supported version of a dependency but the configure
+step still cannot find it, you may need to add the location of the .pc
+file to the environment variable PKG_CONFIG_PATH before running meson
+setup.
+
+When you use custom installation prefixes for dependencies, you will
+likely need to set more environment variables, such as LD_LIBRARY_PATH
+or GI_TYPELIB_PATH, either for the configuration to succeed, the build
+itself or to start GIMP at all.
+Please check out our building tutorial for more in-depth details:
+
+  https://developer.gimp.org/core/setup/build/
+
+
+About optional features
+=======================
+
+When the configure step succeeds, it will display a summary of which
+optional features or plug-ins will be installed.
+
+There are some GIMP features, in particular for the support of more
+recent or less used image formats, that need additional third-party
+libraries installed on your system. You need the related libraries and
+header files installed for these, otherwise the compiled GIMP will be a
+minimal version without these features.
+
+Once you installed them, run the following command to trigger a
+reconfiguration:
+
+  % ninja reconfigure
+
+Verify that the optional features you wanted are now shown as `true`,
+otherwise follow similar advice as above to make sure they are
+visible to your setup.

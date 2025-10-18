@@ -1,0 +1,206 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+
+#include <gtkmm/treeview.h>
+#include <gtk/gtk.h>
+
+namespace
+{
+extern "C"
+{
+static void proxy_foreach_selection_iter_callback(GtkTreeModel* model, GtkTreePath*, GtkTreeIter* iter, void* data)
+{
+  typedef Gtk::TreeSelection::SlotForeachIter SlotType;
+  auto& slot = *static_cast<SlotType*>(data);
+
+  try
+  {
+    slot(Gtk::TreeModel::const_iterator(model, iter));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+static void proxy_foreach_selection_path_callback(GtkTreeModel*, GtkTreePath* path, GtkTreeIter*, void* data)
+{
+  typedef Gtk::TreeSelection::SlotForeachPath SlotType;
+  auto& slot = *static_cast<SlotType*>(data);
+
+  try
+  {
+    slot(Gtk::TreeModel::Path(path, true));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+static void proxy_foreach_selection_path_and_iter_callback(GtkTreeModel* model, GtkTreePath* path,
+                                                    GtkTreeIter* iter, void* data)
+{
+  typedef Gtk::TreeSelection::SlotForeachPathAndIter SlotType;
+  auto& slot = *static_cast<SlotType*>(data);
+
+  try
+  {
+    slot(Gtk::TreeModel::Path(path, true), Gtk::TreeModel::const_iterator(model, iter));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+
+
+static gboolean SignalProxy_Select_gtk_callback(GtkTreeSelection*, GtkTreeModel* model, GtkTreePath* path,
+                                          gboolean path_currently_selected, void* data)
+{
+  const auto the_slot = static_cast<Gtk::TreeSelection::SlotSelect*>(data);
+
+  try
+  {
+    return (*the_slot)(Glib::wrap(model, true),   // take copy
+                         Gtk::TreePath(path, true), // take copy
+                         path_currently_selected);
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return 0;
+}
+
+static void SignalProxy_Select_gtk_callback_destroy(void* data)
+{
+  delete static_cast<Gtk::TreeSelection::SlotSelect*>(data);
+}
+} // extern "C"
+} // anonymous namespace
+
+namespace Gtk
+{
+
+void TreeSelection::set_select_function(const SlotSelect& slot)
+{
+  // Create a copy of the slot.  A pointer to this will be passed
+  // through the callback's data parameter.  It will be deleted
+  // when SignalProxy_Select_gtk_callback_destroy() is called.
+  auto slot_copy = new SlotSelect(slot);
+
+  gtk_tree_selection_set_select_function(gobj(),
+      &SignalProxy_Select_gtk_callback, slot_copy,
+      &SignalProxy_Select_gtk_callback_destroy);
+}
+
+Glib::RefPtr<TreeModel> TreeSelection::get_model()
+{
+  const auto tree_view = gtk_tree_selection_get_tree_view(gobj());
+  return Glib::wrap(gtk_tree_view_get_model(tree_view), true);
+}
+
+Glib::RefPtr<const TreeModel> TreeSelection::get_model() const
+{
+  const auto tree_view = gtk_tree_selection_get_tree_view(const_cast<GtkTreeSelection*>(gobj()));
+  return Glib::wrap(gtk_tree_view_get_model(tree_view), true);
+}
+
+TreeModel::iterator TreeSelection::get_selected()
+{
+  TreeModel::iterator iter;
+  GtkTreeModel* model_gobject = nullptr;
+
+  // If no row is selected, *iter.gobj() is set to an invalid iterator.
+  gtk_tree_selection_get_selected(gobj(), &model_gobject, iter.gobj());
+
+  iter.set_model_gobject(model_gobject);
+  return iter;
+}
+
+TreeModel::const_iterator TreeSelection::get_selected() const
+{
+  return const_cast<TreeSelection*>(this)->get_selected();
+}
+
+TreeModel::iterator TreeSelection::get_selected(Glib::RefPtr<TreeModel>& model)
+{
+  TreeModel::iterator iter;
+  GtkTreeModel* model_gobject = nullptr;
+
+  // If no row is selected, *iter.gobj() is set to an invalid iterator.
+  gtk_tree_selection_get_selected(gobj(), &model_gobject, iter.gobj());
+
+  model = Glib::wrap(model_gobject, true);
+
+  iter.set_model_refptr(model);
+  return iter;
+}
+
+TreeModel::const_iterator TreeSelection::get_selected(Glib::RefPtr<const TreeModel>& model) const
+{
+  TreeModel::iterator iter;
+  GtkTreeModel* model_gobject = nullptr;
+
+  // If no row is selected, *iter.gobj() is set to an invalid iterator.
+  gtk_tree_selection_get_selected(const_cast<GtkTreeSelection*>(gobj()), &model_gobject, iter.gobj());
+
+  model = Glib::wrap(model_gobject, true);
+
+  iter.set_model_refptr(std::const_pointer_cast<TreeModel>(model));
+  return iter;
+}
+
+void TreeSelection::selected_foreach_iter(const SlotForeachIter& slot) const
+{
+  SlotForeachIter slot_copy (slot);
+  gtk_tree_selection_selected_foreach(const_cast<GtkTreeSelection*>(gobj()), &proxy_foreach_selection_iter_callback, &slot_copy);
+}
+
+void TreeSelection::selected_foreach_path(const SlotForeachPath& slot) const
+{
+  SlotForeachPath slot_copy (slot);
+  gtk_tree_selection_selected_foreach(const_cast<GtkTreeSelection*>(gobj()), &proxy_foreach_selection_path_callback, &slot_copy);
+}
+
+void TreeSelection::selected_foreach(const SlotForeachPathAndIter& slot) const
+{
+  SlotForeachPathAndIter slot_copy (slot);
+  gtk_tree_selection_selected_foreach(const_cast<GtkTreeSelection*>(gobj()), &proxy_foreach_selection_path_and_iter_callback, &slot_copy);
+}
+
+std::vector<TreeModel::Path> TreeSelection::get_selected_rows() const
+{
+  return Glib::ListHandler<TreeModel::Path, TreePathTraits>::list_to_vector(gtk_tree_selection_get_selected_rows(
+      const_cast<GtkTreeSelection*>(gobj()), nullptr), Glib::OWNERSHIP_DEEP);
+}
+
+std::vector<TreeModel::Path> TreeSelection::get_selected_rows(Glib::RefPtr<TreeModel>& model)
+{
+  GtkTreeModel* model_gobject = nullptr;
+
+  const std::vector<TreeModel::Path> result (Glib::ListHandler<TreeModel::Path, TreePathTraits>::list_to_vector(gtk_tree_selection_get_selected_rows(
+      const_cast<GtkTreeSelection*>(gobj()), &model_gobject), Glib::OWNERSHIP_DEEP));
+
+  model = Glib::wrap(model_gobject, true);
+  return result;
+}
+
+} // namespace Gtk

@@ -1,0 +1,246 @@
+/* completionprovider.h
+ *
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <glibmm/interface.h>
+#include <gtksourceview/gtksource.h>
+
+#include <gtksourceviewmm/completionactivation.h>
+#include <gtksourceviewmm/completioncontext.h>
+#include <gtksourceviewmm/completioninfo.h>
+#include <gtksourceviewmm/completionproposal.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+namespace Gsv
+{
+
+class CompletionContext;
+
+/** Completion provider interface.
+ *
+ * You must implement this interface to provide proposals to Completion.
+ *
+ * @newin{2,10}
+ */
+class CompletionProvider : public Glib::Interface
+{
+  _CLASS_INTERFACE(CompletionProvider, GtkSourceCompletionProvider, GTK_SOURCE_COMPLETION_PROVIDER, GtkSourceCompletionProviderIface)
+public:
+  _WRAP_METHOD(Glib::ustring get_name() const, gtk_source_completion_provider_get_name)
+
+  /** Get the icon of the provider.
+   *
+   * @return The icon to be used for the provider, or empty Glib::RefPtr if the
+   * provider does not have a special icon.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Pixbuf> get_icon(), gtk_source_completion_provider_get_icon, refreturn)
+
+  /** Get the icon of the provider.
+   *
+   * @return The icon to be used for the provider, or empty Glib::RefPtr if the
+   * provider does not have a special icon.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Pixbuf> get_icon() const, gtk_source_completion_provider_get_icon, refreturn, constversion)
+
+  /** Populate @a context with proposals from a provider.
+   *
+   * @param context The CompletionContext.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void populate(const Glib::RefPtr<CompletionContext>& context), gtk_source_completion_provider_populate)
+
+  /** Get whether the provider match the context of completion detailed in
+   *  @a context.
+   *
+   * @param context The CompletionContext.
+   *
+   * @return @c true if provider matches the completion context, @c false
+   * otherwise.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(bool match(const Glib::RefPtr<const CompletionContext>& context) const, gtk_source_completion_provider_match)
+
+  /** Get a customized info widget to show extra information of a proposal.
+   *
+   * This allows for customized widgets on a proposal basis, although in general
+   * providers will have the same custom widget for all their proposals and
+   * @a proposal can be ignored. The implementation of this function is
+   * optional. If implemented, update_info() @b must also be implemented. If not
+   * implemented, the default get_info() will be used to display extra
+   * information about a CompletionProposal.
+   *
+   * @param proposal The currently selected CompletionProposal.
+   *
+   * @return A custom Gtk::Widget to show extra information about @a proposal.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(Gtk::Widget* get_info_widget(const Glib::RefPtr<const CompletionProposal>& proposal), gtk_source_completion_provider_get_info_widget)
+
+  /** Get a customized info widget to show extra information of a proposal.
+   *
+   * This allows for customized widgets on a proposal basis, although in general
+   * providers will have the same custom widget for all their proposals and
+   * @a proposal can be ignored. The implementation of this function is
+   * optional. If implemented, update_info() @b must also be implemented. If not
+   * implemented, the default get_info() will be used to display extra
+   * information about a CompletionProposal.
+   *
+   * @param proposal The currently selected CompletionProposal.
+   *
+   * @return A custom Gtk::Widget to show extra information about @a proposal.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(const Gtk::Widget* get_info_widget(const Glib::RefPtr<const CompletionProposal>& proposal) const, gtk_source_completion_provider_get_info_widget, constversion)
+
+  /** Update extra information shown in @a info for @a proposal.
+   *
+   * This should be implemented if your provider sets a custom info widget for
+   * @a proposal. This function @b must be implemented when get_info_widget() is
+   * implemented.
+   *
+   * @param proposal A CompletionProposal.
+   * @param info A CompletionInfo.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void update_info(const Glib::RefPtr<const CompletionProposal>& proposal, const CompletionInfo& info), gtk_source_completion_provider_update_info)
+
+#m4 _CONVERSION(`Gtk::TextBuffer::iterator&',`GtkTextIter*',`($3).gobj()')
+  /** Get the Gtk::TextBuffer::iterator at which the completion for @a proposal starts.
+   *
+   * When implemented, the completion can use this information to position the
+   * completion window accordingly when a proposal is selected in the completion
+   * window.
+   *
+   * @param proposal A CompletionProposal.
+   * @param context A CompletionContext.
+   * @param iter A Gtk::TextBuffer::iterator.
+   *
+   * @return @c true if @a iter was set for @a proposal, @c false otherwise.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(bool get_start_iter(const Glib::RefPtr<const CompletionContext>& context, const Glib::RefPtr<const CompletionProposal>& proposal, Gtk::TextBuffer::iterator& iter), gtk_source_completion_provider_get_start_iter)
+
+#m4 _CONVERSION(`const Gtk::TextBuffer::const_iterator&',`GtkTextIter*',`const_cast<GtkTextIter*>(($3).gobj())')
+  /** Activate @a proposal at @a iter.
+   *
+   * When this functions returns <tt>false</tt>, the default activation of
+   * @a proposal will take place which replaces the word at @a iter with the
+   * label of @a proposal.
+   *
+   * @param proposal A CompletionProposal.
+   * @param iter A Gtk::TextBuffer::const_iterator.
+   *
+   * @return @c true to indicate that the proposal activation has been handled,
+   * @c false otherwise.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(bool activate_proposal(const Glib::RefPtr<CompletionProposal>& proposal, const Gtk::TextBuffer::const_iterator& iter), gtk_source_completion_provider_activate_proposal)
+
+  /** Get with what kind of activation the provider should be activated.
+   *
+   * @return A combination of CompletionActivation.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(CompletionActivation get_activation() const, gtk_source_completion_provider_get_activation)
+
+  /** Get the delay in milliseconds before starting interactive completion for
+   *  this provider.
+   *
+   * A value of -1 indicates to use the default value as set
+   * by Completion::property_auto_complete_delay().
+   *
+   * @return The interactive delay in milliseconds.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(int get_interactive_delay() const, gtk_source_completion_provider_get_interactive_delay)
+
+  /** Get the provider priority.
+   *
+   * The priority determines the order in which proposals appear in the
+   * completion popup. Higher priorities are sorted before lower priorities. The
+   * default priority is 0.
+   *
+   * @return The provider priority.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(int get_priority() const, gtk_source_completion_provider_get_priority)
+
+private:
+
+#m4 _CONVERSION(`char*',`Glib::ustring',`Glib::convert_return_gchar_ptr_to_ustring($3)')
+#m4 _CONVERSION(`Glib::ustring', `char*', `g_strdup(($3).c_str())')
+  _WRAP_VFUNC(Glib::ustring get_name() const, get_name)
+
+  _WRAP_VFUNC(Glib::RefPtr<Gdk::Pixbuf> get_icon(), get_icon, refreturn)
+
+#m4 _CONVERSION(`GtkSourceCompletionContext*', `const Glib::RefPtr<CompletionContext>&', `Glib::wrap($3, true)')
+  _WRAP_VFUNC(void populate(const Glib::RefPtr<CompletionContext>& context), populate)
+#m4 _CONVERSION(`GtkSourceCompletionContext*', `const Glib::RefPtr<CompletionContext>&', `Glib::wrap($3)')
+
+#m4 _CONVERSION(`GtkSourceCompletionContext*', `const Glib::RefPtr<const CompletionContext>&', `Glib::wrap($3, true)')
+  _WRAP_VFUNC(bool match(const Glib::RefPtr<const CompletionContext>& context) const, match)
+#m4 _CONVERSION(`GtkSourceCompletionContext*', `const Glib::RefPtr<const CompletionContext>&', `Glib::wrap($3)')
+
+  _WRAP_VFUNC(CompletionActivation get_activation() const, get_activation)
+
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<const CompletionProposal>&', `Glib::wrap($3, true)')
+  _WRAP_VFUNC(Gtk::Widget* get_info_widget(const Glib::RefPtr<const CompletionProposal>& proposal) const, get_info_widget)
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<const CompletionProposal>&', `Glib::wrap($3)')
+
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<const CompletionProposal>&', `Glib::wrap($3, true)')
+#m4 _CONVERSION(`GtkSourceCompletionInfo*',`const CompletionInfo&',`(*(Glib::wrap($3)))')
+  _WRAP_VFUNC(void update_info(const Glib::RefPtr<const CompletionProposal>& proposal, const CompletionInfo& info), update_info)
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<const CompletionProposal>&', `Glib::wrap($3)')
+
+#m4 _CONVERSION(`GtkSourceCompletionContext*', `const Glib::RefPtr<const CompletionContext>&', `Glib::wrap($3, true)')
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<const CompletionProposal>&', `Glib::wrap($3, true)')
+#m4 _CONVERSION(`GtkTextIter*',`Gtk::TextBuffer::iterator&',`Glib::wrap_iter($3)')
+  _WRAP_VFUNC(bool get_start_iter(const Glib::RefPtr<const CompletionContext>& context, const Glib::RefPtr<const CompletionProposal>& proposal, Gtk::TextBuffer::iterator& iter), get_start_iter)
+
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<const CompletionProposal>&', `Glib::wrap($3)')
+#m4 _CONVERSION(`GtkSourceCompletionContext*', `const Glib::RefPtr<const CompletionContext>&', `Glib::wrap($3)')
+
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<CompletionProposal>&', `Glib::wrap($3, true)')
+#m4 _CONVERSION(`GtkTextIter*',`const Gtk::TextBuffer::const_iterator&',`Glib::wrap_const_iter($3)')
+  _WRAP_VFUNC(bool activate_proposal(const Glib::RefPtr<CompletionProposal>& proposal, const Gtk::TextBuffer::const_iterator& iter), activate_proposal)
+#m4 _CONVERSION(`GtkSourceCompletionProposal*', `const Glib::RefPtr<CompletionProposal>&', `Glib::wrap($3)')
+
+  _WRAP_VFUNC(int get_interactive_delay() const, get_interactive_delay)
+
+  _WRAP_VFUNC(int get_priority() const, get_priority)
+};
+
+} // namespace Gsv
+
+

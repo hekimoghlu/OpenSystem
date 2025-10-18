@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!DOCTYPE moduleset SYSTEM "moduleset.dtd">
+<?xml-stylesheet type="text/xsl" href="moduleset.xsl"?>
+<moduleset>
+  <!-- Please format this file using the following command:
+       tidy -config ../tidy.conf -m gtk-osx-bootstrap.modules; sed -i "" '/^ *$/d' gtk-osx-bootstrap.modules
+       You can get 'tidy' here: https://github.com/htacg/tidy-html5 -->
+  <repository name="git.gnome.org"
+              default="yes"
+              href="https://gitlab.gnome.org/GNOME"
+              type="git" />
+  <repository name="sourceforge"
+              href="http://downloads.sourceforge.net/sourceforge/"
+              type="tarball" />
+  <repository name="libtiff"
+              href="http://download.osgeo.org/"
+              type="tarball" />
+  <repository name="github-tarball"
+              href="https://github.com/"
+              type="tarball" />
+  <autotools id="libpng"
+             autogen-sh="configure"
+             autogenargs="--enable-shared">
+    <branch module="libpng/libpng-1.6.50.tar.xz"
+            version="1.6.50"
+            hash="sha256:4df396518620a7aa3651443e87d1b2862e4e88cad135a8b93423e01706232307"
+            repo="sourceforge" />
+    <dependencies>
+      <dep package="zlib" />
+    </dependencies>
+  </autotools>
+  <autotools id="nasm"
+             autogen-sh="autogen.sh"
+             autogen-template="./%(autogen-sh)s &amp;&amp; %(srcdir)s/configure --prefix=%(prefix)s %(autogenargs)s"
+             supports-non-srcdir-builds="no" >
+    <branch module="netwide-assembler/nasm/archive/refs/tags/nasm-2.16.03.tar.gz"
+            checkoutdir="nasm-nasm-2.16.03"
+            version="2.16.03"
+            hash="sha256:e525fa6fdc3df33cec6b499111f44afa78ce50bf260158580dcf014015a21ba9"
+            repo="github-tarball" >
+      <patch file="nasm-dont-install-docs.patch" strip="1" />
+    </branch>
+  </autotools>
+  <cmake id="libjpeg"
+         cmakeargs="-DCMAKE_MACOSX_RPATH=true -DCMAKE_INSTALL_NAME_DIR=&quot;${JHBUILD_PREFIX}/lib&quot; -DCMAKE_INSTALL_LIBDIR:PATH=lib">
+    <branch module="libjpeg-turbo/libjpeg-turbo/releases/download/3.1.1/libjpeg-turbo-3.1.1.tar.gz"
+            version="3.1.1"
+            hash="sha256:aadc97ea91f6ef078b0ae3a62bba69e008d9a7db19b34e4ac973b19b71b4217c"
+            checkoutdir="libjpeg-turbo-3.1.1"
+            repo="github-tarball" />
+    <dependencies>
+      <dep package="nasm" />
+    </dependencies>
+  </cmake>
+  <cmake id="libtiff"
+         cmakeargs='-Dtiff-tests=off -Dtiff-docs=off -DCMAKE_MACOSX_RPATH=OFF -DCMAKE_INSTALL_NAME_DIR="${JHBUILD_PREFIX}/lib"'>
+    <branch module="libtiff/tiff-4.7.0.tar.xz"
+            version="4.7.0"
+            hash="sha256:273a0a73b1f0bed640afee4a5df0337357ced5b53d3d5d1c405b936501f71017"
+            repo="libtiff">
+      <patch file="tiff-nohtml.patch"
+             strip="1" />
+    </branch>
+    <dependencies>
+      <dep package="libjpeg" />
+    </dependencies>
+  </cmake>
+  <meson id="gtk-doc"
+         mesonargs="-Dyelp_manual=false -Dtests=false">
+    <branch module="gtk-doc" />
+    <after>
+      <dep package="python3" />
+      <dep package="pygments" />
+    </after>
+  </meson>
+  <metamodule id="meta-gtk-osx-bootstrap">
+    <dependencies>
+      <dep package="libpng" />
+      <dep package="libjpeg" />
+      <dep package="libtiff" />
+      <dep package="gtk-doc" />
+    </dependencies>
+  </metamodule>
+</moduleset>

@@ -1,0 +1,73 @@
+subsurface {
+  child: debug {
+    message: "A node that is deep in, but still found";
+    child: debug {
+      message: "Affine transforms, debug nodes and single-child containers are ok";
+      child: transform {
+        transform: translate(10, 10) scale(2, 1);
+        child: container {
+          texture { }
+        }
+      }
+    }
+  }
+}
+transform {
+  transform: translate(0, 100);
+  child: subsurface {
+    child: debug {
+      message: "Multi-child containers are not ok";
+      child: container {
+        color { }
+        texture { }
+      }
+    }
+  }
+}
+transform {
+  transform: translate(0, 200);
+  child: subsurface {
+    child: debug {
+      message: "other nodes, such as cross-fade, are not ok";
+      child: cross-fade {
+        start: texture { }
+        end: texture { }
+        progress: 0.5;
+      }
+    }
+  }
+}
+transform {
+  transform: translate(0, 300);
+  child: subsurface {
+    child: debug {
+      message: "Other nodes, such as cross-fade, are not ok";
+      child: cross-fade {
+        start: texture { }
+        end: texture { }
+        progress: 0.5;
+      }
+    }
+  }
+}
+transform {
+  transform: translate(0, 400);
+  child: subsurface {
+    child: debug {
+      message: "Clips are ok";
+      child: clip {
+        clip: 0 0 400 400;
+        child: texture { }
+      }
+    }
+  }
+}
+transform {
+  transform: translate(0, 500);
+  child: subsurface {
+   child: debug {
+       message: "Can't offload non-textures";
+       child: linear-gradient { }
+     }
+  }
+}

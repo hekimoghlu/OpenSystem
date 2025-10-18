@@ -1,0 +1,84 @@
+/* Copyright (C) 2007 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(giommconfig.h)
+
+#include <glibmm/object.h>
+#include <giomm/appinfo.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+// This file is not used on Windows and Mac OS Cocoa
+_GMMPROC_WRAP_CONDITIONALLY(if !defined(G_OS_WIN32) && !defined(GLIBMM_OS_COCOA))
+
+namespace Glib
+{
+
+class GLIBMM_API KeyFile;
+
+}
+
+namespace Gio
+{
+
+/**
+ * DesktopAppInfo is an implementation of AppInfo based on desktop files.
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API DesktopAppInfo
+: public Glib::Object,
+  public AppInfo
+{
+  _CLASS_GOBJECT(DesktopAppInfo, GDesktopAppInfo, G_DESKTOP_APP_INFO, Glib::Object, GObject, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(AppInfo)
+
+public:
+  // We can't use _WRAP_CTOR() and _WRAP_CREATE() because the C functions do more
+  // than just call g_object_new(). There's quite a bit of error-handling to do.
+  _WRAP_METHOD(static Glib::RefPtr<DesktopAppInfo> create(const std::string& desktop_id), g_desktop_app_info_new)
+  _WRAP_METHOD(static Glib::RefPtr<DesktopAppInfo> create_from_keyfile(const Glib::RefPtr<Glib::KeyFile>& key_file), g_desktop_app_info_new_from_keyfile)
+  _WRAP_METHOD(static Glib::RefPtr<DesktopAppInfo> create_from_filename(const std::string& filename), g_desktop_app_info_new_from_filename)
+
+  _WRAP_METHOD(std::string get_filename() const, g_desktop_app_info_get_filename)
+  _WRAP_METHOD(bool is_hidden() const, g_desktop_app_info_get_is_hidden)
+
+  _IGNORE(g_desktop_app_info_set_desktop_env)
+
+#m4 _CONVERSION(`const char* const*', `std::vector<Glib::ustring>', `Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_keywords() const, g_desktop_app_info_get_keywords)
+
+  _WRAP_METHOD(std::string get_startup_wm_class() const, g_desktop_app_info_get_startup_wm_class)
+  _WRAP_METHOD(bool get_nodisplay() const, g_desktop_app_info_get_nodisplay)
+  _WRAP_METHOD(bool get_show_in(const std::string& desktop_env) const, g_desktop_app_info_get_show_in)
+  _WRAP_METHOD(std::string get_generic_name() const, g_desktop_app_info_get_generic_name)
+  _WRAP_METHOD(std::string get_categories() const, g_desktop_app_info_get_categories)
+
+  _WRAP_METHOD(bool has_key(const Glib::ustring& key) const, g_desktop_app_info_has_key)
+  _WRAP_METHOD(Glib::ustring get_string(const Glib::ustring& key), g_desktop_app_info_get_string)
+  _WRAP_METHOD(Glib::ustring get_locale_string(const Glib::ustring& key), g_desktop_app_info_get_locale_string)
+  _WRAP_METHOD(bool get_boolean(const Glib::ustring& key) const, g_desktop_app_info_get_boolean)
+
+#m4 _CONVERSION(`const gchar* const*', `std::vector<Glib::ustring>', `Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_METHOD(std::vector<Glib::ustring> list_actions() const, g_desktop_app_info_list_actions)
+
+  _WRAP_METHOD(void launch_action(const Glib::ustring& action_name, const Glib::RefPtr<AppLaunchContext>& launch_context{?}), g_desktop_app_info_launch_action)
+
+  _WRAP_METHOD(Glib::ustring get_action_name(const Glib::ustring& action_name) const, g_desktop_app_info_get_action_name)
+};
+
+} // namespace Gio

@@ -1,0 +1,170 @@
+require GLib
+require Gio version "2.0"
+
+assert(true)
+assert(true != false)
+assert(!false)
+assert(TRUE)
+assert(TRUE != false)
+assert(TRUE == true)
+assert(True == true)
+assert(False == FALSE)
+assert(False == false)
+
+assert(123 == 123)
+assert(123 != 124)
+assert(123 != -123)
+assert(123 == abs(-123))
+
+assert(1 - 10 == -9)
+assert(1 / 10 == .1)
+
+abc = "abc"
+assert(abc == "abc")
+assert(abc != "abc\n")
+assert(abc != "def")
+
+# we can't do builtins yet w/ >1 param so this is a
+# very bad pow() implementation that works on integers only.
+pow = func(a,b) while b > 1 do a = a * a; b = b - 1; a
+assert(pow(2,3) == 8)
+assert(pow(2,3) == 8) # and here
+multiply = func(x,y) x*y
+assert(multiply(10, 10) == 100)
+assert(multiply(-10, 10) == -100)
+
+nop = func() pass
+nop()
+
+def order2(a,b) assert(a==1); assert(b==2); end
+order2(1,2)
+
+def order3(a,b,c)
+  assert(a == 1)
+  assert(b == 2)
+  assert(c == 3)
+end
+order3(1,2,3)
+
+def weird1(a) assert(a==1)
+end
+
+# anonymous functions can have a single statement
+(func() 123)()
+(func(a,b) assert((a==1)&&(b==2)))(1,2)
+
+myfunc = func() 9*3
+assert(myfunc() == 27);
+
+# test out construction
+group = Gio.SimpleActionGroup.new()
+assert(group)
+assert(group != null)
+assert(typeof(group).is_a(typeof(Gio.ActionGroup)))
+assert(typeof(group).is_a(typeof(Gio.ActionMap)))
+assert(!typeof(group).is_a(typeof(Gio.Action)))
+assert(typeof(group).name() == "GSimpleActionGroup")
+
+t1 = typeof(group)
+t2 = typeof(Gio.SimpleActionGroup)
+assert(t1)
+assert(t2)
+assert(t1 == t2)
+
+Nil = null
+assert(Nil == null)
+assert(null == null)
+assert(group != null)
+
+action = Gio.SimpleAction.new("myaction", null)
+assert(action != null)
+assert(typeof(action) != null)
+assert(typeof(action) == typeof(Gio.SimpleAction))
+assert(typeof(action) != typeof(Gio.SimpleActionGroup))
+assert(typeof(action).is_a(typeof(Gio.Action)))
+assert(!typeof(action).is_a(typeof(Gio.ActionMap)))
+
+def count()
+  mycount+1
+end
+mycount = 2
+assert(count() == 3)
+
+multiline = (1 + \
+             2 + \
+             3)
+assert(multiline == 6)
+
+# test left associativity
+val = true && true || false
+assert(val == true)
+# if only we had compiler warnings
+val = true && false || true
+assert(val == true)
+
+# Implicit floor() in GType conversion
+assert(double(i32(1234.56)) == 1234)
+
+# Test boolean casts
+assert(bool(1) == true)
+assert(bool(0) == false)
+assert(bool("") == true)
+assert(bool(null) == false)
+assert(bool(char(0)) == false)
+assert(bool(char(1)) == true)
+assert(bool(byte(0)) == false)
+assert(bool(byte(1)) == true)
+assert(bool(i32(0)) == false)
+assert(bool(i32(1)) == true)
+assert(bool(u32(0)) == false)
+assert(bool(u32(1)) == true)
+assert(bool(i64(0)) == false)
+assert(bool(i64(1)) == true)
+assert(bool(u64(0)) == false)
+assert(bool(u64(1)) == true)
+
+# FIXME: broken exp priority
+a1 = 1 < 3
+(a2 = 1) < 3
+assert(a1 == a2)
+
+scoped = 1
+ret = (true || (scoped = 2))
+assert(scoped == 1)
+assert(ret == true)
+ret = ((scoped = 2) || (scoped = 3))
+assert(scoped == 2)
+assert(ret == true)
+ret = ((scoped = 3) && (scoped = 4))
+assert(scoped == 4)
+assert(ret == true)
+ret = ((scoped = 3) && (scoped = 0))
+assert(scoped == 0)
+assert(ret == false)
+
+assert(1 == i32(1))
+assert(-2 == i32(-2))
+
+assert(1 == u32(1))
+assert(2 == abs(-2))
+
+assert(GLib.strjoinv("_", GLib.strsplit("abc", "b", i32(2))) == "a_c")
+assert(GLib.strsplit("123", "2", i32(0)) == GLib.strsplit("123", "2", i32(0)))
+
+def m(x,y)
+  x * y
+end
+
+a = 10
+if true then a = m(10, 2)
+assert(a == 20)
+
+libname = "libfoo"
+if GLib.str_has_prefix(libname, "lib") then libname = GLib.utf8_substring(libname, i64(3), i64(-1))
+assert(libname == "foo")
+
+aa = 30
+if false then aa = 10
+assert(aa == 30)
+
+1234;

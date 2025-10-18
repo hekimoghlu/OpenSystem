@@ -1,0 +1,28 @@
+include:
+ - project: "GNOME/citemplates"
+   file: "templates/default-rules.yml"
+ - component: gitlab.gnome.org/GNOME/citemplates/gnomeos-basic-ci@master
+ - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+   inputs:
+     dist-job-name: "build-gnomeos"
+     tarball-artifact-path: "_builddir/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz"
+
+build:
+  image: debian:unstable
+  variables:
+    LINT_WARNINGS_ARE_ERRORS: '1'
+  before_script:
+    - apt update -qq
+    - apt install -y -qq black build-essential flake8 git meson pkg-config appstream libxml2-utils
+    - export LANG=C.UTF-8
+  script:
+    - meson setup --buildtype debug --werror _build .
+    - ninja -C _build
+    - meson test -C _build
+  except:
+    - tags
+  artifacts:
+    when: on_failure
+    name: "gnome-app-list-_${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"

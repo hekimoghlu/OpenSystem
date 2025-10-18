@@ -1,0 +1,68 @@
+image: ubuntu:devel
+
+
+stages:
+  - build
+  - deploy
+
+variables:
+  DEPENDENCIES: clang gcc gettext gtk-doc-tools make autoconf meson ninja-build
+                libxml2-dev libglib2.0-dev libglib2.0-bin
+                valac libgee-0.8-dev gettext
+                gnome-common libtool-bin
+                gobject-introspection libgirepository1.0-dev valadoc
+                yelp-tools iso-codes git
+
+  GIT_SUBMODULE_STRATEGY: normal
+
+before_script:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt update
+  - apt -y install $DEPENDENCIES
+
+build:
+  stage: build
+  script:
+  - meson _build -Dintrospection=true -Ddocs=true
+  - cd _build
+  - ninja
+  - meson test
+  - ninja install
+  artifacts:
+    when: on_failure
+    paths:
+    - _build/meson-logs/testlog.txt
+    - _build/meson-logs/meson-log.txt
+    expire_in: 1 week
+
+build-clang:
+  stage: build
+  script:
+  - export CC=clang  
+  - meson _build -Dintrospection=true -Ddocs=true
+  - cd _build
+  - ninja
+  - meson test
+  - ninja install
+  artifacts:
+    when: on_failure
+    paths:
+    - _build/meson-logs/testlog.txt
+    - _build/meson-logs/meson-log.txt
+    expire_in: 1 week
+
+pages:
+  stage: deploy
+  script:
+  - meson _build -Ddocs=true
+  - cd _build
+  - ninja
+  - mv ../docs/site ../public
+  - mv docs/GXml-* ../public/dev
+  - cd ..
+  - cp public/dev/index.htm public/dev/index.html
+  artifacts:
+    paths:
+      - public
+
+

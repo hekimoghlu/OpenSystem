@@ -1,0 +1,168 @@
+2004-11-28  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.4.0
+
+2004-11-26  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=159581 #1
+	* src/application.c (gnm_app_clipboard_cut_copy_obj) : patch leak
+
+2004-11-26  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=159577
+	* src/format.c (gnm_format_parse_markup) : return NULL on error
+
+2004-11-26  Jody Goldberg <jody@gnome.org>
+
+	* src/gui-file.c (gui_file_open) : Add a hook to open template files.
+	  This is cheesy, but is better than nothing.
+
+2004-11-26  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=159365
+	* src/commands.c (gnm_reloc_undo_release) : new
+	(cmd_ins_del_colrow_finalize) : use it
+	(cmd_paste_cut_finalize) : use it.
+	(gnm_reloc_undo_apply) : new
+	(cmd_ins_del_colrow_undo) : use it.
+	(cmd_paste_cut_undo) : use it.
+
+	* src/sheet-object.c (sheet_objects_relocate) : store lost objects
+
+	* src/sheet.c (sheet_colrow_insdel_finish) : take an optional undo
+	  storage
+	(sheet_colrow_insert_finish) : ditto.
+	(sheet_colrow_delete_finish) : ditto.
+	(sheet_insert_cols) : pass the undo info
+	(sheet_delete_cols) : ditto.
+	(sheet_insert_rows) : ditto.
+	(sheet_delete_rows) : ditto.
+	(sheet_move_range) : pass undo info to sheet_objects_relocate
+
+2004-11-21  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-view.c (sv_panes_insdel_colrow) : be more careful
+	  inserting large numbers of cols/rows
+
+2004-11-21  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_insert_rows) : no need to test when inserting
+	  SHEET_MAX_ROWS
+	(sheet_insert_cols) : ditto for SHEET_MAX_COLS
+
+2004-11-21  Jon K Hellan  <hellan@acm.org>
+
+	* src/ssindex.c: #include gog-object.h
+
+2004-11-19  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add ssindex but leave it disabled by default because
+	  it relies on unreleased changes to libgsf
+
+2004-11-19  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c (gnm_font_find_closest_from_weight_slant) : add some
+	  protection.
+
+2004-11-19  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-gconf.c (gnm_conf_init_printer_decoration_font) : add a
+	  default in case conf lookup fails.
+	(gnm_conf_init_essential) : fix swapped max and default for print zoom
+
+2004-11-18  Morten Welinder  <terra@gnome.org>
+
+	* src/print.c (sheet_print): Fix leak for preview.  (#158566)
+
+2004-11-15  Jody Goldberg <jody@gnome.org>
+
+	* src/stf.c (stf_init) : register some suffixes and mime types
+	* src/xml-io.c (xml_init) : ditto.
+
+	* src/plugin-service.c (plugin_service_file_opener_read_xml) : parse
+	  mime types too.
+
+	* src/gui-file.c (gui_file_open) : Use the new lists of suffixes and
+	  mime types from the openers rather than kluding something from
+	  savers.
+
+	* src/file.c (gnm_file_opener_setup) : store a list of suffixes and
+	  mime types.
+	(gnm_file_opener_finalize) : free the new lists.
+	(gnm_file_opener_new) : take suffixes and mime types as arguments
+	(gnm_file_opener_new_with_enc) : take suffixes and mime types as arguments
+	(gnm_file_opener_get_suffixes) : new.
+	(gnm_file_opener_get_mimes) : new.
+
+2004-11-15  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-object-widget.c : Add text and markup properties to
+	  checkbox/toggle button
+
+2004-11-14  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c (gnm_pane_display_obj_size_tip) : tweak the
+	  pixel distances.  The far coordinates are excluded.
+
+2004-11-14  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=151609
+	* src/commands.c (cmd_objects_restore_location): new
+	(cmd_objects_delete_undo): restore ordering of objects
+	(cmd_objects_delete_finalize): free locations array
+	(cmd_objects_delete): create and save locations array
+	* src/sheet-object.h (sheet_object_get_stacking): new
+	* src/sheet-object.c (sheet_object_get_stacking): new
+
+2004-11-10  Jody Goldberg <jody@gnome.org>
+
+	* src/style.c (required_updates_for_style) : for font size, and wrap
+	  changes add a flag to resize row heights.
+	* src/sheet.c (sheet_apply_style) : use the new SPANCALC_ROW_HEIGHT to
+	  decide when to autosize the rows. (debian #228105)
+
+2004-11-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : leave the old perl plugin disabled by default
+	  distros can enable it if desired using --with-perl.
+	  There are just too many build issues with it right now.
+
+2004-11-09  Stepan Kasal  <kasal@ucw.cz>
+
+	* configure.in (GCONFTOOL, GLIB_GENMARSHAL, GDK_PIXBUF_CSOURCE):
+	  Clarify descriptions of these variables to say that the absolute
+	  path is required.
+
+2004-11-09  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	for Harald Ashburner <hal.ashburner@gmail.com>:
+	* sample/derivaties.gnumeric: update
+
+2004-11-08  Morten Welinder  <terra@gnome.org>
+
+	* src/history.c: Survive NULL basename (#157682).
+
+2004-11-08  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Fix psiconv test.
+
+2004-11-08  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (perl_msg): Disable buggy perl_construct check.
+
+	* src/expr.h: Delete trailing comma in enum.
+	* src/func.h: Ditto.
+
+2004-11-07  J.H.M. Dassen (Ray) <jdassen@debian.org>
+
+	* configure.in: Call the "make" command for PY_EXTRA_LIBS with "-s".
+	  Without it, out-of-source builds have problems due to interference 
+	  from make printing entering/leaving directory messages.
+	* configure.in: Corrected $(GNUMERIC_PLUGIN_LDFLAGS) to
+	  $GNUMERIC_PLUGIN_LDFLAGS.
+
+2004-11-07  Andreas J. Guelzow <aguelzow@taliesin.ca>
+
+	* src/gnumeric-gconf.c (go_conf_get_short_desc) return 
+	  NULL if we don't have a desription
+	(go_conf_get_long_desc): ditto

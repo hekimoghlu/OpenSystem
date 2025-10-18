@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2017-04-26 j.h: added diagonal meighbors
+-->
+<sect2 xmlns:xi="http://www.w3.org/2001/XInclude" id="gimp-tool-fuzzy-select">
+  <title>Fuzzy Selection (Magic wand)</title>
+  <indexterm>
+    <primary>Tools</primary>
+    <secondary>Fuzzy Selection</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Selection</primary>
+    <secondary>Fuzzy selection</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Fuzzy Selection</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Magic Wand</primary>
+  </indexterm>
+  <indexterm>
+    <primary>Diagonal Neighbors</primary>
+  </indexterm>
+
+  <para>
+    The Fuzzy Select tool is designed to select areas of the
+    current layer or image based on color similarity.
+  </para>
+  <para>
+    When using this tool, it is very important to pick the right starting
+    point. If you select the wrong spot, you might get something very
+    different from what you want, or even the opposite.
+  </para>
+  <para>
+    Fuzzy Select is a good tool for selecting objects with sharp edges. It is fun
+    to use, so beginners often start out using it a lot. You will probably
+    find, however, that the more you use it, the more frustrated you become
+    with the difficulty of selecting exactly what you want, no more, no less.
+    More experienced users find that the
+    <link linkend="gimp-tool-path">Path</link> and
+    <link linkend="gimp-tool-by-color-select">Color Select</link>
+    tools are often more efficient, and use the Fuzzy Select tool less. Still, it is useful
+    for selecting an area within a contour, or touching up imperfect
+    selections. It often works very well for selecting a solid-colored (or nearly
+    solid-colored) background area.
+  </para>
+  <para>
+    Note that as the selected area expands outward from the center, it does
+    not only propagate to pixels that touch each other: it is capable of
+    jumping over small gaps, depending on <guilabel>Threshold</guilabel> option.
+    To increase/decrease Threshold, during the use of Fuzzy Selection, after the
+    first button-press, dragging the pointer downward (or to the right) or
+    upward (or to the left).
+  </para>
+
+  <sect3>
+    <title>Activating the Tool</title>
+    <para>
+      There are different possibilities to activate the tool:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          From the main menu:
+          <menuchoice>
+            <guimenu>Tools</guimenu>
+            <guisubmenu>Selection Tools</guisubmenu>
+            <guimenuitem>Fuzzy Select</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By clicking the tool icon
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-tool-fuzzy-select.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          in the Toolbox.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          By pressing the <keycap>U</keycap> keyboard shortcut.
+        </para>
+      </listitem>
+    </itemizedlist>
+  </sect3>
+
+  <sect3>
+    <title>Key modifiers</title>
+    <para>
+      The Fuzzy Select tool does not have any special key modifiers, only the
+      ones that affect all selection tools in the same way. See
+      <xref linkend="gimp-tool-select"/> for help with these.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Tool handling</title>
+    <figure>
+      <title>
+        Using the Fuzzy Select tool: selected pixels are contiguous
+      </title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/fuzzy-selection.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <para>
+      It starts selecting when you click at a spot in the image, and expands
+      outwards like water flooding low-lying areas, selecting contiguous
+      pixels whose colors are similar to the starting pixel. You can control
+      the threshold of similarity by dragging the mouse downward or to the
+      right: the farther you drag it, the larger you get the selected region.
+      And you can reduce the selection by dragging upwards or to the left.
+    </para>
+    <para>
+      You can move the selection outline using <keycap>Alt</keycap> + arrow
+      keys.
+    </para>
+  </sect3>
+
+  <sect3 id="tool-fuzzy-select-options">
+    <title>Options</title>
+    <figure>
+      <title>Tool Options Dialog</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata format="PNG"
+            fileref="images/toolbox/tool-options-fuzzy-select.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <xi:include href="../about-common-options-display.xml"/>
+
+    <variablelist>
+      <varlistentry>
+        <term>Mode</term>
+        <term>Antialiasing</term>
+        <term>Feather edges</term>
+        <listitem>
+          <xi:include href="about-common-select-options.xml"/>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+    <variablelist>
+      <varlistentry>
+        <term>Finding Similar Colors</term>
+        <listitem>
+          <para>
+            These options affect the way Fuzzy Select expands the selection
+            out from the initial point.
+          </para>
+          <variablelist>
+            <varlistentry>
+              <term>Select Transparent Areas</term>
+              <listitem>
+                <para>
+                  This option gives Fuzzy Select the ability to select areas
+                  that are completely transparent. If this option is not
+                  checked, transparent areas will never be included in the
+                  selection.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Sample Merged</term>
+              <listitem>
+                <para>
+                  If you enable this option, sampling is not calculated only
+                  from the values of the active layer, but from all visible layers.
+                </para>
+                <para>
+                  For more information, see the
+                  <link linkend="glossary-samplemerge">Glossary entry</link>.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry id="diagonal-neighbors">
+              <term>Diagonal Neighbors</term>
+              <listitem>
+                <para>
+                  When activated, the tool considers diagonally neighboring
+                  pixels as connected when calculating the affected area. In
+                  other words, instead of looking at the four orthogonal
+                  neighbors of each pixel, it looks at all eight pixels
+                </para>
+                <figure>
+                  <title>Example for Diagonal Neighbors</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/diagonal-neighbors-1.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        A pixel with 4 orthogonal neighbors
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/diagonal-neighbors-2.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        A pixel with 4 diagonal neighbors
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/diagonal-neighbors-3.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        A pixel with 8 neighbors
+                      </para>
+                    </caption>
+                  </mediaobject>
+                </figure>
+                <figure>
+                  <title>Example for Diagonal Neighbors option applied</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/diagonal-neighbors-wand-1.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Diagonal Neighbors option unchecked
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/toolbox/diagonal-neighbors-wand-2.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Diagonal Neighbors option checked
+                      </para>
+                    </caption>
+                  </mediaobject>
+                </figure>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term>Threshold</term>
+              <listitem>
+                <para>
+                  This slider determines the range of colors that will be
+                  selected at the moment you click the pointer on the initial
+                  point, before dragging it: the higher the threshold, the
+                  larger the resulting selection. After the first
+                  button-press, dragging the pointer downward or to the right
+                  will increase the size of the selection; dragging upward or
+                  to the left will decrease it. Thus, you have the same set of
+                  possibilities regardless of the Threshold setting: what
+                  differs is the amount of dragging you have to do to get the
+                  result you want.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Select by</term>
+              <listitem>
+                <para>
+                  This option determines which component of the image
+                  GIMP uses to calculate the similarity in color.
+                </para>
+                <para>
+                  You can choose from
+                  <guimenuitem>Composite</guimenuitem>,
+                  <guimenuitem>Red</guimenuitem>,
+                  <guimenuitem>Green</guimenuitem>,
+                  <guimenuitem>Blue</guimenuitem>,
+                  <guimenuitem>HSV Hue</guimenuitem>,
+                  <guimenuitem>HSV Saturation</guimenuitem>,
+                  <guimenuitem>HSV Value</guimenuitem>.
+                  <guimenuitem>LCh Lightness</guimenuitem>,
+                  <guimenuitem>LCh Chroma</guimenuitem>,
+                  <guimenuitem>LCh Hue</guimenuitem>, and
+                  <guimenuitem>Alpha</guimenuitem>.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Draw Mask</term>
+              <listitem>
+                <para>
+                  This option can help to visualize the selection. Selected
+                  areas marked with
+                  <link linkend="glossary-marching-ants">marching ants</link>
+                  may not be evident when
+                  selecting with Fuzzy Select. If this option is
+                  checked, selected areas will be filled with a magenta color
+                  as long as you keep pressing on the left mouse button, and
+                  this mask will disappear as soon as you release this button.
+                </para>
+
+                <figure>
+                  <title>Example for Draw mask option applied</title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/tool-options/draw-mask-ex1.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Fuzzy Select used with Draw Mask option unchecked
+                      </para>
+                    </caption>
+                  </mediaobject>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                        fileref="images/tool-options/draw-mask-ex2.png"/>
+                    </imageobject>
+                    <caption>
+                      <para>
+                        Fuzzy Select used with Draw Mask option checked, left
+                        mouse button not released yet.
+                      </para>
+                    </caption>
+                  </mediaobject>
+                </figure>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

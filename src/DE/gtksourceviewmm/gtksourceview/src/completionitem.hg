@@ -1,0 +1,96 @@
+/* completionitem.h
+ *
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gtksourceviewmm/markup.h>
+#include <gtksourceviewmm/completionproposal.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/object_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+//Avoid warnings when we use deprecated gtkmm API in our deprecated wrappers:
+#include <glibmm.h>
+#undef GTKMM_DISABLE_DEPRECATED
+#undef GTK_DISABLE_DEPRECATED
+#define GTK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+namespace Gsv
+{
+
+// TODO: need docs here. krnowak
+/** CompletionItem
+ *
+ * @newin{2,10}
+ */
+class CompletionItem
+:
+  public Glib::Object,
+  public CompletionProposal
+{
+  _CLASS_GOBJECT(CompletionItem, GtkSourceCompletionItem, GTK_SOURCE_COMPLETION_ITEM, Glib::Object, GObject)
+  _IMPLEMENTS_INTERFACE(CompletionProposal)
+protected:
+  explicit CompletionItem(const Glib::ustring& label, const Glib::ustring& text, const Glib::RefPtr<const Gdk::Pixbuf>& icon, const Glib::ustring& info);
+  explicit CompletionItem(const Markup& markup, const Glib::ustring& text, const Glib::RefPtr<const Gdk::Pixbuf>& icon, const Glib::ustring& info);
+
+public:
+  /** Create a new CompletionItem with label @a label, icon @a icon and
+   *  extra information @a info.
+   *;
+   * If @a icon is empty, then there will be no icon shown. If @a info is empty,
+   * then no extra information will be available.
+   *
+   * @param label The item label.
+   * @param text The item text.
+   * @param icon The item icon.
+   * @param info The item extra information.
+   *
+   * @return New CompletionInfo.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_CREATE(const Glib::ustring& label, const Glib::ustring& text, const Glib::RefPtr<const Gdk::Pixbuf>& icon, const Glib::ustring& info)
+
+  /** Create a new CompletionItem with markup label @a markup, icon
+   *  @a icon and extra information @a info.
+   *
+   * If @a icon is empty, then there will be no icon shown. If @a info is empty,
+   * then no extra information will be available.
+   *
+   * @param markup The item markup label.
+   * @param text The item text.
+   * @param icon The item icon.
+   * @param info The item extra information.
+   *
+   * @return New CompletionInfo.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_CREATE(const Markup& markup, const Glib::ustring& text, const Glib::RefPtr<const Gdk::Pixbuf>& icon, const Glib::ustring& info)
+
+  _WRAP_PROPERTY("icon", Glib::RefPtr<Gdk::Pixbuf>)
+  _WRAP_PROPERTY("info", Glib::ustring)
+  _WRAP_PROPERTY("label", Glib::ustring)
+  _WRAP_PROPERTY("markup", Glib::ustring)
+  _WRAP_PROPERTY("text", Glib::ustring)
+};
+
+} /* namespace Gsv */
+

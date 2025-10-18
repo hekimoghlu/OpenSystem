@@ -1,0 +1,84 @@
+{
+    "app-id": "org.gnome.Nibbles",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "sdk-extensions": [ "org.freedesktop.Sdk.Extension.vala" ],
+    "command": "gnome-nibbles",
+    "finish-args": [
+        /* X11 + XShm access */
+        "--share=ipc", "--socket=fallback-x11",
+        /* Wayland access */
+        "--socket=wayland",
+        /* Sound! */
+        "--socket=pulseaudio",
+        /* OpenGL access */
+        "--device=dri"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name" : "gsound",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gsound.git"
+                }
+            ],
+            "modules": [
+                {
+                    "name": "libcanberra",
+                    "config-opts": [
+                        "--disable-alsa",
+                        "--disable-null",
+                        "--disable-oss",
+                        "--disable-gtk3"
+                    ],
+                    "sources": [{
+                        "type": "archive",
+                        "url": "http://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz",
+                        "sha256": "c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72"
+                    }]
+                }
+            ]
+        },
+        {
+            "name": "libgee",
+            "buildsystem": "autotools",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libgee.git",
+                    "branch": "main"
+                }
+            ]
+        },
+        {
+            "name": "gnome-nibbles",
+            "buildsystem": "meson",
+            "config-opts": [
+            	"--wrap-mode=nodownload",
+                "-Dappend_to_version= (GNOME flatpak)",
+                "-Dwebsite=https://gitlab.gnome.org/GNOME/gnome-nibbles"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-nibbles.git"
+                }                
+            ]
+        }
+    ]
+}

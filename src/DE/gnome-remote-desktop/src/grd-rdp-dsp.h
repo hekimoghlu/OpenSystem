@@ -1,0 +1,77 @@
+/*
+ * Copyright (C) 2022 Pascal Nowack
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
+ */
+
+#pragma once
+
+#include <glib-object.h>
+#include <stdint.h>
+
+#define GRD_TYPE_RDP_DSP (grd_rdp_dsp_get_type ())
+G_DECLARE_FINAL_TYPE (GrdRdpDsp, grd_rdp_dsp,
+                      GRD, RDP_DSP, GObject)
+
+typedef enum _GrdRdpDspCodec
+{
+  GRD_RDP_DSP_CODEC_NONE,
+  GRD_RDP_DSP_CODEC_AAC,
+  GRD_RDP_DSP_CODEC_ALAW,
+  GRD_RDP_DSP_CODEC_OPUS,
+} GrdRdpDspCodec;
+
+typedef enum
+{
+  GRD_RDP_DSP_CREATE_FLAG_NONE = 0,
+  GRD_RDP_DSP_CREATE_FLAG_ENCODER = 1 << 0,
+  GRD_RDP_DSP_CREATE_FLAG_DECODER = 1 << 1,
+} GrdRdpDspCreateFlag;
+
+typedef struct
+{
+  GrdRdpDspCreateFlag create_flags;
+
+  /* Encoder */
+  uint32_t n_samples_per_sec_aac;
+  uint32_t n_samples_per_sec_opus;
+  uint32_t n_channels;
+  uint32_t bitrate_aac;
+  uint32_t bitrate_opus;
+} GrdRdpDspDescriptor;
+
+GrdRdpDsp *grd_rdp_dsp_new (const GrdRdpDspDescriptor  *dsp_descriptor,
+                            GError                    **error);
+
+const char *grd_rdp_dsp_codec_to_string (GrdRdpDspCodec dsp_codec);
+
+uint32_t grd_rdp_dsp_get_frames_per_packet (GrdRdpDsp      *rdp_dsp,
+                                            GrdRdpDspCodec  codec);
+
+gboolean grd_rdp_dsp_encode (GrdRdpDsp       *rdp_dsp,
+                             GrdRdpDspCodec   codec,
+                             int16_t         *input_data,
+                             uint32_t         input_size,
+                             uint32_t         input_elem_size,
+                             uint8_t        **output_data,
+                             uint32_t        *output_size);
+
+gboolean grd_rdp_dsp_decode (GrdRdpDsp       *rdp_dsp,
+                             GrdRdpDspCodec   codec,
+                             uint8_t         *input_data,
+                             uint32_t         input_size,
+                             int16_t        **output_data,
+                             uint32_t        *output_size);

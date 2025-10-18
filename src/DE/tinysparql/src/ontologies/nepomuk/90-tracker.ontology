@@ -1,0 +1,84 @@
+@prefix nao: <http://tracker.api.gnome.org/ontology/v3/nao#> .
+@prefix nie: <http://tracker.api.gnome.org/ontology/v3/nie#> .
+@prefix nfo: <http://tracker.api.gnome.org/ontology/v3/nfo#> .
+@prefix nrl: <http://tracker.api.gnome.org/ontology/v3/nrl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix tracker: <http://tracker.api.gnome.org/ontology/v3/tracker#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+tracker: a nrl:Ontology ;
+	nrl:prefix "tracker" ;
+	nrl:lastModified "2022-09-26T09:41:00Z" .
+
+tracker:isDefaultTag a rdf:Property ;
+	rdfs:domain nao:Tag ;
+	nrl:maxCardinality 1 ;
+	rdfs:range xsd:boolean .
+
+tracker:tagRelatedTo a rdf:Property ;
+	rdfs:domain nao:Tag ;
+	rdfs:range rdfs:Class .
+
+tracker:IndexedFolder a rdfs:Class ;
+        rdfs:label "Indexed Folder" ;
+        rdfs:subClassOf nfo:Folder ;
+        rdfs:subClassOf nie:DataSource .
+
+tracker:unmountDate a rdf:Property ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain tracker:IndexedFolder ;
+	rdfs:range xsd:dateTime .
+
+tracker:isRemovable a rdf:Property ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain tracker:IndexedFolder ;
+	rdfs:range xsd:boolean .
+
+tracker:isOptical a rdf:Property ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain tracker:IndexedFolder ;
+	rdfs:range xsd:boolean .
+
+tracker:available a rdf:Property ;
+	nrl:maxCardinality 1 ;
+	rdfs:domain tracker:IndexedFolder ;
+	rdfs:range xsd:boolean .
+
+tracker:extractor-data-source a nie:DataSource ;
+	rdfs:label "Tracker extractor data source" .
+
+nao:predefined-tag-favorite a nao:Tag .
+
+tracker:ExternalReference a rdfs:Class ;
+        rdfs:label "External reference" ;
+        rdfs:comment "External reference to online services" ;
+        rdfs:subClassOf nie:InformationElement .
+
+tracker:referenceIdentifier a rdf:Property ;
+        rdfs:label "Identifier" ;
+        rdfs:comment "Identifier of the external reference" ;
+        nrl:maxCardinality 1 ;
+        rdfs:subPropertyOf nie:identifier ;
+        rdfs:domain tracker:ExternalReference ;
+        rdfs:range xsd:string .
+
+tracker:referenceSource a rdf:Property ;
+        rdfs:label "Source" ;
+        rdfs:comment "Source of the external reference (eg. 'Musicbrainz')" ;
+        nrl:maxCardinality 1 ;
+        rdfs:domain tracker:ExternalReference ;
+        rdfs:range rdfs:Resource .
+
+tracker:hasExternalReference a rdf:Property ;
+        rdfs:label "External reference link" ;
+        rdfs:comment "Links the information element with the external reference" ;
+        rdfs:domain nie:InformationElement ;
+        rdfs:range tracker:ExternalReference .
+
+tracker:extractorHash a rdf:Property ;
+        rdfs:label "Extractor hash" ;
+        rdfs:comment "Hash identifying the extractor of the metadata" ;
+        nrl:maxCardinality 1 ;
+        rdfs:domain nfo:FileDataObject ;
+        rdfs:range xsd:string .

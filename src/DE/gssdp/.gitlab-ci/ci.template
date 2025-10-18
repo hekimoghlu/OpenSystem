@@ -1,0 +1,247 @@
+## This file is generated. Do not modify 
+
+include:
+    - '/.gitlab-ci/tags.yml'
+    - project: "Infrastructure/freedesktop-ci-templates"
+      file: "templates/fedora.yml"
+      ref: "e195d80f35b45cc73668be3767b923fd76c70ed5"
+    - project: "Infrastructure/freedesktop-ci-templates"
+      file: "templates/ci-fairy.yml"
+      ref: "e195d80f35b45cc73668be3767b923fd76c70ed5"
+    - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+      inputs:
+        dist-job-name: build-{{targets["dist"]}}
+        # gupnp tags are always of the format {PROJECT_NAME}-{version}
+        tarball-artifact-path: "build/meson-dist/${CI_COMMIT_TAG}.tar.xz"
+    - project: "GNOME/citemplates"
+      file: "templates/default-rules.yml"
+
+variables:
+    MESON_TEST_TIMEOUT_MULTIPLIER: 3
+
+stages:
+    - review
+    - prepare
+    - build
+    - test
+    - website
+    - analysis
+    - deploy
+
+.check-template: &check
+  extends:
+    - .fdo.ci-fairy
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - check-junit-report.xml
+    reports:
+      junit: check-junit-report.xml
+
+check-commit-log:
+  variables:
+    GIT_DEPTH: "100"
+  stage: review
+  script:
+    - if [[ x"$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" != "x" ]] ;
+      then
+        ci-fairy check-commits --junit-xml=check-junit-report.xml ;
+      else
+        echo "Not a merge request" ;
+      fi
+  <<: *check
+
+check-merge-request:
+  variables:
+    GIT_STRATEGY: none
+  stage: review
+  script:
+    - if [[ x"$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" != "x" ]] ;
+      then
+        ci-fairy check-merge-request --require-allow-collaboration --junit-xml=check-junit-report.xml ;
+      else
+        echo "Not a merge request" ;
+      fi
+  <<: *check
+
+.build-template: &build
+  stage: build
+  script:
+      - meson . build --prefix=/usr -Db_coverage=true -Dgtk_doc=true
+      - ninja -C build
+      - meson dist -C build --no-tests
+  artifacts:
+      expire_in: 1 day
+      paths:
+          - build
+
+.test-template: &test
+  stage: test
+  variables:
+    G_SLICE: "always-malloc"
+    MALLOC_CHECK_: "3"
+  script:
+    - cd build
+    - |
+      # Remove the many "CI_" variables from the environment. Meson dumps the
+      # whole environment for every failed test, and that gives a whole
+      # screenful of junk each time unless we strip these.
+      unset $(env|grep -o '^CI_[^=]*')
+      env LANG=C.UTF-8 LC_ALL=C.UTF-8 meson test --timeout-multiplier ${MESON_TEST_TIMEOUT_MULTIPLIER} --print-errorlogs ${MESON_TEST_EXTRA_ARGS}
+  after_script:
+    - |
+      echo "Distribution: "
+      echo
+      egrep '^NAME=|^VERSION=' /etc/os-release
+      echo
+      echo "Test suite settings:"
+      echo
+      echo "G_MESSAGES_DEBUG: ${G_MESSAGES_DEBUG}"
+      echo "MESON_TEST_EXTRA_ARGS: ${MESON_TEST_EXTRA_ARGS}"
+      echo
+      echo "These values can be set at https://gitlab.gnome.org/GNOME/{{project}}/pipelines/new"
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+    - build
+    reports:
+      junit: "build/meson-logs/testlog.junit.xml"
+
+{% for distro in distributions %}
+{% for version in distributions[distro] %}
+.{{project}}.{{distro}}@common:
+   variables:
+      BASE_TAG: '${{"{"}}{{distro|upper}}_BASE_TAG}'
+      FDO_UPSTREAM_REPO: GNOME/{{project}}
+      FDO_DISTRIBUTION_PACKAGES: "{{" ".join(packages[distro].needed)}}"
+      FDO_DISTRIBUTION_EXEC: .gitlab-ci/setup-image-{{distro}}.sh
+
+.{{project}}.{{distro}}:{{version}}@{{arch}}:
+    extends: .{{project}}.{{distro}}@common
+    variables:
+      FDO_DISTRIBUTION_VERSION: "{{version}}"
+      FDO_DISTRIBUTION_TAG: "{{arch}}-${BASE_TAG}"
+
+build-container-{{distro}}:{{version}}@{{arch}}:
+    extends:
+        - .fdo.container-build@{{distro}}
+        - .{{project}}.{{distro}}:{{version}}@{{arch}}
+    stage: prepare
+    variables:
+        GIT_STRATEGY: none
+
+build-{{distro}}:{{version}}@{{arch}}:
+    extends:
+        - .fdo.distribution-image@{{distro}}
+        - .{{project}}.{{distro}}:{{version}}@{{arch}}
+    needs:
+        - build-container-{{distro}}:{{version}}@{{arch}}
+    <<: *build
+
+test-{{distro}}:{{version}}@{{arch}}:
+    tags:
+        - ipv6
+    extends:
+        - .fdo.distribution-image@{{distro}}
+        - .{{project}}.{{distro}}:{{version}}@{{arch}}
+    needs:
+        - build-{{distro}}:{{version}}@{{arch}}
+    <<: *test
+{% endfor %}
+{% endfor %}
+
+{% for downstream in triggers %}
+trigger-{{downstream}}:
+    stage: analysis
+    needs:
+        - test-{{targets["downstream"]}}
+    trigger: {{triggers[downstream]}}
+    only:
+        - master
+{% endfor %}
+
+coverage-analysis:
+  extends:
+    - .fdo.distribution-image@{{targets["coverage"].split(":")[0]}}
+    - .{{project}}.{{targets["coverage"]}}
+  stage: analysis
+  allow_failure: true
+  script:
+    - cd build
+    - mkdir -p coveragereport
+    - gcovr --html-details --print-summary --root=.. --exclude=../docs/reference --exclude=../tests --exclude=../tools --exclude=../examples --output coveragereport/index.html
+  coverage: '/^lines: (\d+\.\d+\%)/'
+  artifacts:
+    when: always
+    paths:
+    - build/coveragereport
+  needs:
+    - test-{{targets["coverage"]}}
+
+static-scan:
+  extends:
+    - .fdo.distribution-image@{{targets["static-scan"].split(":")[0]}}
+    - .{{project}}.{{targets["static-scan"]}}
+  stage: analysis
+  needs:
+    - build-container-{{targets["static-scan"]}}
+  script:
+    - meson --buildtype=debug _scan_build -Dintrospection=false
+    - export SCANBUILD="$PWD/.gitlab-ci/scanbuild-wrapper.sh"
+    - ninja -C _scan_build scan-build
+  artifacts:
+    paths:
+      - _scan_build/meson-logs
+  after_script:
+    - .gitlab-ci/scanbuild-plist-to-junit.py _scan_build/meson-logs/scanbuild/ > _scan_build/junit-scan-build.xml
+  artifacts:
+    reports:
+      junit: "_scan_build/junit-scan-build.xml"
+
+coverity:
+  extends:
+    - .fdo.distribution-image@{{targets["coverity"].split(":")[0]}}
+    - .{{project}}.{{targets["coverity"]}}
+  stage: analysis
+  allow_failure: true
+  script:
+    - curl https://scan.coverity.com/download/linux64 --data "token=$COVERITY_TOKEN&project={{project}}" --output /tmp/coverity_tool.tgz
+    - tar zxf /tmp/coverity_tool.tgz
+    - mkdir coverity-build
+    - cd coverity-build
+    - env CC=clang meson ..
+    - ../cov-analysis-linux64-*/bin/cov-build --dir cov-int ninja
+    - tar czf cov-int.tar.gz cov-int
+    - curl https://scan.coverity.com/builds?project={{project}}
+      --form token=$COVERITY_TOKEN --form email=mail@jensge.org
+      --form file=@cov-int.tar.gz --form version="`git describe --tags`"
+      --form description="gitlab CI build"
+  needs:
+    - build-container-{{targets["coverity"]}}
+  only:
+    - master
+  except:
+    changes:
+      - po/*.po
+
+pages:
+  extends:
+    - .fdo.distribution-image@{{targets["pages"].split(":")[0]}}
+    - .{{project}}.{{targets["pages"]}}
+  stage: website
+  script:
+      - mkdir -p public
+      - mv build/doc/{{project}}-{{api_version}} public/docs
+
+  artifacts:
+    paths:
+      - public
+  needs:
+    - build-{{targets["pages"]}}
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == /^wip\/.*\/ci.*$/
+    - if: $CI_COMMIT_BRANCH == /^wip\/.*\/.*doc.*$/
+
+

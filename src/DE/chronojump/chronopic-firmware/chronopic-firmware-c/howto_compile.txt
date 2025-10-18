@@ -1,0 +1,45 @@
+2016 (debian)
+-----
+Note gputils cannot be 0.13.7-1. It has to be Lenny: 0.13.6-1:
+https://archive.debian.net/lenny/gputils
+https://archive.debian.net/lenny/all/gputils-common/download
+
+sdcc has to be 2.8.0
+dpkg -i sdcc-libraries_2.8.0.dfsg-1_all.deb sdcc_2.8.0.dfsg-1_amd64.deb
+https://archive.debian.net/lenny/sdcc
+https://archive.debian.net/lenny/all/sdcc-libraries/download
+
+
+sdcc -mpic14 -p16f876a -Wl-m -Wl-ainhx8m chronopic-firmware-4MHz.c
+sdcc -mpic14 -p16f876a -Wl-m -Wl-ainhx8m chronopic-firmware-20MHz.c
+
+#multitest firmware
+sdcc -mpic14 -p16f876a -Wl-m -Wl-ainhx8m chronopic-firmware-multitest.c
+cp chronopic-firmware-multitest.hex ../chronopic-firmwarecord/.
+
+
+
+then record with chronopic-firmwarecord
+
+IMPORTANT:
+there's a bug:
+https://bugs.launchpad.net/ubuntu/+source/sdcc/+bug/1077918
+that makes compiling with pics impossible.
+Solution is to manually (dpkg -i) install lenny packages:
+
+http://archive.debian.net/lenny/electronics/sdcc-libraries
+
+32 bits:
+http://archive.debian.net/lenny/i386/sdcc/download
+64 bits:
+http://archive.debian.net/lenny/amd64/sdcc/download
+
+this sdcc-libraries (2.8.0) has 
+pic16f876a.h
+pic16f876a.lib
+
+but all the 3.0 and above doesn't have them
+
+trying
+sdcc -mpic14 -p16f876 -Wl-m -Wl-ainhx8m chronopic-firmware-4MHz-16f876.c
+but created hex file is the same than in "a" version

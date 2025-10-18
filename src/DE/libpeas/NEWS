@@ -1,0 +1,136 @@
+# Libpeas 2.2.0
+
+This is a stable release for GNOME 49.0
+
+ * Disable Lua tests until we have a GIRepository-2.0 supported
+   version of LuaGI. Only our testsuite requires it, not runtime
+   use of libpeas-2.x.
+ * Build system improvements.
+
+# Libpeas 2.1.0
+
+This is a beta release for GNOME 49.beta
+
+ * Support builds with custom python path
+ * Support mozjs_dep_name pkgconfig variable from GJS
+ * Port testsuite to girepository-2.0
+
+Distributors, if you are building with Lua support, there is no way you
+can make the testsuite pass unless you have an LGI with girepository-2.0
+support. I've posted patches to help with that at¹ but you may instead
+choose to just disable the lua testsuite for now.
+
+Note that you do not need girepository-2.0 at runtime for libpeas 2.0,
+only for the testsuite.
+
+¹ https://github.com/lgi-devs/lgi/pull/337
+
+# Libpeas 2.0.7
+
+ * CI fixes
+
+# Libpeas 2.0.6
+
+ * Translation updates
+
+# Libpeas 2.0.5
+
+ * Fix UB in memcpy
+ * Fix weak pointer usage in testsuite
+
+# Libpeas 2.0.4
+
+ * Update to mozjs 128
+
+# Libpeas 2.0.3
+
+ * Various non-critical resiliency fixes
+ * Translation updates
+
+# Libpeas 2.0.2
+
+Changes since 2.0.1:
+
+ * Translation updates
+
+# Libpeas 2.0.1
+
+Changes since 2.0.0:
+
+ * Improve dependency searching for Python when building
+ * Fix g_object_ref() usage with PeasExtensionSet as a GListModel
+ * Translation updates
+
+It is recommended that distributions update to 2.0.1.
+
+# Libpeas 2.0.0
+
+This release corresponds with GNOME 45.0.
+
+Changes since 1.99.1:
+
+ * Translation updates
+
+# Libpeas 1.99.1
+
+This release corresponds with GNOME 45.rc.
+
+It contains various build system improvements that were found when
+integrating 1.99.0 with various distribution channels.
+
+# Libpeas 1.99.0
+
+This is the beginning of the libpeas 2.0 series. It breaks ABI with previous
+versions of libpeas and therefore can be installed along-side libpeas-1.0.
+
+This allows libpeas to improve API ergonomics as well as implement features
+which will improve integration with GTK 4.
+
+## GJS
+
+With libpeas-2 we are gaining a new plugin loader in GJS. This is the same
+JavaScript engine (powered by SpiderMonkey) that GNOME Shell uses and allows
+for modern JavaScript programming with clean integration of GObject.
+
+This works using new-style JavaScript modules and recent feature additions
+to GJS. See https://gitlab.gnome.org/GNOME/gjs/-/merge_requests/846 for
+more information.
+
+## Removal of libpeas-gtk
+
+libpeas-gtk is not part of libpeas-2.
+
+Application developers are encouraged to use GTK 4's integration with
+GtkListView and similar widgets with PeasEngine. It provides a GListModel
+implementation with PeasPluginInfo to bind into row widgets.
+
+## Removal of PeasActivatable
+
+Interfaces are cheap and easy to create in GObject these days. Application
+developers are encouraged to create their own interfaces or base-objects
+which can implemented by their plugins.
+
+## Removal of Python 2 support
+
+Everything of consequence is on Python 3 now. There is no need for us to
+maintain the Python 2 loader for new applications targeting libpeas-2.
+
+## Deprecated API
+
+Previously deprecated API has been removed from libpeas such as the very
+old GObject Introspection integration using "call" on extension objects.
+
+## PeasEngine
+
+The PeasEngine object now implements a GListModel of PeasPluginInfo. Now
+that PeasPluginInfo is a GObject, you may bind its properties to labels
+within rows of a GtkListView with relative ease.
+
+Additionally, you can easily filter lists based on type-to-search with
+GtkFilterListModel, more than you could ever do with libpeas-gtk.
+
+## PeasExtensionSet
+
+PeasExtensionSet is also a GListModel which improves situations where an
+application wants to limit which extensions within a set are active based
+on arbitrary conditions.

@@ -1,0 +1,265 @@
+==============
+Version 3.44.2
+==============
+
+Improvements for potential UB usage for 8-byte aligned types
+
+==============
+Version 3.44.1
+==============
+
+Update testsuite to work with stricter json-glib.
+
+==============
+Version 3.44.0
+==============
+
+No changes since 3.43.0 development release.
+
+==============
+Version 3.43.0
+==============
+
+This is a development release.
+
+ • Testsuite fixes
+ • Improved error messages
+ • Provide client error code with JSON_CLIENT_ERROR error domain
+ • Explicit variant ownership fixes
+
+==============
+Version 3.42.0
+==============
+
+ • Documentation improvements to use gi-docgen
+ • Introspection fixes
+
+==============
+Version 3.41.0
+==============
+
+This is a development release.
+
+ • Improvements to JSONRPC_MESSAGE_PUT_VARIANT()
+
+==============
+Version 3.40.0
+==============
+
+ • Add ability to inject variant into messages
+
+==============
+Version 3.38.0
+==============
+
+ • Improve usage as a subproject
+
+==============
+Version 3.34.0
+==============
+
+ • No changes since 3.33.3.
+
+==============
+Version 3.33.3
+==============
+
+Changes in this release:
+
+ • Custom marshallers are now provided for all signals to improve the
+   stack-unwinding capability from kernel tooling such as Linux `perf`.
+ • Various build system improvements.
+
+==============
+Version 3.32.0
+==============
+
+No changes in this release
+
+===============
+Version 3.31.91
+===============
+
+Changes in this release:
+
+ • Improve cross-compilation support.
+
+==============
+Version 3.30.1
+==============
+
+Changes in this release:
+
+ • When --buildtype=release is used, assertion checks are disabled
+   and -Bsymbolic is used.
+
+==============
+Version 3.30.0
+==============
+
+No changes in this release since our beta 3.29.91.
+
+===============
+Version 3.29.91
+===============
+
+Changes in this release:
+
+ • Fix of double-free in generated vala bindings
+ • Floating reference fixes for some gvariants
+ • Use g_bytes_new_take() to simplify memory tracking
+ • Some variants are now unwrapped to simplify usage by consumers.
+ • Unit tests now disable SIGPIPE
+ • test-client was removed as it was dead code
+
+==============
+Version 3.29.4
+==============
+
+Changes in this release:
+
+ • More lenient testing for transient errors
+ • Increased compiler warnings when building on GCC
+ • Vala vapi generation improvements
+
+==============
+Version 3.29.3
+==============
+
+Changes in this release:
+
+ • Various introspection fixes
+ • Add JsonrpcServer::client-closed
+ • Emit JsonrpcClient::failed upon panic
+ • Helpers for strv message building and parsing
+ • Output stream now tracks busy status
+ • Support for boxing/unboxing a{sv} variants
+ • Version ABI macros were added
+ • A new variant for calling a remote method and get message id
+ • Fixes for an invalid type propagation
+
+==============
+Version 3.28.0
+==============
+
+There are no changes since 3.27.91.
+
+===============
+Version 3.27.91
+===============
+
+Changes in this release:
+
+ • Add JsonrpcServer::client-accepted signal.
+ • Improvements to dispatching of errors when panic'ing the connection.
+ • Message parsing is more liberal in what it accepts as input.
+ • Default ABI visibility was set to hidden, making our ABI macros useful.
+
+===============
+Version 3.27.90
+===============
+
+Changes in this release:
+
+ • More documentation and GObject Introspection additions.
+ • Fixes for documentation and taking of floating references from
+   GVariant params.
+ • The soname has been bumped since we altered the correctness of
+   GVariant params. C-based programs mostly just need to be recompiled.
+   Other bindings-based consumers should have their bindings regenerated
+   if necessary.
+ • When panic'ing a connection (such as from a broken pipe) we now
+   defer error propagation back to the main loop to avoid some
+   re-entrancy complexity for applications.
+
+Distributors:
+
+ In this cycle we had to break our GObject Introspection documentation
+ that was correct for the transfer ownership of GVariant. Additionally, we
+ fixed the miss-named library libjsonrpc_glib-1.0 to libjsonrpc-glib-1.0.
+ Since we bumped our soname, it is a good time to fix this in your
+ packaging.
+
+==============
+Version 3.27.4
+==============
+
+Changes in this release:
+
+ • The JSONRPC_MESSAGE_NEW_ARRAY() macro was added to allow for creating
+   GVariant messages that are an array.
+ • A number of conformance tests were added.
+ • JsonrpcClient allows for detailed signals (G_SIGNAL_DETAILED) for
+   notification and handle-call signals.
+ • JsonrpcServer gained new functionality to enumerate the number of
+   connected clients.
+ • JsonrpcClient tries to hold on to an additional reference when
+   panic is called.
+ • Message parsing can now support NULL strings using maybe types when
+   encoding and decoding messages.
+
+==============
+Version 3.27.1
+==============
+
+Changes in this release:
+
+ • jsonrpc-glib now uses versioning macros similar to GLib or Gtk instead
+   of a custom linker script for ABI exports.
+
+==============
+Version 3.26.0
+==============
+
+Changes in this release:
+
+ • Run test suite as part of build tooling
+
+===============
+Version 3.25.92
+===============
+
+Changes in this release:
+
+ • Check for version-script support from linker
+ • Fix impossible comparison in JsonrpcInputStream
+
+==============
+Version 3.25.3
+==============
+
+This new release of jsonrpc-glib contains a few fixes and additions.
+
+ • Support for gtk-doc based documentation has been added. Use
+   -Denable_gtk_doc=true to enable it when configuring Meson.
+ • JsonrpcServer now supports a convenience API for handling incoming
+   methods via jsonrpc_server_add_handler() and
+   jsonrpc_server_remove_handler().
+ • Support has been added to allow jsonrpc-glib to be used as a Meson
+   subproject.
+ • jsonrpc-version.h now generates the proper values for checking
+   compile time version information.
+ • Various build options were canonicalized to use _ instead of -
+   as a word separator.
+
+==============
+Version 3.25.2
+==============
+
+This is the first release of jsonrpc-glib.
+
+This is an early project, but things seem to be working well so it's time for a
+release.  You can use jsonrpc-glib to create both JSON RPC clients and servers.
+Additionally, it supports connection upgrades to GVariant when both sides
+support it instead of JSON to reduce parser overhead and lesson the chances of
+memory fragmentation.
+
+Things to note
+
+ • Initial release of jsonrpc-glib.
+ • We'll follow the GNOME release cycle.
+ • You JsonrpcClient and JsonrpcServer should handle most of what you need
+ • See jsonrpc-message.h for a convenient va_args based C API.
+
+Thanks!
+ 

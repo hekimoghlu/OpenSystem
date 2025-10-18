@@ -1,0 +1,38 @@
+/*
+ * SPDX-FileCopyrightText: (C) 2012 Red Hat, Inc. (www.redhat.com)
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+#ifndef E_EWS_ENUMS_H
+#define E_EWS_ENUMS_H
+
+#include <glib.h>
+
+G_BEGIN_DECLS
+
+typedef enum {
+	E_EWS_EXTERNAL_AUDIENCE_NONE,
+	E_EWS_EXTERNAL_AUDIENCE_KNOWN,
+	E_EWS_EXTERNAL_AUDIENCE_ALL
+} EEwsExternalAudience;
+
+typedef enum {
+	E_EWS_FOLDER_TYPE_UNKNOWN,
+	E_EWS_FOLDER_TYPE_MAILBOX,
+	E_EWS_FOLDER_TYPE_CALENDAR,
+	E_EWS_FOLDER_TYPE_CONTACTS,
+	E_EWS_FOLDER_TYPE_SEARCH,
+	E_EWS_FOLDER_TYPE_TASKS,
+	E_EWS_FOLDER_TYPE_MEMOS
+} EEwsFolderType;
+
+typedef enum {
+	E_EWS_OOF_STATE_DISABLED,
+	E_EWS_OOF_STATE_ENABLED,
+	E_EWS_OOF_STATE_SCHEDULED
+} EEwsOofState;
+
+G_END_DECLS
+
+#endif /* E_EWS_ENUMS_H */
+

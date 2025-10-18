@@ -1,0 +1,159 @@
+{
+  "app-id": "org.gnome.Logs",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "master",
+  "sdk": "org.gnome.Sdk",
+  "command": "gnome-logs",
+  "tags": ["nightly"],
+  "desktop-file-name-prefix": "(Nightly) ",
+  "finish-args": [
+    "--share=ipc", "--socket=fallback-x11",
+    "--device=dri",
+    "--socket=wayland",
+    "--filesystem=/var/log/journal:ro",
+    "--metadata=X-DConf=migrate-path=/org/gnome/logs/"
+  ],
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig"
+  ],
+  "modules": [
+    {
+      "name": "liblz4",
+      "buildsystem": "meson",
+      "subdir": "contrib/meson",
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/lz4/lz4",
+          "tag": "v1.9.2",
+          "commit": "fdf2ef5809ca875c454510610764d9125ef2ebbd"
+        }
+      ]
+    },
+    {
+      "name": "rsync",
+      "config-opts": [
+        "--disable-zstd",
+        "--disable-xxhash"
+      ],
+      "cleanup": [
+        "/share"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://download.samba.org/pub/rsync/src/rsync-3.4.1.tar.gz",
+          "sha256": "2924bcb3a1ed8b551fc101f740b9f0fe0a202b115027647cf69850d65fd88c52"
+        }
+      ]
+    },
+    {
+        "name": "python3-jinja2",
+        "buildsystem": "simple",
+        "build-commands": [
+            "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"jinja2\" --no-build-isolation"
+        ],
+        "sources": [
+            {
+                "type": "file",
+                "url": "https://files.pythonhosted.org/packages/1d/97/2288fe498044284f39ab8950703e88abbac2abbdf65524d576157af70556/MarkupSafe-2.1.1.tar.gz",
+                "sha256": "7f91197cc9e48f989d12e4e6fbc46495c446636dfc81b9ccf50bb0ec74b91d4b"
+            },
+            {
+                "type": "file",
+                "url": "https://files.pythonhosted.org/packages/bc/c3/f068337a370801f372f2f8f6bad74a5c140f6fda3d9de154052708dd3c65/Jinja2-3.1.2-py3-none-any.whl",
+                "sha256": "6088930bfe239f0e6710546ab9c19c9ef35e29792895fed6e6e31a023a182a61"
+            }
+        ]
+    },
+    {
+      "name": "systemd",
+      "buildsystem": "meson",
+      "config-opts": [
+        "--libdir=lib",
+        "-Drootprefix=/app",
+        "-Drootlibdir=/app/lib",
+        "-Dsysconfdir=/app/etc",
+        "-Ddocdir=/app/share/doc",
+        "-Dsysvinit-path=/app/etc/init.d",
+
+        "-Dfdisk=disabled",
+        "-Ddbus=disabled",
+        "-Dutmp=false",
+        "-Dhibernate=false",
+        "-Dldconfig=false",
+        "-Dresolve=false",
+        "-Defi=false",
+        "-Dtpm=false",
+        "-Denvironment-d=false",
+        "-Dbinfmt=false",
+        "-Dcoredump=false",
+        "-Dlogind=false",
+        "-Dhostnamed=false",
+        "-Dlocaled=false",
+        "-Dmachined=false",
+        "-Dportabled=false",
+        "-Dnetworkd=false",
+        "-Dtimedated=false",
+        "-Dtimesyncd=false",
+        "-Dremote=disabled",
+        "-Dnss-myhostname=false",
+        "-Dnss-mymachines=disabled",
+        "-Dnss-resolve=disabled",
+        "-Dnss-systemd=false",
+        "-Dfirstboot=false",
+        "-Drandomseed=false",
+        "-Dbacklight=false",
+        "-Dvconsole=false",
+        "-Dquotacheck=false",
+        "-Dsysusers=false",
+        "-Dtmpfiles=false",
+        "-Dimportd=disabled",
+        "-Dhwdb=false",
+        "-Drfkill=false",
+        "-Dman=disabled",
+        "-Dhtml=disabled",
+        "-Dbashcompletiondir=no",
+        "-Dzshcompletiondir=no"
+      ],
+      "cleanup": [
+        "/bin",
+        "/etc",
+        "/lib/libudev*",
+        "/lib/kernel",
+        "/lib/modprobe.d",
+        "/lib/rpm",
+        "/lib/sysctl.d",
+        "/lib/systemd",
+        "/lib/udev",
+        "/share/dbus-1",
+        "/share/doc",
+        "/share/factory",
+        "/share/glib-2.0",
+        "/share/icons",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/polkit-1",
+        "/share/runtime"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/systemd/systemd.git",
+          "tag": "v256"
+        }
+      ]
+    },
+    {
+      "name": "gnome-logs",
+      "buildsystem": "meson",
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://gitlab.gnome.org/GNOME/gnome-logs.git"
+        }
+      ]
+    }
+  ]
+}

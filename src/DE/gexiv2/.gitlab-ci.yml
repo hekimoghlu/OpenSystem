@@ -1,0 +1,289 @@
+.flatpak:
+  tags:
+    - flatpak
+  variables:
+      EXIV2_REF: 'main'
+  image: quay.io/gnome_infrastructure/gnome-runtime-images:gnome-47
+  stage: build
+  only:
+    - schedules
+    - merge_requests
+  script:
+    - sed build-aux/org.gnome.GExiv2.json.in -e "s/@EXIV2_REF@/${EXIV2_REF}/" > org.gnome.GExiv2.json
+    - flatpak-builder build-dir org.gnome.GExiv2.json --stop-at=gexiv2 --user --disable-rofiles-fuse
+    - flatpak build build-dir meson _build -Dtests=true
+    - flatpak build build-dir ninja -C _build
+    - flatpak build build-dir ninja -C _build test
+  artifacts:
+    when: on_failure
+    name: "gexiv2-_${CI_COMMIT_REF_NAME}"
+    paths:
+      - "${CI_PROJECT_DIR}/_build/meson-logs"
+
+exiv2-main:on-schedule:
+    extends: .flatpak
+    variables:
+        EXIV2_REF: "main"
+
+exiv2-0-28:on-schedule:
+    extends: .flatpak
+    variables:
+        EXIV2_REF: "0.28.x"
+
+include:
+    - project: "Infrastructure/freedesktop-ci-templates"
+      file: "templates/fedora.yml"
+      ref: "e195d80f35b45cc73668be3767b923fd76c70ed5"
+    - project: "Infrastructure/freedesktop-ci-templates"
+      file: "templates/ci-fairy.yml"
+      ref: "e195d80f35b45cc73668be3767b923fd76c70ed5"
+    - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
+      inputs:
+        dist-job-name: build-fedora@x86_64
+        tarball-artifact-path: "build/meson-dist/gexiv2-${CI_COMMIT_TAG}.tar.xz"
+    - project: "GNOME/citemplates"
+      file: "templates/default-rules.yml"
+
+variables:
+    MESON_TEST_TIMEOUT_MULTIPLIER: 3
+
+stages:
+    - review
+    - prepare
+    - build
+    - test
+    - analysis
+    - deploy
+
+.check-template: &check
+  extends:
+    - .fdo.ci-fairy
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - check-junit-report.xml
+    reports:
+      junit: check-junit-report.xml
+
+check-commit-log:
+  variables:
+    GIT_DEPTH: "100"
+  stage: review
+  script:
+    - if [[ x"$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" != "x" ]] ;
+      then
+        ci-fairy check-commits --junit-xml=check-junit-report.xml ;
+      else
+        echo "Not a merge request" ;
+      fi
+  <<: *check
+
+check-merge-request:
+  variables:
+    GIT_STRATEGY: none
+  stage: review
+  script:
+    - if [[ x"$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" != "x" ]] ;
+      then
+        ci-fairy check-merge-request --require-allow-collaboration --junit-xml=check-junit-report.xml ;
+      else
+        echo "Not a merge request" ;
+      fi
+  <<: *check
+
+.build-template: &build
+  stage: build
+  script:
+      - meson setup . ${MESON_BUILD_DIR} --prefix=/usr -Db_coverage=true -Dtests=true -Dgtk_doc=true --werror ${MESON_EXTRA_ARGS}
+      - ninja -C ${MESON_BUILD_DIR}
+      - if [[ "${MESON_BUILD_DIR}" = "build" ]] ;
+        then
+          meson dist -C ${MESON_BUILD_DIR} --no-tests ;
+        fi
+  artifacts:
+      expire_in: 1 day
+      paths:
+          - ${MESON_BUILD_DIR}
+
+.gexiv2.fedora@common:
+  variables:
+    BASE_TAG: '2025-02-01.0'
+    FDO_UPSTREAM_REPO: GNOME/gexiv2
+    FDO_DISTRIBUTION_PACKAGES: 'clang clang-analyzer gcovr git libasan libubsan python3-gobject python3-pip xmlto gobject-introspection-devel gi-docgen vala ninja-build python3-devel exiv2-devel'
+    FDO_DISTRIBUTION_EXEC: |
+      dnf clean all &&
+      pip3 install meson
+
+.gexiv2.fedora:41@x86_64:
+  extends: .gexiv2.fedora@common
+  variables:
+    FDO_DISTRIBUTION_VERSION: 41
+    FDO_DISTRIBUTION_TAG: "x86_64-${BASE_TAG}"
+
+build-fedora-container@x86_64:
+  extends:
+    - .fdo.container-build@fedora
+    - .gexiv2.fedora:41@x86_64
+  stage: prepare
+  variables:
+    GIT_STRATEGY: none
+
+build-fedora@x86_64:
+    extends:
+        - .fdo.distribution-image@fedora
+        - .gexiv2.fedora:41@x86_64
+    needs:
+        - build-fedora-container@x86_64
+    variables:
+        MESON_BUILD_DIR: 'build'
+    <<: *build
+
+build-msys2-ucrt64@x86_64:
+  only:
+    - branches
+    - merge_requests
+  stage: build
+  needs: []
+  tags:
+    - win32-ps
+  variables:
+    CHERE_INVOKING: "yes"
+    MSYSTEM: "UCRT64"
+  script:
+    - C:\msys64\usr\bin\pacman --noconfirm -Syyuu
+    - C:\msys64\usr\bin\bash -lc "bash -x ./.gitlab-ci/test-ucrt.sh"
+  artifacts:
+    name: "${env:CI_JOB_NAME}-${env:CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/build/meson-logs"
+
+.test-template: &test
+  stage: test
+  script:
+    - cd ${MESON_BUILD_DIR}
+    - |
+      # Remove the many "CI_" variables from the environment. Meson dumps the
+      # whole environment for every failed test, and that gives a whole
+      # screenful of junk each time unless we strip these.
+      unset $(env|grep -o '^CI_[^=]*')
+      env LANG=C.UTF-8 LC_ALL=C.UTF-8 meson test --print-errorlogs ${MESON_TEST_EXTRA_ARGS}
+  after_script:
+    - |
+      echo "Distribution: "
+      echo
+      egrep '^NAME=|^VERSION=' /etc/os-release
+      echo
+      echo "Test suite settings:"
+      echo
+      echo "G_MESSAGES_DEBUG: ${G_MESSAGES_DEBUG}"
+      echo "MESON_TEST_EXTRA_ARGS: ${MESON_TEST_EXTRA_ARGS}"
+      echo
+      echo "These values can be set at https://gitlab.gnome.org/GNOME/gexiv2/pipelines/new"
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+    - ${MESON_BUILD_DIR}
+    reports:
+      junit: "${MESON_BUILD_DIR}/meson-logs/testlog.junit.xml"
+
+test-fedora@x86_64:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gexiv2.fedora:41@x86_64
+  needs:
+    - build-fedora@x86_64
+  variables:
+    MESON_BUILD_DIR: 'build'
+  <<: *test
+
+coverage-analysis:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gexiv2.fedora:41@x86_64
+  stage: analysis
+  allow_failure: true
+  script:
+    - cd build
+    - find -name "*gexiv2-tool.c.gcno" -exec rm {} \;
+    - mkdir -p coveragereport
+    - gcovr --html-details --print-summary --root=.. --exclude=../build --exclude=../subprojects --exclude=../docs/reference --exclude=../tests --exclude=../tools --exclude=../examples --output coveragereport/index.html
+  coverage: '/^lines: (\d+\.\d+\%)/'
+  artifacts:
+    when: always
+    paths:
+    - build/coveragereport
+  needs:
+    - test-fedora@x86_64
+
+static-scan:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gexiv2.fedora:41@x86_64
+  stage: analysis
+  needs:
+    - build-fedora-container@x86_64
+  script:
+    - meson setup _scan_build --buildtype=debug -Dintrospection=false -Dvapi=false -Dpython3=false
+    - ninja -C _scan_build scan-build
+  artifacts:
+    paths:
+      - _scan_build/meson-logs
+  allow_failure: true
+
+coverity:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gexiv2.fedora:41@x86_64
+  stage: analysis
+  allow_failure: true
+  script:
+    - curl https://scan.coverity.com/download/linux64 --data "token=$COVERITY_TOKEN&project=Gexiv2" --output /tmp/coverity_tool.tgz
+    - tar zxf /tmp/coverity_tool.tgz
+    - mkdir coverity-build
+    - cd coverity-build
+    - env CC=clang meson ..
+    - ../cov-analysis-linux64-*/bin/cov-build --dir cov-int ninja
+    - tar czf cov-int.tar.gz cov-int
+    - curl https://scan.coverity.com/builds?project=Gexiv2
+      --form token=$COVERITY_TOKEN --form email=mail@jensge.org
+      --form file=@cov-int.tar.gz --form version="`git describe --tags`"
+      --form description="gitlab CI build"
+  needs:
+    - build-fedora-container@x86_64
+  only:
+    - master
+  except:
+    changes:
+      - po/*.po
+
+docs:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gexiv2.fedora:41@x86_64
+  stage: build
+  script:
+      - meson doc-build -Dgtk_doc=true
+      - ninja -C doc-build docs/reference/GExiv2
+      - mv doc-build/docs/reference/GExiv2 reference
+  artifacts:
+    paths:
+      - reference
+  needs:
+    - build-fedora-container@x86_64
+  rules:
+    - if: $CI_COMMIT_BRANCH== $CI_DEFAULT_BRANCH
+
+refresh-doc:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .gexiv2.fedora:41@x86_64
+  stage: deploy
+  needs: ['docs']
+  only:
+    refs:
+    - 'master'
+  script:
+    - "curl -X POST -F token=${PAGES_TRIGGER_TOKEN} -F ref=pages https://gitlab.gnome.org/api/v4/projects/1534/trigger/pipeline"
+

@@ -1,0 +1,71 @@
+<services>
+  <service name="obs_scm">
+    <param name="scm">git</param>
+    <param name="url">https://gitlab.gnome.org/GNOME/NetworkManager-openconnect.git</param>
+    <param name="revision">main</param>
+    <param name="version">_auto_</param>
+    <param name="versionformat">@PARENT_TAG@+git%cd</param>
+    <param name="versionrewrite-pattern">(.*)-dev</param>
+    <param name="versionrewrite-replacement">\1</param>
+    <param name="exclude">.git</param>
+    <param name="changesgenerate">enable</param>
+    <param name="filename">network-manager-openconnect</param>
+    <param name="extract">.obs/network-manager-openconnect.dsc</param>
+    <param name="extract">.obs/network-manager-openconnect.spec</param>
+  </service>
+
+  <!-- recreate the tarball, as it's expected by debian build tools -->
+  <service name="tar" mode="buildtime"/>
+
+  <!-- extract debian packaging -->
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/changelog</param>
+    <param name="outfilename">debian.changelog</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/control</param>
+    <param name="outfilename">debian.control</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/copyright</param>
+    <param name="outfilename">debian.copyright</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/rules</param>
+    <param name="outfilename">debian.rules</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/network-manager-openconnect.postinst</param>
+    <param name="outfilename">debian.network-manager-openconnect.postinst</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/network-manager-openconnect.postrm</param>
+    <param name="outfilename">debian.network-manager-openconnect.postrm</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/network-manager-openconnect.install</param>
+    <param name="outfilename">debian.network-manager-openconnect.install</param>
+  </service>
+  <service name="extract_file" mode="buildtime">
+    <param name="archive">*.tar</param>
+    <param name="files">*/.obs/debian/network-manager-openconnect-gnome.install</param>
+    <param name="outfilename">debian.network-manager-openconnect-gnome.install</param>
+  </service>
+
+  <service name="set_version" mode="buildtime">
+    <param name="basename">network-manager-openconnect</param>
+  </service>
+
+  <service name="recompress" mode="buildtime">
+    <param name="file">*.tar</param>
+    <param name="compression">gz</param>
+  </service>
+</services>
+

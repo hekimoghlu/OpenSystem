@@ -1,0 +1,102 @@
+{
+    "id" : "org.gnome.BreakTimer.Devel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "gnome-break-timer-settings",
+    "tags": ["devel", "development", "nightly"],
+    "desktop-file-name-suffix": " ☢️",
+    "finish-args" : [
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--socket=pulseaudio",
+        "--talk-name=org.gnome.Settings",
+        "--talk-name=org.gnome.Shell",
+        "--talk-name=org.gnome.Mutter.IdleMonitor",
+        "--talk-name=org.gnome.ScreenSaver"
+    ],
+    "modules" : [
+        {
+            "name" : "libcanberra",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "http://0pointer.de/lennart/projects/libcanberra/libcanberra-0.30.tar.xz",
+                    "sha256" : "c2b671e67e0c288a69fc33dc1b6f1b534d07882c2aceed37004bf48c601afa72"
+                }
+            ],
+            "config-opts" : [
+                "--disable-alsa",
+                "--disable-null",
+                "--disable-oss"
+            ]
+        },
+        {
+            "name" : "gsound",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gsound.git",
+                    "tag" : "1.0.3"
+                }
+            ]
+        },
+        {
+            "name" : "intltool",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz",
+                    "sha256" : "67c74d94196b153b774ab9f89b2fa6c6ba79352407037c8c14d5aeb334e959cd"
+                }
+            ],
+            "cleanup" : [
+                "*"
+            ]
+        },
+        {
+            "name" : "sound-theme-freedesktop",
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "http://people.freedesktop.org/~mccann/dist/sound-theme-freedesktop-0.8.tar.bz2",
+                    "sha256" : "cb518b20eef05ec2e82dda1fa89a292c1760dc023aba91b8aa69bafac85e8a14"
+                }
+            ]
+        },
+        {
+            "name" : "blueprint-compiler",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/jwestman/blueprint-compiler",
+                    "tag" : "v0.10.0",
+                    "commit" : "2a39a16391122af2f3d812e478c1c1398c98b972",
+                    "x-checker-data" : {
+                        "type" : "git",
+                        "tag-pattern": "^v([\d.]+)$"
+                    }
+                }
+            ]
+        },
+        {
+            "name" : "gnome-break-timer",
+            "buildsystem" : "meson",
+            "builddir" : true,
+            "run-tests" : true,
+            "config-opts" : [
+                "-Dprofile=development"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gnome-break-timer.git"
+                }
+            ]
+        }
+    ]
+}

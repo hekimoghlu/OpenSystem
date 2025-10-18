@@ -1,0 +1,173 @@
+# Miscellaneous number theory functions
+
+function IsNthPower(m,n) =
+ (
+  if IsMatrix (m) or IsMatrix (n) then
+  	return ApplyOverMatrix2 (m, n, IsNthPower)
+  else if not IsRational (m) then
+	# Only integers/rationals can be perfect powers
+	false
+  else if n == 2 then
+	IsPerfectSquare(m)
+  else if not IsPerfectPower(m) then
+	# We know this won't work
+	false
+  else if IsInteger(m) then
+	IsInteger(m^(1/n))
+
+  # Since rational numbers are in reduced form, by unique factorization it
+  # suffices to check if the numerator and denominator are Nth powers
+  else
+	(IsNthPower(Numerator(m),n)) and IsNthPower(Denominator(m),n)
+ )
+SetHelp("IsNthPower","number_theory","Tests if a rational number is a perfect power");
+
+# Returns the highest power of p that divides n, where n is rational.
+# FIXME: This is only a valuation if p is prime, so this is an abuse
+# of language.
+function PadicValuation(n,p) =
+ (
+  if IsRational(n) and not IsInteger(n) then
+    return PadicValuation(Numerator(n))-PadicValuation(Denominator(n));
+  if not IsInteger(n) then
+   (
+    error("PadicValuation: argument must be rational or integer");
+    bailout
+   );
+#  if (n==0) then return Infinity; # FIXME: Infinity not yet implemented
+  if (n==0) then return null;
+
+  valuation=0;
+  while Divides(p,n) do
+   (
+    increment valuation;
+    n=ExactDivision(n,p);
+   );
+  valuation
+ )
+SetHelp("PadicValuation","number_theory","Returns the p-adic valuation (number of trailing zeros in base p).");
+
+function RemoveFactor(n,m) =
+ (
+  if not IsInteger(n) or not IsInteger(m) then
+   (
+    error("RemoveFactor: arguments must be integers");
+    bailout
+   );
+  if (n==0) then return 0;
+
+  while Divides(m,n) do
+   (
+    n = ExactDivision(n,m)
+   );
+  n
+ )
+SetHelp("RemoveFactor","number_theory","Removes all instances of the factor m from the number n");
+
+function PowerMod(a,b,m) = a^b mod m
+SetHelp("PowerMod","number_theory","Compute a^b mod m");
+
+function AreRelativelyPrime(a,b) = (
+	if IsMatrix (a) or IsMatrix (b) then
+		return ApplyOverMatrix2 (a, b, AreRelativelyPrime);
+	gcd(a,b) == 1
+)
+SetHelp("AreRelativelyPrime","number_theory","Are a and b relatively prime?");
+
+function LeastAbsoluteResidue(a,n) = (
+  	if not IsInteger(a) or not IsPositiveInteger(n) then
+	   (
+	    error("LeastAbsoluteResidue: arguments must be integers");
+	    bailout
+	   );
+	b = a mod n;
+	if (-b+n) < b then
+		b-n
+	else
+		b
+)
+SetHelp("LeastAbsoluteResidue", "number_theory", "Return the residue of a mod n with the least absolute value (in the interval -n/2 to n/2)");
+
+SetHelp("ChineseRemainder", "number_theory", "Find the x that solves the system given by the vector a and modulo the elements of m, using the Chinese Remainder Theorem");
+function ChineseRemainder(a,m) = (
+  M=MatrixProduct(m);
+  ( sum i=1 to elements(a) do (
+      Mi = (M/m@(i));
+      a@(i)*Mi*(Mi^-1 mod m@(i))
+    )
+  ) % M
+)
+SetHelpAlias ("ChineseRemainder", "CRT")
+CRT = ChineseRemainder
+
+SetHelp("ConvertToBase", "number_theory", "Convert a number to a vector of powers for elements in base b");
+function ConvertToBase(n,b) = (
+  if not IsNonNegativeInteger(n) or not IsInteger(b) or b <= 1 then
+   (
+    error("ConvertToBase: arguments must be integers with n >= 0 and b > 1");
+    bailout
+   );
+  ret = null;
+  while n != 0 do (
+    r = n % b;
+    n = (n-r)/b;
+    ret = [ret;r]
+  );
+  ret
+)
+
+SetHelp("ConvertFromBase", "number_theory", "Convert a vector of values indicating powers of b to a number");
+function ConvertFromBase(v,b) = (
+  n = 0;
+  if not IsMatrix(v) or not IsInteger(b) or b <= 1 then
+   (
+    error("ConvertFromBase: bad arguments");
+    bailout
+   );
+  for i=1 to elements(v) do
+    n = n + v@(i)*b^(i-1);
+  n
+)
+
+# Eric W. Weisstein. "Bernoulli Number." From MathWorld--A Wolfram Web Resource. http://mathworld.wolfram.com/BernoulliNumber.html
+SetHelp("BernoulliNumber", "number_theory", "Return the nth Bernoulli number");
+function BernoulliNumber(n) = (
+	if IsMatrix (n) then
+		return ApplyOverMatrix (n, BernoulliNumber);
+
+  	if not IsNonNegativeInteger(n) then (
+    		error("BernoulliNumber: bad arguments, must be a non-negative integer");
+    		bailout
+	);
+	if n > 1 and IsOdd(n) then return 0;
+	sum k=0 to n do (
+        	(1/(k+1)) * (
+			sum r=0 to k do (
+				(-1)^r * nCr (k, r) * r^n
+			)
+		)
+	)
+)
+
+
+SetHelp("MoebiusMu", "number_theory", "Return the Moebius mu function evaluated in n");
+function MoebiusMu(n) = (
+      if IsMatrix(n) then
+              return ApplyOverMatrix (n, MoebiusMu);
+
+      if not IsPositiveInteger(n) then (
+              error("MoebiusMu: bad arguments, must be a positive integer");
+              bailout
+      );
+      if n = 1 then return 1;
+      m = Factorize(n);
+      r = m@(2,);
+      r = DeleteColumn(r,1);
+      moeb = 1;
+      for x in r do (
+              if x > 1 then return 0;
+              moeb = -1 * moeb
+      );
+      moeb
+)
+

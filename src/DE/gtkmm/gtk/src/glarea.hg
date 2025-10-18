@@ -1,0 +1,197 @@
+/* Copyright (C) 2015 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+#include <gdkmm/glcontext.h>
+
+namespace Gtk
+{
+
+/** A widget used for drawing with [OpenGL](https://en.wikipedia.org/wiki/OpenGL).
+ *
+ * %Gtk::GLArea sets up its own Gdk::GLContext, and creates a custom
+ * GL framebuffer that the widget will do GL rendering onto. It also ensures
+ * that this framebuffer is the default GL rendering target when rendering.
+ * The completed rendering is integrated into the larger GTK scene graph as
+ * a texture.
+ *
+ * In order to draw, you have to connect to signal_render().
+ *
+ * The %Gtk::GLArea widget ensures that the Gdk::GLContext is associated with
+ * the widget's drawing area, and it is kept updated when the size and
+ * position of the drawing area changes.
+ *
+ * ## Drawing with Gtk::GLArea
+ *
+ * The simplest way to draw using OpenGL commands in a %Gtk::GLArea is to
+ * create a widget instance and connect to signal_render().
+ *
+ * Your `my_render_handler()` signal handler will be called when the %Gtk::GLArea is ready
+ * for you to draw its content.
+ *
+ * The initial contents of the framebuffer are transparent.
+ *
+ * @code
+ * bool my_render_handler(const Glib::RefPtr<Gdk::GLContext>& context)
+ * {
+ *   // Inside this function it's safe to use GL; the given
+ *   // Gdk::GLContext has been made current to the drawable
+ *   // surface used by the Gtk::GLArea and the viewport has
+ *   // already been set to be the size of the allocation.
+ *
+ *   // We can start by clearing the buffer.
+ *   glClearColor(0, 0, 0, 0);
+ *   glClear(GL_COLOR_BUFFER_BIT);
+ *
+ *   // Draw your object.
+ *   // draw_an_object();
+ *
+ *   // We completed our drawing; the draw commands will be
+ *   // flushed at the end of the signal emission chain, and
+ *   // the buffers will be drawn on the window.
+ *   return true;
+ * }
+ * @endcode
+ *
+ * If you need to initialize OpenGL state, e.g. buffer objects or
+ * shaders, you should use Gtk::Widget::signal_realize();
+ * you can use Gtk::Widget::signal_unrealize() to clean up.
+ * Since the Gdk::GLContext creation and initialization may fail, you
+ * will need to check for errors, using has_error() and/or throw_if_error().
+ *
+ * An example of how to safely initialize the GL state is:
+ *
+ * @code
+ * void my_realize_handler()
+ * {
+ *   // We need to make the context current if we want to call GL API.
+ *   m_GLArea.make_current();
+ *
+ *   try
+ *   {
+ *     // If there were errors during the initialization or
+ *     // when trying to make the context current, this
+ *     // function will throw.
+ *     m_GLArea.throw_if_error();
+ *
+ *     init_buffers();
+ *     init_shaders();
+ *   }
+ *   catch (const Gdk::GLError& gle)
+ *   {
+ *     std::cerr << "An error occured making the context current during realize:" << std::endl;
+ *     std::cerr << gle.domain() << "-" << gle.code() << "-" << gle.what() << std::endl;
+ *   }
+ * }
+ * @endcode
+ *
+ * If you need to change the options for creating the Gdk::GLContext,
+ * you should use signal_create_context().
+ *
+ * A demo program shows the use of %Gtk::GLArea in more detail.
+ *
+ * @newin{3,18}
+ * @ingroup Widgets
+ */
+class GTKMM_API GLArea : public Widget
+{
+  _CLASS_GTKOBJECT(GLArea,GtkGLArea,GTK_GL_AREA,Gtk::Widget,GtkWidget, , , GTKMM_API)
+public:
+
+  _CTOR_DEFAULT
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::GLContext> get_context(), gtk_gl_area_get_context, refreturn, newin "3,18")
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::GLContext> get_context() const, gtk_gl_area_get_context, refreturn, constversion, newin "3,18")
+  _WRAP_METHOD(void make_current(), gtk_gl_area_make_current, newin "3,18")
+  _WRAP_METHOD(void queue_render(), gtk_gl_area_queue_render, newin "3,18")
+  _WRAP_METHOD(void attach_buffers(), gtk_gl_area_attach_buffers, newin "3,18")
+  /** Check if any error is currently set on this <i>area</i>.
+   *
+   * The error may be obtained by using throw_if_error() and
+   * set using set_error().
+   *
+   * @newin{3,18}
+   *
+   * @return true if an error is currently set.
+   */
+  bool has_error() const;
+
+  _IGNORE(gtk_gl_area_get_error)
+  /** Will throw the correct Glib::Error subclass if
+   * any is currently set on this <i>area</i>.
+   *
+   * @newin{3,18}
+   *
+   * @throw Throws any currently set error (e.g. Gdk::GLError).
+   */
+  void throw_if_error() const;
+
+#m4 _CONVERSION(`const Glib::Error&', `const GError*', __FR2P)
+  /** Sets an error on the <i>area</i> which will be shown
+   * instead of GL rendering.
+   *
+   * This is useful in the signal_create_context() handler
+   * if GL context creation fails.
+   *
+   * @newin{3,18}
+   *
+   * @param error The error to set on the <i>area</i>.
+   */
+  _WRAP_METHOD(void set_error(const Glib::Error& error), gtk_gl_area_set_error)
+  /** Clears any previous set error on this <i>area</i> made with set_error().
+   *
+   * @newin{3,18}
+   */
+  void unset_error();
+  _WRAP_METHOD(bool get_has_depth_buffer() const, gtk_gl_area_get_has_depth_buffer, newin "3,18")
+  _WRAP_METHOD(void set_has_depth_buffer(bool has_depth_buffer = true), gtk_gl_area_set_has_depth_buffer, newin "3,18")
+  _WRAP_METHOD(bool get_has_stencil_buffer() const, gtk_gl_area_get_has_stencil_buffer, newin "3,18")
+  _WRAP_METHOD(void set_has_stencil_buffer(bool has_stencil_buffer = true), gtk_gl_area_set_has_stencil_buffer, newin "3,18")
+  _WRAP_METHOD(bool get_auto_render() const, gtk_gl_area_get_auto_render, newin "3,18")
+  _WRAP_METHOD(void set_auto_render(bool auto_render = true), gtk_gl_area_set_auto_render, newin "3,18")
+  _WRAP_METHOD(void get_required_version(int& major, int& minor) const, gtk_gl_area_get_required_version, newin "3,18")
+  _WRAP_METHOD(void set_required_version(int major, int minor), gtk_gl_area_set_required_version, newin "3,18")
+  dnl// _CONVERSION()s are case-insensitive. Can't have conversions
+  dnl//  GdkGLAPI -> Gdk::GLAPI and GdkGLAPI -> Gdk::GLApi active at the same time.
+#m4 _CONVERSION(`GdkGLAPI', `Gdk::GLApi', `static_cast<Gdk::GLApi>($3)')
+  _WRAP_METHOD(void set_allowed_apis(Gdk::GLApi apis), gtk_gl_area_set_allowed_apis)
+  _WRAP_METHOD(Gdk::GLApi get_allowed_apis() const, gtk_gl_area_get_allowed_apis)
+  _WRAP_METHOD(Gdk::GLApi get_api() const, gtk_gl_area_get_api)
+  _WRAP_METHOD(bool get_use_es() const, gtk_gl_area_get_use_es,
+    deprecated "Use get_api() instead.")
+  _WRAP_METHOD(void set_use_es(bool use_es = true), gtk_gl_area_set_use_es,
+    deprecated "Use set_allowed_apis() instead.")
+
+  _WRAP_PROPERTY("auto-render", bool, newin "3,18")
+  _WRAP_PROPERTY("context", Glib::RefPtr<Gdk::GLContext>, newin "3,18")
+  _WRAP_PROPERTY("has-depth-buffer", bool, newin "3,18")
+  _WRAP_PROPERTY("has-stencil-buffer", bool, newin "3,18")
+  _WRAP_PROPERTY("use-es", bool, deprecated "Use property_allowed_apis() instead.")
+  _WRAP_PROPERTY("allowed-apis", Gdk::GLApi)
+  _WRAP_PROPERTY("api", Gdk::GLApi)
+
+#m4 _CONVERSION(`Glib::RefPtr<Gdk::GLContext>', `GdkGLContext*', Glib::unwrap_copy($3))
+  _WRAP_SIGNAL(Glib::RefPtr<Gdk::GLContext> create_context(), "create_context", newin "3,18")
+#m4 _CONVERSION(`GdkGLContext*', `const Glib::RefPtr<Gdk::GLContext>&', Glib::wrap($3, true))
+  _WRAP_SIGNAL(bool render(const Glib::RefPtr<Gdk::GLContext>& context), "render", newin "3,18")
+  _WRAP_SIGNAL(void resize(int width, int height), "resize", newin "3,18")
+
+};
+
+} //namespace Gtk

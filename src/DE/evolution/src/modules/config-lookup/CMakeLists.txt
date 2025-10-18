@@ -1,0 +1,26 @@
+set(extra_deps
+	evolution-mail
+	evolution-util
+)
+set(sources
+	config-lookup.c
+	e-gnome-config-lookup.c
+	e-gnome-config-lookup.h
+	e-srv-config-lookup.c
+	e-srv-config-lookup.h
+	e-webdav-config-lookup.c
+	e-webdav-config-lookup.h
+)
+set(extra_defines)
+set(extra_cflags)
+set(extra_incdirs)
+set(extra_ldflags)
+
+add_evolution_module(module-config-lookup
+	sources
+	extra_deps
+	extra_defines
+	extra_cflags
+	extra_incdirs
+	extra_ldflags
+)

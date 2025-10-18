@@ -1,0 +1,113 @@
+/* Copyright (C) 2004 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/listmodel.h>
+#include <gtkmm/window.h>
+#include <gtkmm/assistantpage.h>
+#include <gdkmm/pixbuf.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/window_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+/** A widget used to guide users through multi-step operations.
+ *
+ * A %Gtk::Assistant is a widget used to represent a generally complex
+ * operation split into several steps, guiding the user through its
+ * pages and controlling the page flow to collect the necessary data.
+ *
+ * %Gtk::Assistant maintains a Gtk::AssistantPage object for each added
+ * child, which holds additional per-child properties. You
+ * obtain the Gtk::AssistantPage for a child with get_page().
+ *
+ * @deprecated 4.10: libadwaita (a C library) has replacement parts (like AdwCarousel).
+ * @ingroup Dialogs
+ */
+class GTKMM_API Assistant : public Window
+{
+  _CLASS_GTKOBJECT(Assistant, GtkAssistant, GTK_ASSISTANT, Gtk::Window, GtkWindow, , , GTKMM_API)
+  _UNMANAGEABLE
+public:
+  _CTOR_DEFAULT()
+
+  /** Constructor.
+   *
+   * @param use_header_bar <tt>true</tt> if the assistant shall use a HeaderBar
+   *        for action buttons instead of the action-area.
+   *
+   * @newin{3,90}
+   */
+  explicit Assistant(bool use_header_bar);
+
+  _WRAP_METHOD(void next_page(), gtk_assistant_next_page)
+  _WRAP_METHOD(void previous_page(), gtk_assistant_previous_page)
+
+  _WRAP_METHOD(int get_current_page() const, gtk_assistant_get_current_page)
+  _WRAP_METHOD(void set_current_page(int page_num), gtk_assistant_set_current_page)
+  _WRAP_METHOD(int get_n_pages() const, gtk_assistant_get_n_pages)
+  _WRAP_METHOD(Widget* get_nth_page(int page_num), gtk_assistant_get_nth_page)
+  _WRAP_METHOD(const Widget* get_nth_page(int page_num) const, gtk_assistant_get_nth_page, constversion)
+  _WRAP_METHOD(int prepend_page(Widget& page), gtk_assistant_prepend_page)
+  _WRAP_METHOD(int append_page(Widget& page), gtk_assistant_append_page)
+  _WRAP_METHOD(int insert_page(Widget& page, int position), gtk_assistant_insert_page)
+  _WRAP_METHOD(void remove_page(int page_num), gtk_assistant_remove_page)
+
+  typedef sigc::slot<int(int /* current_page */)> SlotForwardPage;
+
+  void set_forward_page_func(const SlotForwardPage& slot);
+  _IGNORE(gtk_assistant_set_forward_page_func)
+
+  _WRAP_METHOD(void set_page_type(const Widget& page, AssistantPage::Type type), gtk_assistant_set_page_type)
+  _WRAP_METHOD(AssistantPage::Type  get_page_type(const Widget& page) const, gtk_assistant_get_page_type)
+  _WRAP_METHOD(void set_page_title(const Widget& page, const Glib::ustring& title), gtk_assistant_set_page_title)
+  _WRAP_METHOD(Glib::ustring get_page_title(const Widget& page) const, gtk_assistant_get_page_title)
+
+  _WRAP_METHOD(void set_page_complete(const Widget& page, bool complete = true), gtk_assistant_set_page_complete)
+  _WRAP_METHOD(bool get_page_complete(const Widget& page) const, gtk_assistant_get_page_complete)
+  _WRAP_METHOD(void add_action_widget(Widget& child), gtk_assistant_add_action_widget)
+  _WRAP_METHOD(void remove_action_widget(Widget& child), gtk_assistant_remove_action_widget)
+  _WRAP_METHOD(void update_buttons_state(), gtk_assistant_update_buttons_state)
+  _WRAP_METHOD(void commit(), gtk_assistant_commit)
+
+  _WRAP_METHOD(Glib::RefPtr<AssistantPage> get_page(Widget& child), gtk_assistant_get_page, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const AssistantPage> get_page(const Widget& child) const, gtk_assistant_get_page, refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::ListModel> get_pages(), gtk_assistant_get_pages)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::ListModel> get_pages() const, gtk_assistant_get_pages, constversion)
+
+  // no_default_handler because GtkAssistantClass is private.
+  _WRAP_SIGNAL(void prepare(Gtk::Widget* page), "prepare", no_default_handler)
+  _WRAP_SIGNAL(void apply(), "apply", no_default_handler)
+  _WRAP_SIGNAL(void close(), "close", no_default_handler)
+  _WRAP_SIGNAL(void cancel(), "cancel", no_default_handler)
+
+  //Ignore action signals.
+  _IGNORE_SIGNAL("escape")
+
+  _WRAP_PROPERTY("use-header-bar", bool)
+  _WRAP_PROPERTY("pages", Glib::RefPtr<Gio::ListModel>)
+};
+
+} // namespace Gtk

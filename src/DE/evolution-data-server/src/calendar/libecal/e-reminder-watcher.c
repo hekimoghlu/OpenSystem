@@ -1,0 +1,4050 @@
+/*
+ * Copyright (C) 2018 Red Hat, Inc. (www.redhat.com)
+ *
+ * This library is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * SECTION: e-reminder-watcher
+ * @include: libecal/libecal.h
+ * @short_description: Calendar reminder watcher
+ *
+ * The #EReminderWatcher watches reminders in configured calendars
+ * and notifies the owner about them through signals. It also remembers
+ * past and snoozed reminders. It doesn't provide any GUI, it's all
+ * up to the owner to provide such functionality.
+ *
+ * The API is thread safe and each signal is emitted from the thread of
+ * the default main context of the process.
+ **/
+
+#include "evolution-data-server-config.h"
+
+#include <string.h>
+#include <glib/gi18n-lib.h>
+
+#include "camel/camel.h"
+#include "libedataserver/libedataserver.h"
+
+#include "e-cal-check-timezones.h"
+#include "e-cal-client.h"
+#include "e-cal-system-timezone.h"
+#include "e-cal-time-util.h"
+#include "e-cal-util.h"
+
+#include "e-reminder-watcher.h"
+
+typedef struct _ClientData {
+	EReminderWatcher *watcher; /* Just as an owner, not referenced */
+	ECalClient *client;
+	ECalClientView *view;
+	GCancellable *cancellable;
+	gboolean for_every_event;
+} ClientData;
+
+struct _EReminderWatcherPrivate {
+	GRecMutex lock;
+
+	ESourceRegistry *registry;
+	ESourceRegistryWatcher *registry_watcher;
+	GCancellable *cancellable;
+	GSettings *settings;
+	GSettings *desktop_settings;
+	gboolean use_24h_format;
+	gboolean timers_enabled;
+	gulong past_changed_handler_id;
+	gulong snoozed_changed_handler_id;
+	guint expected_past_changes;
+	guint expected_snoozed_changes;
+
+	ICalTimezone *default_zone;
+
+	GSList *clients; /* ClientData * */
+	GSList *snoozed; /* EReminderData * */
+	GHashTable *scheduled; /* gchar *source_uid ~> GSList * { EReminderData * } */
+
+	gulong construct_idle_id;
+	gulong timer_handler_id;
+
+	gint64 expected_wall_clock_time;
+	gulong wall_clock_handler_id;
+
+	gint64 next_midnight;
+	gint64 next_trigger;
+	gint64 last_cleanup_date;
+
+	gboolean defall_reminder_enabled;
+	gint defall_reminder_interval;
+	ECalIntervalUnits defall_reminder_units;
+	guint n_for_every_event;
+};
+
+enum {
+	PROP_0,
+	PROP_REGISTRY,
+	PROP_DEFAULT_ZONE,
+	PROP_TIMERS_ENABLED,
+	N_PROPS
+};
+
+enum {
+	FORMAT_TIME,
+	TRIGGERED,
+	CHANGED,
+	LAST_SIGNAL
+};
+
+static GParamSpec *properties[N_PROPS] = { NULL, };
+
+static guint signals[LAST_SIGNAL];
+
+G_DEFINE_TYPE_WITH_PRIVATE (EReminderWatcher, e_reminder_watcher, G_TYPE_OBJECT)
+
+G_DEFINE_BOXED_TYPE (EReminderData, e_reminder_data, e_reminder_data_copy, e_reminder_data_free)
+
+struct _EReminderData {
+	gchar *source_uid;
+	ECalComponent *component;
+	ECalComponentAlarmInstance *instance;
+};
+
+static void
+e_reminder_watcher_objects_added_cb (ECalClientView *view,
+				     const GSList *objects, /* ICalComponent * */
+				     gpointer user_data);
+static void
+e_reminder_watcher_objects_modified_cb (ECalClientView *view,
+					const GSList *objects, /* ICalComponent * */
+					gpointer user_data);
+static void
+e_reminder_watcher_objects_removed_cb (ECalClientView *view,
+				       const GSList *uids, /* ECalComponentId * */
+				       gpointer user_data);
+static void
+e_reminder_watcher_source_changed_cb (ESource *source,
+				      gpointer user_data);
+
+static gboolean
+e_reminder_watcher_debug_enabled (void)
+{
+	static gint enabled = -1;
+
+	if (enabled == -1)
+		enabled = g_strcmp0 (g_getenv ("ERW_DEBUG"), "1") == 0 ? 1 : 0;
+
+	return enabled == 1;
+}
+
+static void
+e_reminder_watcher_debug_print (const gchar *format,
+				...) G_GNUC_PRINTF (1, 2);
+
+static void
+e_reminder_watcher_debug_print (const gchar *format,
+				...)
+{
+	va_list args;
+
+	if (!e_reminder_watcher_debug_enabled ())
+		return;
+
+	va_start (args, format);
+	e_util_debug_printv ("ERW", format, args);
+	va_end (args);
+}
+
+static const gchar *
+e_reminder_watcher_timet_as_string (gint64 tt)
+{
+	static gchar buffers[10][32 + 1];
+	static volatile gint curr_index = 0;
+	gint counter = 0, index;
+	ICalTime *itt;
+
+	while (index = (curr_index + 1) % 10, !g_atomic_int_compare_and_exchange (&curr_index, curr_index, index)) {
+		counter++;
+		if (counter > 20)
+			break;
+	}
+
+	itt = i_cal_time_new_from_timet_with_zone ((time_t) tt, 0, i_cal_timezone_get_utc_timezone ());
+
+	g_snprintf (buffers[index], 32, "%04d%02d%02dT%02d%02d%02d",
+		i_cal_time_get_year (itt), i_cal_time_get_month (itt), i_cal_time_get_day (itt),
+		i_cal_time_get_hour (itt), i_cal_time_get_minute (itt), i_cal_time_get_second (itt));
+
+	g_clear_object (&itt);
+
+	return buffers[index];
+}
+
+static void
+e_reminder_watcher_dump_scheduled (EReminderWatcher *watcher)
+{
+	GHashTableIter iter;
+	gpointer key, value;
+	guint ii, jj;
+
+	if (!e_reminder_watcher_debug_enabled ())
+		return;
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	e_reminder_watcher_debug_print ("   Has scheduled reminders for %u clients\n", g_hash_table_size (watcher->priv->scheduled));
+
+	ii = 0;
+
+	g_hash_table_iter_init (&iter, watcher->priv->scheduled);
+	while (g_hash_table_iter_next (&iter, &key, &value)) {
+		const gchar *source_uid = key;
+		GSList *items = value, *link;
+
+		jj = 0;
+
+		e_reminder_watcher_debug_print ("     [%u] Client '%s' has scheduled %d reminders\n", ii, source_uid, g_slist_length (items));
+
+		for (link = items; link; jj++, link = g_slist_next (link)) {
+			EReminderData *rd = link->data;
+			ECalComponent *comp;
+			ECalComponentAlarmInstance *alarm;
+			ICalComponent *icomp;
+			gchar *rid;
+
+			comp = e_reminder_data_get_component (rd);
+			alarm = e_reminder_data_get_instance (rd);
+			icomp = e_cal_component_get_icalcomponent (comp);
+			rid = e_cal_component_get_recurid_as_string (comp);
+
+			e_reminder_watcher_debug_print ("      - [%u] Event '%s' (%s|%s; alarm-rid:%s) at %s\n", jj, i_cal_component_get_summary (icomp),
+				i_cal_component_get_uid (icomp), rid ? rid : "",
+				e_cal_component_alarm_instance_get_rid (alarm) ? e_cal_component_alarm_instance_get_rid (alarm) : "",
+				e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (alarm)));
+
+			g_free (rid);
+		}
+
+		ii++;
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_dump_objects (const GSList *objects) /* ICalComponent * */
+{
+	GSList *link;
+
+	if (!e_reminder_watcher_debug_enabled ())
+		return;
+
+	for (link = (GSList *) objects; link; link = g_slist_next (link)) {
+		ICalComponent *icomp = link->data;
+		gchar *rid;
+
+		rid = e_cal_util_component_get_recurid_as_string (icomp);
+
+		e_reminder_watcher_debug_print ("   - %s '%s' uid:'%s'%s%s%s\n",
+			i_cal_component_kind_to_string (i_cal_component_isa (icomp)),
+			i_cal_component_get_summary (icomp),
+			i_cal_component_get_uid (icomp),
+			rid ? " rid:'" : "",
+			rid ? rid : "",
+			rid ? "'" : "");
+
+		g_free (rid);
+	}
+}
+
+static gboolean
+e_reminder_watcher_is_for_every_event_client (ECalClient *client)
+{
+	ESource *source;
+	ESourceAlarms *alarms_ext;
+
+	source = e_client_get_source (E_CLIENT (client));
+	alarms_ext = e_source_get_extension (source, E_SOURCE_EXTENSION_ALARMS);
+
+	return e_source_alarms_get_for_every_event (alarms_ext);
+}
+
+static gint64
+e_reminder_watcher_get_defall_reminder_shift_by_seconds (EReminderWatcher *watcher)
+{
+	gint64 shift_by_seconds = watcher->priv->defall_reminder_interval;
+
+	switch (watcher->priv->defall_reminder_units) {
+	case E_CAL_INTERVAL_UNIT_MINUTES:
+		shift_by_seconds = shift_by_seconds * 60;
+		break;
+	case E_CAL_INTERVAL_UNIT_HOURS:
+		shift_by_seconds = shift_by_seconds * 60 * 60;
+		break;
+	case E_CAL_INTERVAL_UNIT_DAYS:
+		shift_by_seconds = shift_by_seconds * 60 * 60 * 24;
+		break;
+	default:
+		g_warn_if_reached ();
+		break;
+	}
+
+	return shift_by_seconds;
+}
+
+static ClientData *
+client_data_new (EReminderWatcher *watcher,
+		 ECalClient *client) /* Assumes ownership of the 'client' */
+{
+	ClientData *cd;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+	g_return_val_if_fail (E_IS_CAL_CLIENT (client), NULL);
+
+	cd = g_slice_new0 (ClientData);
+	cd->watcher = watcher;
+	cd->client = client;
+	cd->view = NULL;
+	cd->cancellable = NULL;
+	cd->for_every_event = e_reminder_watcher_is_for_every_event_client (client);
+
+	e_cal_client_set_default_timezone (client, watcher->priv->default_zone);
+
+	return cd;
+}
+
+static void
+client_data_free_view (ClientData *cd)
+{
+	GError *local_error = NULL;
+
+	g_return_if_fail (cd != NULL);
+
+	if (cd->cancellable) {
+		g_cancellable_cancel (cd->cancellable);
+		g_clear_object (&cd->cancellable);
+	}
+
+	if (!cd->view)
+		return;
+
+	e_cal_client_view_stop (cd->view, &local_error);
+
+	if (local_error) {
+		e_reminder_watcher_debug_print ("Failed to stop view for %s: %s\n",
+			e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))),
+			local_error->message);
+
+		g_clear_error (&local_error);
+	} else {
+		e_reminder_watcher_debug_print ("Stopped view for %s\n",
+			e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))));
+	}
+
+	g_signal_handlers_disconnect_by_data (cd->view, cd->watcher);
+
+	g_clear_object (&cd->view);
+}
+
+static void
+client_data_free (gpointer ptr)
+{
+	ClientData *cd = ptr;
+
+	if (cd) {
+		client_data_free_view (cd);
+		if (cd->client) {
+			ESource *source = e_client_get_source (E_CLIENT (cd->client));
+
+			g_signal_handlers_disconnect_by_func (source, G_CALLBACK (e_reminder_watcher_source_changed_cb), cd->watcher);
+		}
+		g_clear_object (&cd->client);
+		g_slice_free (ClientData, cd);
+	}
+}
+
+static void
+client_data_source_written_cb (GObject *source_object,
+			       GAsyncResult *result,
+			       gpointer user_data)
+{
+	GError *local_error = NULL;
+
+	e_source_write_finish (E_SOURCE (source_object), result, &local_error);
+
+	if (local_error) {
+		g_warning ("Failed to write source %s changes: %s", e_source_get_uid (E_SOURCE (source_object)), local_error->message);
+		g_error_free (local_error);
+	}
+}
+
+static gint64
+client_get_last_notification_time (ECalClient *client)
+{
+	ESource *source;
+	ESourceAlarms *alarms_extension;
+	gchar *last_notified;
+	gint64 value = 0;
+
+	if (!client)
+		return -1;
+
+	source = e_client_get_source (E_CLIENT (client));
+	if (!source || !e_source_has_extension (source, E_SOURCE_EXTENSION_ALARMS))
+		return -1;
+
+	alarms_extension = e_source_get_extension (source, E_SOURCE_EXTENSION_ALARMS);
+	last_notified = e_source_alarms_dup_last_notified (alarms_extension);
+
+	if (last_notified && *last_notified) {
+		GDateTime *dt, *now;
+
+		dt = g_date_time_new_from_iso8601 (last_notified, NULL);
+		if (!dt) {
+			g_free (last_notified);
+			return -1;
+		}
+
+		now = g_date_time_new_now_utc ();
+
+		if (g_date_time_compare (dt, now) > 0) {
+			value = g_date_time_to_unix (now);
+		} else {
+			value = g_date_time_to_unix (dt);
+		}
+
+		g_date_time_unref (dt);
+		g_date_time_unref (now);
+	}
+
+	g_free (last_notified);
+
+	return value;
+}
+
+static void
+client_set_last_notification_time (ECalClient *client,
+				   time_t tt)
+{
+	ESource *source;
+	ESourceAlarms *alarms_extension;
+	GDateTime *tt_dt, *now, *last_notified_dt = NULL;
+	gchar *iso8601;
+
+	g_return_if_fail (client != NULL);
+	g_return_if_fail (tt > 0);
+
+	source = e_client_get_source (E_CLIENT (client));
+	if (!source)
+		return;
+
+	alarms_extension = e_source_get_extension (source, E_SOURCE_EXTENSION_ALARMS);
+	iso8601 = e_source_alarms_dup_last_notified (alarms_extension);
+
+	if (iso8601) {
+		last_notified_dt = g_date_time_new_from_iso8601 (iso8601, NULL);
+		g_free (iso8601);
+	}
+
+	tt_dt = g_date_time_new_from_unix_utc (tt);
+	now = g_date_time_new_now_utc ();
+
+	if (!last_notified_dt ||
+	    (g_date_time_compare (tt_dt, last_notified_dt) > 0 || g_date_time_compare (last_notified_dt, now) > 0)) {
+		iso8601 = g_date_time_format_iso8601 (tt_dt);
+		e_source_alarms_set_last_notified (alarms_extension, iso8601);
+
+		e_reminder_watcher_debug_print ("Changed last-notified for source %s (%s) to %s\n",
+			e_source_get_uid (source),
+			e_source_get_display_name (source),
+			iso8601);
+
+		g_free (iso8601);
+
+		e_source_write (source, NULL, client_data_source_written_cb, NULL);
+	}
+
+	if (last_notified_dt)
+		g_date_time_unref (last_notified_dt);
+	g_date_time_unref (tt_dt);
+	g_date_time_unref (now);
+}
+
+static void
+client_data_view_created_cb (GObject *source_object,
+			     GAsyncResult *result,
+			     gpointer user_data)
+{
+	ClientData *cd = user_data;
+	ECalClient *client;
+	ECalClientView *view = NULL;
+	GError *local_error = NULL;
+
+	g_return_if_fail (E_IS_CAL_CLIENT (source_object));
+	g_return_if_fail (cd != NULL);
+
+	client = E_CAL_CLIENT (source_object);
+
+	if (!e_cal_client_get_view_finish (client, result, &view, &local_error) || local_error || !view) {
+		e_reminder_watcher_debug_print ("Failed to get view for %s: %s\n",
+			e_source_get_uid (e_client_get_source (E_CLIENT (client))),
+			local_error ? local_error->message : "Unknown error");
+	} else {
+		cd->view = view;
+
+		e_reminder_watcher_debug_print ("Got view for %s\n",
+			e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))));
+
+		g_signal_connect (
+			cd->view, "objects-added",
+			G_CALLBACK (e_reminder_watcher_objects_added_cb), cd->watcher);
+		g_signal_connect (
+			cd->view, "objects-modified",
+			G_CALLBACK (e_reminder_watcher_objects_modified_cb), cd->watcher);
+		g_signal_connect (
+			cd->view, "objects-removed",
+			G_CALLBACK (e_reminder_watcher_objects_removed_cb), cd->watcher);
+
+		e_cal_client_view_start (cd->view, &local_error);
+
+		if (local_error) {
+			e_reminder_watcher_debug_print ("Failed to start view for %s: %s\n",
+				e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))),
+				local_error ? local_error->message : "Unknown error");
+		}
+	}
+
+	g_clear_error (&local_error);
+}
+
+static void
+client_data_start_view (ClientData *cd,
+			gint64 next_midnight,
+			GCancellable *cancellable)
+{
+	gchar *iso_start, *iso_end;
+	gint64 start_tt;
+
+	g_return_if_fail (cd != NULL);
+	g_return_if_fail (cd->client != NULL);
+
+	client_data_free_view (cd);
+
+	start_tt = client_get_last_notification_time (cd->client) + 1;
+	if (start_tt <= 0)
+		start_tt = (gint64) time_day_begin (time (NULL));
+
+	iso_start = isodate_from_time_t ((time_t) start_tt);
+	iso_end = isodate_from_time_t ((time_t) next_midnight);
+
+	if (!iso_start || !iso_end) {
+		e_reminder_watcher_debug_print ("Failed to convert last notification %" G_GINT64_FORMAT " or next midnight %" G_GINT64_FORMAT " into iso strings for client %s\n",
+			start_tt, next_midnight, e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))));
+	} else {
+		GString *query = g_string_new ("");
+
+		g_string_append_printf (query, "(has-alarms-in-range? (make-time \"%s\") (make-time \"%s\"))", iso_start, iso_end);
+
+		if (cd->watcher->priv->defall_reminder_enabled && cd->for_every_event) {
+			gint64 shifted_start, shifted_end, shift_by_seconds;
+
+			shift_by_seconds = e_reminder_watcher_get_defall_reminder_shift_by_seconds (cd->watcher);
+			shifted_start = start_tt + shift_by_seconds;
+			shifted_end = next_midnight + shift_by_seconds + 1;
+
+			g_free (iso_start);
+			g_free (iso_end);
+
+			iso_start = isodate_from_time_t ((time_t) shifted_start);
+			iso_end = isodate_from_time_t ((time_t) shifted_end);
+
+			if (iso_start && iso_end) {
+				g_string_prepend (query, "(or ");
+				g_string_append_printf (query, " (occur-in-time-range? (make-time \"%s\") (make-time \"%s\")))", iso_start, iso_end);
+			} else {
+				e_reminder_watcher_debug_print ("Failed to convert shifted start %" G_GINT64_FORMAT " or shifted end %" G_GINT64_FORMAT " into iso strings for client %s\n",
+					shifted_start, shifted_end, e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))));
+			}
+		}
+
+		e_reminder_watcher_debug_print ("Getting view for %s: %s\n",
+			e_source_get_uid (e_client_get_source (E_CLIENT (cd->client))),
+			query->str);
+
+		if (cd->cancellable) {
+			g_cancellable_cancel (cd->cancellable);
+			g_clear_object (&cd->cancellable);
+		}
+
+		cd->cancellable = camel_operation_new_proxy (cancellable);
+
+		e_cal_client_get_view (cd->client, query->str, cd->cancellable, client_data_view_created_cb, cd);
+
+		g_string_free (query, TRUE);
+	}
+
+	g_free (iso_start);
+	g_free (iso_end);
+}
+
+static EReminderData *
+e_reminder_data_new_take_component (const gchar *source_uid,
+				    ECalComponent *component,
+				    const ECalComponentAlarmInstance *instance)
+{
+	EReminderData *rd;
+
+	g_return_val_if_fail (source_uid != NULL, NULL);
+	g_return_val_if_fail (component != NULL, NULL);
+	g_return_val_if_fail (instance != NULL, NULL);
+
+	rd = g_slice_new0 (EReminderData);
+	rd->source_uid = g_strdup (source_uid);
+	rd->component = component;
+	rd->instance = e_cal_component_alarm_instance_copy (instance);
+
+	return rd;
+}
+
+/**
+ * e_reminder_data_new:
+ * @source_uid: an #ESource UID, to which the @component belongs
+ * @component: an #ECalComponent
+ * @instance: an #ECalComponentAlarmInstance describing one reminder instance
+ *
+ * Returns: (transfer full): a new #EReminderData prefilled with given values.
+ *    Free the returned structure with e_reminder_data_free() when no longer needed.
+ *
+ * Since: 3.30
+ **/
+EReminderData *
+e_reminder_data_new (const gchar *source_uid,
+		     const ECalComponent *component,
+		     const ECalComponentAlarmInstance *instance)
+{
+	g_return_val_if_fail (source_uid != NULL, NULL);
+	g_return_val_if_fail (component != NULL, NULL);
+	g_return_val_if_fail (instance != NULL, NULL);
+
+	return e_reminder_data_new_take_component (source_uid, e_cal_component_clone ((ECalComponent *) component), instance);
+}
+
+/**
+ * e_reminder_data_copy:
+ * @rd: (nullable): source #EReminderData, or %NULL
+ *
+ * Copies given #EReminderData structure. When the @rd is %NULL, simply returns %NULL as well.
+ *
+ * Returns: (transfer full) (nullable): copy of @rd. Free the returned
+ *    structure with e_reminder_data_free() when no longer needed.
+ *
+ * Since: 3.30
+ **/
+EReminderData *
+e_reminder_data_copy (const EReminderData *rd)
+{
+	if (!rd)
+		return NULL;
+
+	return e_reminder_data_new_take_component (rd->source_uid, g_object_ref (rd->component), rd->instance);
+}
+
+/**
+ * e_reminder_data_free:
+ * @rd: (nullable) (type EReminderData): an #EReminderData, or %NULL
+ *
+ * Frees previously allocated #EReminderData structure with e_reminder_data_new()
+ * or e_reminder_data_copy(). The function does nothing when @rd is %NULL.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_data_free (gpointer rd)
+{
+	EReminderData *ptr = rd;
+
+	if (ptr) {
+		g_clear_object (&ptr->component);
+		e_cal_component_alarm_instance_free (ptr->instance);
+		g_free (ptr->source_uid);
+		g_slice_free (EReminderData, ptr);
+	}
+}
+
+/**
+ * e_reminder_data_get_source_uid:
+ * @rd: an #EReminderData
+ *
+ * Returns: an #ESource UID for @rd
+ *
+ * Since: 3.34
+ **/
+const gchar *
+e_reminder_data_get_source_uid (const EReminderData *rd)
+{
+	g_return_val_if_fail (rd != NULL, NULL);
+
+	return rd->source_uid;
+}
+
+/**
+ * e_reminder_data_set_source_uid:
+ * @rd: an #EReminderData
+ * @source_uid: an #ESource UID
+ *
+ * Set an #ESource UID for @rd.
+ *
+ * Since: 3.34
+ **/
+void
+e_reminder_data_set_source_uid (EReminderData *rd,
+				const gchar *source_uid)
+{
+	g_return_if_fail (rd != NULL);
+
+	if (g_strcmp0 (rd->source_uid, source_uid) != 0) {
+		g_free (rd->source_uid);
+		rd->source_uid = g_strdup (source_uid);
+	}
+}
+
+/**
+ * e_reminder_data_get_component:
+ * @rd: an #EReminderData
+ *
+ * Returns: (transfer none): an #ECalComponent for @rd. It is owned by @rd,
+ *    thus do not free it.
+ *
+ * Since: 3.34
+ **/
+ECalComponent *
+e_reminder_data_get_component (const EReminderData *rd)
+{
+	g_return_val_if_fail (rd != NULL, NULL);
+
+	return rd->component;
+}
+
+/**
+ * e_reminder_data_set_component:
+ * @rd: an #EReminderData
+ * @component: an #ECalComponent
+ *
+ * Set an #ECalComponent @component as associated with this @rd.
+ * The @rd creates a copy of the @component.
+ *
+ * Since: 3.34
+ **/
+void
+e_reminder_data_set_component (EReminderData *rd,
+			       const ECalComponent *component)
+{
+	g_return_if_fail (rd != NULL);
+	g_return_if_fail (E_IS_CAL_COMPONENT (component));
+
+	if (rd->component != component) {
+		g_clear_object (&rd->component);
+		rd->component = e_cal_component_clone ((ECalComponent *) component);
+	}
+}
+
+/**
+ * e_reminder_data_get_instance:
+ * @rd: an #EReminderData
+ *
+ * Returns: (transfer none): an #ECalComponentAlarmInstance for @rd.
+ *    It is owned by @rd, thus do not free it.
+ *
+ * Since: 3.34
+ **/
+ECalComponentAlarmInstance *
+e_reminder_data_get_instance (const EReminderData *rd)
+{
+	g_return_val_if_fail (rd != NULL, NULL);
+
+	return rd->instance;
+}
+
+/**
+ * e_reminder_data_set_instance:
+ * @rd: an #EReminderData
+ * @instance: an #ECalComponentAlarmInstance
+ *
+ * Set an #ECalComponentAlarmInstance @instance as associated with this @rd.
+ * The @rd creates a copy of the @instance.
+ *
+ * Since: 3.34
+ **/
+void
+e_reminder_data_set_instance (EReminderData *rd,
+			      const ECalComponentAlarmInstance *instance)
+{
+	g_return_if_fail (rd != NULL);
+	g_return_if_fail (instance != NULL);
+
+	if (rd->instance != instance) {
+		e_cal_component_alarm_instance_free (rd->instance);
+		rd->instance = e_cal_component_alarm_instance_copy (instance);
+	}
+}
+
+static gchar *
+e_reminder_data_to_string (const EReminderData *rd)
+{
+	GString *str;
+	gchar *icalstr;
+
+	g_return_val_if_fail (rd != NULL, NULL);
+	g_return_val_if_fail (rd->source_uid != NULL, NULL);
+	g_return_val_if_fail (rd->component != NULL, NULL);
+
+	icalstr = e_cal_component_get_as_string (rd->component);
+	g_return_val_if_fail (icalstr != NULL, NULL);
+
+	str = g_string_sized_new (strlen (icalstr) + 100);
+	g_string_append (str, rd->source_uid);
+	g_string_append_c (str, '\n');
+
+	if (rd->instance && e_cal_component_alarm_instance_get_uid (rd->instance))
+		g_string_append (str, e_cal_component_alarm_instance_get_uid (rd->instance));
+
+	if (rd->instance && e_cal_component_alarm_instance_get_rid (rd->instance)) {
+		g_string_append_c (str, '\t');
+		g_string_append (str, e_cal_component_alarm_instance_get_rid (rd->instance));
+	}
+
+	g_string_append_c (str, '\n');
+
+	g_string_append_printf (str, "%" G_GINT64_FORMAT, (gint64) (rd->instance ? e_cal_component_alarm_instance_get_time (rd->instance) : -1));
+	g_string_append_c (str, '\n');
+
+	g_string_append_printf (str, "%" G_GINT64_FORMAT, (gint64) (rd->instance ? e_cal_component_alarm_instance_get_occur_start (rd->instance) : -1));
+	g_string_append_c (str, '\n');
+
+	g_string_append_printf (str, "%" G_GINT64_FORMAT, (gint64) (rd->instance ? e_cal_component_alarm_instance_get_occur_end (rd->instance) : -1));
+	g_string_append_c (str, '\n');
+
+	g_string_append (str, icalstr);
+
+	g_free (icalstr);
+
+	return g_string_free (str, FALSE);
+}
+
+static EReminderData *
+e_reminder_data_from_string (const gchar *str)
+{
+	gchar **strv, *tab;
+	EReminderData *rd;
+	ECalComponent *component;
+	ECalComponentAlarmInstance *instance;
+
+	g_return_val_if_fail (str != NULL, NULL);
+
+	strv = g_strsplit (str, "\n", 6);
+	if (!strv)
+		return NULL;
+
+	if (!strv[0] || !strv[1] || !strv[2] || !strv[3] || !strv[4] || !strv[5] || strv[6]) {
+		g_strfreev (strv);
+		return NULL;
+	}
+
+	component = e_cal_component_new_from_string (strv[5]);
+	if (!component) {
+		g_strfreev (strv);
+		return NULL;
+	}
+
+	tab = strchr (strv[1], '\t');
+
+	if (tab)
+		*tab = '\0';
+
+	instance = e_cal_component_alarm_instance_new (
+		(*(strv[1])) ? strv[1] : NULL,
+		g_ascii_strtoll (strv[2], NULL, 10),
+		g_ascii_strtoll (strv[3], NULL, 10),
+		g_ascii_strtoll (strv[4], NULL, 10));
+
+	if (tab) {
+		e_cal_component_alarm_instance_set_rid (instance, tab + 1);
+
+		*tab = '\t';
+	}
+
+	rd = e_reminder_data_new_take_component (strv[0], component, instance);
+
+	e_cal_component_alarm_instance_free (instance);
+	g_strfreev (strv);
+
+	return rd;
+}
+
+static gint
+e_reminder_data_compare (gconstpointer ptr1,
+			 gconstpointer ptr2)
+{
+	const EReminderData *rd1 = ptr1, *rd2 = ptr2;
+	time_t trigger1, trigger2;
+
+	if (!rd1 || !rd2) {
+		if (rd1 == rd2)
+			return 0;
+		return !rd1 ? -1 : 1;
+	}
+
+	trigger1 = rd1->instance ? e_cal_component_alarm_instance_get_time (rd1->instance) : -1;
+	trigger2 = rd2->instance ? e_cal_component_alarm_instance_get_time (rd2->instance) : -1;
+
+	if (trigger1 == trigger2)
+		return 0;
+
+	return trigger1 < trigger2 ? -1 : 1;
+}
+
+static void
+e_reminder_watcher_free_rd_slist (gpointer ptr)
+{
+	GSList *lst = ptr;
+
+	g_slist_free_full (lst, e_reminder_data_free);
+}
+
+/* Moves those 'data' to a new GSList for which match_func() returns TRUE.
+   The passed-in slist has set the ::data members of the moved items to NULL.
+   The function reverses order of the items in the returned GSList. */
+static GSList *
+e_reminder_watcher_move_matched (GSList *slist,
+				 gboolean (* match_func) (gpointer data,
+							  gpointer user_data),
+				 gpointer user_data)
+{
+	GSList *res = NULL, *link;
+
+	g_return_val_if_fail (match_func != NULL, NULL);
+
+	for (link = slist; link; link = g_slist_next (link)) {
+		if (match_func (link->data, user_data)) {
+			res = g_slist_prepend (res, link->data);
+			link->data = NULL;
+		}
+	}
+
+	return res;
+}
+
+static gboolean
+match_not_component_id_cb (gpointer data,
+			   gpointer user_data)
+{
+	EReminderData *rd = data;
+	ECalComponentId *id = user_data, *rd_id;
+	gboolean match;
+
+	if (!rd || !id)
+		return FALSE;
+
+	rd_id = e_cal_component_get_id (rd->component);
+	match = rd_id && g_strcmp0 (e_cal_component_id_get_uid (rd_id), e_cal_component_id_get_uid (id)) == 0;
+	e_cal_component_id_free (rd_id);
+
+	return !match;
+}
+
+typedef struct _ObjectsChangedData {
+	ECalClient *client;
+	GSList *ids; /* ECalComponentId * */
+	time_t interval_start;
+	time_t interval_end;
+	ICalTimezone *zone;
+} ObjectsChangedData;
+
+static void
+objects_changed_data_free (gpointer ptr)
+{
+	ObjectsChangedData *ocd = ptr;
+
+	if (ocd) {
+		g_clear_object (&ocd->client);
+		g_slist_free_full (ocd->ids, (GDestroyNotify) e_cal_component_id_free);
+		g_clear_object (&ocd->zone);
+		g_slice_free (ObjectsChangedData, ocd);
+	}
+}
+
+static void
+e_reminder_watcher_objects_changed_thread (GTask *task,
+					   gpointer source_object,
+					   gpointer task_data,
+					   GCancellable *cancellable)
+{
+	EReminderWatcher *watcher;
+	ESource *source;
+	ObjectsChangedData *ocd = task_data;
+	const gchar *source_uid;
+	GHashTable *covered_uids; /* const gchar *uid ~> 1 - to not check multiple times for detached instances */
+	GSList *link, *reminders = NULL;
+	gint def_reminder_before_start_seconds;
+	gint64 cal_last_notified;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (source_object));
+	g_return_if_fail (ocd != NULL);
+
+	covered_uids = g_hash_table_new (g_str_hash, g_str_equal);
+
+	watcher = E_REMINDER_WATCHER (source_object);
+	if (watcher->priv->defall_reminder_enabled && e_reminder_watcher_is_for_every_event_client (ocd->client))
+		def_reminder_before_start_seconds = e_reminder_watcher_get_defall_reminder_shift_by_seconds (watcher);
+	else
+		def_reminder_before_start_seconds = -1;
+	source = e_client_get_source (E_CLIENT (ocd->client));
+	source_uid = e_source_get_uid (source);
+	cal_last_notified = client_get_last_notification_time (ocd->client);
+
+	for (link = ocd->ids; link && !g_cancellable_is_cancelled (cancellable); link = g_slist_next (link)) {
+		const ECalComponentId *id = link->data;
+		ECalComponentAlarmAction omit[] = { -1 };
+		ECalComponentAlarms *alarms;
+		GError *local_error = NULL;
+
+		if (!id || !e_cal_component_id_get_uid (id) ||
+		    g_hash_table_contains (covered_uids, e_cal_component_id_get_uid (id)))
+			continue;
+
+		g_hash_table_insert (covered_uids, (gpointer) e_cal_component_id_get_uid (id), GINT_TO_POINTER (1));
+
+		alarms = e_cal_util_generate_alarms_for_uid_sync (ocd->client, e_cal_component_id_get_uid (id),
+			ocd->interval_start, ocd->interval_end, omit, e_cal_client_tzlookup_cb, ocd->client, ocd->zone,
+			def_reminder_before_start_seconds, cancellable, &local_error);
+
+		if (alarms && e_cal_component_alarms_get_instances (alarms)) {
+			ECalComponent *def_comp = e_cal_component_alarms_get_component (alarms);
+			GHashTable *acknowledged_alarms; /* alarm uid ~> ICalTime * */
+			GSList *alink, *instances, *all_alarms;
+
+			acknowledged_alarms = g_hash_table_new (g_str_hash, g_str_equal);
+			all_alarms = NULL;
+
+			instances = e_cal_component_alarms_get_instances (alarms);
+
+			e_reminder_watcher_debug_print ("Source %s: Got %d alarms for object '%s' at interval %s .. %s\n",
+				source_uid, g_slist_length (instances), e_cal_component_id_get_uid (id),
+				e_reminder_watcher_timet_as_string (ocd->interval_start),
+				e_reminder_watcher_timet_as_string (ocd->interval_end));
+
+			for (alink = instances; alink; alink = g_slist_next (alink)) {
+				const ECalComponentAlarmInstance *instance = alink->data;
+				ECalComponent *instance_comp = e_cal_component_alarm_instance_get_component (instance);
+
+				if (instance_comp) {
+					GSList *existing_alarms;
+
+					existing_alarms = e_cal_component_get_all_alarms (instance_comp);
+					if (existing_alarms)
+						all_alarms = g_slist_concat (all_alarms, existing_alarms);
+				}
+			}
+
+			for (alink = all_alarms; alink; alink = g_slist_next (alink)) {
+				ECalComponentAlarm *alarm = alink->data;
+
+				if (e_cal_component_alarm_get_acknowledged (alarm)) {
+					g_hash_table_insert (acknowledged_alarms,
+						(gpointer) e_cal_component_alarm_get_uid (alarm),
+						e_cal_component_alarm_get_acknowledged (alarm));
+				}
+			}
+
+			for (alink = instances; alink; alink = g_slist_next (alink)) {
+				const ECalComponentAlarmInstance *instance = alink->data;
+
+				if (instance && e_cal_component_alarm_instance_get_uid (instance)) {
+					ICalTime *acknowledged;
+
+					acknowledged = g_hash_table_lookup (acknowledged_alarms, e_cal_component_alarm_instance_get_uid (instance));
+					if (acknowledged) {
+						gint64 ack_time, instance_time;
+
+						ack_time = i_cal_time_as_timet (acknowledged);
+						instance_time = e_cal_component_alarm_instance_get_time (instance);
+
+						if (instance_time <= ack_time) {
+							e_reminder_watcher_debug_print ("   Skipping alarm '%s' for '%s|%s' at '%s', because had been acknowledged at '%s'\n",
+								e_cal_component_alarm_instance_get_uid (instance),
+								e_cal_component_id_get_uid (id),
+								e_cal_component_alarm_instance_get_rid (instance) ? e_cal_component_alarm_instance_get_rid (instance) : "",
+								e_reminder_watcher_timet_as_string (instance_time),
+								e_reminder_watcher_timet_as_string (ack_time));
+
+							instance = NULL;
+						}
+					}
+				}
+
+				if (instance && cal_last_notified >= 0) {
+					gint64 instance_time;
+
+					instance_time = e_cal_component_alarm_instance_get_time (instance);
+
+					if (instance_time <= cal_last_notified) {
+						e_reminder_watcher_debug_print ("   Skipping alarm '%s' for '%s|%s' at '%s', because being before or at calendar's last notify time '%s'\n",
+							e_cal_component_alarm_instance_get_uid (instance),
+							e_cal_component_id_get_uid (id),
+							e_cal_component_alarm_instance_get_rid (instance) ? e_cal_component_alarm_instance_get_rid (instance) : "",
+							e_reminder_watcher_timet_as_string (instance_time),
+							e_reminder_watcher_timet_as_string (cal_last_notified));
+
+						instance = NULL;
+					}
+				}
+
+				if (instance) {
+					ECalComponent *instance_comp;
+
+					instance_comp = e_cal_component_alarm_instance_get_component (instance);
+					if (!instance_comp)
+						instance_comp = def_comp;
+
+					reminders = g_slist_prepend (reminders, e_reminder_data_new_take_component (
+						source_uid, g_object_ref (instance_comp), instance));
+				}
+			}
+
+			g_hash_table_destroy (acknowledged_alarms);
+			/* Free all_alarms after the acknowledged_alarms, because it uses data from it */
+			g_slist_free_full (all_alarms, e_cal_component_alarm_free);
+		} else if (local_error) {
+			e_reminder_watcher_debug_print ("Source %s: Failed to get alarms for object '%s': %s\n",
+				source_uid, e_cal_component_id_get_uid (id),
+				local_error->message);
+			g_clear_error (&local_error);
+		} else {
+			e_reminder_watcher_debug_print ("Source %s: Got no alarms for object '%s' at interval %s .. %s\n",
+				source_uid, e_cal_component_id_get_uid (id),
+				e_reminder_watcher_timet_as_string (ocd->interval_start),
+				e_reminder_watcher_timet_as_string (ocd->interval_end));
+		}
+
+		e_cal_component_alarms_free (alarms);
+	}
+
+	if (!g_cancellable_is_cancelled (cancellable)) {
+		g_rec_mutex_lock (&watcher->priv->lock);
+
+		if (watcher->priv->scheduled) {
+			gpointer orig_key, orig_value;
+			GSList *scheduled;
+			gboolean needs_reverse = FALSE;
+
+			if (g_hash_table_lookup_extended (watcher->priv->scheduled, source_uid, &orig_key, &orig_value)) {
+				scheduled = orig_value;
+				g_warn_if_fail (g_hash_table_steal (watcher->priv->scheduled, orig_key));
+				g_free (orig_key);
+			} else {
+				scheduled = NULL;
+			}
+
+			for (link = ocd->ids; link && !g_cancellable_is_cancelled (cancellable); link = g_slist_next (link)) {
+				ECalComponentId *id = link->data;
+				GSList *new_scheduled;
+
+				if (!id || !e_cal_component_id_get_uid (id))
+					continue;
+
+				new_scheduled = e_reminder_watcher_move_matched (scheduled, match_not_component_id_cb, id);
+				g_slist_free_full (scheduled, e_reminder_data_free);
+				scheduled = new_scheduled;
+				needs_reverse = !needs_reverse;
+			}
+
+			/* concat and sort longer lists, instead of insert_sorted() */
+			if (reminders && reminders->next && reminders->next->next && reminders->next->next->next && reminders->next->next->next->next) {
+				scheduled = g_slist_concat (reminders, scheduled);
+				scheduled = g_slist_sort (scheduled, e_reminder_data_compare);
+			} else {
+				if (needs_reverse && scheduled)
+					scheduled = g_slist_reverse (scheduled);
+
+				for (link = reminders; link; link = g_slist_next (link)) {
+					EReminderData *rd = link->data;
+
+					if (rd)
+						scheduled = g_slist_insert_sorted (scheduled, rd, e_reminder_data_compare);
+				}
+
+				/* ::data is taken by 'scheduled' */
+				g_slist_free (reminders);
+			}
+
+			if (scheduled)
+				g_hash_table_insert (watcher->priv->scheduled, g_strdup (source_uid), scheduled);
+		}
+
+		g_rec_mutex_unlock (&watcher->priv->lock);
+
+		e_reminder_watcher_timer_elapsed (watcher);
+	} else if (reminders) {
+		g_slist_free_full (reminders, e_reminder_data_free);
+	}
+
+	e_reminder_watcher_dump_scheduled (watcher);
+
+	g_hash_table_destroy (covered_uids);
+}
+
+static void
+e_reminder_watcher_objects_changed_done_cb (GObject *source_object,
+					    GAsyncResult *result,
+					    gpointer user_data)
+{
+	/* Nothing to be done here */
+}
+
+static void
+e_reminder_watcher_objects_changed (EReminderWatcher *watcher,
+				    ECalClient *client,
+				    const GSList *objects) /* ICalComponent * */
+{
+	GSList *link, *ids = NULL;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (E_IS_CAL_CLIENT (client));
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (!watcher->priv->scheduled) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	for (link = (GSList *) objects; link; link = g_slist_next (link)) {
+		ICalComponent *icalcomp = link->data;
+		ECalComponentId *id;
+		const gchar *uid;
+		gchar *rid = NULL;
+
+		uid = i_cal_component_get_uid (icalcomp);
+		if (!uid || !*uid)
+			continue;
+
+		if (e_cal_util_component_is_instance (icalcomp)) {
+			ICalTime *itt;
+
+			itt = i_cal_component_get_recurrenceid (icalcomp);
+			if (i_cal_time_is_valid_time (itt) && !i_cal_time_is_null_time (itt))
+				rid = i_cal_time_as_ical_string (itt);
+			else
+				rid = g_strdup ("0");
+
+			g_clear_object (&itt);
+		}
+
+		id = e_cal_component_id_new (uid, rid && *rid ? rid : NULL);
+
+		g_free (rid);
+
+		if (id)
+			ids = g_slist_prepend (ids, id);
+	}
+
+	if (ids) {
+		ObjectsChangedData *ocd;
+		GTask *task;
+
+		ocd = g_slice_new (ObjectsChangedData);
+		ocd->client = g_object_ref (client);
+		ocd->ids = ids;
+		ocd->interval_start = client_get_last_notification_time (client) + 1;
+		if (ocd->interval_start <= 0)
+			ocd->interval_start = time_day_begin (time (NULL));
+		ocd->interval_end = watcher->priv->next_midnight;
+		ocd->zone = e_reminder_watcher_dup_default_zone (watcher);
+
+		task = g_task_new (watcher, watcher->priv->cancellable, e_reminder_watcher_objects_changed_done_cb, NULL);
+		g_task_set_source_tag (task, e_reminder_watcher_objects_changed_thread);
+		g_task_set_task_data (task, ocd, objects_changed_data_free);
+
+		g_task_run_in_thread (task, e_reminder_watcher_objects_changed_thread);
+
+		g_object_unref (task);
+	} else {
+		e_reminder_watcher_debug_print ("No IDs recognized on change, skipping\n");
+		e_reminder_watcher_dump_scheduled (watcher);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_objects_removed (EReminderWatcher *watcher,
+				    const gchar *source_uid,
+				    const GSList *uids) /* ECalComponentId * */
+{
+	GSList *link, *scheduled;
+	gpointer orig_key = NULL, orig_value = NULL;
+	gboolean needs_reverse = FALSE;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (source_uid != NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (!watcher->priv->scheduled) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	if (g_hash_table_lookup_extended (watcher->priv->scheduled, source_uid, &orig_key, &orig_value)) {
+		scheduled = orig_value;
+		g_warn_if_fail (g_hash_table_steal (watcher->priv->scheduled, orig_key));
+		g_free (orig_key);
+	} else {
+		scheduled = NULL;
+	}
+
+	for (link = (GSList *) uids; link && scheduled; link = g_slist_next (link)) {
+		ECalComponentId *id = link->data;
+		GSList *new_scheduled;
+
+		if (!id || !e_cal_component_id_get_uid (id))
+			continue;
+
+		new_scheduled = e_reminder_watcher_move_matched (scheduled, match_not_component_id_cb, id);
+		g_slist_free_full (scheduled, e_reminder_data_free);
+		scheduled = new_scheduled;
+		needs_reverse = !needs_reverse;
+	}
+
+	if (scheduled) {
+		if (needs_reverse)
+			scheduled = g_slist_reverse (scheduled);
+		g_hash_table_insert (watcher->priv->scheduled, g_strdup (source_uid), scheduled);
+	}
+
+	e_reminder_watcher_dump_scheduled (watcher);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_objects_added_cb (ECalClientView *view,
+				     const GSList *objects, /* ICalComponent * */
+				     gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	ECalClient *client;
+	ESource *source;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	client = e_cal_client_view_ref_client (view);
+	source = client ? e_client_get_source (E_CLIENT (client)) : NULL;
+
+	e_reminder_watcher_debug_print ("View for %s added %d objects\n",
+		source ? e_source_get_uid (source) : "[null]",
+		g_slist_length ((GSList *) objects));
+	e_reminder_watcher_dump_objects (objects);
+
+	if (source)
+		e_reminder_watcher_objects_changed (watcher, client, objects);
+
+	g_clear_object (&client);
+}
+
+static void
+e_reminder_watcher_objects_modified_cb (ECalClientView *view,
+					const GSList *objects, /* ICalComponent * */
+					gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	ECalClient *client;
+	ESource *source;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	client = e_cal_client_view_ref_client (view);
+	source = client ? e_client_get_source (E_CLIENT (client)) : NULL;
+
+	e_reminder_watcher_debug_print ("View for %s modified %u objects\n",
+		source ? e_source_get_uid (source) : "[null]",
+		g_slist_length ((GSList *) objects));
+	e_reminder_watcher_dump_objects (objects);
+
+	if (source)
+		e_reminder_watcher_objects_changed (watcher, client, objects);
+
+	g_clear_object (&client);
+}
+
+static void
+e_reminder_watcher_objects_removed_cb (ECalClientView *view,
+				       const GSList *uids, /* ECalComponentId * */
+				       gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	ECalClient *client;
+	ESource *source;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	client = e_cal_client_view_ref_client (view);
+	source = client ? e_client_get_source (E_CLIENT (client)) : NULL;
+
+	e_reminder_watcher_debug_print ("View for %s removed %d objects\n",
+		source ? e_source_get_uid (source) : "[null]",
+		g_slist_length ((GSList *) uids));
+	if (e_reminder_watcher_debug_enabled ()) {
+		GSList *link;
+
+		for (link = (GSList *) uids; link; link = g_slist_next (link)) {
+			ECalComponentId *id = link->data;
+			const gchar *rid = e_cal_component_id_get_rid (id);
+
+			e_reminder_watcher_debug_print ("   - uid:'%s'%s%s%s\n",
+				e_cal_component_id_get_uid (id),
+				rid ? " rid:'" : "",
+				rid ? rid : "",
+				rid ? "'" : "");
+		}
+	}
+
+	if (source)
+		e_reminder_watcher_objects_removed (watcher, e_source_get_uid (source), uids);
+
+	g_clear_object (&client);
+}
+
+static void
+e_reminder_watcher_calc_next_midnight (EReminderWatcher *watcher)
+{
+	time_t now, midnight;
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	now = time (NULL);
+	midnight = time_day_end_with_zone (now, watcher->priv->default_zone);
+
+	while (midnight <= now) {
+		now += 60 * 60; /* increment one day */
+		midnight = time_day_end_with_zone (now, watcher->priv->default_zone);
+		e_reminder_watcher_debug_print ("Required correction of the day end, now at %s\n", e_reminder_watcher_timet_as_string ((gint64) midnight));
+	}
+
+	if (watcher->priv->next_midnight != midnight && watcher->priv->timers_enabled) {
+		GSList *link;
+
+		e_reminder_watcher_debug_print ("Next midnight at %s\n", e_reminder_watcher_timet_as_string ((gint64) midnight));
+		watcher->priv->next_midnight = midnight;
+
+		for (link = watcher->priv->clients; link; link = g_slist_next (link)) {
+			ClientData *cd = link->data;
+
+			if (cd && cd->client)
+				client_data_start_view (cd, watcher->priv->next_midnight, watcher->priv->cancellable);
+		}
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static gboolean
+e_reminder_watcher_timer_elapsed_cb (gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+
+	if (g_source_is_destroyed (g_main_current_source ()))
+		return FALSE;
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+	watcher->priv->timer_handler_id = 0;
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	e_reminder_watcher_timer_elapsed (watcher);
+
+	return FALSE;
+}
+
+static void
+e_reminder_watcher_schedule_timer_impl (EReminderWatcher *watcher,
+					gint64 at_time)
+{
+	gint64 current_time;
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	current_time = g_get_real_time () / G_USEC_PER_SEC;
+
+	if (current_time >= at_time) {
+		e_reminder_watcher_timer_elapsed (watcher);
+	} else {
+		if (watcher->priv->timer_handler_id)
+			g_source_remove (watcher->priv->timer_handler_id);
+
+		watcher->priv->timer_handler_id = e_named_timeout_add_seconds (at_time - current_time, e_reminder_watcher_timer_elapsed_cb, watcher);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_format_time_impl (EReminderWatcher *watcher,
+				     const EReminderData *rd,
+				     ICalTime *itt,
+				     gchar **inout_buffer,
+				     gint buffer_size)
+{
+	struct tm tm;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (rd != NULL);
+	g_return_if_fail (itt != NULL);
+	g_return_if_fail (inout_buffer != NULL);
+	g_return_if_fail (*inout_buffer != NULL);
+	g_return_if_fail (buffer_size > 0);
+
+	tm = e_cal_util_icaltime_to_tm (itt);
+	e_time_format_date_and_time (&tm, watcher->priv->use_24h_format, FALSE, FALSE, *inout_buffer, buffer_size);
+}
+
+static GSList * /* EReminderData * */
+e_reminder_watcher_reminders_from_key (EReminderWatcher *watcher,
+				       const gchar *key)
+{
+	GSList *list = NULL;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (watcher->priv->settings) {
+		gchar **strv;
+		gint ii;
+
+		strv = g_settings_get_strv (watcher->priv->settings, key);
+		if (strv) {
+			for (ii = 0; strv[ii]; ii++) {
+				EReminderData *rd;
+
+				rd = e_reminder_data_from_string (strv[ii]);
+				if (rd)
+					list = g_slist_prepend (list, rd);
+			}
+
+			g_strfreev (strv);
+		}
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return g_slist_reverse (list);
+}
+
+static gchar **
+e_reminder_watcher_slist_to_strv (const GSList *reminders) /* EReminderData * */
+{
+	GSList *link;
+	gint ii;
+	gchar **strv;
+
+	if (!reminders)
+		return NULL;
+
+	strv = g_new0 (gchar *, 1 + g_slist_length ((GSList *) reminders));
+
+	for (ii = 0, link = (GSList *) reminders; link; link = g_slist_next (link)) {
+		gchar *str;
+
+		str = e_reminder_data_to_string (link->data);
+		if (str) {
+			strv[ii] = str;
+			ii++;
+		}
+	}
+
+	strv[ii] = NULL;
+
+	return strv;
+}
+
+static EReminderData * /* one from reminders, corresponding to rd */
+e_reminder_watcher_find (GSList *reminders, /* EReminderData * */
+			 const EReminderData *rd)
+{
+	ECalComponentId *id1 = NULL;
+	EReminderData *found = NULL;
+	GSList *link;
+
+	g_return_val_if_fail (rd != NULL, NULL);
+
+	for (link = reminders; !found && link; link = g_slist_next (link)) {
+		EReminderData *rd2 = link->data;
+		ECalComponentId *id2;
+
+		if (!rd2 || g_strcmp0 (rd2->source_uid, rd->source_uid) != 0)
+			continue;
+
+		if (!id1) {
+			id1 = e_cal_component_get_id (rd->component);
+			if (!id1)
+				break;
+		}
+
+		id2 = e_cal_component_get_id (rd2->component);
+
+		if (id2) {
+			const gchar *uid1, *uid2, *rid1, *rid2, *auid1, *auid2;
+
+			uid1 = e_cal_component_id_get_uid (id1);
+			rid1 = e_cal_component_id_get_rid (id1);
+			uid2 = e_cal_component_id_get_uid (id2);
+			rid2 = e_cal_component_id_get_rid (id2);
+			auid1 = e_cal_component_alarm_instance_get_uid (e_reminder_data_get_instance (rd));
+			auid2 = e_cal_component_alarm_instance_get_uid (e_reminder_data_get_instance (rd2));
+
+			if (g_strcmp0 (uid1, uid2) == 0 && (
+			    (g_strcmp0 (rid1, rid2) == 0 ||
+			    ((!rid1 || !*rid1) && (!rid2 || !*rid2)))) &&
+			    g_strcmp0 (auid1, auid2) == 0 &&
+			    e_cal_component_alarm_instance_get_time (e_reminder_data_get_instance (rd)) ==
+			    e_cal_component_alarm_instance_get_time (e_reminder_data_get_instance (rd2)))
+				found = rd2;
+
+			e_cal_component_id_free (id2);
+		}
+	}
+
+	if (id1)
+		e_cal_component_id_free (id1);
+
+	return found;
+}
+
+typedef struct _EmitSignalData {
+	EReminderWatcher *watcher;
+	guint signal_id;
+	GSList *reminders; /* EReminderData * */
+	gboolean is_snoozed; /* only for the triggered signal */
+} EmitSignalData;
+
+static EmitSignalData *
+emit_signal_data_new (void)
+{
+	return g_slice_new0 (EmitSignalData);
+}
+
+static void
+emit_signal_data_free (gpointer ptr)
+{
+	EmitSignalData *esd = ptr;
+
+	if (esd) {
+		g_clear_object (&esd->watcher);
+		g_slist_free_full (esd->reminders, e_reminder_data_free);
+		g_slice_free (EmitSignalData, esd);
+	}
+}
+
+static gboolean
+e_reminder_watcher_emit_signal_idle_cb (gpointer user_data)
+{
+	EmitSignalData *esd = user_data;
+
+	g_return_val_if_fail (esd != NULL, FALSE);
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (esd->watcher), FALSE);
+
+	if (esd->signal_id == signals[TRIGGERED])
+		g_signal_emit (esd->watcher, esd->signal_id, 0, esd->reminders, esd->is_snoozed, NULL);
+	else
+		g_signal_emit (esd->watcher, esd->signal_id, 0, esd->reminders, NULL);
+
+	return FALSE;
+}
+
+static void
+e_reminder_watcher_emit_signal_idle_multiple (EReminderWatcher *watcher,
+					      guint signal_id,
+					      const GSList *reminders, /* EReminderData * */
+					      gboolean is_snoozed)
+{
+	EmitSignalData *esd;
+
+	esd = emit_signal_data_new ();
+	esd->watcher = g_object_ref (watcher);
+	esd->signal_id = signal_id;
+	esd->reminders = g_slist_copy_deep ((GSList *) reminders, (GCopyFunc) e_reminder_data_copy, NULL);
+	esd->is_snoozed = is_snoozed;
+
+	g_idle_add_full (G_PRIORITY_HIGH_IDLE, e_reminder_watcher_emit_signal_idle_cb, esd, emit_signal_data_free);
+}
+
+static void
+e_reminder_watcher_emit_signal_idle (EReminderWatcher *watcher,
+				     guint signal_id,
+				     const EReminderData *rd)
+{
+	GSList *reminders = NULL;
+
+	if (rd)
+		reminders = g_slist_prepend (NULL, e_reminder_data_copy (rd));
+
+	e_reminder_watcher_emit_signal_idle_multiple (watcher, signal_id, reminders, FALSE);
+
+	g_slist_free_full (reminders, e_reminder_data_free);
+}
+
+static void
+e_reminder_watcher_save_list (EReminderWatcher *watcher,
+			      const gchar *key,
+			      const GSList *reminders) /* EReminderData * */
+{
+	gchar **strv;
+
+	strv = e_reminder_watcher_slist_to_strv (reminders);
+	g_settings_set_strv (watcher->priv->settings, key, (const gchar * const *) strv);
+	g_strfreev (strv);
+}
+
+static void
+e_reminder_watcher_save_past (EReminderWatcher *watcher,
+			      GSList *reminders) /* EReminderData * */
+{
+	g_rec_mutex_lock (&watcher->priv->lock);
+	watcher->priv->expected_past_changes++;
+	e_reminder_watcher_save_list (watcher, "reminders-past", reminders);
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_save_snoozed (EReminderWatcher *watcher)
+{
+	g_rec_mutex_lock (&watcher->priv->lock);
+	watcher->priv->expected_snoozed_changes++;
+	e_reminder_watcher_save_list (watcher, "reminders-snoozed", watcher->priv->snoozed);
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static gboolean
+e_reminder_watcher_remove_from_past (EReminderWatcher *watcher,
+				     const EReminderData *rd)
+{
+	GSList *reminders;
+	EReminderData *found;
+	gboolean changed = FALSE;
+
+	g_return_val_if_fail (rd != NULL, FALSE);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	reminders = e_reminder_watcher_dup_past (watcher);
+	found = e_reminder_watcher_find (reminders, rd);
+	if (found) {
+		reminders = g_slist_remove (reminders, found);
+		changed = TRUE;
+
+		e_reminder_watcher_save_past (watcher, reminders);
+
+		e_reminder_watcher_debug_print ("Removed reminder from past for '%s' from %s at %s\n",
+			i_cal_component_get_summary (e_cal_component_get_icalcomponent (found->component)),
+			found->source_uid,
+			e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (found->instance)));
+
+		e_reminder_data_free (found);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	g_slist_free_full (reminders, e_reminder_data_free);
+
+	return changed;
+}
+
+static gboolean
+e_reminder_watcher_remove_from_snoozed (EReminderWatcher *watcher,
+					const EReminderData *rd,
+					gboolean with_save)
+{
+	EReminderData *found;
+	gboolean changed = FALSE;
+
+	g_return_val_if_fail (rd != NULL, FALSE);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	found = e_reminder_watcher_find (watcher->priv->snoozed, rd);
+	if (found) {
+		watcher->priv->snoozed = g_slist_remove (watcher->priv->snoozed, found);
+		changed = TRUE;
+
+		if (with_save)
+			e_reminder_watcher_save_snoozed (watcher);
+
+		e_reminder_watcher_debug_print ("Removed reminder from snoozed for '%s' from %s at %s\n",
+			i_cal_component_get_summary (e_cal_component_get_icalcomponent (found->component)),
+			found->source_uid,
+			e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (found->instance)));
+
+		e_reminder_data_free (found);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return changed;
+}
+
+static ECalClient *
+e_reminder_watcher_ref_client (EReminderWatcher *watcher,
+			       const gchar *source_uid,
+			       GCancellable *cancellable)
+{
+	ECalClient *client = NULL;
+	GSList *link;
+
+	g_return_val_if_fail (source_uid != NULL, NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	for (link = watcher->priv->clients; link; link = g_slist_next (link)) {
+		const ClientData *cd = link->data;
+
+		if (!cd || !cd->client)
+			continue;
+
+		if (g_strcmp0 (source_uid, e_source_get_uid (e_client_get_source (E_CLIENT (cd->client)))) == 0) {
+			client = g_object_ref (cd->client);
+			break;
+		}
+	}
+
+	if (!client && cancellable) {
+		ESourceRegistry *registry;
+		ESource *source;
+
+		registry = g_object_ref (watcher->priv->registry);
+
+		g_rec_mutex_unlock (&watcher->priv->lock);
+
+		source = e_source_registry_ref_source (registry, source_uid);
+		if (source) {
+			ECalClientSourceType source_type = E_CAL_CLIENT_SOURCE_TYPE_LAST;
+
+			if (e_source_has_extension (source, E_SOURCE_EXTENSION_CALENDAR))
+				source_type = E_CAL_CLIENT_SOURCE_TYPE_EVENTS;
+			else if (e_source_has_extension (source, E_SOURCE_EXTENSION_TASK_LIST))
+				source_type = E_CAL_CLIENT_SOURCE_TYPE_TASKS;
+
+			if (source_type != E_CAL_CLIENT_SOURCE_TYPE_LAST) {
+				EReminderWatcherClass *klass;
+				EClient *tmp_client;
+				GError *local_error = NULL;
+
+				klass = E_REMINDER_WATCHER_GET_CLASS (watcher);
+				if (klass && klass->cal_client_connect_sync) {
+					tmp_client = klass->cal_client_connect_sync (watcher, source, source_type, 30, cancellable, &local_error);
+				} else {
+					g_warn_if_fail (klass && klass->cal_client_connect_sync);
+					tmp_client = NULL;
+				}
+
+				if (tmp_client)
+					client = E_CAL_CLIENT (tmp_client);
+
+				if (!client) {
+					e_reminder_watcher_debug_print ("Failed to connect client '%s': %s\n", source_uid, local_error ? local_error->message : "Unknown error");
+					g_clear_error (&local_error);
+				} else if (tmp_client) {
+					client = E_CAL_CLIENT (tmp_client);
+				}
+			}
+		}
+
+		g_clear_object (&source);
+		g_clear_object (&registry);
+	} else {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+	}
+
+	return client;
+}
+
+static gboolean
+e_reminder_watcher_add (GSList **inout_reminders, /* EReminderData * */
+			EReminderData *rd, /* assumes ownership of 'rd' */
+			gboolean with_lookup,
+			gboolean sorted)
+{
+	g_return_val_if_fail (inout_reminders != NULL, FALSE);
+
+	if (with_lookup) {
+		EReminderData *found;
+
+		found = e_reminder_watcher_find (*inout_reminders, rd);
+		if (found) {
+			*inout_reminders = g_slist_remove (*inout_reminders, found);
+			e_reminder_data_free (found);
+		}
+	}
+
+	if (sorted)
+		*inout_reminders = g_slist_insert_sorted (*inout_reminders, rd, e_reminder_data_compare);
+	else
+		*inout_reminders = g_slist_prepend (*inout_reminders, rd);
+
+	return TRUE;
+}
+
+static void
+e_reminder_watcher_cleanup_past_reminders (EReminderWatcher *watcher)
+{
+	gint64 reminders_past_days;
+	gint64 check_date; /* midnight / (24 * 60 * 60) */
+	time_t now, midnight;
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	reminders_past_days = g_settings_get_int (watcher->priv->settings, "reminders-past-days");
+	if (!reminders_past_days) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	} else if (reminders_past_days < 1) {
+		reminders_past_days = 1;
+	}
+
+	now = time (NULL);
+	midnight = time_day_end_with_zone (now, watcher->priv->default_zone);
+
+	while (midnight <= now) {
+		now += 60 * 60; /* increment one day */
+		midnight = time_day_end_with_zone (now, watcher->priv->default_zone);
+	}
+
+	check_date = midnight / (24 * 60 * 60);
+
+	if (check_date != watcher->priv->last_cleanup_date) {
+		GSList *past_reminders, *new_past_reminders = NULL, *link;
+		guint64 n_removed = 0;
+
+		watcher->priv->last_cleanup_date = check_date;
+
+		past_reminders = e_reminder_watcher_dup_past (watcher);
+
+		for (link = past_reminders; link; link = g_slist_next (link)) {
+			EReminderData *rd = link->data;
+			gint64 diff;
+
+			diff = (g_get_real_time () / G_USEC_PER_SEC) - ((gint64) e_cal_component_alarm_instance_get_occur_start (rd->instance));
+			if (diff > 0) {
+				diff /= 60 * 60 * 24;
+
+				if (diff <= reminders_past_days) {
+					new_past_reminders = g_slist_prepend (new_past_reminders, rd);
+				} else {
+					n_removed++;
+					e_reminder_watcher_debug_print ("Auto-removed reminder from past for '%s' from %s at %s due to being %" G_GINT64_FORMAT " days old\n",
+						i_cal_component_get_summary (e_cal_component_get_icalcomponent (rd->component)),
+						rd->source_uid,
+						e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (rd->instance)),
+						diff);
+				}
+			} else {
+				new_past_reminders = g_slist_prepend (new_past_reminders, rd);
+			}
+		}
+
+		if (n_removed > 0) {
+			e_reminder_watcher_debug_print ("Auto-removed %" G_GUINT64_FORMAT " past reminders older than %" G_GINT64_FORMAT " days, left %d reminders\n",
+				n_removed, reminders_past_days, g_slist_length (new_past_reminders));
+
+			new_past_reminders = g_slist_reverse (new_past_reminders);
+
+			e_reminder_watcher_save_past (watcher, new_past_reminders);
+			e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+		}
+
+		g_slist_free_full (past_reminders, e_reminder_data_free);
+		g_slist_free (new_past_reminders);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_gather_nearest_scheduled_cb (gpointer key,
+						gpointer value,
+						gpointer user_data)
+{
+	GSList *reminders = value;
+	gint *out_nearest = user_data;
+	EReminderData *rd = reminders ? reminders->data : NULL;
+
+	if (rd && out_nearest && (!*out_nearest || e_cal_component_alarm_instance_get_time (rd->instance) < *out_nearest))
+		*out_nearest = e_cal_component_alarm_instance_get_time (rd->instance);
+}
+
+static gint64
+e_reminder_watcher_get_nearest_scheduled (EReminderWatcher *watcher)
+{
+	gint64 res = 0;
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (watcher->priv->scheduled)
+		g_hash_table_foreach (watcher->priv->scheduled, e_reminder_watcher_gather_nearest_scheduled_cb, &res);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return res;
+}
+
+static void
+e_reminder_watcher_maybe_schedule_next_trigger (EReminderWatcher *watcher,
+						gint64 next_trigger)
+{
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	e_reminder_watcher_cleanup_past_reminders (watcher);
+
+	if (!watcher->priv->timers_enabled) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	e_reminder_watcher_calc_next_midnight (watcher);
+
+	if (watcher->priv->snoozed && watcher->priv->snoozed->data) {
+		const EReminderData *rd = watcher->priv->snoozed->data;
+
+		if (next_trigger <= 0 || e_cal_component_alarm_instance_get_time (rd->instance) < next_trigger)
+			next_trigger = e_cal_component_alarm_instance_get_time (rd->instance);
+	}
+
+	if (watcher->priv->scheduled) {
+		gint64 nearest_scheduled = e_reminder_watcher_get_nearest_scheduled (watcher);
+
+		if (nearest_scheduled > 0 && (next_trigger <= 0 || nearest_scheduled < next_trigger))
+			next_trigger = nearest_scheduled;
+	}
+
+	if (next_trigger <= 0 || watcher->priv->next_midnight < next_trigger)
+		next_trigger = watcher->priv->next_midnight;
+
+	if (watcher->priv->next_trigger != next_trigger) {
+		EReminderWatcherClass *klass;
+
+		watcher->priv->next_trigger = next_trigger;
+
+		klass = E_REMINDER_WATCHER_GET_CLASS (watcher);
+		g_warn_if_fail (klass->schedule_timer != NULL);
+
+		e_reminder_watcher_debug_print ("Going to schedule next trigger at %s\n", e_reminder_watcher_timet_as_string (next_trigger));
+
+		if (klass->schedule_timer)
+			klass->schedule_timer (watcher, next_trigger);
+		else
+			e_reminder_watcher_schedule_timer_impl (watcher, next_trigger);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_reminders_past_changed_cb (GSettings *settings,
+					      const gchar *key,
+					      gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (key != NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (watcher->priv->expected_past_changes) {
+		watcher->priv->expected_past_changes--;
+		e_reminder_watcher_debug_print ("GSettings::%s possibly changed, but ignored, because it was expected\n", key);
+	} else {
+		e_reminder_watcher_debug_print ("GSettings::%s possibly changed\n", key);
+
+		/* Cannot determine whether it really changed, because the past reminders
+		   are not held in memory. */
+		e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_reminders_snoozed_changed_cb (GSettings *settings,
+						 const gchar *key,
+						 gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	GSList *new_snoozed, *old_snoozed, *link;
+	gboolean changed = FALSE;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (key != NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (watcher->priv->expected_snoozed_changes) {
+		watcher->priv->expected_snoozed_changes--;
+		e_reminder_watcher_debug_print ("GSettings::%s possibly changed, but ignored, because it was expected\n", key);
+		g_rec_mutex_unlock (&watcher->priv->lock);
+
+		return;
+	}
+
+	e_reminder_watcher_debug_print ("GSettings::%s possibly changed\n", key);
+
+	new_snoozed = e_reminder_watcher_reminders_from_key (watcher, "reminders-snoozed");
+	if (new_snoozed) {
+		old_snoozed = watcher->priv->snoozed;
+		watcher->priv->snoozed = g_slist_sort (new_snoozed, e_reminder_data_compare);
+
+		for (link = old_snoozed; link; link = g_slist_next (link)) {
+			EReminderData *rd = link->data;
+
+			if (rd && !e_reminder_watcher_find (watcher->priv->snoozed, rd)) {
+				changed = TRUE;
+
+				e_reminder_watcher_debug_print ("Removed reminder from snoozed for '%s' from %s at %s\n",
+					i_cal_component_get_summary (e_cal_component_get_icalcomponent (rd->component)),
+					rd->source_uid,
+					e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (rd->instance)));
+			}
+		}
+
+		for (link = watcher->priv->snoozed; link; link = g_slist_next (link)) {
+			EReminderData *rd = link->data;
+
+			if (rd && !e_reminder_watcher_find (old_snoozed, rd)) {
+				changed = TRUE;
+
+				e_reminder_watcher_debug_print ("Added reminder to snoozed for '%s' from %s at %s\n",
+					i_cal_component_get_summary (e_cal_component_get_icalcomponent (rd->component)),
+					rd->source_uid,
+					e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (rd->instance)));
+			}
+		}
+
+		g_slist_free_full (old_snoozed, e_reminder_data_free);
+	} else if (watcher->priv->snoozed) {
+		old_snoozed = watcher->priv->snoozed;
+		watcher->priv->snoozed = NULL;
+
+		changed = TRUE;
+
+		for (link = old_snoozed; link; link = g_slist_next (link)) {
+			EReminderData *rd = link->data;
+
+			if (!rd)
+				continue;
+
+			e_reminder_watcher_debug_print ("Removed reminder from snoozed for '%s' from %s at %s\n",
+				i_cal_component_get_summary (e_cal_component_get_icalcomponent (rd->component)),
+				rd->source_uid,
+				e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (rd->instance)));
+		}
+
+		g_slist_free_full (old_snoozed, e_reminder_data_free);
+	}
+
+	if (changed) {
+		e_reminder_watcher_maybe_schedule_next_trigger (watcher, 0);
+		e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static gboolean
+e_reminder_watcher_filter_source_cb (ESourceRegistryWatcher *watcher,
+				     ESource *source)
+{
+	g_return_val_if_fail (E_IS_SOURCE (source), FALSE);
+
+	if (!e_source_has_extension (source, E_SOURCE_EXTENSION_CALENDAR) &&
+	    !e_source_has_extension (source, E_SOURCE_EXTENSION_TASK_LIST))
+		return FALSE;
+
+	return !e_source_has_extension (source, E_SOURCE_EXTENSION_ALARMS) ||
+	    e_source_alarms_get_include_me (e_source_get_extension (source, E_SOURCE_EXTENSION_ALARMS));
+}
+
+static void
+e_reminder_watcher_source_changed_cb (ESource *source,
+				      gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	ClientData *cd = NULL;
+	GSList *link;
+	const gchar *source_uid;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	source_uid = e_source_get_uid (source);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	for (link = watcher->priv->clients; link; link = g_slist_next (link)) {
+		ClientData *incd = link->data;
+
+		if (!incd || !incd->client)
+			continue;
+
+		if (g_strcmp0 (source_uid, e_source_get_uid (e_client_get_source (E_CLIENT (incd->client)))) == 0) {
+			cd = incd;
+			break;
+		}
+	}
+
+	if (cd) {
+		gboolean for_every_event;
+
+		for_every_event = e_reminder_watcher_is_for_every_event_client (cd->client);
+
+		if ((for_every_event ? 1 : 0) != (cd->for_every_event ? 1 : 0)) {
+			cd->for_every_event = for_every_event;
+
+			if (for_every_event)
+				watcher->priv->n_for_every_event++;
+			else
+				watcher->priv->n_for_every_event--;
+
+			e_reminder_watcher_debug_print ("defall-reminder setting for source '%s' changed, enabled:%d\n", source_uid, cd->for_every_event);
+
+			if (watcher->priv->timers_enabled && watcher->priv->defall_reminder_enabled)
+				client_data_start_view (cd, watcher->priv->next_midnight, watcher->priv->cancellable);
+			else
+				e_reminder_watcher_debug_print ("not going to rebuild view for '%s', because timers_enabled:%d defall_reminder_enabled:%d\n",
+					source_uid, watcher->priv->timers_enabled, watcher->priv->defall_reminder_enabled);
+		}
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_client_connect_cb (GObject *source_object,
+				      GAsyncResult *result,
+				      gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	EReminderWatcherClass *klass;
+	EClient *client;
+	ClientData *cd;
+	GError *local_error = NULL;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	klass = E_REMINDER_WATCHER_GET_CLASS (watcher);
+	g_return_if_fail (klass != NULL);
+	g_return_if_fail (klass->cal_client_connect_finish != NULL);
+
+	client = klass->cal_client_connect_finish (watcher, result, &local_error);
+	if (!client) {
+		e_reminder_watcher_debug_print ("Failed to connect client: %s\n", local_error ? local_error->message : "Unknown error");
+		g_clear_error (&local_error);
+		g_object_unref (watcher);
+		return;
+	}
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	cd = client_data_new (watcher, E_CAL_CLIENT (client));
+	if (cd) {
+		ESource *source = e_client_get_source (client);
+
+		e_reminder_watcher_debug_print ("Connected client: %s (%s)\n", e_source_get_uid (source), e_source_get_display_name (source));
+
+		watcher->priv->clients = g_slist_prepend (watcher->priv->clients, cd);
+
+		if (cd->for_every_event)
+			watcher->priv->n_for_every_event++;
+
+		g_signal_connect_object (source, "changed", G_CALLBACK (e_reminder_watcher_source_changed_cb), watcher, 0);
+
+		if (watcher->priv->timers_enabled)
+			client_data_start_view (cd, watcher->priv->next_midnight, watcher->priv->cancellable);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	g_object_unref (watcher);
+}
+
+static void
+e_reminder_watcher_source_appeared_cb (EReminderWatcher *watcher,
+				       ESource *source)
+{
+	EReminderWatcherClass *klass;
+	ECalClientSourceType source_type;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (E_IS_SOURCE (source));
+
+	klass = E_REMINDER_WATCHER_GET_CLASS (watcher);
+	g_return_if_fail (klass != NULL);
+	g_return_if_fail (klass->cal_client_connect != NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (e_source_has_extension (source, E_SOURCE_EXTENSION_CALENDAR))
+		source_type = E_CAL_CLIENT_SOURCE_TYPE_EVENTS;
+	else if (e_source_has_extension (source, E_SOURCE_EXTENSION_TASK_LIST))
+		source_type = E_CAL_CLIENT_SOURCE_TYPE_TASKS;
+	else {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	if (watcher->priv->timers_enabled)
+		klass->cal_client_connect (watcher, source, source_type, 30, watcher->priv->cancellable, e_reminder_watcher_client_connect_cb, g_object_ref (watcher));
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_source_disappeared_cb (EReminderWatcher *watcher,
+					  ESource *source)
+{
+	GSList *link;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (E_IS_SOURCE (source));
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	for (link = watcher->priv->clients; link; link = g_slist_next (link)) {
+		ClientData *cd = link->data;
+
+		if (cd && cd->client && g_strcmp0 (e_source_get_uid (source),
+		    e_source_get_uid (e_client_get_source (E_CLIENT (cd->client)))) == 0) {
+			e_reminder_watcher_debug_print ("Removed client: %s (%s)\n", e_source_get_uid (source), e_source_get_display_name (source));
+			watcher->priv->clients = g_slist_remove (watcher->priv->clients, cd);
+			if (cd->for_every_event)
+				watcher->priv->n_for_every_event--;
+			client_data_free (cd);
+			break;
+		}
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static gboolean
+e_reminder_watcher_check_wall_clock_time_changed_cb (gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	gint64 wall_clock_time;
+
+	if (g_source_is_destroyed (g_main_current_source ()))
+		return FALSE;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+
+	#define ADD_SECONDS(to, secs) ((to) + ((secs) * G_USEC_PER_SEC))
+
+	wall_clock_time = g_get_real_time ();
+
+	/* Use one second margin */
+	if (wall_clock_time > ADD_SECONDS (watcher->priv->expected_wall_clock_time, 1) ||
+	    wall_clock_time < ADD_SECONDS (watcher->priv->expected_wall_clock_time, -1)) {
+		gint64 diff = (wall_clock_time - watcher->priv->expected_wall_clock_time) / 1000;
+
+		e_reminder_watcher_debug_print ("Current wall-clock time differs from expected by %" G_GINT64_FORMAT " ms, rescheduling reminders\n", diff);
+
+		/* To make sure the timer is re-scheduled */
+		watcher->priv->next_trigger = 0;
+
+		e_reminder_watcher_maybe_schedule_next_trigger (watcher, 0);
+
+		wall_clock_time = g_get_real_time ();
+	}
+
+	watcher->priv->expected_wall_clock_time = ADD_SECONDS (wall_clock_time, 60);
+
+	#undef ADD_SECONDS
+
+	return TRUE;
+}
+
+static gboolean
+e_reminder_watcher_construct_idle_cb (gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+
+	if (g_source_is_destroyed (g_main_current_source ()))
+		return FALSE;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	watcher->priv->construct_idle_id = 0;
+	watcher->priv->registry_watcher = e_source_registry_watcher_new (watcher->priv->registry, NULL);
+
+	g_signal_connect (watcher->priv->registry_watcher, "filter",
+		G_CALLBACK (e_reminder_watcher_filter_source_cb), watcher);
+
+	g_signal_connect_swapped (watcher->priv->registry_watcher, "appeared",
+		G_CALLBACK (e_reminder_watcher_source_appeared_cb), watcher);
+
+	g_signal_connect_swapped (watcher->priv->registry_watcher, "disappeared",
+		G_CALLBACK (e_reminder_watcher_source_disappeared_cb), watcher);
+
+	e_source_registry_watcher_reclaim (watcher->priv->registry_watcher);
+
+	if (!watcher->priv->wall_clock_handler_id) {
+		/* Monotonic time doesn't change during hibernation, while the
+		 * wall clock time does, thus check for wall clock time changes
+		 * and reschedule alarms when it changes. */
+		watcher->priv->expected_wall_clock_time = g_get_real_time () + (60 * G_USEC_PER_SEC);
+		watcher->priv->wall_clock_handler_id = e_named_timeout_add_seconds (60,
+			e_reminder_watcher_check_wall_clock_time_changed_cb, watcher);
+	}
+
+	if (!watcher->priv->snoozed)
+		watcher->priv->snoozed = e_reminder_watcher_reminders_from_key (watcher, "reminders-snoozed");
+
+	e_reminder_watcher_maybe_schedule_next_trigger (watcher, 0);
+
+	if (!watcher->priv->past_changed_handler_id) {
+		watcher->priv->past_changed_handler_id = g_signal_connect (watcher->priv->settings, "changed::reminders-past",
+			G_CALLBACK (e_reminder_watcher_reminders_past_changed_cb), watcher);
+	}
+
+	if (!watcher->priv->snoozed_changed_handler_id) {
+		watcher->priv->snoozed_changed_handler_id = g_signal_connect (watcher->priv->settings, "changed::reminders-snoozed",
+			G_CALLBACK (e_reminder_watcher_reminders_snoozed_changed_cb), watcher);
+	}
+
+	/* Read from the keys, otherwise the "changed" signal won't be emitted by GSettings */
+	g_strfreev (g_settings_get_strv (watcher->priv->settings, "reminders-past"));
+	g_strfreev (g_settings_get_strv (watcher->priv->settings, "reminders-snoozed"));
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return FALSE;
+}
+
+static EClient *
+e_reminder_watcher_cal_client_connect_sync (EReminderWatcher *watcher,
+					    ESource *source,
+					    ECalClientSourceType source_type,
+					    guint32 wait_for_connected_seconds,
+					    GCancellable *cancellable,
+					    GError **error)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	return e_cal_client_connect_sync (source, source_type, wait_for_connected_seconds, cancellable, error);
+}
+
+static void
+e_reminder_watcher_cal_client_connect (EReminderWatcher *watcher,
+				       ESource *source,
+				       ECalClientSourceType source_type,
+				       guint32 wait_for_connected_seconds,
+				       GCancellable *cancellable,
+				       GAsyncReadyCallback callback,
+				       gpointer user_data)
+{
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	e_cal_client_connect (source, source_type, wait_for_connected_seconds, cancellable, callback, user_data);
+}
+
+static EClient *
+e_reminder_watcher_cal_client_connect_finish (EReminderWatcher *watcher,
+					      GAsyncResult *result,
+					      GError **error)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	return e_cal_client_connect_finish (result, error);
+}
+
+static void
+e_reminder_watcher_update_defall (EReminderWatcher *watcher)
+{
+	GSList *link;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (!watcher->priv->timers_enabled) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	for (link = watcher->priv->clients; link; link = g_slist_next (link)) {
+		ClientData *cd = link->data;
+
+		if (!cd || !cd->client || !cd->for_every_event)
+			continue;
+
+		client_data_start_view (cd, watcher->priv->next_midnight, watcher->priv->cancellable);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_defall_reminder_changed (GSettings *settings,
+					    const gchar *key,
+					    gpointer user_data)
+{
+	EReminderWatcher *watcher = user_data;
+	gboolean changed = FALSE;
+	gboolean changed_enabled = FALSE;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	if (watcher->priv->defall_reminder_enabled != g_settings_get_boolean (watcher->priv->settings, "defall-reminder-enabled")) {
+		watcher->priv->defall_reminder_enabled = g_settings_get_boolean (watcher->priv->settings, "defall-reminder-enabled");
+		changed_enabled = TRUE;
+	}
+
+	if (watcher->priv->defall_reminder_interval != g_settings_get_int (watcher->priv->settings, "defall-reminder-interval")) {
+		watcher->priv->defall_reminder_interval = g_settings_get_int (watcher->priv->settings, "defall-reminder-interval");
+		changed = TRUE;
+	}
+
+	if (watcher->priv->defall_reminder_units != g_settings_get_enum (watcher->priv->settings, "defall-reminder-units")) {
+		watcher->priv->defall_reminder_units = g_settings_get_enum (watcher->priv->settings, "defall-reminder-units");
+		changed = TRUE;
+	}
+
+	if ((changed_enabled || (changed && watcher->priv->defall_reminder_enabled)) && watcher->priv->n_for_every_event > 0) {
+		e_reminder_watcher_debug_print ("defall-reminder changed, enabled:%d interval:%d units:%s\n",
+			watcher->priv->defall_reminder_enabled, watcher->priv->defall_reminder_interval,
+			watcher->priv->defall_reminder_units == E_CAL_INTERVAL_UNIT_MINUTES ? "minutes" :
+			watcher->priv->defall_reminder_units == E_CAL_INTERVAL_UNIT_HOURS ? "hours" :
+			watcher->priv->defall_reminder_units == E_CAL_INTERVAL_UNIT_DAYS ? "days" : "???");
+		e_reminder_watcher_update_defall (watcher);
+	}
+}
+
+static void
+reminder_watcher_set_registry (EReminderWatcher *watcher,
+			       ESourceRegistry *registry)
+{
+	g_return_if_fail (E_IS_SOURCE_REGISTRY (registry));
+	g_return_if_fail (watcher->priv->registry == NULL);
+
+	watcher->priv->registry = g_object_ref (registry);
+}
+
+static void
+e_reminder_watcher_set_property (GObject *object,
+				 guint property_id,
+				 const GValue *value,
+				 GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_REGISTRY:
+			reminder_watcher_set_registry (
+				E_REMINDER_WATCHER (object),
+				g_value_get_object (value));
+			return;
+
+		case PROP_DEFAULT_ZONE:
+			e_reminder_watcher_set_default_zone (
+				E_REMINDER_WATCHER (object),
+				g_value_get_object (value));
+			return;
+
+		case PROP_TIMERS_ENABLED:
+			e_reminder_watcher_set_timers_enabled (
+				E_REMINDER_WATCHER (object),
+				g_value_get_boolean (value));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+e_reminder_watcher_get_property (GObject *object,
+				 guint property_id,
+				 GValue *value,
+				 GParamSpec *pspec)
+{
+	switch (property_id) {
+		case PROP_REGISTRY:
+			g_value_set_object (
+				value,
+				e_reminder_watcher_get_registry (
+				E_REMINDER_WATCHER (object)));
+			return;
+
+		case PROP_DEFAULT_ZONE:
+			g_value_take_object (
+				value,
+				e_reminder_watcher_dup_default_zone (
+				E_REMINDER_WATCHER (object)));
+			return;
+
+		case PROP_TIMERS_ENABLED:
+			g_value_set_boolean (
+				value,
+				e_reminder_watcher_get_timers_enabled (
+				E_REMINDER_WATCHER (object)));
+			return;
+	}
+
+	G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+}
+
+static void
+e_reminder_watcher_constructed (GObject *object)
+{
+	EReminderWatcher *watcher = E_REMINDER_WATCHER (object);
+
+	/* Chain up to parent's method. */
+	G_OBJECT_CLASS (e_reminder_watcher_parent_class)->constructed (object);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	watcher->priv->construct_idle_id = g_idle_add (e_reminder_watcher_construct_idle_cb, watcher);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+static void
+e_reminder_watcher_dispose (GObject *object)
+{
+	EReminderWatcher *watcher = E_REMINDER_WATCHER (object);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (watcher->priv->construct_idle_id) {
+		g_source_remove (watcher->priv->construct_idle_id);
+		watcher->priv->construct_idle_id = 0;
+	}
+
+	if (watcher->priv->wall_clock_handler_id) {
+		g_source_remove (watcher->priv->wall_clock_handler_id);
+		watcher->priv->wall_clock_handler_id = 0;
+	}
+
+	if (watcher->priv->timer_handler_id) {
+		g_source_remove (watcher->priv->timer_handler_id);
+		watcher->priv->timer_handler_id = 0;
+	}
+
+	if (watcher->priv->cancellable)
+		g_cancellable_cancel (watcher->priv->cancellable);
+
+	g_slist_free_full (watcher->priv->clients, client_data_free);
+	watcher->priv->clients = NULL;
+	watcher->priv->n_for_every_event = 0;
+
+	g_slist_free_full (watcher->priv->snoozed, e_reminder_data_free);
+	watcher->priv->snoozed = NULL;
+
+	g_clear_pointer (&watcher->priv->scheduled, g_hash_table_destroy);
+
+	if (watcher->priv->settings && watcher->priv->past_changed_handler_id) {
+		g_signal_handler_disconnect (watcher->priv->settings, watcher->priv->past_changed_handler_id);
+		watcher->priv->past_changed_handler_id = 0;
+	}
+
+	if (watcher->priv->settings && watcher->priv->snoozed_changed_handler_id) {
+		g_signal_handler_disconnect (watcher->priv->settings, watcher->priv->snoozed_changed_handler_id);
+		watcher->priv->snoozed_changed_handler_id = 0;
+	}
+
+	g_clear_object (&watcher->priv->cancellable);
+	g_clear_object (&watcher->priv->settings);
+	g_clear_object (&watcher->priv->desktop_settings);
+	g_clear_object (&watcher->priv->registry_watcher);
+	g_clear_object (&watcher->priv->registry);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	/* Chain up to parent's method. */
+	G_OBJECT_CLASS (e_reminder_watcher_parent_class)->dispose (object);
+}
+
+static void
+e_reminder_watcher_finalize (GObject *object)
+{
+	EReminderWatcher *watcher = E_REMINDER_WATCHER (object);
+
+	g_clear_object (&watcher->priv->default_zone);
+	g_rec_mutex_clear (&watcher->priv->lock);
+
+	/* Chain up to parent's method. */
+	G_OBJECT_CLASS (e_reminder_watcher_parent_class)->finalize (object);
+}
+
+static void
+e_reminder_watcher_class_init (EReminderWatcherClass *klass)
+{
+	GObjectClass *object_class;
+
+	object_class = G_OBJECT_CLASS (klass);
+	object_class->set_property = e_reminder_watcher_set_property;
+	object_class->get_property = e_reminder_watcher_get_property;
+	object_class->constructed = e_reminder_watcher_constructed;
+	object_class->dispose = e_reminder_watcher_dispose;
+	object_class->finalize = e_reminder_watcher_finalize;
+
+	klass->schedule_timer = e_reminder_watcher_schedule_timer_impl;
+	klass->format_time = e_reminder_watcher_format_time_impl;
+	klass->cal_client_connect_sync = e_reminder_watcher_cal_client_connect_sync;
+	klass->cal_client_connect = e_reminder_watcher_cal_client_connect;
+	klass->cal_client_connect_finish = e_reminder_watcher_cal_client_connect_finish;
+
+	/**
+	 * EReminderWatcher:registry:
+	 *
+	 * The #ESourceRegistry which manages #ESource instances.
+	 *
+	 * Since: 3.30
+	 **/
+	properties[PROP_REGISTRY] =
+		g_param_spec_object (
+			"registry",
+			NULL, NULL,
+			E_TYPE_SOURCE_REGISTRY,
+			G_PARAM_READWRITE |
+			G_PARAM_CONSTRUCT_ONLY |
+			G_PARAM_STATIC_STRINGS);
+
+	/**
+	 * EReminderWatcher:default-zone:
+	 *
+	 * An #ICalTimezone to be used as the default time zone.
+	 *
+	 * Since: 3.30
+	 **/
+	properties[PROP_DEFAULT_ZONE] =
+		g_param_spec_object (
+			"default-zone",
+			NULL, NULL,
+			I_CAL_TYPE_TIMEZONE,
+			G_PARAM_READWRITE |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS);
+
+	/**
+	 * EReminderWatcher:timers-enabled:
+	 *
+	 * Whether timers are enabled for the #EReminderWatcher. See
+	 * e_reminder_watcher_set_timers_enabled() for more information
+	 * what it means.
+	 *
+	 * Default: %TRUE
+	 *
+	 * Since: 3.30
+	 **/
+	properties[PROP_TIMERS_ENABLED] =
+		g_param_spec_boolean (
+			"timers-enabled",
+			NULL, NULL,
+			TRUE,
+			G_PARAM_READWRITE |
+			G_PARAM_EXPLICIT_NOTIFY |
+			G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties (object_class, N_PROPS, properties);
+
+	/**
+	 * EReminderWatcher::format-time:
+	 * @watcher: an #EReminderWatcher
+	 * @rd: an #EReminderData
+	 * @itt: an #ICalTime
+	 * @inout_buffer: (inout): a pointer to a buffer to fill with formatted @itt
+	 * @buffer_size: size of inout_buffer
+	 *
+	 * Formats time @itt to a string and writes it to @inout_buffer, which can hold
+	 * up to @buffer_size bytes. The first character of @inout_buffer is the nul-byte
+	 * when nothing wrote to it yet.
+	 *
+	 * Since: 3.30
+	 **/
+	signals[FORMAT_TIME] = g_signal_new (
+		"format-time",
+		G_OBJECT_CLASS_TYPE (klass),
+		G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET (EReminderWatcherClass, format_time),
+		NULL,
+		NULL,
+		g_cclosure_marshal_generic,
+		G_TYPE_NONE, 4,
+		E_TYPE_REMINDER_DATA,
+		I_CAL_TYPE_TIME,
+		G_TYPE_POINTER,
+		G_TYPE_INT);
+
+	/**
+	 * EReminderWatcher::triggered:
+	 * @watcher: an #EReminderWatcher
+	 * @reminders: (type GSList) (element-type EReminderData): a #GSList of #EReminderData
+	 * @snoozed: %TRUE, when the @reminders had been snoozed, %FALSE otherwise
+	 *
+	 * Signal is emitted when any reminder is either overdue or triggered.
+	 *
+	 * Since: 3.30
+	 **/
+	signals[TRIGGERED] = g_signal_new (
+		"triggered",
+		G_OBJECT_CLASS_TYPE (klass),
+		G_SIGNAL_RUN_LAST,
+		G_STRUCT_OFFSET (EReminderWatcherClass, triggered),
+		NULL,
+		NULL,
+		g_cclosure_marshal_generic,
+		G_TYPE_NONE, 2,
+		G_TYPE_POINTER,
+		G_TYPE_BOOLEAN);
+
+	/**
+	 * EReminderWatcher::changed:
+	 * @watcher: an #EReminderWatcher
+	 *
+	 * Signal is emitted when the list of past or snoozed reminders
+	 * changes. It's called also when GSettings key for past reminders
+	 * is notified as changed, because this list is not held in memory.
+	 *
+	 * Since: 3.30
+	 **/
+	signals[CHANGED] = g_signal_new (
+		"changed",
+		G_OBJECT_CLASS_TYPE (klass),
+		G_SIGNAL_RUN_LAST,
+		G_STRUCT_OFFSET (EReminderWatcherClass, changed),
+		NULL,
+		NULL,
+		g_cclosure_marshal_generic,
+		G_TYPE_NONE, 0,
+		G_TYPE_NONE);
+}
+
+static void
+e_reminder_watcher_load_clock_format (EReminderWatcher *watcher)
+{
+	gchar *clock_format;
+
+	if (watcher->priv->desktop_settings == NULL) {
+		/* GNOME settings not detected, so fall back to locale. We'll
+		 * pick the 24-hour format, if the am/pm string is empty. */
+		struct tm now_tm;
+		time_t now;
+		gchar buf[64];
+
+		now = time (NULL);
+
+		if (now == -1 || localtime_r (&now, &now_tm) == NULL) {
+			watcher->priv->use_24h_format = FALSE;
+			return;
+		}
+
+		/* We want to differentiate between strftime() failures and
+		 * empty %p strings, hence the space in " %p". */
+		watcher->priv->use_24h_format = e_utf8_strftime (buf, sizeof (buf), " %p", &now_tm) == 1;
+
+		return;
+	}
+
+	clock_format = g_settings_get_string (watcher->priv->desktop_settings, "clock-format");
+	watcher->priv->use_24h_format = g_strcmp0 (clock_format, "24h") == 0;
+	g_free (clock_format);
+}
+
+static GSettings*
+e_reminder_watcher_load_settings_tentative (const gchar *schema_id)
+{
+	GSettings *settings;
+	GSettingsSchemaSource *schema_source;
+	GSettingsSchema *schema;
+
+	schema_source = g_settings_schema_source_get_default ();
+	schema = g_settings_schema_source_lookup (schema_source, schema_id, TRUE);
+
+	if (schema == NULL) {
+		return NULL;
+	}
+
+	settings = g_settings_new (schema_id);
+	/* only unref after g_settings_new() to avoid needless realloc */
+	g_settings_schema_unref (schema);
+	return settings;
+}
+
+static void
+e_reminder_watcher_init (EReminderWatcher *watcher)
+{
+	ICalTimezone *zone = NULL;
+	gchar *location;
+
+	location = e_cal_system_timezone_get_location ();
+	if (location) {
+		zone = i_cal_timezone_get_builtin_timezone (location);
+		g_free (location);
+	}
+
+	if (!zone)
+		zone = i_cal_timezone_get_utc_timezone ();
+
+	watcher->priv = e_reminder_watcher_get_instance_private (watcher);
+	watcher->priv->cancellable = g_cancellable_new ();
+	watcher->priv->settings = g_settings_new ("org.gnome.evolution-data-server.calendar");
+	watcher->priv->desktop_settings = e_reminder_watcher_load_settings_tentative ("org.gnome.desktop.interface");
+	if (watcher->priv->desktop_settings) {
+		g_signal_connect_object (
+			watcher->priv->desktop_settings,
+			"changed::clock-format",
+			G_CALLBACK (e_reminder_watcher_load_clock_format),
+			watcher,
+			G_CONNECT_SWAPPED);
+	}
+	e_reminder_watcher_load_clock_format (watcher);
+	watcher->priv->scheduled = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, e_reminder_watcher_free_rd_slist);
+	watcher->priv->default_zone = e_cal_util_copy_timezone (zone);
+	watcher->priv->timers_enabled = TRUE;
+
+	g_rec_mutex_init (&watcher->priv->lock);
+
+	watcher->priv->defall_reminder_enabled = g_settings_get_boolean (watcher->priv->settings, "defall-reminder-enabled");
+	watcher->priv->defall_reminder_interval = g_settings_get_int (watcher->priv->settings, "defall-reminder-interval");
+	watcher->priv->defall_reminder_units = g_settings_get_enum (watcher->priv->settings, "defall-reminder-units");
+
+	g_signal_connect_object (watcher->priv->settings, "changed::defall-reminder-enabled",
+		G_CALLBACK (e_reminder_watcher_defall_reminder_changed), watcher, 0);
+	g_signal_connect_object (watcher->priv->settings, "changed::defall-reminder-interval",
+		G_CALLBACK (e_reminder_watcher_defall_reminder_changed), watcher, 0);
+	g_signal_connect_object (watcher->priv->settings, "changed::defall-reminder-units",
+		G_CALLBACK (e_reminder_watcher_defall_reminder_changed), watcher, 0);
+}
+
+/**
+ * e_reminder_watcher_new:
+ * @registry: (transfer none): an #ESourceRegistry
+ *
+ * Creates a new #EReminderWatcher, which will use the @registry. It adds
+ * its own reference to @registry. Free the created #EReminderWatcher
+ * with g_object_unref() when no longer needed.
+ *
+ * Returns: (transfer full): a new instance of #EReminderWatcher
+ *
+ * Since: 3.30
+ **/
+EReminderWatcher *
+e_reminder_watcher_new (ESourceRegistry *registry)
+{
+	g_return_val_if_fail (E_IS_SOURCE_REGISTRY (registry), NULL);
+
+	return g_object_new (E_TYPE_REMINDER_WATCHER,
+		"registry", registry,
+		NULL);
+}
+
+/**
+ * e_reminder_watcher_get_registry:
+ * @watcher: an #EReminderWatcher
+ *
+ * Returns: (transfer none): an #ESourceRegistry with which the @watcher
+ *    had been created
+ **/
+ESourceRegistry *
+e_reminder_watcher_get_registry (EReminderWatcher *watcher)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	return watcher->priv->registry;
+}
+
+/**
+ * e_reminder_watcher_ref_opened_client:
+ * @watcher: an #EReminderWatcher
+ * @source_uid: an #ESource UID of the calendar to return
+ *
+ * Returns: (transfer full) (nullable): a referenced #ECalClient for the @source_uid,
+ *    if any such is opened; %NULL otherwise.
+ *
+ * Since: 3.30
+ **/
+ECalClient *
+e_reminder_watcher_ref_opened_client (EReminderWatcher *watcher,
+				      const gchar *source_uid)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+	g_return_val_if_fail (source_uid != NULL, NULL);
+
+	return e_reminder_watcher_ref_client (watcher, source_uid, NULL);
+}
+
+/**
+ * e_reminder_watcher_set_default_zone:
+ * @watcher: an #EReminderWatcher
+ * @zone: (nullable): an #ICalTimezone
+ *
+ * Sets the default zone for the @watcher. This is used when calculating
+ * trigger times for floating component times. When the @zone is %NULL,
+ * then sets a UTC time zone.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_watcher_set_default_zone (EReminderWatcher *watcher,
+				     const ICalTimezone *zone)
+{
+	const gchar *new_location;
+	GSList *link;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	if (!zone)
+		zone = i_cal_timezone_get_utc_timezone ();
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	new_location = i_cal_timezone_get_location ((ICalTimezone *) zone);
+
+	if (new_location && g_strcmp0 (new_location,
+	    i_cal_timezone_get_location (watcher->priv->default_zone)) == 0) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	g_clear_object (&watcher->priv->default_zone);
+	watcher->priv->default_zone = e_cal_util_copy_timezone (zone);
+
+	for (link = watcher->priv->clients; link; link = g_slist_next (link)) {
+		ClientData *cd = link->data;
+
+		e_cal_client_set_default_timezone (cd->client, watcher->priv->default_zone);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	g_object_notify_by_pspec (G_OBJECT (watcher), properties[PROP_DEFAULT_ZONE]);
+}
+
+/**
+ * e_reminder_watcher_dup_default_zone:
+ * @watcher: an #EReminderWatcher
+ *
+ * Returns: (transfer full): A copy of the currently set default time zone.
+ *    Free it with g_object_unref(), when no longer needed.
+ *
+ * Since: 3.30
+ **/
+ICalTimezone *
+e_reminder_watcher_dup_default_zone (EReminderWatcher *watcher)
+{
+	ICalTimezone *zone;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	zone = e_cal_util_copy_timezone (watcher->priv->default_zone);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return zone;
+}
+
+/**
+ * e_reminder_watcher_get_timers_enabled:
+ * @watcher: an #EReminderWatcher
+ *
+ * Returns: whether timers are enabled for the @watcher. See
+ *    e_reminder_watcher_set_timers_enabled() for more information
+ *    what it means.
+ *
+ * Since: 3.30
+ **/
+gboolean
+e_reminder_watcher_get_timers_enabled (EReminderWatcher *watcher)
+{
+	gboolean enabled;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	enabled = watcher->priv->timers_enabled;
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return enabled;
+}
+
+/**
+ * e_reminder_watcher_set_timers_enabled:
+ * @watcher: an #EReminderWatcher
+ * @enabled: a value to set
+ *
+ * The @watcher can be used both for scheduling the timers for the reminders
+ * and respond to them through the "triggered" signal, or only to listen for
+ * changes on the past reminders. The default is to have timers enabled, thus
+ * to response to scheduled reminders. Disabling the timers also means there
+ * will be less resources needed by the @watcher.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_watcher_set_timers_enabled (EReminderWatcher *watcher,
+				       gboolean enabled)
+{
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (!enabled == !watcher->priv->timers_enabled) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	watcher->priv->timers_enabled = enabled;
+
+	if (watcher->priv->timers_enabled &&
+	    !watcher->priv->construct_idle_id) {
+		e_source_registry_watcher_reclaim (watcher->priv->registry_watcher);
+		e_reminder_watcher_maybe_schedule_next_trigger (watcher, 0);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	g_object_notify_by_pspec (G_OBJECT (watcher), properties[PROP_TIMERS_ENABLED]);
+}
+
+static gchar *
+e_reminder_watcher_get_alarm_summary (EReminderWatcher *watcher,
+				      const EReminderData *rd)
+{
+	ECalComponentText *summary_text, *alarm_text;
+	ECalComponentAlarm *alarm;
+	gchar *alarm_summary;
+	const gchar *summary_text_value, *alarm_text_value;
+
+	g_return_val_if_fail (watcher != NULL, NULL);
+	g_return_val_if_fail (rd != NULL, NULL);
+
+	alarm_text = NULL;
+
+	summary_text = e_cal_component_dup_summary_for_locale (rd->component, NULL);
+	if (summary_text) {
+		const gchar *value;
+
+		value = e_cal_component_text_get_value (summary_text);
+		if (!value || !*value) {
+			e_cal_component_text_free (summary_text);
+			summary_text = NULL;
+		}
+	}
+
+	alarm = e_cal_component_get_alarm (rd->component, e_cal_component_alarm_instance_get_uid (rd->instance));
+	if (alarm) {
+		ECalClient *client;
+
+		client = e_reminder_watcher_ref_opened_client (watcher, rd->source_uid);
+
+		if (client && e_client_check_capability (E_CLIENT (client), E_CAL_STATIC_CAPABILITY_ALARM_DESCRIPTION)) {
+			alarm_text = e_cal_component_alarm_get_description (alarm);
+			if (alarm_text) {
+				const gchar *value;
+
+				value = e_cal_component_text_get_value (alarm_text);
+				if (!value || !*value) {
+					e_cal_component_text_free (alarm_text);
+					alarm_text = NULL;
+				}
+			}
+		}
+
+		g_clear_object (&client);
+	}
+
+	summary_text_value = summary_text ? e_cal_component_text_get_value (summary_text) : NULL;
+	alarm_text_value = alarm_text ? e_cal_component_text_get_value (alarm_text) : NULL;
+
+	if (alarm_text_value && summary_text_value &&
+	    e_util_utf8_strcasecmp (alarm_text_value, summary_text_value) == 0) {
+		alarm_text_value = NULL;
+	}
+
+	if (summary_text_value && *summary_text_value &&
+	    alarm_text_value && *alarm_text_value)
+		alarm_summary = g_strconcat (summary_text_value, "\n", alarm_text_value, NULL);
+	else if (summary_text_value && *summary_text_value)
+		alarm_summary = g_strdup (summary_text_value);
+	else if (alarm_text_value && *alarm_text_value)
+		alarm_summary = g_strdup (alarm_text_value);
+	else
+		alarm_summary = NULL;
+
+	if (alarm)
+		e_cal_component_alarm_free (alarm);
+
+	e_cal_component_text_free (summary_text);
+
+	return alarm_summary;
+}
+
+/**
+ * e_reminder_watcher_describe_data:
+ * @watcher: an #EReminderWatcher
+ * @rd: an #EReminderData
+ * @flags: bit-or of #EReminderWatcherDescribeFlags
+ *
+ * Returns a new string with a text description of the @rd. The text format
+ * can be influenced with @flags.
+ *
+ * Free the returned string with g_free(), when no longer needed.
+ *
+ * Returns: (transfer full): a new string with a text description of the @rd.
+ *
+ * Since: 3.30
+ **/
+gchar *
+e_reminder_watcher_describe_data (EReminderWatcher *watcher,
+				  const EReminderData *rd,
+				  guint32 flags)
+{
+	ICalComponent *icalcomp;
+	gboolean use_markup;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+	g_return_val_if_fail (rd != NULL, NULL);
+
+	use_markup = (flags & E_REMINDER_WATCHER_DESCRIBE_FLAG_MARKUP) != 0;
+
+	icalcomp = e_cal_component_get_icalcomponent (rd->component);
+	if (icalcomp) {
+		gchar *summary;
+		const gchar *location;
+		gchar *timediff = NULL, *tmp;
+		gchar timestr[255];
+		GString *markup;
+
+		timestr[0] = 0;
+		markup = g_string_sized_new (256);
+		summary = e_reminder_watcher_get_alarm_summary (watcher, rd);
+		location = i_cal_component_get_location (icalcomp);
+
+		if (e_cal_component_alarm_instance_get_occur_start (rd->instance) > 0) {
+			gchar *timestrptr = timestr;
+			ICalTimezone *zone;
+			ICalTime *itt;
+			gboolean is_date = FALSE, is_floating = FALSE;
+
+			if (e_cal_component_alarm_instance_get_occur_end (rd->instance) > e_cal_component_alarm_instance_get_occur_start (rd->instance)) {
+				timediff = e_cal_util_seconds_to_string (
+					e_cal_component_alarm_instance_get_occur_end (rd->instance) -
+					e_cal_component_alarm_instance_get_occur_start (rd->instance));
+			}
+
+			zone = e_reminder_watcher_dup_default_zone (watcher);
+			if (zone && (!i_cal_timezone_get_location (zone) || g_strcmp0 (i_cal_timezone_get_location (zone), "UTC") == 0)) {
+				g_clear_object (&zone);
+			}
+
+			itt = i_cal_component_get_dtstart (icalcomp);
+			if (itt && i_cal_time_is_valid_time (itt) && !i_cal_time_is_null_time (itt)) {
+				is_date = i_cal_time_is_date (itt);
+				is_floating = !i_cal_time_get_timezone (itt);
+
+				if (is_floating) {
+					ICalProperty *prop;
+					ICalParameter *param;
+
+					prop = i_cal_component_get_first_property (icalcomp, I_CAL_DTSTART_PROPERTY);
+					param = prop ? i_cal_property_get_first_parameter (prop, I_CAL_TZID_PARAMETER) : NULL;
+
+					is_floating = !param;
+
+					g_clear_object (&param);
+					g_clear_object (&prop);
+				}
+			}
+			g_clear_object (&itt);
+
+			itt = i_cal_time_new_from_timet_with_zone (e_cal_component_alarm_instance_get_occur_start (rd->instance), is_date, is_floating  ? NULL : zone);
+
+			g_signal_emit (watcher, signals[FORMAT_TIME], 0, rd, itt, &timestrptr, 254, NULL);
+
+			if (!*timestr)
+				e_reminder_watcher_format_time_impl (watcher, rd, itt, &timestrptr, 254);
+
+			g_clear_object (&zone);
+			g_clear_object (&itt);
+		}
+
+		if (!summary || !*summary) {
+			g_free (summary);
+			summary = g_strdup (_( "No Summary"));
+		}
+
+		if (use_markup) {
+			tmp = g_markup_printf_escaped ("<b>%s</b>", summary);
+			g_string_append (markup, tmp);
+			g_free (tmp);
+		} else {
+			g_string_append (markup, summary);
+		}
+		g_string_append_c (markup, '\n');
+
+		if (*timestr) {
+			/* Translators: The first %s is replaced with the time string,
+			   the second %s with a duration, and the third %s with an event location,
+			   making it something like: "24.1.2018 10:30 (30 minutes) Meeting room A1" */
+			#define FMT_TIME_TIME_LOCATION C_("overdue", "%s (%s) %s")
+
+			/* Translators: The first %s is replaced with the time string,
+			   the second %s with a duration, making is something like:
+			   "24.1.2018 10:30 (30 minutes)" */
+			#define FMT_TIME_TIME C_("overdue", "%s (%s)")
+
+			/* Translators: The first %s is replaced with the time string,
+			   the second %s with an event location, making it something like:
+			   "24.1.2018 10:30 Meeting room A1" */
+			#define FMT_TIME_LOCATION C_("overdue", "%s %s")
+
+			if (timediff && *timediff) {
+				if (location && *location) {
+					if (use_markup)
+						tmp = g_markup_printf_escaped (FMT_TIME_TIME_LOCATION, timestr, timediff, location);
+					else
+						tmp = g_strdup_printf (FMT_TIME_TIME_LOCATION, timestr, timediff, location);
+				} else {
+					if (use_markup)
+						tmp = g_markup_printf_escaped (FMT_TIME_TIME, timestr, timediff);
+					else
+						tmp = g_strdup_printf (FMT_TIME_TIME, timestr, timediff);
+				}
+			} else if (location && *location) {
+				if (use_markup)
+					tmp = g_markup_printf_escaped (FMT_TIME_LOCATION, timestr, location);
+				else
+					tmp = g_strdup_printf (FMT_TIME_LOCATION, timestr, location);
+			} else {
+				if (use_markup)
+					tmp = g_markup_escape_text (timestr, -1);
+				else
+					tmp = g_strdup (timestr);
+			}
+
+			if (use_markup)
+				g_string_append (markup, "<small>");
+			g_string_append (markup, tmp);
+			if (use_markup)
+				g_string_append (markup, "</small>");
+
+			g_free (tmp);
+		} else if (location && *location) {
+			if (use_markup) {
+				tmp = g_markup_printf_escaped ("%s", location);
+
+				g_string_append (markup, "<small>");
+				g_string_append (markup, tmp);
+				g_string_append (markup, "</small>");
+
+				g_free (tmp);
+			} else {
+				g_string_append (markup, location);
+			}
+		}
+
+		g_free (timediff);
+		g_free (summary);
+		return g_string_free (markup, FALSE);
+	}
+
+	return NULL;
+}
+
+typedef struct _ForeachTriggerData {
+	gint64 current_time;
+	GSList *triggered; /* EReminderData * */
+	GHashTable *insert_back; /* gchar * ~> GSList * { EReminderData * } */
+} ForeachTriggerData;
+
+static gboolean
+foreach_trigger_cb (gpointer key,
+		    gpointer value,
+		    gpointer user_data)
+{
+	gchar *source_uid = key;
+	GSList *reminders = value, *link;
+	ForeachTriggerData *ftd = user_data;
+	EReminderData *rd;
+
+	if (!source_uid || !reminders || !ftd)
+		return FALSE;
+
+	for (link = reminders; link; link = g_slist_next (link)) {
+		rd = link->data;
+
+		if (!rd || e_cal_component_alarm_instance_get_time (rd->instance) > ftd->current_time)
+			break;
+	}
+
+	if (link == reminders)
+		return FALSE;
+
+	if (link) {
+		GSList *prev;
+
+		for (prev = reminders; prev; prev = g_slist_next (prev)) {
+			if (prev->next == link) {
+				prev->next = NULL;
+				break;
+			}
+		}
+	}
+
+	ftd->triggered = g_slist_concat (ftd->triggered, reminders);
+
+	if (link) {
+		g_hash_table_insert (ftd->insert_back, source_uid, link);
+	} else {
+		g_free (source_uid);
+	}
+
+	return TRUE;
+}
+
+/**
+ * e_reminder_watcher_timer_elapsed:
+ * @watcher: an #EReminderWatcher
+ *
+ * Notifies the #watcher that the timer previously scheduled
+ * with EReminderWatcherClass::schedule_timer elapsed. This can
+ * be used by the descendants which override the default implementation
+ * of EReminderWatcherClass::schedule_timer. There is always scheduled
+ * only one timer and once it's elapsed it should be also removed,
+ * the same when the EReminderWatcherClass::schedule_timer is called
+ * and the previously scheduled timer was not elapsed yet, the previous
+ * should be removed first, aka every call to EReminderWatcherClass::schedule_timer
+ * replaces any previously scheduled timer.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_watcher_timer_elapsed (EReminderWatcher *watcher)
+{
+	ForeachTriggerData ftd;
+	GSList *snoozed, *link, *triggered_snoozed = NULL;
+	gboolean changed = FALSE;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	ftd.current_time = g_get_real_time () / G_USEC_PER_SEC;
+
+	e_reminder_watcher_debug_print ("Timer elapsed called at %s\n", e_reminder_watcher_timet_as_string (ftd.current_time));
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (!watcher->priv->scheduled) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		return;
+	}
+
+	ftd.triggered = NULL;
+	ftd.insert_back = g_hash_table_new (g_str_hash, g_str_equal);
+
+	g_hash_table_foreach_steal (watcher->priv->scheduled, foreach_trigger_cb, &ftd);
+
+	if (g_hash_table_size (ftd.insert_back) > 0) {
+		GHashTableIter iter;
+		gpointer key, value;
+
+		g_hash_table_iter_init (&iter, ftd.insert_back);
+		while (g_hash_table_iter_next (&iter, &key, &value)) {
+			g_warn_if_fail (key != NULL);
+			g_warn_if_fail (value != NULL);
+
+			if (key && value)
+				g_hash_table_insert (watcher->priv->scheduled, key, value);
+		}
+	}
+
+	g_hash_table_destroy (ftd.insert_back);
+
+	snoozed = e_reminder_watcher_dup_snoozed (watcher);
+
+	for (link = snoozed; link; link = g_slist_next (link)) {
+		EReminderData *rd = link->data;
+
+		if (rd && e_cal_component_alarm_instance_get_time (rd->instance) <= ftd.current_time) {
+			link->data = NULL;
+
+			changed = e_reminder_watcher_remove_from_snoozed (watcher, rd, FALSE) || changed;
+
+			triggered_snoozed = g_slist_prepend (triggered_snoozed, rd);
+		}
+	}
+
+	g_slist_free_full (snoozed, e_reminder_data_free);
+
+	if (ftd.triggered || triggered_snoozed) {
+		GHashTable *last_notifies;
+		GHashTableIter iter;
+		GSList *past;
+		gpointer key, value;
+
+		last_notifies = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
+
+		past = e_reminder_watcher_dup_past (watcher);
+
+		for (link = ftd.triggered; link; link = g_slist_next (link)) {
+			EReminderData *rd = e_reminder_data_copy (link->data);
+
+			if (rd) {
+				if (e_reminder_watcher_add (&past, rd, TRUE, FALSE)) {
+					time_t *ptrigger;
+
+					ptrigger = g_hash_table_lookup (last_notifies, rd->source_uid);
+					if (ptrigger) {
+						if (*ptrigger < e_cal_component_alarm_instance_get_time (rd->instance))
+							*ptrigger = e_cal_component_alarm_instance_get_time (rd->instance);
+					} else {
+						ptrigger = g_new0 (time_t, 1);
+						*ptrigger = e_cal_component_alarm_instance_get_time (rd->instance);
+						g_hash_table_insert (last_notifies, rd->source_uid, ptrigger);
+					}
+				}
+			}
+		}
+
+		for (link = triggered_snoozed; link; link = g_slist_next (link)) {
+			EReminderData *rd = e_reminder_data_copy (link->data);
+
+			if (rd) {
+				if (e_reminder_watcher_add (&past, rd, TRUE, FALSE)) {
+					time_t *ptrigger;
+
+					ptrigger = g_hash_table_lookup (last_notifies, rd->source_uid);
+					if (ptrigger) {
+						if (*ptrigger < e_cal_component_alarm_instance_get_time (rd->instance))
+							*ptrigger = e_cal_component_alarm_instance_get_time (rd->instance);
+					} else {
+						ptrigger = g_new0 (time_t, 1);
+						*ptrigger = e_cal_component_alarm_instance_get_time (rd->instance);
+						g_hash_table_insert (last_notifies, rd->source_uid, ptrigger);
+					}
+				}
+			}
+		}
+
+		e_reminder_watcher_save_past (watcher, past);
+
+		g_hash_table_iter_init (&iter, last_notifies);
+		while (g_hash_table_iter_next (&iter, &key, &value)) {
+			const gchar *source_uid = key;
+			const time_t *ptrigger = value;
+
+			if (source_uid && ptrigger) {
+				ECalClient *client = e_reminder_watcher_ref_client (watcher, source_uid, NULL);
+
+				if (client) {
+					client_set_last_notification_time (client, *ptrigger);
+					g_object_unref (client);
+				}
+			}
+		}
+
+		/* Destroy before the 'past', because keys are from its data */
+		g_hash_table_destroy (last_notifies);
+		g_slist_free_full (past, e_reminder_data_free);
+	}
+
+	if (changed)
+		e_reminder_watcher_save_snoozed (watcher);
+
+	if (ftd.triggered || triggered_snoozed) {
+		if (triggered_snoozed)
+			e_reminder_watcher_emit_signal_idle_multiple (watcher, signals[TRIGGERED], triggered_snoozed, TRUE);
+
+		if (ftd.triggered)
+			e_reminder_watcher_emit_signal_idle_multiple (watcher, signals[TRIGGERED], ftd.triggered, FALSE);
+
+		e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+
+		g_slist_free_full (triggered_snoozed, e_reminder_data_free);
+		g_slist_free_full (ftd.triggered, e_reminder_data_free);
+	}
+
+	/* To make sure the timer is re-scheduled */
+	watcher->priv->next_trigger = 0;
+
+	e_reminder_watcher_maybe_schedule_next_trigger (watcher, 0);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+}
+
+/**
+ * e_reminder_watcher_dup_past:
+ * @watcher: an #EReminderWatcher
+ *
+ * Gathers a #GSList of all past reminders which had not been removed after
+ * EReminderWatcher::triggered signal. Such reminders are remembered
+ * across sessions, until they are dismissed by e_reminder_watcher_dismiss()
+ * or its synchronous variant. These reminders can be also snoozed
+ * with e_reminder_watcher_snooze(), which removes them from the past
+ * reminders into the list of snoozed reminders, see e_reminder_watcher_dup_snoozed().
+ *
+ * Free the returned #GSList with
+ * g_slist_free_full (reminders, e_reminder_data_free);
+ * when no longer needed.
+ *
+ * Returns: (transfer full) (element-type EReminderData) (nullable): a newly
+ *    allocated #GSList of the past reminders, or %NULL, when there are none
+ *
+ * Since: 3.30
+ **/
+GSList *
+e_reminder_watcher_dup_past (EReminderWatcher *watcher)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	return e_reminder_watcher_reminders_from_key (watcher, "reminders-past");
+}
+
+/**
+ * e_reminder_watcher_dup_snoozed:
+ * @watcher: an #EReminderWatcher
+ *
+ * Gathers a #GSList of currently snoozed reminder with e_reminder_watcher_snooze().
+ * The snoozed reminders are remembered across sessions and they are re-triggered
+ * when their snooze time elapses, which can move them back to the list of past reminders.
+ *
+ * Free the returned #GSList with
+ * g_slist_free_full (reminders, e_reminder_data_free);
+ * when no longer needed.
+ *
+ * Returns: (transfer full) (element-type EReminderData) (nullable): a newly
+ *    allocated #GSList of the snoozed reminders, or %NULL, when there are none
+ *
+ * Since: 3.30
+ **/
+GSList *
+e_reminder_watcher_dup_snoozed (EReminderWatcher *watcher)
+{
+	GSList *list;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	list = g_slist_copy_deep (watcher->priv->snoozed, (GCopyFunc) e_reminder_data_copy, NULL);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	return list;
+}
+
+/**
+ * e_reminder_watcher_snooze:
+ * @watcher: an #EReminderWatcher
+ * @rd: an #EReminderData identifying the reminder
+ * @until: time_t as gint64, when the @rd should be retriggered
+ *
+ * Snoozes @rd until @until, which is an absolute time when the @rd
+ * should be retriggered. This moves the @rd from the list of past
+ * reminders into the list of snoozed reminders and invokes the "changed"
+ * signal.
+ *
+ * The @until can be a special value 0, to set the time as the event start,
+ * if it's in the future. The function does nothing when the event time
+ * is in the past.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_watcher_snooze (EReminderWatcher *watcher,
+			   const EReminderData *rd,
+			   gint64 until)
+{
+	EReminderData *rd_copy;
+	gboolean changed;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (rd != NULL);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	if (!until) {
+		until = e_cal_component_alarm_instance_get_occur_start (rd->instance);
+
+		/* Only if it's in the future. */
+		if (until <= g_get_real_time () / G_USEC_PER_SEC) {
+			g_rec_mutex_unlock (&watcher->priv->lock);
+			return;
+		}
+	}
+
+	rd_copy = e_reminder_data_copy (rd);
+	if (!rd_copy) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		g_warn_if_reached ();
+		return;
+	}
+
+	changed = e_reminder_watcher_remove_from_past (watcher, rd_copy);
+	changed = e_reminder_watcher_remove_from_snoozed (watcher, rd_copy, FALSE) || changed;
+
+	e_cal_component_alarm_instance_set_time (rd_copy->instance, (time_t) until);
+
+	changed = e_reminder_watcher_add (&watcher->priv->snoozed, rd_copy, FALSE, TRUE) || changed;
+
+	e_reminder_watcher_debug_print ("Added reminder to snoozed for '%s' from %s at %s\n",
+		i_cal_component_get_summary (e_cal_component_get_icalcomponent (rd_copy->component)),
+		rd_copy->source_uid,
+		e_reminder_watcher_timet_as_string (e_cal_component_alarm_instance_get_time (rd_copy->instance)));
+
+	e_reminder_watcher_save_snoozed (watcher);
+	e_reminder_watcher_maybe_schedule_next_trigger (watcher, until);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	if (changed)
+		e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+}
+
+static void
+e_reminder_watcher_dismiss_thread (GTask *task,
+				   gpointer source_object,
+				   gpointer task_data,
+				   GCancellable *cancellable)
+{
+	GError *local_error = NULL;
+
+	if (!e_reminder_watcher_dismiss_sync (E_REMINDER_WATCHER (source_object), task_data, cancellable, &local_error)) {
+		if (local_error)
+			g_task_return_error (task, local_error);
+		else
+			g_task_return_boolean (task, FALSE);
+	} else {
+		g_task_return_boolean (task, TRUE);
+	}
+}
+
+/**
+ * e_reminder_watcher_dismiss:
+ * @watcher: an #EReminderWatcher
+ * @rd: an #EReminderData to dismiss
+ * @cancellable: optional #GCancellable object, or %NULL
+ * @callback: a #GAsyncReadyCallback to call when the request is satisfied
+ * @user_data: data to pass to the callback function
+ *
+ * Asynchronously dismiss single reminder in the past or snoozed reminders.
+ *
+ * When the operation is finished, @callback will be called. You can
+ * then call e_reminder_watcher_dismiss_finish() to get the result of
+ * the operation.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_watcher_dismiss (EReminderWatcher *watcher,
+			    const EReminderData *rd,
+			    GCancellable *cancellable,
+			    GAsyncReadyCallback callback,
+			    gpointer user_data)
+{
+	GTask *task;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+	g_return_if_fail (rd != NULL);
+
+	task = g_task_new (watcher, cancellable, callback, user_data);
+	g_task_set_source_tag (task, e_reminder_watcher_dismiss);
+	g_task_set_task_data (task, e_reminder_data_copy (rd), e_reminder_data_free);
+
+	g_task_run_in_thread (task, e_reminder_watcher_dismiss_thread);
+
+	g_object_unref (task);
+}
+
+/**
+ * e_reminder_watcher_dismiss_finish:
+ * @watcher: an #EReminderWatcher
+ * @result: a #GAsyncResult
+ * @error: return location for a #GError, or %NULL
+ *
+ * Finishes the operation started with e_reminder_watcher_dismiss().
+ *
+ * Returns: whether succeeded
+ *
+ * Since: 3.30
+ **/
+gboolean
+e_reminder_watcher_dismiss_finish (EReminderWatcher *watcher,
+				   GAsyncResult *result,
+				   GError **error)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+	g_return_val_if_fail (g_task_is_valid (result, watcher), FALSE);
+
+	g_return_val_if_fail (
+		g_async_result_is_tagged (
+		result, e_reminder_watcher_dismiss), FALSE);
+
+	return g_task_propagate_boolean (G_TASK (result), error);
+}
+
+static gboolean
+e_reminder_watcher_dismiss_one_sync (ECalClient *client,
+				     const EReminderData *rd,
+				     GCancellable *cancellable,
+				     GError **error)
+{
+	ECalComponentId *id;
+	gboolean success = TRUE;
+
+	g_return_val_if_fail (E_IS_CAL_CLIENT (client), FALSE);
+	g_return_val_if_fail (rd != NULL, FALSE);
+
+	id = e_cal_component_get_id (rd->component);
+	if (id) {
+		GError *local_error = NULL;
+
+		success = e_cal_client_discard_alarm_sync (client,
+			e_cal_component_id_get_uid (id),
+			e_cal_component_id_get_rid (id) ? e_cal_component_id_get_rid (id) : e_cal_component_alarm_instance_get_rid (rd->instance),
+			e_cal_component_alarm_instance_get_uid (rd->instance),
+			/* this is not a reason to notify meeting attendees */
+			E_CAL_OPERATION_FLAG_DISABLE_ITIP_MESSAGE,
+			cancellable, &local_error);
+
+		e_reminder_watcher_debug_print ("Discard alarm for '%s' from %s (uid:%s rid:%s auid:%s) %s%s%s%s\n",
+			i_cal_component_get_summary (e_cal_component_get_icalcomponent (rd->component)),
+			rd->source_uid, e_cal_component_id_get_uid (id),
+			e_cal_component_id_get_rid (id) ? e_cal_component_id_get_rid (id) : (
+			e_cal_component_alarm_instance_get_rid (rd->instance) ? e_cal_component_alarm_instance_get_rid (rd->instance) : "null"),
+			e_cal_component_alarm_instance_get_uid (rd->instance),
+			success ? "succeeded" : "failed",
+			(!success || local_error) ? " (" : "",
+			local_error ? local_error->message : success ? "" : "Unknown error",
+			(!success || local_error) ? ")" : "");
+
+		/* Ignore all errors here, users cannot usually do anything with it anyway */
+		success = TRUE;
+		g_clear_error (&local_error);
+
+		e_cal_component_id_free (id);
+	}
+
+	return success;
+}
+
+/**
+ * e_reminder_watcher_dismiss_sync:
+ * @watcher: an #EReminderWatcher
+ * @rd: an #EReminderData to dismiss
+ * @cancellable: optional #GCancellable object, or %NULL
+ * @error: return location for a #GError, or %NULL
+ *
+ * Synchronously dismiss single reminder in the past or snoozed reminders.
+ *
+ * Returns: whether succeeded
+ *
+ * Since: 3.30
+ **/
+gboolean
+e_reminder_watcher_dismiss_sync (EReminderWatcher *watcher,
+				 const EReminderData *rd,
+				 GCancellable *cancellable,
+				 GError **error)
+{
+	EReminderData *rd_copy;
+	ECalClient *client = NULL;
+	gboolean changed, success = TRUE;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+	g_return_val_if_fail (rd != NULL, FALSE);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	rd_copy = e_reminder_data_copy (rd);
+	if (!rd_copy) {
+		g_rec_mutex_unlock (&watcher->priv->lock);
+		g_warn_if_reached ();
+		return FALSE;
+	}
+
+	changed = e_reminder_watcher_remove_from_past (watcher, rd_copy);
+	changed = e_reminder_watcher_remove_from_snoozed (watcher, rd_copy, TRUE) || changed;
+
+	if (changed)
+		client = e_reminder_watcher_ref_client (watcher, rd_copy->source_uid, cancellable ? cancellable : watcher->priv->cancellable);
+
+	e_reminder_watcher_maybe_schedule_next_trigger (watcher, 0);
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	if (changed)
+		e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+
+	if (client) {
+		success = e_reminder_watcher_dismiss_one_sync (client, rd, cancellable, error);
+		g_object_unref (client);
+	}
+
+	e_reminder_data_free (rd_copy);
+
+	return success;
+}
+
+static void
+e_reminder_watcher_dismiss_all_thread (GTask *task,
+				       gpointer source_object,
+				       gpointer task_data,
+				       GCancellable *cancellable)
+{
+	GError *local_error = NULL;
+
+	if (!e_reminder_watcher_dismiss_all_sync (E_REMINDER_WATCHER (source_object), cancellable, &local_error)) {
+		if (local_error)
+			g_task_return_error (task, local_error);
+		else
+			g_task_return_boolean (task, FALSE);
+	} else {
+		g_task_return_boolean (task, TRUE);
+	}
+}
+
+/**
+ * e_reminder_watcher_dismiss_all:
+ * @watcher: an #EReminderWatcher
+ * @cancellable: optional #GCancellable object, or %NULL
+ * @callback: a #GAsyncReadyCallback to call when the request is satisfied
+ * @user_data: data to pass to the callback function
+ *
+ * Asynchronously dismiss all past reminders.
+ *
+ * When the operation is finished, @callback will be called. You can
+ * then call e_reminder_watcher_dismiss_all_finish() to get the result
+ * of the operation.
+ *
+ * Since: 3.30
+ **/
+void
+e_reminder_watcher_dismiss_all (EReminderWatcher *watcher,
+				GCancellable *cancellable,
+				GAsyncReadyCallback callback,
+				gpointer user_data)
+{
+	GTask *task;
+
+	g_return_if_fail (E_IS_REMINDER_WATCHER (watcher));
+
+	task = g_task_new (watcher, cancellable, callback, user_data);
+	g_task_set_source_tag (task, e_reminder_watcher_dismiss_all);
+
+	g_task_run_in_thread (task, e_reminder_watcher_dismiss_all_thread);
+
+	g_object_unref (task);
+}
+
+/**
+ * e_reminder_watcher_dismiss_all_finish:
+ * @watcher: an #EReminderWatcher
+ * @result: a #GAsyncResult
+ * @error: return location for a #GError, or %NULL
+ *
+ * Finishes the operation started with e_reminder_watcher_dismiss_all().
+ *
+ * Returns: whether succeeded
+ *
+ * Since: 3.30
+ **/
+gboolean
+e_reminder_watcher_dismiss_all_finish (EReminderWatcher *watcher,
+				       GAsyncResult *result,
+				       GError **error)
+{
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+	g_return_val_if_fail (g_task_is_valid (result, watcher), FALSE);
+
+	g_return_val_if_fail (
+		g_async_result_is_tagged (
+		result, e_reminder_watcher_dismiss_all), FALSE);
+
+	return g_task_propagate_boolean (G_TASK (result), error);
+}
+
+/**
+ * e_reminder_watcher_dismiss_all_sync:
+ * @watcher: an #EReminderWatcher
+ * @cancellable: optional #GCancellable object, or %NULL
+ * @error: return location for a #GError, or %NULL
+ *
+ * Synchronously dismiss all past reminders. The operation stops after
+ * the first error is encountered, which can be before all the past
+ * reminders are dismissed.
+ *
+ * Returns: whether succeeded.
+ *
+ * Since: 3.30
+ **/
+gboolean
+e_reminder_watcher_dismiss_all_sync (EReminderWatcher *watcher,
+				     GCancellable *cancellable,
+				     GError **error)
+{
+	GHashTable *clients; /* gchar *source_uid ~> ECalClient * */
+	GSList *reminders, *link;
+	gboolean success = TRUE;
+
+	g_return_val_if_fail (E_IS_REMINDER_WATCHER (watcher), FALSE);
+
+	g_rec_mutex_lock (&watcher->priv->lock);
+
+	reminders = e_reminder_watcher_dup_past (watcher);
+
+	/* This will hide the window and keep running the task in the background.
+	   It can also avoid lock-wait in the main thread under e_reminder_watcher_objects_modified_cb(),
+	   when a change notification had been received during the 'reminders' processing. */
+	if (reminders) {
+		e_reminder_watcher_save_past (watcher, NULL);
+		e_reminder_watcher_emit_signal_idle (watcher, signals[CHANGED], NULL);
+	}
+
+	g_rec_mutex_unlock (&watcher->priv->lock);
+
+	clients = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+
+	for (link = reminders; link; link = g_slist_next (link)) {
+		EReminderData *rd = link->data;
+		ECalClient *client;
+
+		client = g_hash_table_lookup (clients, rd->source_uid);
+		if (!client) {
+			client = e_reminder_watcher_ref_client (watcher, rd->source_uid, cancellable ? cancellable : watcher->priv->cancellable);
+			if (client) {
+				g_hash_table_insert (clients, g_strdup (rd->source_uid), client);
+			}
+		}
+
+		if (client) {
+			success = e_reminder_watcher_dismiss_one_sync (client, rd, cancellable, error);
+
+			if (!success)
+				break;
+		}
+	}
+
+	g_slist_free_full (reminders, e_reminder_data_free);
+	g_hash_table_destroy (clients);
+
+	return success;
+}

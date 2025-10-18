@@ -1,0 +1,387 @@
+{
+    "app-id": "net.figuiere.Niepce.Devel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk" : "org.gnome.Sdk",
+    "sdk-extensions" : [
+        "org.freedesktop.Sdk.Extension.llvm20",
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+    "command" : "niepce",
+    "desktop-file-name-prefix": "(Devel) ",
+    "finish-args" : [
+        "--allow=devel",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--filesystem=host",
+        "--share=network",
+        "--talk-name=org.gtk.vfs.*",
+        "--filesystem=xdg-run/gvfsd",
+        "--device=all",
+        "--env=RUST_BACKTRACE=1"
+    ],
+    "build-options" : {
+        "build-args": [
+            "--share=network"
+        ],
+        "test-args": [
+            "--share=network"
+        ],
+        "append-path": "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm20/bin",
+        "prepend-ld-library-path": "/usr/lib/sdk/llvm20/lib"
+    },
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/devhelp",
+        "/share/doc",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        {
+            "name": "libgphoto2",
+            "cleanup": [
+                "/bin",
+                "/share/man"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/gphoto/libgphoto2/releases/download/v2.5.32/libgphoto2-2.5.32.tar.xz",
+                    "sha256": "495a347be21b8f970607a81e739aa91513a8479cbd73b79454a339c73e2b860e"
+                }
+            ]
+        },
+        {
+            "name": "libraw",
+            "config-opts": [
+                "--disable-static"
+            ],
+            "cleanup": [
+                "/bin",
+                "/share/doc"
+            ],
+            "sources": [
+                {
+                    "type" : "archive",
+                    "url" : "http://www.libraw.org/data/LibRaw-0.21.4.tar.gz",
+                    "sha256" : "6be43f19397e43214ff56aab056bf3ff4925ca14012ce5a1538a172406a09e63"
+                }
+            ]
+        },
+        {
+            "name": "exiv2",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DEXIV2_BUILD_DOC=OFF",
+                "-DEXIV2_BUILD_SAMPLES=OFF",
+                "-DEXIV2_BUILD_EXIV2_COMMAND=OFF",
+                "-DEXIV2_ENABLE_BMFF=ON",
+                "-DEXIV2_ENABLE_INIH=OFF"
+            ],
+            "cleanup": [
+                "/bin",
+                "/lib/cmake",
+                "/share/man"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/Exiv2/exiv2/archive/refs/tags/v0.28.5.tar.gz",
+                    "sha256": "e1671f744e379a87ba0c984617406fdf8c0ad0c594e5122f525b2fb7c28d394d"
+                }
+            ]
+        },
+        {
+            "name": "gexiv2",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dintrospection=false",
+                "-Dpython3=false",
+                "-Dtools=false",
+                "-Dvapi=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/gexiv2/0.14/gexiv2-0.14.6.tar.xz",
+                    "sha256": "606c28aaae7b1f3ef5c8eabe5e7dffd7c5a1c866d25b7671fb847fe287a72b8b"
+                }
+            ]
+        },
+        {
+            "name" : "babl",
+            "buildsystem": "meson",
+            "cleanup": [
+                "/bin"
+            ],
+            "config-opts": [
+                "-Dwith-docs=false",
+                "-Denable-vapi=false",
+                "-Denable-gir=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "archive",
+                    "url" : "https://download.gimp.org/pub/babl/0.1/babl-0.1.114.tar.xz",
+                    "sha256" : "bcbb7786c1e447703db3bc7fa34d62d0d2d117b22f04d8834c7b2d5ded456487"
+                }
+            ]
+        },
+        "heif.json",
+        {
+            "name": "lensfun",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+            ],
+            "build-options": {
+                "arch": {
+                    "x86_64": {
+                        "config-opts": [
+                            "-DBUILD_FOR_SSE=1",
+                            "-DBUILD_FOR_SSE2=1"
+                        ]
+                    }
+                }
+            },
+            "cleanup": [
+                "/lib/python3.*",
+                "/bin"
+            ],
+            "post-install": [
+                "python3 lensfun_convert_db.py $PWD lensfun-git/data/db",
+                "rm -rf /app/share/lensfun/version_1/*",
+                "tar xvf db/version_1.tar -C /app/share/lensfun/version_1"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/lensfun/lensfun/archive/refs/tags/v0.3.3.tar.gz",
+                    "sha256": "57ba5a0377f24948972339e18be946af12eda22b7c707eb0ddd26586370f6765"
+                },
+                {
+                    "type": "file",
+                    "path": "lensfun_convert_db.py"
+                },
+                {
+                    "type": "git",
+                    "dest": "lensfun-git",
+                    "url": "https://github.com/lensfun/lensfun.git",
+                    "commit": "fcbfbf38e5c297fc5595705c2e61ff5b3eaeb9d9"
+                }
+            ]
+        },
+        {
+            "name": "gegl",
+            "buildsystem": "meson",
+            "cleanup": [
+                "/bin"
+            ],
+            "config-opts": [
+                "-Dgtk-doc=false",
+                "-Dvapigen=disabled",
+                "-Dlibav=disabled",
+                "-Dintrospection=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gimp.org/pub/gegl/0.4/gegl-0.4.62.tar.xz",
+                    "sha256": "5887576371ebf1d9e90797d10e4b9a7f1658228d4827583e79e1db3d94505c6c"
+                }
+            ]
+        },
+        {
+            "name": "mm-common",
+            "cleanup": [
+                "*"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/mm-common/0.9/mm-common-0.9.12.tar.xz",
+                    "sha256": "ceffdcce1e5b52742884c233ec604bf6fded12eea9da077ce7a62c02c87e7c0b"
+                }
+            ]
+        },
+        {
+            "name": "sigc++",
+            "cleanup": [
+                "/lib/sigc++-*"
+            ],
+            "config-opts": [
+                "--disable-documentation"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/libsigc++/3.2/libsigc++-3.2.0.tar.xz",
+                    "sha256": "8cdcb986e3f0a7c5b4474aa3c833d676e62469509f4899110ddf118f04082651"
+                }
+            ]
+        },
+        {
+            "name": "glibmm",
+            "buildsystem": "meson",
+            "cleanup": [
+                "/lib/giomm-*",
+                "/lib/glibmm-*"
+            ],
+            "config-opts": [
+                "-Dbuild-deprecated-api=false",
+                "-Dbuild-examples=false",
+                "-Dbuild-documentation=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/glibmm/2.68/glibmm-2.68.2.tar.xz",
+                    "sha256": "91e0a8618f7b82db4aaf2648932ea2bcfe626ad030068c18fa2d106fd838d8ad"
+                }
+            ]
+        },
+        {
+            "name": "cairomm",
+            "cleanup": [
+                "/lib/cairomm-1.16"
+            ],
+            "config-opts": [
+                "--disable-documentation"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "http://cairographics.org/releases/cairomm-1.16.1.tar.xz",
+                    "sha256": "6f6060d8e98dd4b8acfee2295fddbdd38cf487c07c26aad8d1a83bb9bff4a2c6"
+                }
+            ]
+        },
+        {
+            "name": "pangomm",
+            "buildsystem": "meson",
+            "cleanup": [
+                "/lib/pangomm-*"
+            ],
+            "config-opts": [
+                "-Dbuild-deprecated-api=false",
+                "-Dbuild-documentation=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/pangomm/2.50/pangomm-2.50.0.tar.xz",
+                    "sha256": "a27aa77e017b9afce9e751d85bd1cf890abbb3a58bf59d0fac917eef82db3b5b"
+                }
+            ]
+        },
+        {
+            "name": "atkmm",
+            "buildsystem": "meson",
+            "cleanup": [
+                "/lib/atkmm-2.36"
+            ],
+            "config-opts": [
+                "-Dbuild-deprecated-api=false",
+                "-Dbuild-documentation=false"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://download.gnome.org/sources/atkmm/2.36/atkmm-2.36.1.tar.xz",
+                    "sha256": "e11324bfed1b6e330a02db25cecc145dca03fb0dff47f0710c85e317687da458"
+                }
+            ]
+        },
+        {
+            "name": "libshumate",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dgtk_doc=false",
+                "-Dvapi=false",
+                "-Dgir=false"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libshumate.git",
+                    "tag": "1.0.5",
+                    "commit": "05bf8b37a274cb72e61b4d59bb8e804b88d8b046"
+                }
+            ]
+        },
+        {
+            "name": "exempi",
+            "config-opts": [
+                "--enable-unittest=no"
+            ],
+            "cleanup": [
+                "/bin",
+                "/share/man"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://libopenraw.freedesktop.org/download/exempi-2.6.6.tar.xz",
+                    "sha256": "900fb9957be2095c78e5111b99c49378adac58161a358f52f93c55126f34eb8f"
+                }
+            ]
+        },
+        {
+            "name": "libiptcdata",
+            "config-opts": [
+                "--disable-static",
+                "--disable-gtk-doc",
+                "--enable-maintainer-mode"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/ianw/libiptcdata/archive/release_1_0_5.tar.gz",
+                    "sha256": "78a5c49b646cb610c84bc4dfc730caad9a06e9b4e295600908782f4abb25316e"
+                },
+                {
+                    "type": "shell",
+                    "commands": [
+                        "cp -p /usr/share/automake-*/config.{sub,guess} ."
+                    ]
+                }
+            ]
+        },
+        "fftw3f.json",
+        {
+            "name": "blueprint-compiler",
+            "buildsystem": "meson",
+            "cleanup": ["*"],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/jwestman/blueprint-compiler",
+                    "tag": "v0.16.0"
+                }
+            ]
+        },
+        {
+            "name": "niepce",
+	    "buildsystem": "meson",
+            "build-options": {
+                "env": {
+                    "CARGO_HOME": "/run/build/niepce/cargo"
+                }
+            },
+            "config-opts": [
+                "-Dprofile=development"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": ".."
+                }
+            ]
+        }
+    ]
+}

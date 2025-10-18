@@ -1,0 +1,365 @@
+/* Copyright (C) 2010 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/asyncresult.h>
+#include <giomm/dbusintrospection.h>
+#include <giomm/dbusinterface.h>
+#include <giomm/initable.h>
+#include <giomm/asyncinitable.h>
+#include <giomm/dbusconnection.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+namespace Gio
+{
+
+namespace DBus
+{
+//The GMMPROC_EXTRA_NAMESPACE() macro is a hint to generate_wrap_init.pl to put it in the DBus sub-namespace
+_GMMPROC_EXTRA_NAMESPACE(DBus)
+
+_WRAP_ENUM(ProxyFlags, GDBusProxyFlags, gtype_func g_dbus_proxy_flags_get_type, decl_prefix GIOMM_API)
+
+/** A client-side proxy.
+ * This is a base class used for proxies to access a D-Bus interface on
+ * a remote object. It can be constructed for both well-known and
+ * unique names.
+ *
+ * By default, Proxy will cache all properties (and listen to changes) of
+ * the remote object, and proxy all signals that gets emitted. This behaviour
+ * can be changed by passing suitable ProxyFlags when the proxy is
+ * created. If the proxy is for a well-known name, the property cache is
+ * flushed when the name owner vanishes and reloaded when a name owner
+ * appears.
+ *
+ * If a Proxy is used for a well-known name, the owner of the name is
+ * tracked and can be read from property_g_name_owner().
+ *
+ * The generic signal_properties_changed() and signal_signal() signals are
+ * not very convenient to work with. Therefore, the recommended way of working
+ * with proxies is to subclass Proxy, and have more natural properties and
+ * signals in your derived class.
+ *
+ * This documentation was adapted from the C API documentation.  The C API docs
+ * has more information and an example.
+ *
+ * @newin{2,28}
+ * @ingroup DBus
+ */
+class GIOMM_API Proxy
+: public Glib::Object,
+  public Initable,
+  public AsyncInitable,
+  public Interface
+{
+  _CLASS_GOBJECT(Proxy, GDBusProxy, G_DBUS_PROXY, Glib::Object, GObject, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(Initable)
+  _IMPLEMENTS_INTERFACE(AsyncInitable)
+  _IMPLEMENTS_INTERFACE(DBus::Interface)
+
+protected:
+
+  Proxy(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  Proxy(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+public:
+
+  _WRAP_METHOD_DOCS_ONLY(g_dbus_proxy_new)
+  static void create(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  /// Non-cancellable version of create().
+  static void create(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  _WRAP_METHOD_DOCS_ONLY(g_dbus_proxy_new_finish)
+  /// @throw Glib::Error.
+  _WRAP_METHOD(static Glib::RefPtr<Gio::DBus::Proxy> create_finish(const Glib::RefPtr<AsyncResult>& res), g_dbus_proxy_new_finish, errthrow)
+
+  _WRAP_METHOD_DOCS_ONLY(g_dbus_proxy_new_sync)
+  static Glib::RefPtr<Proxy>
+  create_sync(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  /// Non-cancellable version of create_sync().
+  static Glib::RefPtr<Proxy>
+  create_sync(const Glib::RefPtr<Connection>& connection,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  _WRAP_METHOD_DOCS_ONLY(g_dbus_proxy_new_for_bus)
+  static void create_for_bus(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  /// Non-cancellable version of create_for_bus().
+  static void create_for_bus(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const SlotAsyncReady& slot,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  _WRAP_METHOD_DOCS_ONLY(g_dbus_proxy_new_for_bus_finish)
+  /// @throw Glib::Error.
+  _WRAP_METHOD(static Glib::RefPtr<Gio::DBus::Proxy> create_for_bus_finish(const Glib::RefPtr<AsyncResult>& res), g_dbus_proxy_new_for_bus_finish, errthrow)
+
+  _WRAP_METHOD_DOCS_ONLY(g_dbus_proxy_new_for_bus_sync)
+  static Glib::RefPtr<Proxy>
+  create_for_bus_sync(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<Cancellable>& cancellable,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  /// Non-cancellable version of create_for_bus_sync().
+  static Glib::RefPtr<Proxy>
+  create_for_bus_sync(BusType bus_type,
+    const Glib::ustring& name,
+    const Glib::ustring& object_path,
+    const Glib::ustring& interface_name,
+    const Glib::RefPtr<InterfaceInfo>& info = {},
+    ProxyFlags flags = ProxyFlags::NONE);
+
+  _WRAP_METHOD(ProxyFlags get_flags() const, g_dbus_proxy_get_flags)
+
+  _WRAP_METHOD(Glib::RefPtr<Connection> get_connection(), g_dbus_proxy_get_connection, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Connection> get_connection() const, g_dbus_proxy_get_connection, refreturn, constversion)
+
+  _WRAP_METHOD(Glib::ustring get_name() const, g_dbus_proxy_get_name)
+  _WRAP_METHOD(Glib::ustring get_name_owner() const, g_dbus_proxy_get_name_owner)
+  _WRAP_METHOD(Glib::ustring get_object_path() const, g_dbus_proxy_get_object_path)
+  _WRAP_METHOD(Glib::ustring get_interface_name() const, g_dbus_proxy_get_interface_name)
+
+  _WRAP_METHOD(int get_default_timeout() const, g_dbus_proxy_get_default_timeout)
+  _WRAP_METHOD(void set_default_timeout(int timeout_msec = -1), g_dbus_proxy_set_default_timeout)
+
+  /** Looks up the value for a property from the cache. This call does no
+   * blocking IO.
+   *
+   * If proxy has an expected interface (see property_g_interface_info()),
+   * then @a property_name (for existence) is checked against it.
+   *
+   * @param property An output parameter in which to hold to the variant
+   * instance that holds the value for @a property_name.
+   * @param property_name Property name.
+   *
+   * @newin{2,28}
+   */
+  void get_cached_property(Glib::VariantBase& property,
+    const Glib::ustring& property_name) const;
+  _IGNORE(g_dbus_proxy_get_cached_property)
+
+  _WRAP_METHOD(void set_cached_property(const Glib::ustring& property_name, const Glib::VariantBase& value), g_dbus_proxy_set_cached_property)
+
+#m4 _CONVERSION(`gchar**', `std::vector<Glib::ustring>', `Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_DEEP)')
+  _WRAP_METHOD(std::vector<Glib::ustring> get_cached_property_names() const, g_dbus_proxy_get_cached_property_names)
+
+  _WRAP_METHOD(void set_interface_info(const Glib::RefPtr<InterfaceInfo>& info), g_dbus_proxy_set_interface_info)
+  _WRAP_METHOD(Glib::RefPtr<InterfaceInfo> get_interface_info(), g_dbus_proxy_get_interface_info, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const InterfaceInfo> get_interface_info() const, g_dbus_proxy_get_interface_info, refreturn, constversion)
+
+  _WRAP_METHOD(
+    void call(
+      const Glib::ustring&               method_name{.},
+      const SlotAsyncReady&              slot{callback?},
+      const Glib::RefPtr<Cancellable>&   cancellable{.?},
+      const Glib::VariantContainerBase&  parameters{.} = {},
+      int                                timeout_msec{.} = -1,
+      CallFlags                          flags{.} = Gio::DBus::CallFlags::NONE
+    ),
+    g_dbus_proxy_call, slot_name slot, slot_callback giomm_SignalProxy_async_callback
+  )
+
+  /** Finishes an operation started with call().
+   *
+   * @param res An AsyncResult obtained from the SlotAsyncReady passed to
+   * call().
+   * @result A Variant tuple with return values.
+   *
+   * @throw Glib::Error.
+   */
+  _WRAP_METHOD(Glib::VariantContainerBase call_finish(const Glib::RefPtr<AsyncResult>& res), g_dbus_proxy_call_finish, errthrow)
+
+  _WRAP_METHOD(
+    Glib::VariantContainerBase call_sync(
+      const Glib::ustring&               method_name{.},
+      const Glib::RefPtr<Cancellable>&   cancellable{.?},
+      const Glib::VariantContainerBase&  parameters{.} = {},
+      int                                timeout_msec{.} = -1,
+      CallFlags                          flags{.} = Gio::DBus::CallFlags::NONE
+    ),
+    g_dbus_proxy_call_sync, errthrow
+  )
+
+  _WRAP_METHOD(
+    void call(
+      const Glib::ustring&                method_name{.},
+      const Glib::VariantContainerBase&   parameters{.},
+      const SlotAsyncReady&               slot{callback?},
+      const Glib::RefPtr<Cancellable>&    cancellable{.?},
+      const Glib::RefPtr<UnixFDList>&     fd_list{.},
+      int                                 timeout_msec{.} = -1,
+      CallFlags                           flags{.} = Gio::DBus::CallFlags::NONE
+    ),
+    g_dbus_proxy_call_with_unix_fd_list, ifdef G_OS_UNIX,
+      slot_name slot, slot_callback giomm_SignalProxy_async_callback
+  )
+
+  /** Finishes an operation started with call() (with a UnixFDList).
+   * @param res A AsyncResult obtained from the SlotAsyncReady passed to
+   * call().
+   * @param out_fd_list Return location for a UnixFDList.
+   * @result A Variant tuple with return values.
+   * @throw Glib::Error.
+   * @newin{2,34}
+   */
+  _WRAP_METHOD(Glib::VariantContainerBase call_finish(const Glib::RefPtr<AsyncResult>& res{.}, Glib::RefPtr<UnixFDList>& out_fd_list{.>>}), g_dbus_proxy_call_with_unix_fd_list_finish, errthrow, ifdef G_OS_UNIX)
+
+  _WRAP_METHOD(
+    Glib::VariantContainerBase call_sync(
+      const Glib::ustring&                method_name{.},
+      const Glib::VariantContainerBase&   parameters{.},
+      const Glib::RefPtr<Cancellable>&    cancellable{.?},
+      const Glib::RefPtr<UnixFDList>&     fd_list{.},
+      Glib::RefPtr<UnixFDList>&           out_fd_list{.>>},
+      int                                 timeout_msec{.} = -1,
+      CallFlags                           flags{.} = Gio::DBus::CallFlags::NONE
+    ),
+    g_dbus_proxy_call_with_unix_fd_list_sync, errthrow, ifdef G_OS_UNIX
+  )
+
+ //_WRAP_PROPERTY("g-bus-type", BusType) // write-only construct-only
+ _WRAP_PROPERTY("g-connection", Glib::RefPtr<Connection>)
+ _WRAP_PROPERTY("g-default-timeout", int)
+ _WRAP_PROPERTY("g-flags", ProxyFlags)
+ _WRAP_PROPERTY("g-interface-info", Glib::RefPtr<InterfaceInfo>)
+ _WRAP_PROPERTY("g-interface-name", Glib::ustring)
+ _WRAP_PROPERTY("g-name", Glib::ustring)
+ _WRAP_PROPERTY("g-name-owner", Glib::ustring)
+ _WRAP_PROPERTY("g-object-path", Glib::ustring)
+
+  using MapChangedProperties = std::map<Glib::ustring, Glib::VariantBase>;
+
+  // TODO: Should the signal names match the C API names (ie. the C API names
+  // are g_signal_name while these are just signal_name).
+
+  // The DBus API ensures that the variant changed_properties is of type "DICT<STRING,VARIANT>"
+  #m4 _CONVERSION(`GVariant*', `const MapChangedProperties&', `Glib::Variant<MapChangedProperties>($3, true).get()')
+  #m4 _CONVERSION(`const MapChangedProperties&', `GVariant*', `const_cast<GVariant*>(Glib::Variant<MapChangedProperties>::create($3).gobj())')
+  #m4 _CONVERSION(`const std::vector<Glib::ustring>&', `const gchar*const*',`Glib::ArrayHandler<Glib::ustring>::vector_to_array($3).data()')
+  #m4 _CONVERSION(`const gchar*const*', `const std::vector<Glib::ustring>&', `Glib::ArrayHandler<Glib::ustring>::array_to_vector($3, Glib::OWNERSHIP_NONE)')
+  _WRAP_SIGNAL(void properties_changed(const MapChangedProperties& changed_properties, const std::vector<Glib::ustring>& invalidated_properties), "g-properties-changed")
+
+#m4 _CONVERSION(`GVariant*', `const Glib::VariantContainerBase&', `Glib::VariantContainerBase($3, true)')
+#m4 _CONVERSION(`const Glib::VariantContainerBase&', `GVariant*', `const_cast<GVariant*>(($3).gobj())')
+  _WRAP_SIGNAL(void signal(const Glib::ustring& sender_name, const Glib::ustring& signal_name, const Glib::VariantContainerBase& parameters), "g-signal",
+    detail_name signal_name, two_signal_methods)
+};
+
+} //namespace
+
+} // namespace Gio

@@ -1,0 +1,218 @@
+/* Copyright (C) 1998-2004 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/vectorutils.h>
+
+#include <gtkmm/adjustment.h>
+#include <gtk/gtk.h>
+
+namespace //anonymous namespace
+{
+extern "C"
+{
+static void proxy_foreach_callback(GtkIconView* /* icon_view */, GtkTreePath* path, void* data)
+{
+  typedef Gtk::IconView::SlotForeach SlotType;
+  auto& slot = *static_cast<SlotType*>(data);
+
+  try
+  {
+    slot(Gtk::TreeModel::Path(path, true));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+}
+} // extern "C"
+} //anonymous namespace
+
+
+namespace Gtk
+{
+
+void IconView::unset_model()
+{
+  gtk_icon_view_set_model(gobj(), nullptr);
+}
+
+void IconView::selected_foreach(const SlotForeach& slot)
+{
+  SlotForeach slot_copy(slot);
+  gtk_icon_view_selected_foreach(const_cast<GtkIconView*>(gobj()), &proxy_foreach_callback, &slot_copy);
+}
+
+bool IconView::get_item_at_pos(int x, int y, TreeModel::Path& path, CellRenderer*& cell) const
+{
+  GtkTreePath* cpath = nullptr;
+  GtkCellRenderer* ccell = nullptr;
+  bool result = gtk_icon_view_get_item_at_pos(const_cast<GtkIconView*>(gobj()), x, y, &cpath, &ccell);
+
+  path = Glib::wrap(cpath); //Don't take copy because the gtk_icon_view_get_item_at_pos documentation says we should free this.
+  cell = Glib::wrap(ccell);
+  return result;
+}
+
+bool IconView::get_item_at_pos(int x, int y, TreeModel::Path& path) const
+{
+  GtkTreePath* cpath = nullptr;
+  bool result = gtk_icon_view_get_item_at_pos(const_cast<GtkIconView*>(gobj()), x, y, &cpath, nullptr);
+
+  path = Glib::wrap(cpath); //Don't take copy because the gtk_icon_view_get_item_at_pos documentation says we should free this.
+  return result;
+}
+
+bool IconView::get_item_at_pos(int x, int y, CellRenderer*& cell) const
+{
+  GtkCellRenderer* ccell = nullptr;
+  bool result = gtk_icon_view_get_item_at_pos(const_cast<GtkIconView*>(gobj()), x, y, nullptr, &ccell);
+
+  cell = Glib::wrap(ccell);
+  return result;
+}
+
+bool IconView::get_visible_range(TreeModel::Path& start_path, TreeModel::Path& end_path) const
+{
+  GtkTreePath* cstart_path = nullptr;
+  GtkTreePath* cend_path = nullptr;
+  bool result = gtk_icon_view_get_visible_range(const_cast<GtkIconView*>(gobj()), &cstart_path, &cend_path);
+
+  start_path = Glib::wrap(cstart_path); //Don't take copy because the gtk_icon_view_get_visible_range documentation says we should free this.
+  end_path = Glib::wrap(cend_path); //Don't take copy because the gtk_icon_view_get_visible_range documentation says we should free this.
+  return result;
+}
+
+  _IGNORE(gtk_icon_view_get_visible_range)
+
+bool IconView::get_cursor(TreeModel::Path& path, CellRenderer*& cell) const
+{
+  GtkTreePath* cpath = nullptr;
+  GtkCellRenderer* ccell = nullptr;
+  bool result = gtk_icon_view_get_cursor(const_cast<GtkIconView*>(gobj()), &cpath, &ccell);
+
+  path = Glib::wrap(cpath); //Don't take copy because the gtk_icon_view_get_cursor documentation says we should free this.
+  cell = Glib::wrap(ccell);
+  return result;
+}
+
+bool IconView::get_cursor(TreeModel::Path& path) const
+{
+  GtkTreePath* cpath = nullptr;
+  bool result = gtk_icon_view_get_cursor(const_cast<GtkIconView*>(gobj()), &cpath, nullptr);
+
+  path = Glib::wrap(cpath); //Don't take copy because the gtk_icon_view_get_cursor documentation says we should free this.
+  return result;
+}
+
+bool IconView::get_cursor(CellRenderer*& cell) const
+{
+  GtkCellRenderer* ccell = nullptr;
+  bool result = gtk_icon_view_get_cursor(const_cast<GtkIconView*>(gobj()), nullptr, &ccell);
+
+  cell = Glib::wrap(ccell);
+  return result;
+}
+
+void IconView::get_drag_dest_item(TreeModel::Path& path, DropPosition& pos) const
+{
+  GtkTreePath* cpath = nullptr;
+  gtk_icon_view_get_drag_dest_item(const_cast<GtkIconView*>(gobj()), &cpath, (GtkIconViewDropPosition*)(&pos));
+  if(cpath)
+    path = Gtk::TreeModel::Path(cpath, true /* make_a_copy */);
+}
+
+void IconView::get_drag_dest_item(TreeModel::Path& path) const
+{
+  GtkTreePath* cpath = nullptr;
+  gtk_icon_view_get_drag_dest_item(const_cast<GtkIconView*>(gobj()), &cpath, nullptr);
+  if(cpath)
+    path = Gtk::TreeModel::Path(cpath, true /* make_a_copy */);
+}
+
+void IconView::get_drag_dest_item(DropPosition& pos) const
+{
+   gtk_icon_view_get_drag_dest_item(const_cast<GtkIconView*>(gobj()), nullptr, (GtkIconViewDropPosition*)(&pos));
+}
+
+
+bool IconView::get_dest_item_at_pos(int drag_x, int drag_y, TreeModel::Path& path, DropPosition& pos) const
+{
+  GtkTreePath* cpath = nullptr;
+  const bool result = gtk_icon_view_get_dest_item_at_pos(const_cast<GtkIconView*>(gobj()), drag_x, drag_y, &cpath, (GtkIconViewDropPosition*)(&pos));
+  if(cpath)
+    path = Gtk::TreeModel::Path(cpath, true /* make_a_copy */);
+
+  return result;
+}
+
+bool IconView::get_dest_item_at_pos(int drag_x, int drag_y, TreeModel::Path& path) const
+{
+  GtkTreePath* cpath = nullptr;
+  const bool result = gtk_icon_view_get_dest_item_at_pos(const_cast<GtkIconView*>(gobj()), drag_x, drag_y, &cpath, nullptr);
+  if(cpath)
+    path = Gtk::TreeModel::Path(cpath, true /* make_a_copy */);
+
+  return result;
+}
+
+bool IconView::get_dest_item_at_pos(int drag_x, int drag_y, DropPosition& pos) const
+{
+  return gtk_icon_view_get_dest_item_at_pos(const_cast<GtkIconView*>(gobj()), drag_x, drag_y, nullptr, (GtkIconViewDropPosition*)(&pos));
+}
+
+bool
+IconView::get_tooltip_context_path(int x, int y,
+                                   bool keyboard_tip,
+                                   TreeModel::Path& path)
+{
+  GtkTreePath* cpath = nullptr;
+
+  gboolean result =
+    gtk_icon_view_get_tooltip_context(gobj(),
+                                      x, y,
+                                      keyboard_tip,
+                                      nullptr,
+                                      &cpath,
+                                      nullptr);
+
+  // If result is false, cpath is not modified, it's still 0.
+  // wrap() can handle that situation.
+  path = Glib::wrap(cpath, /* take_copy= */ false);
+
+  return result;
+}
+
+bool
+IconView::get_tooltip_context_iter(int x, int y,
+                                   bool keyboard_tip,
+                                   Gtk::TreeModel::iterator& iter)
+{
+  GtkTreeIter src_iter;
+
+  gboolean result =
+    gtk_icon_view_get_tooltip_context(gobj(),
+                                      x, y,
+                                      keyboard_tip,
+                                      nullptr,
+                                      nullptr,
+                                      &src_iter);
+
+  iter = Gtk::TreeModel::iterator(gtk_icon_view_get_model(this->gobj()), &src_iter);
+
+  return result;
+}
+
+} // namespace Gtk

@@ -1,0 +1,48 @@
+include:
+  - project: 'gnome/citemplates'
+    file: 'flatpak/flatpak_ci_initiative.yml'
+
+.cache-paths: &cache-paths
+  paths:
+    - _ccache/
+
+variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    MANIFEST_PATH: "build-aux/flatpak/org.gnome.Dia.json"
+    FLATPAK_MODULE: "dia"
+    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
+    APP_ID: "org.gnome.Dia"
+    BUNDLE: "dia-dev.flatpak"
+
+flatpak:
+  stage: build
+  extends: .flatpak
+
+flatpak-aarch64:
+  stage: build
+  extends: ".flatpak@aarch64"
+
+nightly:
+  extends: '.publish_nightly'
+
+
+.mingw-defaults:
+  stage: build
+  tags:
+    - win32-ps
+  script:
+    - C:\msys64\usr\bin\pacman --noconfirm -Syyuu
+    - C:\msys64\usr\bin\bash -lc "bash -x ./.gitlab-ci/msys.sh"
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - _ccache/
+      - subprojects/xpm-pixbuf/
+
+
+msys2-ucrt64:
+  extends: .mingw-defaults
+  needs: []
+  variables:
+    MSYSTEM: "UCRT64"
+    CHERE_INVOKING: "yes"

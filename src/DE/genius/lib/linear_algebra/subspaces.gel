@@ -1,0 +1,106 @@
+# Routines for creating and manipulating subspaces of vector spaces
+# FIXME: Currently pretty broken, since instead of
+# subspace objects, I have to work with matrices such that their
+# column span is the subspace. (which i make sure are linearly indep.)
+# FIXME: Also, I don't deal well with empty spaces/sets
+# FIXME: Also, I do no parameter checking
+
+## Vector Subspace creation
+# Column Space of a matrix
+#Column reduce and kill zero vectors
+SetHelp ("ColumnSpace", "linear_algebra", "Get a basis matrix for the columnspace of a matrix")
+function ColumnSpace(M) =
+(
+  if IsNull (M) then return null
+  else if not IsMatrix (M) then
+    (error("ColumnSpace: argument not a matrix");bailout);
+  StripZeroColumns (cref (M))
+)
+
+# Row Space of a matrix
+SetHelp ("RowSpace", "linear_algebra", "Get a basis matrix for the rowspace of a matrix")
+function RowSpace(M) = (
+  if IsNull (M) then return null
+  else if not IsMatrix (M) then
+    (error("RowSpace: argument not a matrix");bailout);
+  ColumnSpace (M.')
+)
+
+# Rank of a matrix
+SetHelp ("Rank", "linear_algebra", "Get the rank of a matrix")
+function Rank(M) =
+(
+  if IsNull (M) then return 0
+  else if not IsMatrix (M) then
+    (error("Rank: argument not a matrix");bailout);
+  columns (M) - CountZeroColumns(cref(M))
+)
+SetHelpAlias ("Rank", "rank");
+rank = Rank
+
+# Nullity of a matrix
+SetHelp ("Nullity", "linear_algebra", "Get the nullity of a matrix")
+function Nullity (M) =
+(
+  if IsNull (M) then return 0
+  else if not IsMatrix (M) then
+    (error("Nullity: argument not a matrix");bailout);
+  CountZeroColumns(cref(M))
+)
+SetHelpAlias ("Nullity", "nullity");
+nullity = Nullity
+
+# Image of a linear transform (=column space of the corresponding matrix)
+SetHelp ("Image", "linear_algebra", "Get the image (columnspace) of a linear transform")
+Image = ColumnSpace
+
+# Null space/kernel of a linear transform
+# NullSpace is now built-in for speed
+
+SetHelp ("Kernel", "linear_algebra", "Get the kernel (nullspace) of a linear transform")
+function Kernel(M) = NullSpace(M)
+
+## Vector Subspace operations
+# Given W1, W2 subspaces of V, returns W1 + W2
+# = {w | w=w1+w2, w1 in W1, w2 in W2}
+SetHelp ("VectorSubspaceSum", "linear_algebra", "The sum of the vector spaces M and N, that is {w | w=m+n, m in M, n in N}")
+function VectorSubspaceSum(M,N)=ColumnSpace([M,N])
+
+# Given vector spaces V1, V2, return V1 (+) V2 (the direct sum)
+# (given by the column space of the direct sum of matrices)
+SetHelp ("VectorSpaceDirectSum", "linear_algebra", "The direct sum of the vector spaces M and N")
+function VectorSpaceDirectSum(M,N)=ColumnSpace(DirectSum(M,N))
+
+# Given vector spaces V1, V2, return V1 (x) V2 (the tensor product)
+# (given by the column space of the tensor product of matrices)
+#FIXME: check that this is right
+#FIXME: need tensorproduct
+# function VectorSpaceTensorProduct(M,N)=ColumnSpace(TensorProduct(M,N))
+
+# Given W1, W2, return W1 intersect W2
+# Given any inner product, this is given by
+# W1 cap W2 = (W1^perp+W2^perp)^perp
+SetHelp ("VectorSubspaceIntersection", "linear_algebra", "Intersection of the subspaces given by M and N")
+function VectorSubspaceIntersection(M,N)= OrthogonalComplement(VectorSubspaceSum(OrthogonalComplement(M),OrthogonalComplement(N)))
+
+# Given a vector subspace of an Inner Product Space (or maybe just
+# a space with a (symmetric?) bilinear form (check lang),
+# return the orthogonal complement.
+# FIXME: currently assumes that the inner product is the hermetian
+# inner product on
+SetHelp ("OrthogonalComplement", "linear_algebra", "Get the orthogonal complement of the columnspace")
+function OrthogonalComplement(M)=NullSpace(M')
+
+## (Vector space + a vector) operations
+
+# vector space membership
+# a vector is in a subspace iff it is equal to its
+# projection onto that space (in any inner product)
+# (in particular, the dot product)
+#FIXME: this is kinda a hack -- i should just ajoin it to a basis
+#and see if there's a dependence (oh wait, that might not work for
+#modules, since it might mean that a MULTIPLE of it is in the module
+#....)
+SetHelp ("IsInSubspace", "linear_algebra", "Test if a vector is in a subspace")
+function IsInSubspace(v,W) = (v==Projection(v,W,.))
+

@@ -1,0 +1,641 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/gst.h>
+#include <gstreamermm/structure.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+_WRAP_ENUM(TagMergeMode, GstTagMergeMode)
+_WRAP_ENUM(TagFlag, GstTagFlag)
+
+// When adding tags, make sure that they are added to this enum and then in the
+// ccg file in the correct order.  Also make sure that the size of the array of
+// strings is updated in the declaration below and in the ccg file.
+// These correspond to the GST_TAG_* #defines in the C API.
+//TODO: Maybe do something like Glib::StockID instead?
+/** Identifiers for commonly-used tags.
+ */
+enum Tag
+{
+/** The commonly used title (string).
+ * The title as it should be displayed, e.g. 'The Doll House'.
+ */
+TAG_TITLE,
+
+/** The commonly used title, as used for sorting (string).
+ * The title as it should be sorted, e.g. 'Doll House, The'.
+ *
+ * Since 0.10.15.
+ */
+TAG_TITLE_SORTNAME,
+
+/** The person(s) responsible for the recording (string).
+ * The artist name as it should be displayed, e.g. 'Jimi Hendrix' or 'The
+ * Guitar Heroes'.
+ */
+TAG_ARTIST,
+
+/** The person(s) responsible for the recording, as used for sorting (string).
+ * The artist name as it should be sorted, e.g. 'Hendrix, Jimi' or 'Guitar
+ * Heroes, The'.
+ *
+ * Since 0.10.15.
+ */
+TAG_ARTIST_SORTNAME,
+
+/** The album containing this data (string).
+ * The album name as it should be displayed, e.g. 'The Jazz Guitar'.
+ */
+TAG_ALBUM,
+
+/** The album containing this data, as used for sorting (string).
+ * The album name as it should be sorted, e.g. 'Jazz Guitar, The'.
+ *
+ * Since 0.10.15.
+ */
+TAG_ALBUM_SORTNAME,
+
+/** The date the data was created (GDate structure).
+ */
+TAG_DATE,
+
+/** The genre this data belongs to (string).
+ */
+TAG_GENRE,
+
+/** The free text commenting the data (string).
+ */
+TAG_COMMENT,
+
+/** The Key/value text commenting the data (string).
+ * Must be in the form of 'key=comment' or 'key[lc]=comment' where 'lc' is an
+ * ISO-639 language code.
+ *
+ * This tag is used for unknown Vorbis comment tags, unknown APE tags and
+ * certain ID3v2 comment fields.
+ *
+ * Since 0.10.10.
+ */
+TAG_EXTENDED_COMMENT,
+
+/** The track number inside a collection (unsigned integer).
+ */
+TAG_TRACK_NUMBER,
+
+/** The count of tracks inside collection this track belongs to (unsigned
+ * integer).
+ */
+TAG_TRACK_COUNT,
+
+/** The disc number inside a collection (unsigned integer).
+ */
+TAG_ALBUM_VOLUME_NUMBER,
+
+/** The count of discs inside collection this disc belongs to (unsigned
+ * integer).
+ */
+TAG_ALBUM_VOLUME_COUNT,
+
+/** The original location of file as a URI (string).
+ */
+TAG_LOCATION,
+
+/** The short text describing the content of the data (string).
+ */
+TAG_DESCRIPTION,
+
+/** The version of this data (string).
+ */
+TAG_VERSION,
+
+/** The International Standard Recording Code - see http://www.ifpi.org/isrc/
+ * (string).
+ */
+TAG_ISRC,
+
+/** The organization (string).
+ */
+TAG_ORGANIZATION,
+
+/** The copyright notice of the data (string).
+ */
+TAG_COPYRIGHT,
+
+/** The URI to location where copyright details can be found (string).
+ * Since 0.10.14.
+ */
+TAG_COPYRIGHT_URI,
+
+/** The person(s) who composed the recording (string).
+ * Since 0.10.15.
+ */
+TAG_COMPOSER,
+
+/** The contact information (string).
+ */
+TAG_CONTACT,
+
+/** The license of the data (string).
+ */
+TAG_LICENSE,
+
+/** The URI to the location where license details can be found (string).
+ * Since 0.10.14.
+ */
+TAG_LICENSE_URI,
+
+/** The person(s) performing (string).
+ */
+TAG_PERFORMER,
+
+/** The length in GStreamer time units (nanoseconds) (unsigned 64-bit
+ * integer).
+ */
+TAG_DURATION,
+
+/** The codec the data is stored in (string).
+ */
+TAG_CODEC,
+
+/** The codec the video data is stored in (string).
+ */
+TAG_VIDEO_CODEC,
+
+/** The codec the audio data is stored in (string).
+ */
+TAG_AUDIO_CODEC,
+
+/** The exact or average bitrate in bits/s (unsigned integer).
+ */
+TAG_BITRATE,
+
+/** The nominal bitrate in bits/s (unsigned integer).
+ */
+TAG_NOMINAL_BITRATE,
+
+/** The minimum bitrate in bits/s (unsigned integer).
+ */
+TAG_MINIMUM_BITRATE,
+
+/** The maximum bitrate in bits/s (unsigned integer).
+ */
+TAG_MAXIMUM_BITRATE,
+
+/** The serial number of track (unsigned integer).
+ */
+TAG_SERIAL,
+
+/** The encoder used to encode this stream (string).
+ */
+TAG_ENCODER,
+
+/** The version of the encoder used to encode this stream (unsigned integer).
+ */
+TAG_ENCODER_VERSION,
+
+/** The track gain in db (double).
+ */
+TAG_TRACK_GAIN,
+
+/** The peak of the track (double).
+ */
+TAG_TRACK_PEAK,
+
+/** The album gain in db (double).
+ */
+TAG_ALBUM_GAIN,
+
+/** The peak of the album (double).
+ */
+TAG_ALBUM_PEAK,
+
+/** The reference level of track and album gain values (double).
+ * Since 0.10.12.
+ */
+TAG_REFERENCE_LEVEL,
+
+/** The language code (ISO-639-1) (string) of the content.
+ */
+TAG_LANGUAGE_CODE,
+
+/** The image (buffer) (buffer caps should specify the content type and
+ * preferably also set "image-type" field as GstTagImageType).
+ * Since 0.10.6 
+ */
+TAG_IMAGE,
+
+/** The image that is meant for preview purposes, e.g.\ small icon-sized
+ * version (buffer) (buffer caps should specify the content type).
+ * Since 0.10.7.
+ */
+TAG_PREVIEW_IMAGE,
+
+/** The generic file attachment (buffer) (buffer caps should specify the
+ * content type and if possible set "filename" to the file name of the
+ * attachment).
+ *
+ * Since 0.10.21.
+ */
+TAG_ATTACHMENT,
+
+/** The number of beats per minute in audio (double).
+ * Since 0.10.12.
+ */
+TAG_BEATS_PER_MINUTE,
+
+/** The comma separated keywords describing the content (string).
+ *
+ * Since 0.10.21
+ */
+TAG_KEYWORDS,
+
+/** The human readable descriptive location of where the media has been
+ * recorded or produced. (string).
+ *
+ * Since 0.10.21.
+ */
+TAG_GEO_LOCATION_NAME,
+
+/** The geo latitude location of where the media has been recorded or produced
+ * in degrees according to WGS84 (zero at the equator, negative values for
+ * southern latitudes) (double).
+ *
+ * Since 0.10.21.
+ */
+TAG_GEO_LOCATION_LATITUDE,
+
+/** The geo longitude location of where the media has been recorded or
+ * produced in degrees according to WGS84 (zero at the prime meridian in
+ * Greenwich/UK, negative values for western longitudes). (double).
+ *
+ * Since 0.10.21.
+ */
+TAG_GEO_LOCATION_LONGITUDE,
+
+/** The geo elevation of where the media has been recorded or produced in
+ * meters according to WGS84 (zero is average sea level) (double).
+ *
+ * Since 0.10.21.
+ */
+TAG_GEO_LOCATION_ELEVATION
+};
+
+/** An Output stream operator for the Gst::Tag enum (this will output a
+ * string).
+ */
+std::ostream& operator<<(std::ostream& stream, Tag tag);
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+const char* gstreamermm_get_stock_tag(Tag tag);
+#endif
+
+/** A class tha represents a list of tags and values used to describe media
+ * metadata.
+ * Taglists form part of media streams and describe the content of a stream in
+ * a non-technical way. Examples include the author of a song, the title of
+ * that very same song or the album it is a part of. Tag reading is done
+ * through a Gst::Bus. You can listen for Gst::MESSAGE_TAG messages and handle
+ * them as you wish.
+ *
+ * Note, however, that the Gst::MESSAGE_TAG  message may be fired multiple
+ * times in the pipeline. It is the application's responsibility to put all
+ * those tags together and display them to the user in a nice, coherent way.
+ * Usually, using merge() is a good enough way of doing this; make sure to
+ * empty the cache when loading a new song, or after every few minutes when
+ * listening to internet radio. Also, make sure you use Gst::TAG_MERGE_PREPEND
+ * as merging mode, so that a new title (which came in later) has a preference
+ * over the old one for display.
+ */
+class TagList
+{
+  _CUSTOM_STRUCT_PROTOTYPE
+  _CLASS_BOXEDTYPE_EXTRA(TagList, GstTagList, gst_tag_list_new_empty, gst_tag_list_copy, gst_tag_list_free)
+  _IGNORE(gst_tag_list_copy)
+
+public:
+  /** Use this to discover if the TagList is a valid object.
+   */
+  operator bool() const;
+
+  _WRAP_METHOD(static bool exists(const Glib::ustring& tag), gst_tag_exists)
+  _WRAP_METHOD(static GType get_type(const Glib::ustring& tag), gst_tag_get_type)
+  _WRAP_METHOD(static Glib::ustring get_nick(const Glib::ustring& tag), gst_tag_get_nick)
+  _WRAP_METHOD(static Glib::ustring get_description(const Glib::ustring& tag), gst_tag_get_description)
+  _WRAP_METHOD(static Gst::TagFlag get_flag(const Glib::ustring& tag), gst_tag_get_flag)
+  _WRAP_METHOD(static bool is_fixed(const Glib::ustring& tag), gst_tag_is_fixed)
+  _WRAP_METHOD(bool is_empty() const, gst_tag_list_is_empty)
+  _WRAP_METHOD(void insert(const Gst::TagList& other, TagMergeMode mode = TAG_MERGE_PREPEND), gst_tag_list_insert)
+
+#m4 _CONVERSION(`GstTagList*',`Gst::TagList',`Glib::wrap_taglist($3)')
+  _WRAP_METHOD(Gst::TagList merge(const Gst::TagList& other, TagMergeMode mode = TAG_MERGE_PREPEND), gst_tag_list_merge)
+
+  _WRAP_METHOD(guint size(const Glib::ustring& tag) const, gst_tag_list_get_tag_size)
+
+  /** Sets a GValue for the given @a tag using the specified mode.
+   *
+   * @param tag The tag name.
+   * @param mode The mode to use.
+   * @param value The Glib::Value<> to use.
+   */
+  void add_value(Tag tag, const Glib::ValueBase& value, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  /** Sets a GValue for the given @a tag using the specified mode.
+   *
+   * @param tag The tag name.
+   * @param mode The mode to use.
+   * @param value The Glib::Value<> to use.
+   */
+  void add_value(const Glib::ustring& tag, const Glib::ValueBase& value, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  _IGNORE(gst_tag_list_add_value)
+
+  /** Sets the value for the given tag to string @a data using the specified
+   * mode.
+   *
+   * @param tag The tag name.
+   * @param data A string to which the tag should be set to.
+   * @param mode The merge mode to use.
+   */
+  void add(Tag tag, const char* data, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  /** Sets the value for the given tag to string @a data using the specified
+   * mode.
+   *
+   * @param tag The tag name.
+   * @param data A string to which the tag should be set to.
+   * @param mode The merge mode to use.
+   */
+  void add(const Glib::ustring& tag, const char* data, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  /** Sets the value for the given tag using the specified mode.
+   *
+   * @param tag The tag name.
+   * @param data A value which the tag should be set to (this can be any
+   * supported C++ type).
+   * @param mode The merge mode to use.
+   */
+  template <class DataType>
+  void add(Tag tag, const DataType& data, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  /** Sets the value for the given tag using the specified mode.
+   *
+   * @param tag The tag name.
+   * @param data A value which the tag should be set to (this can be any
+   * supported C++ type).
+   * @param mode The merge mode to use.
+   */
+  template <class DataType>
+  void add(const Glib::ustring& tag, const DataType& data, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  // Methods below are written as workaround for Glib::Date - it's not working with
+  // with Glib::Value, because GValue with Glib::Date is invalid type for gstreamer functions.
+
+  /** Sets the value for the given tag using the specified mode.
+   *
+   * @param tag The tag name.
+   * @param date A date.
+   * @param mode The merge mode to use.
+   */
+  void add(Tag tag, const Glib::Date& date, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  /** Sets the value for the given tag using the specified mode.
+   *
+   * @param tag The tag name.
+   * @param date A date.
+   * @param mode The merge mode to use.
+   */
+  void add(const Glib::ustring& tag, const Glib::Date& date, TagMergeMode mode = TAG_MERGE_PREPEND);
+
+  _IGNORE(gst_tag_list_add_valist, gst_tag_list_add_valist_values)
+
+#m4begin
+dnl See .ccg implementation for how this conversion works.
+  _CONVERSION(`Tag', `const gchar*', `gstreamermm_get_stock_tag($3)')
+#m4end
+  _WRAP_METHOD(void remove_tag(Tag tag), gst_tag_list_remove_tag)
+
+  _WRAP_METHOD(void remove_tag(const Glib::ustring& tag), gst_tag_list_remove_tag)
+
+  /** For example,
+   * void on_foreach(const Glib::ustring& tag);.
+   */
+  typedef sigc::slot<void, const Glib::ustring&> SlotForeach;
+
+  /** Calls the given slot for each tag inside the tag list. Note that if there
+   * is no tag, the slot won't be called at all.
+   *
+   * @param slot Slot to be called for each tag.
+   */
+  void foreach(const SlotForeach& slot);
+  _IGNORE(gst_tag_list_foreach)
+
+  /** Copies the contents for the given tag into the value, merging multiple
+   * values into one if multiple values are associated with the tag.
+   *
+   * @param dest An uninitialized Glib::ValueBase to copy into.
+   * @param tag The tag to read out.
+   * @return true, if a value was copied, false if the tag didn't exist in the
+   * list.
+   */
+  bool get_value(Tag tag, Glib::ValueBase& dest) const;
+  _IGNORE(gst_tag_list_copy_value)
+
+  /** Copies the contents for the given tag into the value, merging multiple
+   * values into one if multiple values are associated with the tag.
+   *
+   * @param dest An uninitialized Glib::ValueBase to copy into.
+   * @param tag The tag to read out.
+   * @return true, if a value was copied, false if the tag didn't exist in the
+   * list.
+   */
+  bool get_value(const Glib::ustring& tag, Glib::ValueBase& dest) const;
+  _IGNORE(gst_tag_list_copy_value)
+
+  /** Gets the value that is at the given index for the given tag.
+   * @param tag The tag to read out.
+   * @param index Number of entry to read out.
+   * @param dest The Glib::ValueBase to store the value in.
+   * @return true if tag was available and had right number of entries, false
+   * otherwise.
+   */
+  bool get_value(Tag tag, guint index, Glib::ValueBase& dest) const;
+  _IGNORE(gst_tag_list_get_value_index)
+
+  /** Gets the value that is at the given index for the given tag.
+   * @param tag The tag to read out.
+   * @param index Number of entry to read out.
+   * @param dest The Glib::ValueBase to store the value in.
+   * @return true if tag was available and had right number of entries, false
+   * otherwise.
+   */
+  bool get_value(const Glib::ustring& tag, guint index, Glib::ValueBase& dest) const;
+  _IGNORE(gst_tag_list_get_value_index)
+
+  /** Copies the contents for the given tag into the value, merging multiple
+   * values into one if multiple values are associated with the tag.
+   * @param tag The tag to read out.
+   * @param value Location for the result (this can be any supported C++ type).
+   * @return true, if a value was copied, false if the tag didn't exist in the
+   * given list.
+   */
+  template<class DataType>
+  bool get(Tag tag, DataType& value) const;
+
+  /** Copies the contents for the given tag into the value, merging multiple
+   * values into one if multiple values are associated with the tag.
+   * @param tag The tag to read out.
+   * @param value Location for the result (this can be any supported C++ type).
+   * @return true, if a value was copied, false if the tag didn't exist in the
+   * given list.
+   */
+  template<class DataType>
+  bool get(const Glib::ustring& tag, DataType& value) const;
+
+  _IGNORE(gst_tag_list_get_boolean,
+          gst_tag_list_get_int,
+          gst_tag_list_get_uint,
+          gst_tag_list_get_int64,
+          gst_tag_list_get_uint64,
+          gst_tag_list_get_float,
+          gst_tag_list_get_double,
+          gst_tag_list_get_string,
+          gst_tag_list_get_pointer,
+          gst_tag_list_get_date)
+
+  /** Gets the value that is at the given index for the given tag.
+   * @param tag The tag to read out.
+   * @param index Number of entry to read out.
+   * @param value Location for the result (this can be any supported C++ type).
+   * @return true, if a value was copied, false if the tag didn't exist in the
+   * given list.
+   */
+  template<class DataType>
+  bool get(Tag tag, guint index, DataType& value) const;
+
+  /** Gets the value that is at the given index for the given tag.
+   * @param tag The tag to read out.
+   * @param index Number of entry to read out.
+   * @param value Location for the result (this can be any supported C++ type).
+   * @return true, if a value was copied, false if the tag didn't exist in the
+   * given list.
+   */
+  template<class DataType>
+  bool get(const Glib::ustring& tag, guint index, DataType& value) const;
+
+  _IGNORE(gst_tag_list_get_boolean_index,
+          gst_tag_list_get_int_index,
+          gst_tag_list_get_uint_index,
+          gst_tag_list_get_int64_index,
+          gst_tag_list_get_uint64_index,
+          gst_tag_list_get_float_index,
+          gst_tag_list_get_double_index,
+          gst_tag_list_get_string_index,
+          gst_tag_list_get_date_index,
+          gst_tag_list_get_pointer_index)
+
+  //Variable argument functions are ignored.
+  _IGNORE(gst_tag_list_add, gst_tag_list_add_values)
+};
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+/***************************** Gst::TagList *****************************/
+
+template <class DataType>
+void TagList::add(Tag tag, const DataType& data, TagMergeMode mode)
+{
+  typedef Glib::Value<DataType> ValueType;
+
+  ValueType value;
+  value.init(ValueType::value_type());
+  value.set(data);
+  this->add_value(tag, value, mode);
+}
+
+template <class DataType>
+void TagList::add(const Glib::ustring& tag, const DataType& data, TagMergeMode mode)
+{
+  typedef Glib::Value<DataType> ValueType;
+
+  ValueType value;
+  value.init(ValueType::value_type());
+  value.set(data);
+  this->add_value(tag, value, mode);
+}
+
+template<class DataType>
+bool TagList::get(Tag tag, DataType& data) const
+{
+  Glib::Value<DataType> value;
+  value.init(value.value_type());
+  const bool result = this->get_value(tag, value);
+
+  if(result)
+    data = value.get();
+
+  return result;
+}
+
+template<class DataType>
+bool TagList::get(const Glib::ustring& tag, DataType& data) const
+{
+  Glib::Value<DataType> value;
+  value.init(value.value_type());
+  const bool result = this->get_value(tag, value);
+
+  if(result)
+    data = value.get();
+
+  return result;
+}
+
+template<class DataType>
+bool TagList::get(Tag tag, guint index, DataType& data) const
+{
+  Glib::Value<DataType> value;
+  value.init(value.value_type());
+  bool result = this->get_value(tag, index, value);
+
+  if(result)
+    data = value.get();
+
+  return result;
+}
+
+template<class DataType>
+bool TagList::get(const Glib::ustring& tag, guint index, DataType& data) const
+{
+  Glib::Value<DataType> value;
+  value.init(value.value_type());
+  bool result = this->get_value(tag, index, value);
+
+  if(result)
+    data = value.get();
+
+  return result;
+}
+
+
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+} //namespace Gst

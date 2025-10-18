@@ -1,0 +1,66 @@
+= How to build highlight.pack.js
+
+yelp-xsl includes a pre-built copy of highlight.pack.js that includes many
+common languages. The default languages are those for which we have test
+files. If you want to add to the default languages in yelp-xsl, add a test
+code snippet under test/syntax/source/code, then XInclude it into the test
+files for Mallard, DocBook, and DITA under test/syntax. A good place to get
+test files is the live demo on highlightjs.org.
+
+[note .important]
+  Upstream highlight.js plans to remove support for allowing markup inside
+  code blocks in version 11.
+
+  https://github.com/highlightjs/highlight.js/issues/2889
+
+  This will break a number of features in Mallard and DocBook. Do not upgrade
+  to version 11 without figuring out a plugin or something.
+
+[steps]
+. Get prerequisites:
+* dnf install nodejs
+* npm install commander
+
+yelp-xsl also ships with a language definition for Ducktype, which is not
+included in the highlight.js repository at this time. It is in the same
+directory as this README. You will need to copy it into your clone of the
+highlight.js repository.
+
+[steps]
+. Build highlight.pack.js with the default yelp-xsl languages:
+* git clone https://github.com/highlightjs/highlight.js.git
+* Add the Ducktype highlighter:
+  * cp ducktype.js highlight.js/src/languages/
+  * mkdir highlight.js/test/detect/ducktype
+  * touch highlight.js/test/detect/ducktype/detect.txt
+* cd highlight.js
+* node tools/build.js $(find /path/to/yelp-xsl/test/syntax/source/code/* -exec basename {} \;)
+* cp build/highlight.min.js /path/to/yelp-xsl/js/highlight.pack.js
+
+You might want to add a language for your local site, keeping all of the
+default languages as well.
+
+[steps]
+. Build highlight.pack.js with language foo plus the default languages:
+* git clone https://github.com/highlightjs/highlight.js.git
+* Add the Ducktype highlighter:
+  * cp ducktype.js highlight.js/src/languages/
+  * mkdir highlight.js/test/detect/ducktype
+  * touch highlight.js/test/detect/ducktype/detect.txt
+* cd highlight.js
+* node tools/build.js foo $(find /path/to/yelp-xsl/test/syntax/source/code/* -exec basename {} \;)
+* cp build/highlight.min.js /path/to/yelp-xsl/js/highlight.pack.js
+
+Or you might want to trim highlight.pack.js down to just the languages
+you know you use.
+
+[steps]
+. Build hightlight.pack.js with just languages foo and bar:
+* git clone https://github.com/highlightjs/highlight.js.git
+* Add the Ducktype highlighter:
+  * cp ducktype.js highlight.js/src/languages/
+  * mkdir highlight.js/test/detect/ducktype
+  * touch highlight.js/test/detect/ducktype/detect.txt
+* cd highlight.js
+* node tools/build.js foo bar
+* cp build/highlight.min.js /path/to/yelp-xsl/js/highlight.pack.js

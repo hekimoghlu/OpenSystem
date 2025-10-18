@@ -1,0 +1,51 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gstreamermm/clock.h>
+
+_DEFS(gstreamermm,gst)
+
+namespace Gst
+{
+
+/** A default clock that uses the current system time.
+ * The GStreamer core provides a Gst::SystemClock based on the system time.
+ * Asynchronous callbacks are scheduled from an internal thread.
+ *
+ * Gst::Clock implementors are encouraged to subclass this systemclock as it
+ * implements the async notification.
+ *
+ * Subclasses can however override all of the important methods for sync and
+ * async notifications to implement their own callback methods or blocking wait
+ * operations.
+ *
+ * Last reviewed on 2006-03-08 (0.10.4)
+ */
+class SystemClock : public Clock
+{
+  _CLASS_GOBJECT(SystemClock, GstSystemClock, GST_SYSTEM_CLOCK, Clock, GstClock)
+
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_METHOD(static Glib::RefPtr<Gst::Clock> obtain(), gst_system_clock_obtain)
+};
+
+} //namespace Gst

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load extension_icon %}
+
+{% block title %}Review "{{ extension.name }}" version {{ version.display_full_version }} - {{ block.super }}{% endblock %}
+
+{% block body %}
+<h2>Review of "{{ extension.name }}" version {{ version.display_full_version }}</h2>
+<h2 class="expandy_header expanded col-xs-12 col-sm-12 col-md-12 col-lg-12">Details Page Preview</h2>
+<div id="preview">
+  <div class="extension single-page">
+    <div class="extension-header col-xs-12 col-sm-12 col-md-12 col-lg-12">
+        {% spaceless %}
+            <h3 class="extension-name">
+                <a href="{{ extension.get_absolute_url }}">
+                    <img src="{% extension_icon extension.icon %}" class="icon">{{ extension.name }}
+                </a>
+            </h3>
+
+            <span class="author"> by <a
+                    href="{% url 'auth-profile' user=extension.creator %}">{{ extension.creator }}</a></span>
+        {% endspaceless %}
+    </div>
+
+    <div class="extension-details">
+        {% if extension.screenshot %}
+            <div class="screenshot col-xs-12 col-sm-5 col-md-4 col-lg-3">
+                <a href="{{ extension.screenshot.url }}" class="screenshot"><img
+                        src="{{ extension.screenshot.url }}"></a>
+            </div>
+
+            <div class="col-sm-1 col-md-1 col-lg-1">
+            </div>
+        {% endif %}
+
+        <div class="col-xs-12 col-sm-6 col-md-7 col-lg-8">
+            <p class="description">{{ extension.description }}</p>
+
+            <dl>
+                {% if extension.url %}
+                    <dt>Extension Homepage</dt>
+                    <dd><a href="{{ extension.url }}" id="extension_url">{{ extension.url }}</a></dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <hr>
+
+    No comments.
+    <div class="clear"></div>
+  </div>
+</div>
+
+{% if compare_version %}
+<h2 class="expandy_header expanded col-xs-12 col-sm-12 col-md-12 col-lg-12">
+    Diff Against
+    <select id='diff_version_select'>
+    {% for ver in all_versions %}
+    {% if ver.version < version.version %}
+        <option{% if ver.version == compare_version.version %} selected='selected'{% endif %} value='{{ ver.pk }}'>version {{ ver.display_full_version }} ({{ ver.get_status_display }})</option>
+    {% endif %}
+    {% endfor %}
+    </select>
+</h2>
+<div id="diff" data-pk="{{ version.pk }}" class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+</div>
+{% else %}
+  <h2 class="expandy_header expanded col-xs-12 col-sm-12 col-md-12 col-lg-12">FAQ</h2>
+  <ul>
+    <li>
+      {% trans "You can upload the next version by the <a href='https://extensions.gnome.org/upload/'>same form</a> you've posted this version." %}
+    </li>
+    <li>
+      {% trans "You can change the extension icon by clicking on the icon in your extension page." %}
+    </li>
+    <li>
+      {% trans "In case you want to inactivate an approved version, click on inactivate link in your extension page." %}
+    </li>
+    <li>
+      {% trans "You can find developer guides in <a href='https://gjs.guide/extensions/'>gjs.guide</a>." %}
+    </li>
+    <li>
+      {% trans "If you need any help with your extension, you can ask us on <a href='https://matrix.to/#/#extensions:gnome.org'>GNOME Matrix Channel</a>." %}
+    </li>
+  </ul>
+{% endif %}
+
+<h2 class="expandy_header{% if not compare_version %} expanded{% endif %} col-xs-12 col-sm-12 col-md-12 col-lg-12">Files</h2>
+
+<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+  <div id="files" data-pk="{{ version.pk }}">
+  </div>
+  <p>Note: Binary files aren't shown on the web site. To see all
+    files, please <a href="{% url 'review-download' pk=version.pk %}">download
+      the extension zipfile</a>.</p>
+</div>
+
+<h2 class="expandy_header expanded col-xs-12 col-sm-12 col-md-12 col-lg-12">All Versions</h2>
+<div id="all_versions">
+  <table>
+    <thead>
+      <th>Version</th>
+      <th>Status</th>
+    </thead>
+    <tbody>
+      {% comment %}
+      This is somewhat confusing. 'ver' is the loop variable across
+      all extension versions. 'version' is the current version.
+      {% endcomment %}
+      {% for ver in all_versions %}
+      <tr>
+        <td> {{ ver.display_full_version }} </td>
+        <td>
+          {% if ver.version == version.version %}
+          <span class="current_version extension-status {{ ver.get_status_class }}">{{ ver.get_status_display }}</span>
+          {% else %}
+          <a class="extension-status {{ ver.get_status_class }}" href="{% url 'review-version' pk=ver.pk %}">{{ ver.get_status_display }}</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if previous_reviews %}
+<h2 class="expandy_header expanded col-xs-12 col-sm-12 col-md-12 col-lg-12">Previous Reviews on this Version</h2>
+<div id="previous_reviews" class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+  {% for review in previous_reviews %}
+  <div class="review">
+    {% if review.reviewer %}
+    <a class="review-author" href="{% url 'auth-profile' user=review.reviewer.username %}">{{ review.reviewer.get_full_name }}</a>
+    {% else %}
+    Ghost
+    {% endif %}
+    {% if review.new_status %}
+    <span class="extension-status {{ review.get_new_status_display|lower }}">
+      {% if review.auto %}auto-{% endif%}
+      {{ review.get_new_status_display|lower }}
+    </span>
+    {% else %}
+    posted a review
+    {% endif %}
+    <time title="{{ review.date|date:"c" }}Z">{{ review.date|date:"F j, Y" }}</time>
+    <blockquote>{{ review.comments }}</blockquote>
+  </div>
+  {% empty %}
+  <p>No reviews.</p>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if can_review %}
+<h2 class="expanded col-xs-12 col-sm-12 col-md-12 col-lg-12">Review</h2>
+
+<div id="review" class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+  <form id="review_form" action="{% url 'review-submit' pk=version.pk %}" method="POST">
+    {% csrf_token %}
+    <textarea id="comments" name="comments"></textarea>
+    <select name="status">
+      <option value="none" selected>No change</option>
+{% if can_approve %}
+      <option value="approve" class="approve">Approve</option>
+      <option value="reject" class="reject">Reject</option>
+      <option value="wait" class="waiting">Needs reply from author</option>
+{% endif %}
+    </select>
+    <input type="submit" value="Submit">
+  </form>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/review.css' %}" />
+  <script>
+      jQuery(function ($) {
+          require(['review-main'], function(){});
+      });
+  </script>
+{% endblock %}

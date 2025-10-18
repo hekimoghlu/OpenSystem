@@ -1,0 +1,163 @@
+/* Copyright (C) 2008 Jonathon Jongsma
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <gio/gio.h>
+#include <glibmm/error.h>
+#include <giomm/slot_async.h>
+
+namespace {
+
+struct SrvTargetListTraits
+{
+  using CppType = Gio::SrvTarget;
+  using CType = const GSrvTarget*;
+  using CTypeNonConst = GSrvTarget*;
+
+  static CType to_c_type(const CppType& item) { return item.gobj(); }
+  static CType to_c_type(CType ptr) { return ptr; }
+  static CppType to_cpp_type(CType item) { return CppType(const_cast<CTypeNonConst>(item), true /* take_copy */); }
+  static void release_c_type(CType item) { g_srv_target_free(const_cast<CTypeNonConst>(item)); }
+};
+
+} // anonymous namespace
+
+namespace Gio
+{
+
+Glib::RefPtr<Resolver>
+Resolver::get_default()
+{
+  return Glib::wrap(g_resolver_get_default());
+}
+
+void
+Resolver::set_default(const Glib::RefPtr<Resolver>& resolver)
+{
+  g_resolver_set_default(Glib::unwrap(resolver));
+}
+
+void
+Resolver::lookup_by_name_async(const Glib::ustring& hostname, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_by_name_async(
+    gobj(), hostname.c_str(), Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_by_name_async(const Glib::ustring& hostname, const SlotAsyncReady& slot)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_by_name_async(
+    gobj(), hostname.c_str(), nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_by_address_async(const Glib::RefPtr<InetAddress>& address,
+  const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_by_address_async(gobj(), Glib::unwrap(address), Glib::unwrap(cancellable),
+    &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_by_address_async(
+  const Glib::RefPtr<InetAddress>& address, const SlotAsyncReady& slot)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_by_address_async(
+    gobj(), Glib::unwrap(address), nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_service_async(const Glib::ustring& service, const Glib::ustring& protocol,
+  const Glib::ustring& domain, const SlotAsyncReady& slot,
+  const Glib::RefPtr<Cancellable>& cancellable)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_service_async(gobj(), service.c_str(), protocol.c_str(), domain.c_str(),
+    Glib::unwrap(cancellable), &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_service_async(const Glib::ustring& service, const Glib::ustring& protocol,
+  const Glib::ustring& domain, const SlotAsyncReady& slot)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_service_async(gobj(), service.c_str(), protocol.c_str(), domain.c_str(),
+    nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_records_async(const Glib::ustring& rrname, RecordType record_type,
+  const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_records_async(gobj(), Glib::c_str_or_nullptr(rrname),
+    static_cast<GResolverRecordType>(record_type), Glib::unwrap(cancellable),
+    &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+void
+Resolver::lookup_records_async(
+  const Glib::ustring& rrname, RecordType record_type, const SlotAsyncReady& slot)
+{
+  auto slot_copy = new SlotAsyncReady(slot);
+
+  g_resolver_lookup_records_async(gobj(), Glib::c_str_or_nullptr(rrname),
+    static_cast<GResolverRecordType>(record_type), nullptr, &giomm_SignalProxy_async_callback, slot_copy);
+}
+
+std::string
+hostname_to_ascii(const Glib::ustring& hostname)
+{
+  return Glib::convert_return_gchar_ptr_to_stdstring(g_hostname_to_ascii(hostname.c_str()));
+}
+
+Glib::ustring
+hostname_to_unicode(const Glib::ustring& hostname)
+{
+  return Glib::convert_return_gchar_ptr_to_ustring(g_hostname_to_unicode(hostname.c_str()));
+}
+
+bool
+hostname_is_non_ascii(const Glib::ustring& hostname)
+{
+  return g_hostname_is_non_ascii(hostname.c_str());
+}
+
+bool
+hostname_is_ascii_encoded(const Glib::ustring& hostname)
+{
+  return g_hostname_is_ascii_encoded(hostname.c_str());
+}
+
+bool
+hostname_is_ip_address(const Glib::ustring& hostname)
+{
+  return g_hostname_is_ip_address(hostname.c_str());
+}
+
+} // namespace Gio

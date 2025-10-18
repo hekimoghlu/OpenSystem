@@ -1,0 +1,86 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtk/gtk.h>
+
+using Path = Gtk::TreeModel::Path; //So that the generated method implementations can use this as a return type.
+
+namespace Gtk
+{
+
+TreeModel::iterator TreeModelSort::convert_child_iter_to_iter(const iterator& child_iter)
+{
+  iterator sorted_iter(this);
+
+  gtk_tree_model_sort_convert_child_iter_to_iter(gobj(), sorted_iter.gobj(),
+      const_cast<GtkTreeIter*>(child_iter.gobj()));
+
+  return sorted_iter;
+}
+
+TreeModel::const_iterator TreeModelSort::convert_child_iter_to_iter(const const_iterator& child_iter) const
+{
+  const_iterator sorted_iter(const_cast<TreeModelSort*>(this));
+
+  gtk_tree_model_sort_convert_child_iter_to_iter(
+      const_cast<GtkTreeModelSort*>(gobj()), sorted_iter.gobj(),
+      const_cast<GtkTreeIter*>(child_iter.gobj()));
+
+  return sorted_iter;
+}
+
+TreeModel::iterator TreeModelSort::convert_iter_to_child_iter(const iterator& sorted_iter)
+{
+  const auto child_model = gtk_tree_model_sort_get_model(gobj());
+
+  iterator child_iter(dynamic_cast<TreeModel*>(Glib::wrap_auto((GObject*) child_model, false)));
+
+  gtk_tree_model_sort_convert_iter_to_child_iter(gobj(), child_iter.gobj(),
+      const_cast<GtkTreeIter*>(sorted_iter.gobj()));
+
+  return child_iter;
+}
+
+TreeModel::const_iterator TreeModelSort::convert_iter_to_child_iter(const const_iterator& sorted_iter) const
+{
+  const auto child_model = gtk_tree_model_sort_get_model(const_cast<GtkTreeModelSort*>(gobj()));
+
+  const_iterator child_iter(dynamic_cast<TreeModel*>(Glib::wrap_auto((GObject*) child_model, false)));
+
+  gtk_tree_model_sort_convert_iter_to_child_iter(
+      const_cast<GtkTreeModelSort*>(gobj()), child_iter.gobj(),
+      const_cast<GtkTreeIter*>(sorted_iter.gobj()));
+
+  return child_iter;
+}
+
+void TreeModelSort::set_value_impl(const iterator& row, int column, const Glib::ValueBase& value)
+{
+  // Avoid two extra ref/unref cycles -- we don't store the child
+  // model pointer anywhere, so it's OK to do this _internally_.
+
+  const auto child_model = dynamic_cast<TreeModel*>(
+      Glib::wrap_auto((GObject*) gtk_tree_model_sort_get_model(gobj()), false));
+
+  iterator child_iter(child_model);
+
+  gtk_tree_model_sort_convert_iter_to_child_iter(
+      gobj(), child_iter.gobj(), const_cast<GtkTreeIter*>(row.gobj()));
+
+  child_model->set_value_impl(child_iter, column, value);
+}
+
+} // namespace Gtk

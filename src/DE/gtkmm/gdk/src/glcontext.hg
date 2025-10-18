@@ -1,0 +1,152 @@
+/* Copyright (C) 2015 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gdkmmconfig.h>
+#include <gdkmm/drawcontext.h>
+#include <gdkmm/display.h>
+#include <gdkmm/surface.h>
+
+_DEFS(gdkmm,gdk)
+_PINCLUDE(gdkmm/private/drawcontext_p.h)
+
+namespace Gdk
+{
+//TODO: When we can break API/ABI, remove all API with GLAPI
+// and rename get_allowed_apis2() and get_api2().
+#ifdef GDKMM_BUILD
+// Make sure GLAPI is not defined when gdkmm is built.
+#undef GLAPI
+#endif
+
+_WRAP_ENUM(GLApi, GdkGLAPI, gtype_func gdk_gl_api_get_type, newin "4,8", decl_prefix GDKMM_API)
+#ifndef GLAPI
+/** @enum GLAPI
+ * @note Name clash! GLAPI is defined as a preprocessor macro in epoxy/gl.h.
+ * If you include epoxy/gl.h and want to use API with %Gdk::GLAPI, you must undef GLAPI.
+ * @code
+ * #include <gdkmm/glcontext.h> // or <gtkmm.h>
+ * #include <epoxy/gl.h>
+ * #undef GLAPI
+ * @endcode
+ * or
+ * @code
+ * #include <epoxy/gl.h>
+ * #undef GLAPI
+ * #include <gdkmm/glcontext.h> // or <gtkmm.h>
+ * @endcode
+ *
+ */
+_WRAP_ENUM(GLAPI, GdkGLAPI, gtype_func gdk_gl_api_get_type, decl_prefix GDKMM_API,
+  deprecated "Use Gdk::GLApi instead.")
+#endif // GLAPI
+_WRAP_GERROR(GLError, GdkGLError, GDK_GL_ERROR, newin "3,18", decl_prefix GDKMM_API)
+
+/** A %Gdk::GLContext is an OpenGL context abstraction.
+ *
+ * It's a low-level object, used to implement high-level objects such
+ * as Gtk::GLArea on the GTK level.
+ *
+ * @note Name clash! GLAPI is defined as a preprocessor macro in epoxy/gl.h.
+ * Use GLApi instead of GLAPI.
+ * If you include epoxy/gl.h and want to use API with Gdk::GLAPI, you must undef GLAPI.
+ * @code
+ * #include <gdkmm/glcontext.h> // or <gtkmm.h>
+ * #include <epoxy/gl.h>
+ * #undef GLAPI
+ * @endcode
+ * or
+ * @code
+ * #include <epoxy/gl.h>
+ * #undef GLAPI
+ * #include <gdkmm/glcontext.h> // or <gtkmm.h>
+ * @endcode
+ *
+ * @newin{3,18}
+ */
+class GDKMM_API GLContext : public DrawContext
+{
+  _CLASS_GOBJECT(GLContext, GdkGLContext, GDK_GL_CONTEXT, Gdk::DrawContext, GdkDrawContext, , , GDKMM_API)
+
+protected:
+  _CTOR_DEFAULT
+
+public:
+  _WRAP_METHOD(Glib::RefPtr<Display> get_display(), gdk_gl_context_get_display, refreturn, newin "3,18")
+  _WRAP_METHOD(Glib::RefPtr<const Display> get_display() const, gdk_gl_context_get_display, refreturn, constversion, newin "3,18")
+  _WRAP_METHOD(Glib::RefPtr<Surface> get_surface(), gdk_gl_context_get_surface, refreturn, newin "3,18")
+  _WRAP_METHOD(Glib::RefPtr<const Surface> get_surface() const, gdk_gl_context_get_surface, refreturn, constversion, newin "3,18")
+  _WRAP_METHOD(Glib::RefPtr<GLContext> get_shared_context(), gdk_gl_context_get_shared_context, refreturn,
+    newin "3,18", deprecated "Always returns an empty RefPtr. Use is_shared() to check if contexts can be shared.")
+  _WRAP_METHOD(Glib::RefPtr<const GLContext> get_shared_context() const, gdk_gl_context_get_shared_context,
+    refreturn, constversion, newin "3,18",
+     deprecated "Always returns an empty RefPtr. Use is_shared() to check if contexts can be shared.")
+  _WRAP_METHOD(void get_version(int& major, int& minor) const, gdk_gl_context_get_version, newin "3,18")
+  _WRAP_METHOD(bool is_legacy() const, gdk_gl_context_is_legacy)
+  _WRAP_METHOD(bool is_shared(const Glib::RefPtr<const GLContext>& other) const, gdk_gl_context_is_shared, newin "4,4")
+  _WRAP_METHOD(void get_required_version(int& major, int& minor) const, gdk_gl_context_get_required_version, newin "3,18")
+  _WRAP_METHOD(void set_required_version(int major, int minor), gdk_gl_context_set_required_version, newin "3,18")
+  _WRAP_METHOD(bool get_debug_enabled() const, gdk_gl_context_get_debug_enabled, newin "3,18")
+  _WRAP_METHOD(void set_debug_enabled(bool enabled = true), gdk_gl_context_set_debug_enabled, newin "3,18")
+  _WRAP_METHOD(bool get_forward_compatible() const, gdk_gl_context_get_forward_compatible, newin "3,18")
+  _WRAP_METHOD(void set_forward_compatible(bool compatible = true), gdk_gl_context_set_forward_compatible, newin "3,18")
+#ifndef GLAPI
+  _WRAP_METHOD(void set_allowed_apis(GLAPI apis), gdk_gl_context_set_allowed_apis,
+    deprecated "Use set_allowed_apis(GLApi apis) instead.")
+  _WRAP_METHOD(GLAPI get_allowed_apis() const, gdk_gl_context_get_allowed_apis,
+    deprecated "Use get_allowed_apis2() instead.")
+  _WRAP_METHOD(GLAPI get_api() const, gdk_gl_context_get_api,
+    deprecated "Use get_api2() instead.")
+#endif // GLAPI
+  _WRAP_METHOD(void set_allowed_apis(GLApi apis), gdk_gl_context_set_allowed_apis, newin "4,8")
+  dnl// _CONVERSION()s are case-insensitive. Can't have conversions
+  dnl//  GdkGLAPI -> GLAPI and GdkGLAPI -> GLApi active at the same time.
+#m4 _CONVERSION(`GdkGLAPI', `GLApi', `static_cast<GLApi>($3)')
+  _WRAP_METHOD(GLApi get_allowed_apis2() const, gdk_gl_context_get_allowed_apis, newin "4,8")
+  _WRAP_METHOD(GLApi get_api2() const, gdk_gl_context_get_api, newin "4,8")
+  _WRAP_METHOD(void set_use_es(bool use_es = true), gdk_gl_context_set_use_es,
+    deprecated "Use set_allowed_apis(GLApi apis) instead.")
+
+#ifndef GDKMM_DISABLE_DEPRECATED
+  /** Undo a previous call to set_use_es().
+   *
+   * GDK will attempt to automatically detect whether the underlying
+   * GL implementation is OpenGL or OpenGL ES once the %GLContext is realized.
+   *
+   * @newin{3,24}
+   *
+   * @deprecated Use set_allowed_apis(GLApi apis) instead.
+   */
+  void unset_use_es();
+#endif // GDKMM_DISABLE_DEPRECATED
+
+  _WRAP_METHOD(bool get_use_es() const, gdk_gl_context_get_use_es)
+  _WRAP_METHOD(bool realize(), gdk_gl_context_realize, errthrow, newin "3,18")
+
+  _WRAP_METHOD(void make_current(), gdk_gl_context_make_current, newin "3,18")
+  _WRAP_METHOD(static Glib::RefPtr<GLContext> get_current(), gdk_gl_context_get_current, refreturn, newin "3,18")
+  _WRAP_METHOD(static void clear_current(), gdk_gl_context_clear_current, newin "3,18")
+
+  _WRAP_PROPERTY("shared-context", Glib::RefPtr<GLContext>, newin "3,18",
+    deprecated "Always returns an empty RefPtr. Use is_shared() to check if contexts can be shared.")
+#ifndef GLAPI
+  //TODO: When we can break API/ABI, change GLAPI to GLApi.
+  // Can't have both _WRAP_PROPERTY("xxx", GLAPI) and _WRAP_PROPERTY("xxx", GLApi).
+  _WRAP_PROPERTY("allowed-apis", GLAPI, deprecated "Use set/get-methods instead.")
+  _WRAP_PROPERTY("api", GLAPI, deprecated "Use get_api2() instead.")
+#endif // GLAPI
+};
+
+} // namespace Gdk

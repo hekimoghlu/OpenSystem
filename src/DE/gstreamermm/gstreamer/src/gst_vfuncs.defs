@@ -1,0 +1,1459 @@
+;; -*- scheme -*-
+; virtual function definitions
+; define-vfunc is g*mm-specific
+; These are hand-written.
+
+; GstAllocator
+
+(define-vfunc alloc
+  (of-object "GstAllocator")
+  (return-type "GstMemory*")
+  (parameters
+   '("gsize" "size")
+   '("GstAllocationParams*" "params")
+  )
+)
+
+(define-vfunc free
+  (of-object "GstAllocator")
+  (return-type "void")
+  (parameters
+   '("GstMemory*" "memory")
+  )
+)
+
+; GstAudioFilter
+
+(define-vfunc setup
+  (of-object "GstAudioFilter")
+  (return-type "gboolean")
+  (parameters
+   '("const-GstAudioInfo*" "info")
+  )
+)
+
+; GstAudioSink
+
+(define-vfunc open
+  (of-object "GstAudioSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc prepare
+  (of-object "GstAudioSink")
+  (return-type "gboolean")
+  (parameters
+   '("GstAudioRingBufferSpec*" "spec")
+  )
+)
+
+(define-vfunc unprepare
+  (of-object "GstAudioSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc close
+  (of-object "GstAudioSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc write
+  (of-object "GstAudioSink")
+  (return-type "gint")
+  (parameters
+   '("gpointer" "data")
+   '("guint" "length")
+  )
+)
+
+(define-vfunc delay
+  (of-object "GstAudioSink")
+  (return-type "guint")
+)
+
+(define-vfunc reset
+  (of-object "GstAudioSink")
+  (return-type "void")
+)
+
+; GstAudioSrc
+
+(define-vfunc open
+  (of-object "GstAudioSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc prepare
+  (of-object "GstAudioSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstAudioRingBufferSpec*" "spec")
+  )
+)
+
+(define-vfunc unprepare
+  (of-object "GstAudioSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc close
+  (of-object "GstAudioSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc read
+  (of-object "GstAudioSrc")
+  (return-type "guint")
+  (parameters
+   '("gpointer" "data")
+   '("guint" "length")
+  )
+)
+
+(define-vfunc delay
+  (of-object "GstAudioSrc")
+  (return-type "guint")
+)
+
+(define-vfunc reset
+  (of-object "GstAudioSrc")
+  (return-type "void")
+)
+
+; GstAudioBaseSink
+
+(define-vfunc create_ringbuffer
+  (of-object "GstAudioBaseSink")
+  (return-type "GstAudioRingBuffer*")
+)
+
+(define-vfunc payload
+  (of-object "GstAudioBaseSink")
+  (return-type "GstBuffer*")
+  (parameters
+   '("GstBuffer*" "buffer")
+  )
+)
+
+; GstAudioBaseSrc
+
+(define-vfunc create_ringbuffer
+  (of-object "GstAudioBaseSrc")
+  (return-type "GstAudioRingBuffer*")
+)
+
+; GstBaseSink
+
+(define-vfunc get_caps
+  (of-object "GstBaseSink")
+  (return-type "GstCaps*")
+  (parameters
+   '("GstCaps*" "filter")
+  )
+)
+
+(define-vfunc set_caps
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+  (parameters
+   '("GstCaps*" "caps")
+  )
+)
+
+(define-vfunc buffer_alloc
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("guint64" "offset")
+   '("guint" "size")
+   '("GstCaps*" "caps")
+   '("GstBuffer**" "buf")
+  )
+)
+
+(define-vfunc get_times
+  (of-object "GstBaseSink")
+  (return-type "void")
+  (parameters
+   '("GstBuffer*" "buffer")
+   '("GstClockTime*" "start")
+   '("GstClockTime*" "end")
+  )
+)
+
+(define-vfunc start
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc stop
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc unlock
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc event
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc preroll
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBuffer*" "buffer")
+  )
+)
+
+(define-vfunc render
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBuffer*" "buffer")
+  )
+)
+
+(define-vfunc activate_pull
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+  (parameters
+   '("gboolean" "active")
+  )
+)
+
+(define-vfunc fixate
+  (of-object "GstBaseSink")
+  (return-type "GstCaps*")
+  (parameters
+   '("GstCaps*" "caps")
+  )
+)
+
+(define-vfunc unlock_stop
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+)
+
+(define-vfunc render_list
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBufferList*" "buffer_list")
+  )
+)
+
+(define-vfunc propose_allocation
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc query
+  (of-object "GstBaseSink")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc wait_event
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc prepare
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBuffer*" "buffer")
+  )
+)
+
+(define-vfunc prepare_list
+  (of-object "GstBaseSink")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBufferList*" "buffer_list")
+  )
+)
+
+; GstBaseSrc
+
+(define-vfunc get_caps
+  (of-object "GstBaseSrc")
+  (return-type "GstCaps*")
+  (parameters
+   '("GstCaps*" "filter")
+  )
+)
+
+(define-vfunc set_caps
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstCaps*" "caps")
+  )
+)
+
+(define-vfunc negotiate
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc newsegment
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc start
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc stop
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc get_times
+  (of-object "GstBaseSrc")
+  (return-type "void")
+  (parameters
+   '("GstBuffer*" "buffer")
+   '("GstClockTime*" "start")
+   '("GstClockTime*" "end")
+  )
+)
+
+(define-vfunc get_size
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("guint64*" "size")
+  )
+)
+
+(define-vfunc is_seekable
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc unlock
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc event
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc create
+  (of-object "GstBaseSrc")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("guint64" "offset")
+   '("guint" "size")
+   '("GstBuffer**" "buf")
+  )
+)
+
+(define-vfunc do_seek
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstSegment*" "segment")
+  )
+)
+
+(define-vfunc query
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc check_get_range
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc fixate
+  (of-object "GstBaseSrc")
+  (return-type "GstCaps*")
+  (parameters
+   '("GstCaps*" "caps")
+  )
+)
+
+(define-vfunc unlock_stop
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+)
+
+(define-vfunc prepare_seek_segment
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "seek")
+   '("GstSegment*" "segment")
+  )
+)
+
+(define-vfunc decide_allocation
+  (of-object "GstBaseSrc")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc alloc
+  (of-object "GstBaseSrc")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("guint64" "offset")
+   '("guint" "size")
+   '("GstBuffer**" "buf")
+  )
+)
+
+(define-vfunc fill
+  (of-object "GstBaseSrc")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("guint64" "offset")
+   '("guint" "size")
+   '("GstBuffer*" "buf")
+  )
+)
+
+; GstBaseTransform
+
+(define-vfunc transform_caps
+  (of-object "GstBaseTransform")
+  (return-type "GstCaps*")
+  (parameters
+   '("GstPadDirection" "direction")
+   '("GstCaps*" "caps")
+   '("GstCaps*" "filter")
+  )
+)
+
+(define-vfunc fixate_caps
+  (of-object "GstBaseTransform")
+  (return-type "GstCaps*")
+  (parameters
+   '("GstPadDirection" "direction")
+   '("GstCaps*" "caps")
+   '("GstCaps*" "othercaps")
+  )
+)
+
+(define-vfunc transform_size
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstPadDirection" "direction")
+   '("GstCaps*" "caps")
+   '("guint" "size")
+   '("GstCaps*" "othercaps")
+   '("guint*" "othersize")
+  )
+)
+
+(define-vfunc get_unit_size
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstCaps*" "caps")
+   '("gsize*" "size")
+  )
+)
+
+(define-vfunc set_caps
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstCaps*" "incaps")
+   '("GstCaps*" "outcaps")
+  )
+)
+
+(define-vfunc start
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+)
+
+(define-vfunc stop
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+)
+
+(define-vfunc event
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc transform
+  (of-object "GstBaseTransform")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBuffer*" "inbuf")
+   '("GstBuffer*" "outbuf")
+  )
+)
+(define-vfunc transform_ip
+  (of-object "GstBaseTransform")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBuffer*" "buf")
+  )
+)
+
+(define-vfunc prepare_output_buffer
+  (of-object "GstBaseTransform")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("GstBuffer*" "input")
+   '("gint" "size")
+   '("GstCaps*" "caps")
+   '("GstBuffer**" "buffer")
+  )
+)
+
+(define-vfunc src_event
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc sink_event
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc before_transform
+  (of-object "GstBaseTransform")
+  (return-type "void")
+  (parameters
+   '("GstBuffer*" "buffer")
+  )
+)
+
+(define-vfunc accept_caps
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstPadDirection" "direction")
+   '("GstCaps*" "caps")
+  )
+)
+
+(define-vfunc decide_allocation
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc filter_meta
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+   '("GType" "api")
+   '("const-GstStructure*" "params")
+  )
+)
+
+(define-vfunc propose_allocation
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "decide_query")
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc submit_input_buffer
+  (of-object "GstBaseTransform")
+  (return-type "GstFlowReturn")
+  (parameters
+   '("gboolean" "is_discont")
+   '("GstBuffer*" "input")
+  )
+)
+
+(define-vfunc copy_metadata
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstBuffer*" "input")
+   '("GstBuffer*" "outbuf")
+  )
+)
+
+(define-vfunc query
+  (of-object "GstBaseTransform")
+  (return-type "gboolean")
+  (parameters
+   '("GstPadDirection" "direction")
+   '("GstQuery*" "query")
+  )
+)
+
+; GstBin
+
+(define-vfunc add_element
+  (of-object "GstBin")
+  (return-type "gboolean")
+  (parameters
+   '("GstElement*" "element")
+  )
+)
+
+(define-vfunc remove_element
+  (of-object "GstBin")
+  (return-type "gboolean")
+  (parameters
+   '("GstElement*" "element")
+  )
+)
+
+(define-vfunc handle_message
+  (of-object "GstBin")
+  (return-type "void")
+  (parameters
+   '("GstMessage*" "message")
+  )
+)
+
+; GstAudioCdSrc
+
+(define-vfunc open
+  (of-object "GstAudioCdSrc")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "device")
+  )
+)
+
+(define-vfunc close
+  (of-object "GstAudioCdSrc")
+  (return-type "void")
+)
+
+(define-vfunc read_sector
+  (of-object "GstAudioCdSrc")
+  (return-type "GstBuffer*")
+  (parameters
+   '("gint" "sector")
+  )
+)
+
+(define-vfunc get_default_device
+  (of-object "GstAudioCdSrc")
+  (return-type "gchar*")
+)
+
+(define-vfunc probe_devices
+  (of-object "GstAudioCdSrc")
+  (return-type "gchar**")
+)
+
+; GstChildProxy
+
+(define-vfunc get_child_by_name
+  (of-object "GstChildProxy")
+  (return-type "GObject*")
+  (parameters
+   '("const-gchar*" "name")
+  )
+)
+
+(define-vfunc get_child_by_index
+  (of-object "GstChildProxy")
+  (return-type "GObject*")
+  (parameters
+   '("guint" "index")
+  )
+)
+
+(define-vfunc get_children_count
+  (of-object "GstChildProxy")
+  (return-type "guint")
+)
+
+; GstClock
+
+(define-vfunc change_resolution
+  (of-object "GstClock")
+  (return-type "GstClockTime")
+  (parameters
+   '("GstClockTime" "old_resolution")
+   '("GstClockTime" "new_resolution")
+  )
+)
+
+(define-vfunc get_resolution
+  (of-object "GstClock")
+  (return-type "GstClockTime")
+)
+
+(define-vfunc get_internal_time
+  (of-object "GstClock")
+  (return-type "GstClockTime")
+)
+
+(define-vfunc wait
+  (of-object "GstClock")
+  (return-type "GstClockReturn")
+  (parameters
+   '("GstClockEntry*" "entry")
+   '("GstClockTimeDiff*" "jitter")
+  )
+)
+
+(define-vfunc wait_async
+  (of-object "GstClock")
+  (return-type "GstClockReturn")
+  (parameters
+   '("GstClockEntry*" "entry")
+  )
+)
+
+(define-vfunc unschedule
+  (of-object "GstClock")
+  (return-type "void")
+  (parameters
+   '("GstClockEntry*" "entry")
+  )
+)
+
+(define-vfunc wait_jitter
+  (of-object "GstClock")
+  (return-type "GstClockReturn")
+  (parameters
+   '("GstClockEntry*" "entry")
+   '("GstClockTimeDiff*" "jitter")
+  )
+)
+
+; GstColorBalance
+
+(define-vfunc list_channels
+  (of-object "GstColorBalance")
+  (return-type "const-GList*")
+)
+
+(define-vfunc set_value
+  (of-object "GstColorBalance")
+  (return-type "void")
+  (parameters
+   '("GstColorBalanceChannel*" "balance")
+   '("gint" "value")
+  )
+)
+
+(define-vfunc get_value
+  (of-object "GstColorBalance")
+  (return-type "gint")
+  (parameters
+   '("GstColorBalanceChannel*" "balance")
+  )
+)
+
+(define-vfunc get_balance_type
+  (of-object "GstColorBalance")
+  (return-type "GstColorBalanceType")
+)
+
+; GstElement
+
+(define-vfunc request_new_pad
+  (of-object "GstElement")
+  (return-type "GstPad*")
+  (parameters
+   '("GstPadTemplate*" "templ")
+   '("const-gchar*" "name")
+   '("const-GstCaps*" "caps")
+  )
+)
+
+(define-vfunc release_pad
+  (of-object "GstElement")
+  (return-type "void")
+  (parameters
+   '("GstPad*" "pad")
+  )
+)
+
+(define-vfunc get_state
+  (of-object "GstElement")
+  (return-type "GstStateChangeReturn")
+  (parameters
+   '("GstState*" "state")
+   '("GstState*" "pending")
+   '("GstClockTime" "timeout")
+  )
+)
+
+(define-vfunc set_state
+  (of-object "GstElement")
+  (return-type "GstStateChangeReturn")
+  (parameters
+   '("GstState" "state")
+  )
+)
+
+(define-vfunc change_state
+  (of-object "GstElement")
+  (return-type "GstStateChangeReturn")
+  (parameters
+   '("GstStateChange" "transition")
+  )
+)
+
+(define-vfunc state_changed
+  (of-object "GstElement")
+  (return-type "void")
+  (parameters
+   '("GstState" "oldstate")
+   '("GstState" "newstate")
+   '("GstState" "pending")
+  )
+)
+
+(define-vfunc set_bus
+  (of-object "GstElement")
+  (return-type "void")
+  (parameters
+   '("GstBus*" "bus")
+  )
+)
+
+(define-vfunc provide_clock
+  (of-object "GstElement")
+  (return-type "GstClock*")
+)
+
+(define-vfunc set_clock
+  (of-object "GstElement")
+  (return-type "gboolean")
+  (parameters
+   '("GstClock*" "clock")
+  )
+)
+
+(define-vfunc get_index
+  (of-object "GstElement")
+  (return-type "GstIndex*")
+)
+
+(define-vfunc set_index
+  (of-object "GstElement")
+  (return-type "void")
+  (parameters
+   '("GstIndex*" "index")
+  )
+)
+
+(define-vfunc send_event
+  (of-object "GstElement")
+  (return-type "gboolean")
+  (parameters
+   '("GstEvent*" "event")
+  )
+)
+
+(define-vfunc get_query_types
+  (of-object "GstElement")
+  (return-type "const-GstQueryType*")
+)
+
+(define-vfunc query
+  (of-object "GstElement")
+  (return-type "gboolean")
+  (parameters
+   '("GstQuery*" "query")
+  )
+)
+
+(define-vfunc set_context
+  (of-object "GstElement")
+  (return-type "void")
+  (parameters
+   '("GstContext*" "context")
+  )
+)
+
+(define-vfunc post_message
+  (of-object "GstElement")
+  (return-type "gboolean")
+  (parameters
+   '("GstMessage*" "message")
+  )
+)
+
+; GstImplementsInterface
+
+(define-vfunc supported
+  (of-object "GstImplementsInterface")
+  (return-type "gboolean")
+  (parameters
+   '("GType" "iface_type")
+  )
+)
+
+; GstIndex
+
+(define-vfunc get_writer_id
+  (of-object "GstIndex")
+  (return-type "gboolean")
+  (parameters
+   '("gint*" "writer_id")
+   '("gchar*" "writer_string")
+  )
+)
+
+(define-vfunc commit
+  (of-object "GstIndex")
+  (return-type "void")
+  (parameters
+   '("gint" "id")
+  )
+)
+
+(define-vfunc add_entry
+  (of-object "GstIndex")
+  (return-type "void")
+  (parameters
+   '("GstIndexEntry*" "entry")
+  )
+)
+
+(define-vfunc get_assoc_entry
+  (of-object "GstIndex")
+  (return-type "GstIndexEntry*")
+  (parameters
+   '("guint" "id")
+   '("GstIndexLookupMethod" "method")
+   '("GstAssocFlags" "flags")
+   '("GstFormat" "format")
+   '("gint64" "value")
+   '("GCompareDataFunc" "func")
+   '("gpointer" "user_data")
+  )
+)
+
+; GstMessage
+
+(define-vfunc finalize
+  (of-object "GstMessage")
+  (return-type "void")
+)
+
+; GstMixer
+
+(define-vfunc list_tracks
+  (of-object "GstMixer")
+  (return-type "const-GList*")
+)
+
+(define-vfunc get_volume
+  (of-object "GstMixer")
+  (return-type "void")
+  (parameters
+   '("GstMixerTrack*" "track")
+   '("gint*" "volumes")
+  )
+)
+
+(define-vfunc set_volume
+  (of-object "GstMixer")
+  (return-type "void")
+  (parameters
+   '("GstMixerTrack*" "track")
+   '("gint*" "volumes")
+  )
+)
+
+(define-vfunc set_mute
+  (of-object "GstMixer")
+  (return-type "void")
+  (parameters
+   '("GstMixerTrack*" "track")
+   '("gboolean" "mute")
+  )
+)
+
+(define-vfunc set_record
+  (of-object "GstMixer")
+  (return-type "void")
+  (parameters
+   '("GstMixerTrack*" "track")
+   '("gboolean" "record")
+  )
+)
+
+(define-vfunc set_option
+  (of-object "GstMixer")
+  (return-type "void")
+  (parameters
+   '("GstMixerOptions*" "opts")
+   '("gchar*" "value")
+  )
+)
+
+(define-vfunc get_option
+  (of-object "GstMixer")
+  (return-type "const-gchar*")
+  (parameters
+   '("GstMixerOptions*" "opts")
+  )
+)
+
+(define-vfunc get_mixer_flags
+  (of-object "GstMixer")
+  (return-type "GstMixerFlags")
+)
+
+; GstNavigation
+
+(define-vfunc send_event
+  (of-object "GstNavigation")
+  (return-type "void")
+  (parameters
+   '("GstStructure*" "structure")
+  )
+)
+
+; GstObject
+
+(define-vfunc save_thyself
+  (of-object "GstObject")
+  (return-type "GstXmlNodePtr")
+  (parameters
+   '("GstXmlNodePtr" "parent")
+  )
+)
+
+(define-vfunc restore_thyself
+  (of-object "GstObject")
+  (return-type "void")
+  (parameters
+   '("GstXmlNodePtr" "self_node")
+  )
+)
+
+; GstPreset
+
+(define-vfunc get_preset_names
+  (of-object "GstPreset")
+  (return-type "gchar**")
+)
+
+(define-vfunc get_property_names
+  (of-object "GstPreset")
+  (return-type "gchar**")
+)
+
+(define-vfunc load_preset
+  (of-object "GstPreset")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "name")
+  )
+)
+
+(define-vfunc save_preset
+  (of-object "GstPreset")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "name")
+  )
+)
+
+(define-vfunc rename_preset
+  (of-object "GstPreset")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "old_name")
+   '("const-gchar*" "new_name")
+  )
+)
+
+(define-vfunc delete_preset
+  (of-object "GstPreset")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "name")
+  )
+)
+
+(define-vfunc set_meta
+  (of-object "GstPreset")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "name")
+   '("const-gchar*" "tag")
+   '("const-gchar*" "value")
+  )
+)
+
+(define-vfunc get_meta
+  (of-object "GstPreset")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "name")
+   '("const-gchar*" "tag")
+   '("gchar**" "value")
+  )
+)
+
+; GstPropertyProbe
+
+(define-vfunc get_properties
+  (of-object "GstPropertyProbe")
+  (return-type "const-GList*")
+)
+
+(define-vfunc needs_probe
+  (of-object "GstPropertyProbe")
+  (return-type "gboolean")
+  (parameters
+   '("guint" "prop_id")
+   '("const-GParamSpec*" "pspec")
+  )
+)
+
+(define-vfunc probe_property
+  (of-object "GstPropertyProbe")
+  (return-type "void")
+  (parameters
+   '("guint" "prop_id")
+   '("const-GParamSpec*" "pspec")
+  )
+)
+
+(define-vfunc get_values
+  (of-object "GstPropertyProbe")
+  (return-type "GValueArray*")
+  (parameters
+   '("guint" "prop_id")
+   '("const-GParamSpec*" "pspec")
+  )
+)
+
+; GstAudioRingBuffer
+
+(define-vfunc open_device
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc acquire
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+  (parameters
+   '("GstAudioRingBufferSpec*" "spec")
+  )
+)
+
+(define-vfunc release
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc close_device
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc start
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc pause
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc resume
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc stop
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+)
+
+(define-vfunc delay
+  (of-object "GstAudioRingBuffer")
+  (return-type "guint")
+)
+
+(define-vfunc activate
+  (of-object "GstAudioRingBuffer")
+  (return-type "gboolean")
+  (parameters
+   '("gboolean" "active")
+  )
+)
+
+(define-vfunc commit
+  (of-object "GstAudioRingBuffer")
+  (return-type "guint")
+  (parameters
+   '("guint64*" "sample")
+   '("guint8*" "data")
+   '("gint" "in_samples")
+   '("gint" "out_samples")
+   '("gint*" "accum")
+  )
+)
+
+(define-vfunc clear_all
+  (of-object "GstAudioRingBuffer")
+  (return-type "void")
+)
+
+; GstTaskPool
+
+(define-vfunc prepare
+  (of-object "GstTaskPool")
+  (return-type "void")
+  (parameters
+   '("GError**" "error")
+  )
+)
+
+(define-vfunc cleanup
+  (of-object "GstTaskPool")
+  (return-type "void")
+)
+
+(define-vfunc push
+  (of-object "GstTaskPool")
+  (return-type "gpointer")
+  (parameters
+   '("GstTaskPoolFunction" "func")
+   '("gpointer" "user_data")
+   '("GError**" "error")
+  )
+)
+
+(define-vfunc join
+  (of-object "GstTaskPool")
+  (return-type "void")
+  (parameters
+   '("gpointer" "id")
+  )
+)
+
+; GstTuner
+
+(define-vfunc list_channels
+  (of-object "GstTuner")
+  (return-type "const-GList*")
+)
+
+(define-vfunc set_channel
+  (of-object "GstTuner")
+  (return-type "void")
+  (parameters
+   '("GstTunerChannel*" "channel")
+  )
+)
+
+(define-vfunc get_channel
+  (of-object "GstTuner")
+  (return-type "GstTunerChannel*")
+)
+
+(define-vfunc list_norms
+  (of-object "GstTuner")
+  (return-type "const-GList*")
+)
+
+(define-vfunc set_norm
+  (of-object "GstTuner")
+  (return-type "void")
+  (parameters
+   '("GstTunerNorm*" "norm")
+  )
+)
+
+(define-vfunc get_norm
+  (of-object "GstTuner")
+  (return-type "GstTunerNorm*")
+)
+
+(define-vfunc set_frequency
+  (of-object "GstTuner")
+  (return-type "void")
+  (parameters
+   '("GstTunerChannel*" "channel")
+   '("gulong" "frequency")
+  )
+)
+
+(define-vfunc get_frequency
+  (of-object "GstTuner")
+  (return-type "gulong")
+  (parameters
+   '("GstTunerChannel*" "channel")
+  )
+)
+
+(define-vfunc signal_strength
+  (of-object "GstTuner")
+  (return-type "gint")
+  (parameters
+   '("GstTunerChannel*" "channel")
+  )
+)
+
+; GstURIHandler
+
+(define-vfunc get_uri
+  (of-object "GstURIHandler")
+  (return-type "gchar*")
+)
+
+(define-vfunc set_uri
+  (of-object "GstURIHandler")
+  (return-type "gboolean")
+  (parameters
+   '("const-gchar*" "uri")
+   '("GError**" "error")
+  )
+)
+
+; GstVideoOrientation
+
+(define-vfunc get_hflip
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gboolean*" "flip")
+  )
+)
+
+(define-vfunc get_vflip
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gboolean*" "flip")
+  )
+)
+
+(define-vfunc get_hcenter
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gint*" "center")
+  )
+)
+
+(define-vfunc get_vcenter
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gint*" "center")
+  )
+)
+
+(define-vfunc set_hflip
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gboolean" "flip")
+  )
+)
+
+(define-vfunc set_vflip
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gboolean" "flip")
+  )
+)
+
+(define-vfunc set_hcenter
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gint" "center")
+  )
+)
+
+(define-vfunc set_vcenter
+  (of-object "GstVideoOrientation")
+  (return-type "gboolean")
+  (parameters
+   '("gint" "center")
+  )
+)
+
+; GstVideoOverlay
+
+(define-vfunc set_window_handle
+  (of-object "GstVideoOverlay")
+  (return-type "void")
+  (parameters
+   '("guintptr" "handle")
+  )
+)
+
+(define-vfunc expose
+  (of-object "GstVideoOverlay")
+  (return-type "void")
+)
+
+(define-vfunc handle_events
+  (of-object "GstVideoOverlay")
+  (return-type "void")
+  (parameters
+   '("gboolean" "handle_events")
+  )
+)
+
+(define-vfunc set_render_rectangle
+  (of-object "GstVideoOverlay")
+  (return-type "void")
+  (parameters
+   '("gint" "x")
+   '("gint" "y")
+   '("gint" "width")
+   '("gint" "height")
+  )
+)

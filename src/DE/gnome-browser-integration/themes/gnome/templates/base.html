@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="{% block html_lang %}{{ DEFAULT_LANG }}{% endblock html_lang %}">
+
+<head>
+  {% block head %}
+  <meta charset="utf-8">
+  <meta name="generator" content="Pelican" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4a86cf">
+  <meta name="application-name" content="GNOME browser integration">
+  {% if SITESUBTITLE %}
+  <meta name="description" content="{{ SITESUBTITLE }}" />
+  {% endif %}
+  {% if STYLESHEET_URL %}
+    <link rel="stylesheet" type="text/css" href="{{ STYLESHEET_URL }}" />
+  {% endif %}
+  {% if FEED_ALL_ATOM %}
+    <link href="{{ FEED_DOMAIN }}/{% if FEED_ALL_ATOM_URL %}{{ FEED_ALL_ATOM_URL }}{% else %}{{ FEED_ALL_ATOM }}{% endif %}" type="application/atom+xml" rel="alternate" title="{{ SITENAME|striptags }} Full Atom Feed" />
+  {% endif %}
+  {% if FEED_ALL_RSS %}
+    <link href="{{ FEED_DOMAIN }}/{% if FEED_ALL_RSS_URL %}{{ FEED_ALL_RSS_URL }}{% else %}{{ FEED_ALL_RSS }}{% endif %}" type="application/rss+xml" rel="alternate" title="{{ SITENAME|striptags }} Full RSS Feed" />
+  {% endif %}
+  {% if FEED_ATOM %}
+    <link href="{{ FEED_DOMAIN }}/{%if FEED_ATOM_URL %}{{ FEED_ATOM_URL }}{% else %}{{ FEED_ATOM }}{% endif %}" type="application/atom+xml" rel="alternate" title="{{ SITENAME|striptags }} Atom Feed" />
+  {% endif %}
+  {% if FEED_RSS %}
+    <link href="{{ FEED_DOMAIN }}/{% if FEED_RSS_URL %}{{ FEED_RSS_URL }}{% else %}{{ FEED_RSS }}{% endif %}" type="application/rss+xml" rel="alternate" title="{{ SITENAME|striptags }} RSS Feed" />
+  {% endif %}
+  {% if CATEGORY_FEED_ATOM and category %}
+    <link href="{{ FEED_DOMAIN }}/{% if CATEGORY_FEED_ATOM_URL %}{{ CATEGORY_FEED_ATOM_URL.format(slug=category.slug) }}{% else %}{{ CATEGORY_FEED_ATOM.format(slug=category.slug) }}{% endif %}" type="application/atom+xml" rel="alternate" title="{{ SITENAME|striptags }} Categories Atom Feed" />
+  {% endif %}
+  {% if CATEGORY_FEED_RSS and category %}
+    <link href="{{ FEED_DOMAIN }}/{% if CATEGORY_FEED_RSS_URL %}{{ CATEGORY_FEED_RSS_URL.format(slug=category.slug) }}{% else %}{{ CATEGORY_FEED_RSS.format(slug=category.slug) }}{% endif %}" type="application/rss+xml" rel="alternate" title="{{ SITENAME|striptags }} Categories RSS Feed" />
+  {% endif %}
+  {% if TAG_FEED_ATOM and tag %}
+    <link href="{{ FEED_DOMAIN }}/{% if TAG_FEED_ATOM_URL %}{{ TAG_FEED_ATOM_URL.format(slug=tag.slug) }}{% else %}{{ TAG_FEED_ATOM.format(slug=tag.slug) }}{% endif %}" type="application/atom+xml" rel="alternate" title="{{ SITENAME|striptags }} Tags Atom Feed" />
+  {% endif %}
+  {% if TAG_FEED_RSS and tag %}
+    <link href="{{ FEED_DOMAIN }}/{% if TAG_FEED_RSS_URL %}{{ TAG_FEED_RSS_URL.format(slug=tag.slug) }}{% else %}{{ TAG_FEED_RSS.format(slug=tag.slug) }}{% endif %}" type="application/rss+xml" rel="alternate" title="{{ SITENAME|striptags }} Tags RSS Feed" />
+  {% endif %}
+  <link rel="icon" type="image/png" href="{{ SITEURL }}/theme/images/favicon.ico"/>
+  <title>{% block title %}{{ SITENAME|striptags }}{% endblock title %}</title>
+  {% assets output="packed.css", "deneb.5.3.css", "style.css" %}
+  <link href="{{ SITEURL }}/{{ ASSET_URL }}" rel="stylesheet"/>
+  {% endassets %}
+  <style>
+      section {
+          padding: 40px 0;
+          border-bottom: 1px solid #e7e7e7;
+      }
+
+      .bg-dark {
+          background: #f6f6f6;
+      }
+
+      .fake-nav {
+          background-color: #4a86cf;
+          height: 50px;
+      }
+
+      .color-panels {
+          float: left;
+          width: 60px;
+          height: 60px;
+          margin: 0 5px;
+          border-radius: 3px;
+      }
+  </style>
+  {% endblock %}
+</head>
+<body class="gnome-body">
+
+<header class="gnome-header">
+  <nav class="navbar navbar-collapse navbar-expand-lg navbar-default">
+    <div class="container" id="navbar-wrapper">
+
+      <a class="gnome-navbar-brand" href="{{ SITEURL }}" title="Go to home page">
+        <img src="{{ SITEURL }}/theme/images/gnome-logo.svg" alt="GNOME: The Free Software Desktop Project">
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+              aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse my-1 my-sm-0 my-md-0 my-lg-0 my-xl-0" id="navbarSupportedContent">
+        <ul class="nav navbar-nav">
+        {% for title, link in MENUITEMS %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ link }}">{{ title }}</a>
+          </li>
+        {% endfor %}
+        {% if DISPLAY_PAGES_ON_MENU %}
+          {% for p in pages %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ SITEURL }}/{{ p.url }}" {% if p==page %} aria-current="page" {% endif %}>{{ p.title }}</a>
+          </li>
+          {% endfor %}
+        {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<div class="gnome-content">
+  <div class='container'>
+    {% block content %}
+    {% endblock %}
+  </div>
+</div>
+
+<div class="footer m-t-0">
+  <div class="container triangles">
+    <div class="row">
+      <div class="col-xs-12">
+        <p>
+          &copy; <a href="//gnome.org"> The GNOME Project</a>
+        </p>
+        <p>
+          <a href='https://gitlab.gnome.org/GNOME/gnome-browser-integration'>Website source code</a>
+        </p>
+        <p>
+          GNOME browser integration.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% assets output="js/packed.js", "deneb.5.3.js" %}
+ <script src="{{ SITEURL }}/{{ ASSET_URL }}"></script>
+{% endassets %}
+
+</body>
+</html>

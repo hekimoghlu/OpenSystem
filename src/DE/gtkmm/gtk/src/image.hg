@@ -1,0 +1,141 @@
+/* Copyright (C) 1998-2002 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/widget.h>
+#include <gdkmm/pixbuf.h>
+#include <giomm/icon.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/widget_p.h)
+
+namespace Gtk
+{
+
+_CC_INCLUDE(gtk/gtk.h)
+
+/** A widget displaying an image.
+ *
+ * The %Gtk::Image widget displays an image. Various kinds of object can be
+ * displayed as an image; most typically, you would load a Gdk::Texture (which
+ * implements Gdk::Paintable) from a file, and then display that.
+ *
+ * %Gtk::Image displays its image as an icon, with a size that is determined
+ * by the application. See Gtk::Picture if you want to show an image
+ * at its actual size.
+ *
+ * The %Image widget looks like this:
+ * @image html image1.png
+ *
+ * @ingroup Widgets
+ */
+class GTKMM_API Image : public Widget
+{
+  _CLASS_GTKOBJECT(Image,GtkImage,GTK_IMAGE,Gtk::Widget,GtkWidget, , , GTKMM_API)
+public:
+  _WRAP_ENUM(Type, GtkImageType, decl_prefix GTKMM_API)
+
+  _CTOR_DEFAULT
+
+  /** Creates an Image widget displaying the file @a filename.
+   * If the file isn't found or can't be loaded, the resulting Gtk::Image will display a "broken image" icon.
+   *
+   * If you need to detect failures to load the file, use Gdk::Pixbuf::create_from_file() to load the file yourself,
+   * then create the GtkImage from the pixbuf.
+   *
+   * The storage type (get_storage_type()) of the returned image is not defined.
+   * It will be whatever is appropriate for displaying the file.
+   */
+  _WRAP_CTOR(Image(const std::string& file), gtk_image_new_from_file)
+
+_DEPRECATE_IFDEF_START
+  // gtk_image_new_from_pixbuf() does more than just call g_object_new().
+  // GtkImage has no "pixbuf" property.
+  /** Creates a new Image widget displaying @a pixbuf.
+   * Note that this just creates an GtkImage from the pixbuf. The Gtk::Image created will not react to state changes.
+   * Should you want that, you should use the default constructor and set_from_icon_name().
+   *
+   * @deprecated 4.12: Use Gdk::Texture::create_for_pixbuf(), the default constructor
+   *                   and set(const Glib::RefPtr<Gdk::Paintable>& paintable) instead.
+   */
+  explicit Image(const Glib::RefPtr<Gdk::Pixbuf>& pixbuf);
+_DEPRECATE_IFDEF_END
+  _IGNORE(gtk_image_new_from_pixbuf)
+
+  /** Creates a new Gtk::Image displaying @a paintable.
+   *
+   * The Gtk::Image will track changes to the @a paintable and update
+   * its size and contents in response to it.
+   *
+   * @newin{3,94}
+   *
+   * @param paintable A Gdk::Paintable, or an emtpy Glib::RefPtr.
+   */
+  _WRAP_CTOR(Image(const Glib::RefPtr<Gdk::Paintable>& paintable), gtk_image_new_from_paintable)
+  _WRAP_METHOD_DOCS_ONLY(gtk_image_new_from_gicon, voidreturn, newin "3,24")
+  _WRAP_CTOR(Image(const Glib::RefPtr<Gio::Icon>& gicon), gtk_image_new_from_gicon)
+
+  // We don't wrap gtk_image_new_from_resource() and gtk_image_new_from_icon_name()
+  // to avoid a clash with the from_filename constructor.
+  // But we do wrap gtk_image_set_from_resource() and gtk_image_set_from_icon_name().
+  _IGNORE(gtk_image_new_from_resource, gtk_image_new_from_icon_name)
+
+  _WRAP_METHOD(void set(const std::string& filename), gtk_image_set_from_file)
+  _WRAP_METHOD(void set_from_resource(const std::string& resource_path), gtk_image_set_from_resource)
+  _WRAP_METHOD(void set(const Glib::RefPtr<Gdk::Pixbuf>& pixbuf), gtk_image_set_from_pixbuf,
+    deprecated "Use Gdk::Texture::create_for_pixbuf() and set(const Glib::RefPtr<Gdk::Paintable>& paintable) instead.")
+  _WRAP_METHOD(void set(const Glib::RefPtr<Gdk::Paintable>& paintable), gtk_image_set_from_paintable)
+  _WRAP_METHOD(void set(const Glib::RefPtr<const Gio::Icon>& icon), gtk_image_set_from_gicon)
+
+  // Don't just refer to a constructor for this one, because there is no such
+  // constructor, to avoid ambiguity with the filename constructor.
+  /** Causes the %Image to display an icon from the current icon theme.
+   * If the icon name isn't known, a "broken image" icon will be
+   * displayed instead. If the current icon theme is changed, the icon
+   * will be updated appropriately.
+   *
+   * @param icon_name An icon name.
+   */
+  _WRAP_METHOD(void set_from_icon_name(const Glib::ustring& icon_name), gtk_image_set_from_icon_name)
+
+  _WRAP_METHOD(void clear(), gtk_image_clear)
+
+  _WRAP_METHOD(Type get_storage_type() const, gtk_image_get_storage_type)
+
+  _WRAP_METHOD(Glib::RefPtr<Gdk::Paintable> get_paintable(), gtk_image_get_paintable, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gdk::Paintable> get_paintable() const, gtk_image_get_paintable, refreturn, constversion)
+
+  _WRAP_METHOD(void set_icon_size(IconSize icon_size), gtk_image_set_icon_size)
+  _WRAP_METHOD(IconSize get_icon_size() const, gtk_image_get_icon_size)
+
+  _WRAP_METHOD(Glib::RefPtr<Gio::Icon> get_gicon(), gtk_image_get_gicon, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Gio::Icon> get_gicon() const, gtk_image_get_gicon, refreturn, constversion)
+  _WRAP_METHOD(Glib::ustring get_icon_name() const, gtk_image_get_icon_name)
+
+ _WRAP_METHOD(int get_pixel_size() const, gtk_image_get_pixel_size)
+ _WRAP_METHOD(void set_pixel_size(int pixel_size), gtk_image_set_pixel_size)
+
+  _WRAP_PROPERTY("file", Glib::ustring)
+  _WRAP_PROPERTY("icon-size", IconSize)
+  _WRAP_PROPERTY("pixel-size", int)
+  _WRAP_PROPERTY("icon-name", Glib::ustring)
+  _WRAP_PROPERTY("storage-type", Type)
+  _WRAP_PROPERTY("gicon", Glib::RefPtr<Gio::Icon>)
+  _WRAP_PROPERTY("use-fallback", bool)
+  _WRAP_PROPERTY("resource", std::string)
+  _WRAP_PROPERTY("paintable", Glib::RefPtr<Gdk::Paintable>)
+};
+
+} //namespace Gtk

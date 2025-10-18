@@ -1,0 +1,147 @@
+{
+    "app-id": "org.gnome.Music.Devel",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "master",
+    "sdk": "org.gnome.Sdk",
+    "command": "gnome-music",
+    "tags": ["devel", "development", "nightly"],
+    "finish-args": [
+        "--device=dri",
+        "--share=ipc",
+        "--share=network",
+        "--socket=wayland",
+        "--socket=fallback-x11",
+        "--socket=pulseaudio",
+        "--filesystem=xdg-music",
+        "--talk-name=org.freedesktop.Tracker3.Writeback",
+        "--system-talk-name=org.freedesktop.login1",
+        "--add-policy=Tracker3.dbus:org.freedesktop.Tracker3.Miner.Files=tracker:Audio"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/pkgconfig",
+        "/share/aclocal",
+        "/man",
+        "/share/man",
+        "/share/gtk-doc",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules": [
+        "subprojects/shared-modules/lua5.4/lua-5.4.json",
+        {
+            "name": "libmediaart",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libmediaart.git"
+                }
+            ]
+        },
+        {
+            "name": "LocalSearch",
+            "buildsystem": "meson",
+            "config-opts": [ "-Dbattery_detection=none",
+                             "-Ddefault_index_single_dirs=",
+                             "-Ddefault_index_recursive_dirs=&MUSIC",
+                             "-Ddomain_prefix=org.gnome.Music.Devel",
+                             "-Dfunctional_tests=false",
+                             "-Dlandlock=disabled",
+                             "-Dman=false",
+                             "-Dminer_fs=true",
+                             "-Dminer_fs_cache_location=$XDG_CACHE_HOME/gnome-music/miner/files",
+                             "-Dsandbox_tests=false",
+                             "-Dsystemd_user_services=false"],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/localsearch.git",
+                    "branch": "main"
+                }
+            ],
+            "cleanup": [
+                "/share/dbus-1/services/org.gnome.Music.Devel.LocalSearch3.service"
+            ]
+        },
+        {
+            "name": "totem-pl-parser",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/totem-pl-parser.git"
+                }
+            ]
+        },
+        {
+            "name" : "librest",
+            "buildsystem": "meson",
+            "config-opts": [
+            	"-Dgtk_doc=false",
+            	"-Dexamples=false",
+            	"-Dsoup2=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/librest.git",
+                    "branch": "master"
+                }
+            ]
+        },
+        {
+            "name": "grilo",
+            "buildsystem": "meson",
+            "config-opts": [ "-Denable-gtk-doc=false" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/grilo.git"
+                }
+            ],
+            "cleanup": [ "/include", "/bin" ]
+        },
+        {
+            "name": "grilo-plugins",
+            "buildsystem": "meson",
+            "config-opts": [ "-Denable-bookmarks=no",
+                             "-Denable-dleyna=no",
+                             "-Denable-filesystem=no",
+                             "-Denable-freebox=no",
+                             "-Denable-local-metadata=no",
+                             "-Denable-lua-factory=yes",
+                             "-Denable-metadata-store=no",
+                             "-Denable-optical-media=no",
+                             "-Denable-podcasts=no",
+                             "-Denable-thetvdb=no",
+                             "-Denable-tmdb=no",
+                             "-Denable-tracker=no",
+                             "-Denable-tracker3=yes",
+                             "-Denable-youtube=no",
+                             "-Dhelp=no" ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/grilo-plugins.git"
+                }
+            ],
+            "cleanup": [ "/include" ]
+        },
+        {
+            "name": "gnome-music",
+            "config-opts" : [
+                "-Dprofile=development"
+            ],
+            "buildsystem": "meson",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/gnome-music.git"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1405 @@
+# GIMP - The GNU Image Manipulation Program
+# Copyright (C) 1995 Spencer Kimball and Peter Mattis
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# "Perlized" from C source by Manish Singh <yosh@gimp.org>
+
+sub pdb_temp_name {
+    $blurb = 'Generates a unique temporary PDB name.';
+
+    $help = <<'HELP';
+This procedure generates a temporary PDB entry name that is guaranteed to be
+unique.
+HELP
+
+    &andy_pdb_misc('1998');
+
+    $lib_private = 1;
+
+    @outargs = (
+	{ name => 'temp_name', type => 'string',
+	  desc => 'A unique temporary name for a temporary PDB entry' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  static gint proc_number = 0;
+
+  temp_name = g_strdup_printf ("temp-procedure-number-%d", proc_number++);
+}
+CODE
+    );
+}
+
+sub pdb_dump {
+    $blurb = 'Dumps the current contents of the procedural database';
+
+    $help = <<'HELP';
+This procedure dumps the contents of the procedural database to the specified
+file. The file will contain all of the information provided for each registered
+procedure.
+HELP
+
+    &std_pdb_misc;
+    $author = 'Spencer Kimball & Josh MacDonald';
+    $copyright = $author . ' & Peter Mattis';
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'file', type => 'file',
+	  desc => 'The dump filename' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (file)
+    success = gimp_pdb_dump (gimp->pdb, file, error);
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_query {
+    $blurb = <<'BLURB';
+Queries the procedural database for its contents using regular expression
+matching.
+BLURB
+
+    $help = <<'HELP';
+This procedure queries the contents of the procedural database. It is supplied
+with seven arguments matching procedures on { name, blurb, help, authors,
+copyright, date, procedure type}. This is accomplished using regular expression
+matching. For instance, to find all procedures with "jpeg" listed in the blurb,
+all seven arguments can be supplied as ".*", except for the second, which can
+be supplied as ".*jpeg.*". There are two return arguments for this procedure.
+The first is the number of procedures matching the query. The second is a
+concatenated list of procedure names corresponding to those matching the query.
+If no matching entries are found, then the returned string is NULL and the
+number of entries is 0.
+HELP
+
+    &std_pdb_misc;
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'name', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure name' },
+	{ name => 'blurb', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure blurb' },
+	{ name => 'help', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure help' },
+	{ name => 'authors', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure authors' },
+	{ name => 'copyright', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure copyright' },
+	{ name => 'date', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure date' },
+	{ name => 'proc_type', type => 'string', allow_non_utf8 => 1,
+	  desc => 'The regex for procedure type: { \'Internal GIMP procedure\',
+		   \'GIMP Plug-in\', \'GIMP Extension\',
+		   \'Temporary Procedure\' }' }
+    );
+
+    @outargs = (
+	{ name  => 'procedure_names', type  => 'strv', void_ret => 1,
+	  desc  => 'The list of procedure names' }
+    );
+
+    %invoke = (
+	code => <<CODE
+{
+  success = gimp_pdb_query (gimp->pdb,
+                            name, blurb, help, authors,
+                            copyright, date, proc_type,
+                            &procedure_names,
+                            error);
+}
+CODE
+    );
+}
+
+sub pdb_proc_exists {
+    $blurb = <<'BLURB';
+Checks if the specified procedure exists in the procedural database
+BLURB
+
+    $help = <<'HELP';
+This procedure checks if the specified procedure is registered in the
+procedural database.
+HELP
+
+    &neo_pdb_misc('2008', '2.6');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+	{ name => 'exists', type => 'boolean',
+	  desc => 'Whether a procedure of that name is registered' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = gimp_pdb_lookup_procedure (gimp->pdb,
+                                                       procedure_name);
+
+      if (! proc)
+        {
+          procedure_name = gimp_pdb_lookup_compat_proc_name (gimp->pdb,
+	                                                     procedure_name);
+
+          if (procedure_name)
+            proc = gimp_pdb_lookup_procedure (gimp->pdb, procedure_name);
+        }
+
+      exists = (proc != NULL && ! proc->is_private);
+    }
+  else
+    {
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_info {
+    $blurb = <<'BLURB';
+Queries the procedural database for information on the specified procedure.
+BLURB
+
+    $help = <<'HELP';
+This procedure returns information on the specified procedure.  The
+procedure type, number of input, and number of return values are
+returned. For specific information on each input argument and return
+value, use the gimp_pdb_db_proc_argument() and
+gimp_pdb_db_proc_return_value() procedures.
+HELP
+
+    &std_pdb_misc;
+    $date = '1997';
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+        { name => 'proc_type', type => 'enum GimpPDBProcType', void_ret => 1,
+	  desc => 'The procedure type' },
+        { name => 'num_args', type => 'int32',
+	  desc => 'The number of input arguments' },
+        { name => 'num_values', type => 'int32',
+	  desc => 'The number of return values' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (proc)
+        {
+          proc_type  = proc->proc_type;
+          num_args   = proc->num_args;
+          num_values = proc->num_values;
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_argument {
+    $blurb = <<BLURB;
+Queries the procedural database for information on the specified procedure's
+argument.
+BLURB
+
+    $help = <<HELP;
+This procedure returns the #GParamSpec of procedure_name's argument.
+HELP
+
+    &mitch_pdb_misc;
+    $date = '2019';
+    $since = '3.0';
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc => 'The procedure name' },
+	{ name => 'arg_num', type => 'int32',
+	  desc => 'The argument number' }
+    );
+
+    @outargs = (
+	{ name => 'param_spec', type => 'param',
+	  desc => "The GParamSpec of the argument" }
+    );
+
+   %invoke = (
+	code => <<CODE
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (proc && (arg_num >= 0 && arg_num < proc->num_args))
+        {
+          param_spec = g_param_spec_ref (proc->args[arg_num]);
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+   );
+}
+
+sub pdb_get_proc_return_value {
+    $blurb = <<BLURB;
+Queries the procedural database for information on the specified procedure's
+return value.
+BLURB
+
+    $help = <<HELP;
+This procedure returns the #GParamSpec of procedure_name's return value.
+HELP
+
+    &mitch_pdb_misc;
+    $date = '2019';
+    $since = '3.0';
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc => 'The procedure name' },
+	{ name => 'val_num', type => 'int32',
+	  desc => 'The return value number' }
+    );
+
+    @outargs = (
+	{ name => 'param_spec', type => 'param',
+	  desc => "The GParamSpec of the return value" }
+    );
+
+   %invoke = (
+	code => <<CODE
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (proc && (val_num >= 0 && val_num < proc->num_values))
+        {
+          param_spec = g_param_spec_ref (proc->values[val_num]);
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+   );
+}
+
+sub pdb_set_proc_image_types {
+    $blurb = "Set the supported image types for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure sets the supported images types for the given procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure for which to install the menu path' },
+	{ name => 'image_types', type => 'string', none_ok => 1,
+	  desc => "The procedure's supported image types" }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_proc_image_types (plug_in, procedure_name,
+                                                   image_types, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_image_types {
+    $blurb = <<'BLURB';
+Queries the procedural database for the image types supported by the
+specified procedure.
+BLURB
+
+    $help = <<'HELP';
+This procedure returns the image types supported by the specified procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+	{ name => 'image_types', type => 'string',
+	  desc => 'The image types' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (GIMP_IS_PLUG_IN_PROCEDURE (proc))
+        {
+          image_types = g_strdup (GIMP_PLUG_IN_PROCEDURE (proc)->image_types);
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_proc_sensitivity_mask {
+    $blurb = "Set the sensitivity mask for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure sets the sensitivity mask for the given procedure.
+HELP
+
+    &jehan_pdb_misc('2021', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure' },
+	{ name => 'mask', type => 'int32',,
+	  desc => "The procedure's sensitivity mask" }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_proc_sensitivity_mask (plug_in, procedure_name,
+                                                        mask, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_proc_menu_label {
+    $blurb = "Set the menu label for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure sets the menu label for the given procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure for which to install the menu path' },
+	{ name => 'menu_label', type => 'string', non_empty => 1,
+	  desc => "The procedure's menu label" }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_proc_menu_label (plug_in, procedure_name,
+                                                  menu_label, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_menu_label {
+    $blurb = <<'BLURB';
+Queries the procedural database for the procedure's menu label.
+BLURB
+
+    $help = <<'HELP';
+This procedure returns the menu label of the specified procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+	{ name => 'menu_label', type => 'string',
+	  desc => 'The menu_label' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (GIMP_IS_PLUG_IN_PROCEDURE (proc))
+        {
+          menu_label = g_strdup (GIMP_PLUG_IN_PROCEDURE (proc)->menu_label);
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_add_proc_menu_path {
+    $blurb = "Register an additional menu path for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure installs an additional menu entry for the given procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure for which to install the menu path' },
+	{ name => 'menu_path', type => 'string',
+	  desc => "The procedure's additional menu path" }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_add_proc_menu_path (plug_in, procedure_name,
+                                                 menu_path, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_menu_paths {
+    $blurb = <<'BLURB';
+Queries the procedural database for the procedure's menu paths.
+BLURB
+
+    $help = <<'HELP';
+This procedure returns the menu paths of the specified procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+	{ name  => 'menu_paths', type => 'strv',
+	  desc  => 'The menu paths of the plug-in' },
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (GIMP_IS_PLUG_IN_PROCEDURE (proc))
+        {
+          GimpPlugInProcedure *plug_in_proc = GIMP_PLUG_IN_PROCEDURE (proc);
+          guint num_menu_paths;
+
+          num_menu_paths = g_list_length (plug_in_proc->menu_paths);
+
+          if (num_menu_paths > 0)
+            {
+              GList *list;
+              gint   i;
+
+              menu_paths = g_new0 (gchar *, num_menu_paths + 1);
+
+              for (list = plug_in_proc->menu_paths, i = 0;
+                   list;
+                   list = g_list_next (list), i++)
+                {
+                  menu_paths[i] = g_strdup (list->data);
+                }
+            }
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_proc_icon {
+    $blurb = "Register an icon for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure installs an icon for the given procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure for which to install the icon' },
+        { name => 'icon_type', type => 'enum GimpIconType',
+          desc => 'The type of the icon' },
+	{ name => 'icon_data', type => 'bytes',
+	  desc => "The procedure's icon. The format depends on the
+                   'icon_type' parameter", }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_proc_icon (plug_in, procedure_name,
+                                            icon_type,
+                                            g_bytes_get_data (icon_data, NULL),
+                                            g_bytes_get_size (icon_data),
+                                            error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_proc_documentation {
+    $blurb = "Set the documentation for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure sets the documentation for the given procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure for which to install the menu path' },
+	{ name => 'blurb', type => 'string', none_ok => 1,
+	  desc => 'A short blurb' },
+	{ name => 'help', type => 'string', none_ok => 1,
+	  desc => 'Detailed procedure help' },
+	{ name => 'help_id', type => 'string', none_ok => 1,
+	  desc => 'The procedure help_id' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_proc_help (plug_in, procedure_name,
+                                            blurb, help, help_id, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_documentation {
+    $blurb = <<'BLURB';
+Queries the procedural database for documentation on the specified procedure.
+BLURB
+
+    $help = <<'HELP';
+This procedure returns documentation on the specified procedure. A
+short blurb, detailed help and help_id.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+	{ name => 'blurb', type => 'string', void_ret => 1,
+	  desc => 'A short blurb' },
+	{ name => 'help', type => 'string',
+	  desc => 'Detailed procedure help' },
+	{ name => 'help_id', type => 'string',
+	  desc => 'The procedure help_id' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (proc)
+        {
+          blurb   = g_strdup (gimp_procedure_get_blurb   (proc));
+          help    = g_strdup (gimp_procedure_get_help    (proc));
+          help_id = g_strdup (gimp_procedure_get_help_id (proc));
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_proc_attribution {
+    $blurb = "Set the attribution for a plug-in procedure.";
+
+    $help = <<HELP;
+This procedure sets the attribution for the given procedure.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'procedure_name', type => 'string', non_empty => 1,
+	  desc => 'The procedure for which to install the menu path' },
+	{ name => 'authors', type => 'string', none_ok => 1,
+	  desc => 'Authors of the procedure' },
+	{ name => 'copyright', type => 'string', none_ok => 1,
+	  desc => 'The copyright' },
+	{ name => 'date', type => 'string', none_ok => 1,
+	  desc => 'Copyright date' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_proc_attribution (plug_in, procedure_name,
+                                                   authors, copyright, date,
+                                                   error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_proc_attribution {
+    $blurb = <<'BLURB';
+Queries the procedural database for attribution information on the
+specified procedure.
+BLURB
+
+    $help = <<'HELP';
+This procedure returns attribution information on the specified
+procedure.  The authors, copyright information and date are returned.
+HELP
+
+    &mitch_pdb_misc('2019', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name  => 'procedure_name', type  => 'string', non_empty => 1,
+	  desc  => 'The procedure name' }
+    );
+
+    @outargs = (
+	{ name => 'authors', type => 'string', void_ret => 1,
+	  desc => 'Authors of the procedure' },
+	{ name => 'copyright', type => 'string',
+	  desc => 'The copyright' },
+	{ name => 'date', type => 'string',
+	  desc => 'Copyright date' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      GimpProcedure *proc = lookup_procedure (gimp->pdb, procedure_name,
+                                              error);
+
+      if (proc)
+        {
+          authors   = g_strdup (proc->authors);
+          copyright = g_strdup (proc->copyright);
+          date      = g_strdup (proc->date);
+        }
+      else
+        success = FALSE;
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_load_handler {
+    $blurb = 'Registers a file load handler procedure.';
+
+    $help = <<'HELP';
+Registers a procedural database procedure to be called to load files of a 
+particular file format using magic file information.
+HELP
+
+    &std_pdb_misc;
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => 'The name of the procedure to be used for loading' },
+        { name => 'extensions', type => 'string', no_validate => 1,
+          desc => 'comma separated list of extensions this handler
+                   can load (i.e. "jpg,jpeg")' },
+        { name => 'prefixes', type => 'string', no_validate => 1,
+          desc => 'comma separated list of prefixes this handler
+                   can load (i.e. "http:,ftp:")' },
+        { name => 'magics', type => 'string', no_validate => 1,
+          desc => 'comma separated list of magic file information
+                   this handler can load (i.e. "0,string,GIF")' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_load_handler (plug_in,
+                                                         procedure_name,
+                                                         extensions, prefixes,
+                                                         magics, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_export_handler {
+    $blurb = 'Registers a file export handler procedure.';
+
+    $help = <<'HELP';
+Registers a procedural database procedure to be called to export files
+in a particular file format.
+HELP
+
+    &std_pdb_misc;
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => 'The name of the procedure to be used for saving' },
+        { name => 'extensions', type => 'string', no_validate => 1,
+          desc => 'comma separated list of extensions this handler
+                   can export as (i.e. "jpg,jpeg")' },
+        { name => 'prefixes', type => 'string', no_validate => 1,
+          desc => 'comma separated list of prefixes this handler
+                   can export to (i.e. "http:,ftp:")' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_save_handler (plug_in,
+                                                         procedure_name,
+                                                         extensions, prefixes,
+                                                         error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_priority {
+    $blurb = 'Sets the priority of a file handler procedure.';
+
+    $help = <<'HELP';
+Sets the priority of a file handler procedure. When more than one
+procedure matches a given file, the procedure with the lowest priority
+is used; if more than one procedure has the lowest priority, it is
+unspecified which one of them is used. The default priority for file
+handler procedures is 0.
+HELP
+
+    &ell_pdb_misc('2018', '2.10.6');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => "The name of the procedure to set the priority of." },
+        { name => 'priority', type => 'int32',
+          desc => "The procedure priority." }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_priority (plug_in,
+                                                     procedure_name,
+                                                     priority, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_mime_types {
+    $blurb = 'Associates MIME types with a file handler procedure.';
+
+    $help = <<'HELP';
+Registers MIME types for a file handler procedure. This allows GIMP to
+determine the MIME type of the file opened or exported using this
+procedure. It is recommended that only one MIME type is registered per
+file procedure; when registering more than one MIME type, GIMP will
+associate the first one with files opened or exported with this procedure.
+HELP
+
+    &neo_pdb_misc('2004', '2.2');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => "The name of the procedure to associate a MIME type with." },
+        { name => 'mime_types', type => 'string',
+          desc => 'A comma-separated list of MIME types, such as "image/jpeg".' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_mime_types (plug_in,
+                                                       procedure_name,
+                                                       mime_types, error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_handles_remote {
+    $blurb = 'Registers a file handler procedure as capable of handling remote URIs.';
+
+    $help = <<'HELP';
+Registers a file handler procedure as capable of handling remote
+URIs. This allows GIMP to call the procedure directly for all kinds of
+URIs, not only on local file:// URIs.
+HELP
+
+    &mitch_pdb_misc('2012', '2.10');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => "The name of the procedure to enable remote URIs for." }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_handles_remote (plug_in,
+                                                           procedure_name,
+                                                           error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_handles_raw {
+    $blurb = 'Registers a file handler procedure as capable of handling raw camera files.';
+
+    $help = <<'HELP';
+Registers a file handler procedure as capable of handling raw digital
+camera files. Use this procedure only to register raw load handlers,
+calling it on an export handler will generate an error.
+HELP
+
+    &mitch_pdb_misc('2017', '2.10');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => "The name of the procedure to enable raw handling for." }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_handles_raw (plug_in,
+                                                        procedure_name,
+                                                        error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_handles_vector {
+    $blurb = 'Registers a load handler procedure as handling vector formats.';
+
+    $help = <<'HELP';
+Registers a file handler procedure as handling vector image formats.
+Use this procedure only to register a GimpVectorLoadProcedure,
+calling it on any other handler will generate an error.
+HELP
+
+    &jehan_pdb_misc('2024', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => "The name of the vector load procedure." }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_file_proc_handles_vector (plug_in,
+                                                           procedure_name,
+                                                           error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_file_proc_thumbnail_loader {
+    $blurb = 'Associates a thumbnail loader with a file load procedure.';
+
+    $help = <<'HELP';
+Some file formats allow for embedded thumbnails, other file formats
+contain a scalable image or provide the image data in different
+resolutions. A file plug-in for such a format may register a special
+procedure that allows GIMP to load a thumbnail preview of the
+image. This procedure is then associated with the standard load
+procedure using this function.
+HELP
+
+    &neo_pdb_misc('2004', '2.2');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'load_proc', type => 'string', non_empty => 1,
+          desc => "The name of the file load procedure." },
+        { name => 'thumb_proc', type => 'string', non_empty => 1,
+          desc => "The name of the thumbnail load procedure." }
+    );
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (load_proc, error) &&
+      gimp_pdb_is_canonical_procedure (thumb_proc, error))
+    {
+      success = gimp_plug_in_set_file_proc_thumb_loader (plug_in,
+                                                         load_proc, thumb_proc,
+                                                         error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_set_batch_interpreter {
+    $blurb = 'Registers a batch interpreter procedure.';
+
+    $help = <<'HELP';
+Registers a procedural database procedure to be called with the command
+line interface options --batch-interpreter and --batch.
+HELP
+
+    &jehan_pdb_misc('2022', '3.0');
+
+    $lib_private = 1;
+
+    @inargs = (
+        { name => 'procedure_name', type => 'string', non_empty => 1,
+          desc => 'The name of the procedure to be used for running batch commands' },
+        { name => 'interpreter_name', type => 'string',
+          desc => 'A public-facing name for the interpreter, such as "Python 3".' }
+    );
+
+    %invoke = (
+        code => <<'CODE'
+{
+  GimpPlugIn *plug_in = gimp->plug_in_manager->current_plug_in;
+
+  if (plug_in &&
+      gimp_pdb_is_canonical_procedure (procedure_name, error))
+    {
+      success = gimp_plug_in_set_batch_interpreter (plug_in,
+                                                    procedure_name,
+                                                    interpreter_name,
+                                                    error);
+    }
+  else
+    success = FALSE;
+}
+CODE
+    );
+}
+
+sub pdb_get_data {
+    $blurb = 'Returns data associated with the specified identifier.';
+
+    $help = <<'HELP';
+This procedure returns any data which may have been associated with the
+specified identifier. The data is a variable length array of bytes. If no data
+has been associated with the identifier, an error is returned.
+HELP
+
+    &std_pdb_misc;
+    $date = '1997';
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'identifier', type => 'string', non_empty => 1,
+	  desc => 'The identifier associated with data' }
+    );
+
+    @outargs = (
+	{ name  => 'data', type  => 'bytes', void_ret => 1,
+	  desc  => 'A byte array containing data' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_is_canonical_identifier (identifier))
+    {
+      const guint8 *orig_data;
+      gint          bytes;
+
+      orig_data = gimp_plug_in_manager_get_data (gimp->plug_in_manager,
+                                                 identifier, &bytes);
+
+      if (orig_data)
+        data = g_bytes_new (orig_data, bytes);
+      else
+        success = FALSE;
+    }
+  else
+    {
+      g_set_error (error, GIMP_PDB_ERROR, GIMP_PDB_ERROR_INVALID_ARGUMENT,
+                   _("Data label '%s' is not a canonical identifier"),
+                   identifier);
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+sub pdb_set_data {
+    $blurb = 'Associates the specified identifier with the supplied data.';
+
+    $help = <<'HELP';
+This procedure associates the supplied data with the provided identifier. The
+data may be subsequently retrieved by a call to 'procedural-db-get-data'.
+HELP
+
+    &std_pdb_misc;
+    $date = '1997';
+
+    $lib_private = 1;
+
+    @inargs = (
+	{ name => 'identifier', type => 'string', non_empty => 1,
+	  desc => 'The identifier associated with data' },
+	{ name  => 'data', type  => 'bytes',
+	  desc  => 'A byte array containing data' }
+    );
+
+    %invoke = (
+	code => <<'CODE'
+{
+  if (gimp_is_canonical_identifier (identifier))
+    {
+      gimp_plug_in_manager_set_data (gimp->plug_in_manager,
+                                     identifier,
+                                     g_bytes_get_size (data),
+                                     g_bytes_get_data (data, NULL));
+    }
+  else
+    {
+      g_set_error (error, GIMP_PDB_ERROR, GIMP_PDB_ERROR_INVALID_ARGUMENT,
+                   _("Data label '%s' is not a canonical identifier"),
+                   identifier);
+      success = FALSE;
+    }
+}
+CODE
+    );
+}
+
+$extra{app}->{code} = <<'CODE';
+static GimpProcedure *
+lookup_procedure (GimpPDB          *pdb,
+                  const gchar      *proc_name,
+                  GError          **error)
+{
+  GimpProcedure *proc = gimp_pdb_lookup_procedure (pdb, proc_name);
+
+  if (! proc)
+    {
+      const gchar *compat_name = gimp_pdb_lookup_compat_proc_name (pdb,
+                                                                   proc_name);
+
+      if (compat_name)
+        proc = gimp_pdb_lookup_procedure (pdb, compat_name);
+    }
+
+  if (! proc)
+    g_set_error (error, GIMP_PDB_ERROR, GIMP_PDB_ERROR_PROCEDURE_NOT_FOUND,
+                 _("Procedure '%s' not found"), proc_name);
+
+  return proc;
+}
+CODE
+
+@headers = qw("libgimpbase/gimpbase.h"
+              "core/gimp.h"
+              "core/gimpparamspecs-desc.h"
+              "plug-in/gimpplugin-proc.h"
+              "plug-in/gimppluginmanager.h"
+              "plug-in/gimppluginmanager-data.h"
+              "plug-in/gimppluginprocedure.h"
+              "gimppdb-query.h"
+              "gimppdb-utils.h"
+              "gimppdberror.h"
+              "gimp-pdb-compat.h"
+              "gimp-intl.h");
+
+@procs = qw(pdb_temp_name
+            pdb_dump
+            pdb_query
+            pdb_proc_exists
+            pdb_get_proc_info
+            pdb_get_proc_argument
+            pdb_get_proc_return_value
+            pdb_set_proc_image_types
+            pdb_get_proc_image_types
+            pdb_set_proc_sensitivity_mask
+            pdb_set_proc_menu_label
+            pdb_get_proc_menu_label
+            pdb_add_proc_menu_path
+            pdb_get_proc_menu_paths
+            pdb_set_proc_icon
+            pdb_set_proc_documentation
+            pdb_get_proc_documentation
+            pdb_set_proc_attribution
+            pdb_get_proc_attribution
+            pdb_set_file_proc_load_handler
+            pdb_set_file_proc_export_handler
+            pdb_set_file_proc_priority
+            pdb_set_file_proc_mime_types
+            pdb_set_file_proc_handles_remote
+            pdb_set_file_proc_handles_raw
+            pdb_set_file_proc_handles_vector
+            pdb_set_file_proc_thumbnail_loader
+            pdb_set_batch_interpreter
+            pdb_get_data
+            pdb_set_data);
+
+%exports = (app => [@procs], lib => [@procs]);
+
+$desc = 'Procedural database';
+
+$lib_private = 1;
+
+1;

@@ -1,0 +1,63 @@
+Instructions for msys2/mingw64
+
+
+See https://www.mingw-w64.org/
+    https://www.msys2.org/
+
+Install msys2 as per instructions. You will also need to install
+$ pacman -S mingw-w64-x86_64-pcre mingw-w64-x86_64-gmime gspell
+
+To run wininstall, you will also need mingw-w64-x86_64-python-pip
+
+Also for the sake of your own sanity, add 'export MSYS=winsymlinks:native' to your .bash_profile
+
+$ pacman -S mingw-w64-x86_64-gtkspell3
+
+You also need some dictionaries to spell check against!
+$ pacman -S mingw-w64-x86_64-hunspell-en
+
+and this (possibly optional, but...)
+$ pacman -S mingw-w64-x86_64-iso-codes
+
+Then you can create an msys2 x64 window and build with cmake as per README.org instructions.
+
+NOTE: enchant is somewhat broken under mingw64 and cannot find the appropriate libraries as it appears to expect to find at least 'lib/enchant-2' in the the same directory as the executable. You might want to create a soft link or copy. If you run wininstall, it copies the appropriate directories to the same place as the executable, and works fine. Go figure.
+
+Haven't tried these yet (these are the automake switches so not quite cmake):
+
+1. --with-dbus
+
+2. libnotify: autogen with --enable-libnotify
+$ pacman -S mingw-w64-x86_64-libnotify
+
+3. --with-yelp-tools --enable-manual for user manual (can build but have no idea how to install)
+$ pacman -S yelp-tools
+
+4. --enable-gkr for gnome keyring (gtk2 and 3 different for this, not sure if this is necessary)
+
+5. --with-gnutls
+
+5. --with-webkit
+
+and `make`.
+
+If you want a windows theme in gtk3, run
+```
+mkdir ./etc/gtk-3.0
+cat > ./etc/gtk-3.0/settings.ini
+[Settings]
+gtk-theme-name=win32
+<ctrl-d>
+
+If you want other themes, you can install them in share/themes in the target directory.
+
+To add:
+
+
+- [[https://developer.gnome.org/libsecret/][libsecret]] 0.16 or higher and [[https://developer.gnome.org/gcr/][gcr]] 3.20 or higher for password storage
+
+  ([[https://wiki.gnome.org/Projects/GnomeKeyring][GNOME Keyring]] 3.2.0 or higher when using GTK 2)
+
+- [[http://www.freedesktop.org/wiki/Software/dbus][D-Bus]] to support running multiple Pan instances
+
+- [[http://www.gnu.org/software/gnutls/][GnuTLS]] 3.0.0 or higher for encrypted connections (TLS 1.x)

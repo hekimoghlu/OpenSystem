@@ -1,0 +1,82 @@
+/* Copyright (C) 2009 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+_CONFIGINCLUDE(gtkmmconfig.h)
+
+#include <glibmm/interface.h>
+_DEFS(gtkmm,gtk)
+_PINCLUDE(glibmm/private/interface_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+extern "C"
+{
+typedef struct _GtkBuildableIface GtkBuildableIface;
+}
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gtk
+{
+
+/** A base class for objects that can be built by Gtk::Builder.
+ *
+ * Buildable allows objects to extend and customize thier deserialization from Gtk::Builder UI descriptions.
+ * The interface includes methods for setting names and properties of objects, parsing custom tags and constructing child objects.
+ *
+ * All gtkmm widgets, and many non-widget objects, derive from this base class.
+ * The main user of this interface is Gtk::Builder. There should be very little need for applications to call any of Buildable's methods.
+ *
+ * @newin{3,0}
+ */
+class GTKMM_API Buildable : public Glib::Interface
+{
+  _CLASS_INTERFACE(Buildable, GtkBuildable, GTK_BUILDABLE, GtkBuildableIface, , , GTKMM_API)
+
+public:
+  _WRAP_METHOD(Glib::ustring get_buildable_id() const, gtk_buildable_get_buildable_id)
+
+  //TODO: Properties, signals, vfuncs.
+
+#m4begin
+dnl //Custom-coded vfuncs:
+dnl
+  _PUSH(SECTION_CC_PRE_INCLUDES)
+    // Needed before gtkmm/private/buildable_p.h is included.
+    typedef struct _GtkBuilder GtkBuilder;
+    typedef struct _GtkBuildableParser GtkBuildableParser;
+  _SECTION(SECTION_PCC_CLASS_INIT_VFUNCS)
+    klass->custom_tag_start = &Buildable_custom_tag_start_vfunc_c_callback;
+    klass->custom_tag_end = &Buildable_custom_tag_end_vfunc_c_callback;
+    Buildable_custom_tag_start_vfunc_funcptr = &custom_tag_start_vfunc_callback;
+    Buildable_custom_tag_end_vfunc_funcptr = &custom_tag_end_vfunc_callback;
+  _SECTION(SECTION_PH_VFUNCS)
+    static gboolean custom_tag_start_vfunc_callback(
+      GtkBuildable* buildable,
+      GtkBuilder* builder,
+      GObject* child,
+      const char* tagname,
+      GtkBuildableParser* parser,
+      gpointer* data);
+    static void custom_tag_end_vfunc_callback(
+      GtkBuildable* buildable,
+      GtkBuilder* builder,
+      GObject* child,
+      const char* tagname,
+      gpointer data);
+  _POP()
+#m4end
+};
+
+} // namespace Gtk

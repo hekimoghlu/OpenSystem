@@ -1,0 +1,24 @@
+downstream_package_name: libmks
+actions:
+  post-upstream-clone:
+    - "wget https://src.fedoraproject.org/rpms/libmks/raw/rawhide/f/libmks.spec -O libmks.spec"
+specfile_path: libmks.spec
+files_to_sync:
+  - .packit.yml
+  - libmks.spec
+
+jobs:
+  - job: propose_downstream
+    trigger: release
+    dist_git_branches:
+      - fedora-39
+      - fedora-rawhide
+  - job: koji_build
+    trigger: commit
+    dist_git_branches:
+      - fedora-39
+      - fedora-rawhide
+  - job: bodhi_update
+    trigger: commit
+    dist_git_branches:
+      - fedora-branched # rawhide updates are created automatically

@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect2 PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+                       "http://www.docbook.org/xml/4.3/docbookx.dtd">
+<!-- section history:
+  2012-05-26 j.h no change for v2.8
+  2008-12-13 j.h:updated to v2.6
+  2007-09-07 j.h: detailed statistics, added Layer name
+  2006-03-11 lexa: made docbook compliant
+  2005-11-29 replaced informalfigures by figures by lexa
+-->
+<sect2 id="gimp-histogram-dialog">
+  <title>Histogram Dialog</title>
+  <indexterm>
+    <primary>Dialogs</primary>
+    <secondary>Histogram</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>Histogram</primary>
+  </indexterm>
+  <figure>
+    <title>The Histogram dialog</title>
+    <mediaobject>
+      <imageobject>
+        <imagedata format="PNG"
+                   fileref="images/dialogs/histogram-basic-dialog.png"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+  <para>
+    The Histogram dialog shows you information about the statistical
+    distribution of color values in the active layer or selection. This
+    information is often useful when you are trying to
+    <emphasis>color balance</emphasis>
+    an image. However, the Histogram dialog is purely informational: nothing
+    you do with it will cause any change to the image. If you want to perform
+    a histogram-based color correction, use the
+    <link linkend="gimp-tool-levels">Levels</link> tool.
+  </para>
+  <sect3>
+    <title>Activating the Dialog</title>
+    <para>
+      This dialog is a dockable dialog; see the
+      section <xref linkend="gimp-concepts-docks"/> for help on manipulating
+      it.
+    </para>
+    <para>
+      You can access it:
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          from the main menu:
+          <menuchoice>
+            <guimenu>Windows</guimenu>
+            <guisubmenu>Dockable Dialogs</guisubmenu>
+            <guimenuitem>Histogram</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          from the Tab menu in any dockable dialog by clicking the
+          <link linkend="tab-menus">tab menu button</link>
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-menu-left.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon> and selecting
+          <menuchoice>
+            <guimenu>Add Tab</guimenu>
+            <guimenuitem>Histogram</guimenuitem>
+          </menuchoice>,
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          from the main menu:
+          <menuchoice>
+            <guimenu>Colors</guimenu>
+            <guisubmenu>Info</guisubmenu>
+            <guimenuitem>Histogram</guimenuitem>
+          </menuchoice>.
+        </para>
+      </listitem>
+    </itemizedlist>
+    <para>
+      In the <guimenu>Windows</guimenu> menu, there is a list of
+      <link linkend="gimp-dockable-menu">detached windows</link> which exists
+      only if at least one dialog remains open. In this case, you can raise
+      the <quote>Histogram</quote> dialog from the main menu:
+      <menuchoice>
+        <guimenu>Windows</guimenu>
+        <guimenuitem>Histogram</guimenuitem>
+      </menuchoice>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>About Histograms</title>
+    <para>
+      In GIMP, each layer of an image can be decomposed into one or more color
+      channels: for an RGB image, into R, G, and B channels; for a grayscale
+      image, into a single Value channel. Layers that support transparency
+      have an additional channel, the alpha channel. Each channel supports a
+      range of intensity levels from 0 to 255 (integer valued). Thus, a black
+      pixel is encoded by 0 on all color channels; a white pixel by 255 on all
+      color channels. A transparent pixel is encoded by 0 on the alpha
+      channel; an opaque pixel by 255.
+    </para>
+    <para>
+      For RGB images, it is convenient to define a Value <quote>pseudochannel
+      </quote>. This is not a real color channel: it does not reflect any
+      information stored directly in the image. Instead, the Value at a pixel
+      is given by the equation <code>V = max(R,G,B)</code>.
+      Essentially, the Value is what you would get at that pixel if you
+      converted the image to Grayscale mode.
+    </para>
+    <para>
+      For more information on channels, please consult the
+      <xref linkend="gimp-concepts-image-types"/>.
+    </para>
+  </sect3>
+
+  <sect3>
+    <title>Using the Histogram dialog</title>
+    <para>
+      The active layer name is shown at the top of the dialog.
+    </para>
+    <variablelist>
+      <varlistentry>
+        <term>Channel</term>
+        <listitem>
+          <para>
+            The drop-down below the active layer name allows you to select which
+            channel to use. The available options depend on the layer type of
+            the active layer. Possible options are:
+          </para>
+          <variablelist>
+            <varlistentry>
+              <term>Value</term>
+              <listitem>
+                <para>
+                  For RGB and Grayscale images, this shows the distribution of
+                  brightness values across the layer. For a grayscale image,
+                  these are read directly from the image data. For an RGB
+                  image, they are taken from the Value pseudochannel.
+                </para>
+                <para>
+                  For an indexed image, the <quote>Value</quote> channel
+                  actually shows the distribution of frequencies for each
+                  colormap index: thus, it is a <quote>pseudocolor</quote>
+                  histogram rather than a true color histogram.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Red</term>
+              <term>Green</term>
+              <term>Blue</term>
+              <listitem>
+                <para>
+                  These only appear for layers from RGB images. They show the
+                  distribution of intensity levels for the Red, Green, or Blue
+                  channels respectively.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Alpha</term>
+              <listitem>
+                <para>
+                  This shows the distribution of opacity levels. If the layer
+                  is completely transparent (alpha&nbsp;=&nbsp;0) or
+                  completely opaque (alpha&nbsp;=&nbsp;255), the histogram
+                  will consist of a single bar on the left or right edge.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Luminance</term>
+              <listitem>
+                <para>
+                  This shows the distribution of lightness intensity.
+                </para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>RGB</term>
+              <listitem>
+                <figure>
+                  <title>
+                    Combined histograms of R, G, and B channels.
+                  </title>
+                  <mediaobject>
+                    <imageobject>
+                      <imagedata format="PNG"
+                                 fileref="images/dialogs/histogram-rgb.png" />
+                    </imageobject>
+                  </mediaobject>
+                </figure>
+                <para>
+                  This entry, only available for RGB layers, shows the R, G,
+                  and B histograms superimposed, so that you can see all of
+                  the color distribution information in a single view.
+                </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-color-space-linear-symbolic.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          Linear
+        </term>
+        <term>
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-color-space-non-linear-symbolic.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          Non-Linear
+        </term>
+        <term>
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-color-space-perceptual-symbolic.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          Perceptual
+        </term>
+        <listitem>
+          <para>
+            These three buttons determine whether the tone reproduction (TRC)
+            will be displayed using a linear, non-linear, or perceptual X axis.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-histogram-linear.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          Linear histogram
+        </term>
+        <term>
+          <guiicon>
+            <inlinemediaobject>
+              <imageobject>
+                <imagedata
+                  fileref="images/stock-icons/gimp-histogram-logarithmic.svg" contentwidth="16px"/>
+              </imageobject>
+            </inlinemediaobject>
+          </guiicon>
+          Logarithmic histogram
+        </term>
+        <listitem>
+          <para>
+            These two buttons determine whether the histogram will be displayed
+            using a linear or logarithmic Y axis. For images taken from
+            photographs, the linear mode is most commonly useful. For images
+            that contain substantial areas of constant color, though, a linear
+            histogram will often be dominated by a single bar, and a
+            logarithmic histogram will often be more useful.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Range Setting</term>
+        <listitem>
+          <figure>
+            <title>Dialog aspect after range fixing.</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata format="PNG"
+                           fileref="images/dialogs/histogram-range.png"/>
+              </imageobject>
+            </mediaobject>
+          </figure>
+          <para>
+            You can restrict the analysis, for the statistics shown at the
+            bottom of the dialog, to a limited range of values if you wish.
+            You can set the range in one of three ways:
+          </para>
+          <itemizedlist>
+            <listitem>
+              <para>
+                Click and drag the pointer across the histogram display area,
+                from the lowest level to the highest level of the range you
+                want.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                Click and drag the black or white triangles on the slider
+                below the histogram.
+              </para>
+            </listitem>
+            <listitem>
+              <para>
+                Use the spinbutton entries below the slider (left entry:
+                bottom of range; right entry: top of range).
+              </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Statistics</term>
+        <listitem>
+          <para>
+            At the bottom of the dialog some basic statistics are shown
+            describing the distribution of channel values, restricted to the
+            selected range:
+          </para>
+          <itemizedlist>
+            <listitem>
+              <para><guilabel>Mean</guilabel>: the mean value of the interval
+                 in the selected channel.
+               </para>
+            </listitem>
+            <listitem>
+              <para><guilabel>Std Dev</guilabel>: Standard deviation. Gives an
+                 idea about how homogeneous the distribution of values in the
+                 interval is.
+               </para>
+            </listitem>
+            <listitem>
+              <para><guilabel>Median</guilabel>: For example, the value of the
+                 fiftieth peak in a 100 peaks interval.
+               </para>
+            </listitem>
+            <listitem>
+              <para><guilabel>Pixels</guilabel>: The number of pixels in the
+                 active layer or selection.
+               </para>
+            </listitem>
+            <listitem>
+              <para><guilabel>Count</guilabel>: The number of pixels in a peak
+                 (when you click on the histogram) or in the interval.
+               </para>
+            </listitem>
+            <listitem>
+              <para><guilabel>Percentile</guilabel>: The ratio between the
+                 number of pixels in the interval and the total number of
+                 pixels in the active layer or selection.
+               </para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect3>
+</sect2>

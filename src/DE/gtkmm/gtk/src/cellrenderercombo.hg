@@ -1,0 +1,71 @@
+/* Copyright (C) 2004 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <gtkmm/cellrenderertext.h>
+#include <gtkmm/treemodel.h>
+
+_DEFS(gtkmm,gtk)
+_PINCLUDE(gtkmm/private/cellrenderertext_p.h)
+
+#m4 _PUSH(SECTION_CC_PRE_INCLUDES)
+#undef GTK_DISABLE_DEPRECATED
+#define GDK_DISABLE_DEPRECATION_WARNINGS 1
+#m4 _POP()
+
+_IS_DEPRECATED // The entire file is deprecated.
+
+namespace Gtk
+{
+
+/**  Renders a combobox in a cell.
+ * CellRendererCombo renders text in a cell like CellRendererText, from which it is derived. But while
+ * CellRendererText offers a simple entry to edit the text, CellRendererCombo offers a ComboBox or
+ * ComboBoxEntry widget to edit the text. The values to display in the combo box are taken from the
+ * tree model specified in the model property.
+ *
+ * The combo cell renderer takes care of adding a text cell renderer to the combo box and sets it to
+ * display the column specified by its text_column property. Further cell renderers can be added in a
+ * handler for the editing_started signal.
+ *
+ * @ingroup TreeView
+ * @deprecated 4.10: List views use widgets to display their contents.
+ *   You should use Gtk::DropDown instead.
+ */
+class GTKMM_API CellRendererCombo : public CellRendererText
+{
+  _CLASS_GTKOBJECT(CellRendererCombo, GtkCellRendererCombo, GTK_CELL_RENDERER_COMBO, Gtk::CellRendererText, GtkCellRendererText, , , GTKMM_API)
+public:
+
+  _CTOR_DEFAULT
+
+#m4begin
+dnl // We need this special conversion here since the C++ Gtk::TreeIter carries
+dnl // a pointer to the Gtk::TreeModel, whereas the plain GtkTreeIter struct does
+dnl // not.
+  _CONVERSION(`GtkTreeIter*',`const TreeModel::iterator&',`TreeModel::iterator(_get_model(self), $3)')
+#m4end
+
+#m4 _CONVERSION(`const gchar*',`const Glib::ustring&',__GCHARP_TO_USTRING)
+  _WRAP_SIGNAL(void changed(const Glib::ustring& path, const TreeModel::iterator& iter), "changed", no_default_handler)
+
+  _WRAP_PROPERTY("model", Glib::RefPtr<Gtk::TreeModel>)
+  _WRAP_PROPERTY("text_column", int)
+  _WRAP_PROPERTY("has_entry", bool)
+
+  Glib::PropertyProxy_Base _property_renderable() override;
+};
+
+} //namespace Gtk

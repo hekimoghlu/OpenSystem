@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <template class="LpPrint" parent="AdwWindow">
+    <property name="default-width">900</property>
+    <property name="default-height">650</property>
+    <child>
+      <object class="GtkShortcutController">
+        <property name="scope">managed</property>
+        <child>
+          <object class="GtkShortcut">
+            <property name="trigger">Escape|&lt;Ctrl&gt;w</property>
+            <property name="action">action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <property name="content">
+      <object class="AdwToolbarView">
+        <property name="top-bar-style">raised</property>
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <property name="show-start-title-buttons">false</property>
+            <property name="show-end-title-buttons">false</property>
+            <property name="title-widget">
+              <object class="AdwWindowTitle" id="title" />
+            </property>
+            <child type="start">
+              <object class="GtkButton">
+                <property name="label" translatable="yes" comments="Translators: Go back to previous page">_Back</property>
+                <property name="use-underline">true</property>
+                <property name="action-name">print.back</property>
+                <property name="can-shrink">true</property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="GtkButton">
+                <property name="label" translatable="yes">_Print</property>
+                <property name="use-underline">true</property>
+                <property name="action-name">print.print</property>
+                <property name="can-shrink">true</property>
+                <style>
+                  <class name="suggested-action" />
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <property name="content">
+          <object class="AdwOverlaySplitView">
+            <property name="sidebar">
+              <object class="AdwPreferencesPage">
+                <property name="halign">start</property>
+                <property name="width-request">300</property>
+                <child>
+                  <object class="AdwPreferencesGroup">
+                    <property name="title" translatable="yes">Layout</property>
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title" translatable="yes">_Orientation</property>
+                        <property name="use-underline">true</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="valign">center</property>
+                            <style>
+                              <class name="linked" />
+                            </style>
+                            <child>
+                              <object class="GtkToggleButton">
+                                <property name="icon-name">page-orientation-portrait-symbolic</property>
+                                <property name="action-name">print.orientation</property>
+                                <property name="action-target">"portrait"</property>
+                                <property name="tooltip-text" translatable="yes">Portrait Page Orientation</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton">
+                                <property name="icon-name">page-orientation-landscape-symbolic</property>
+                                <property name="action-name">print.orientation</property>
+                                <property name="action-target">"landscape"</property>
+                                <property name="tooltip-text" translatable="yes">Landscape Page Orientation</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwComboRow" id="alignment">
+                        <property name="title" translatable="yes">_Alignment</property>
+                        <property name="use-underline">true</property>
+                        <property name="model">
+                          <object class="GtkStringList">
+                            <items>
+                              <item>center</item>
+                              <item>top</item>
+                              <item>bottom</item>
+                              <item>left</item>
+                              <item>right</item>
+                            </items>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwPreferencesGroup">
+                    <property name="title" translatable="yes">Margins</property>
+                    <property name="header-suffix">
+                      <object class="GtkDropDown" id="margin_unit">
+                        <property name="tooltip-text" translatable="yes">Margin Units</property>
+                        <style>
+                          <class name="flat" />
+                        </style>
+                        <property name="model">
+                          <object class="GtkStringList">
+                            <items>
+                              <item>cm</item>
+                              <item>in</item>
+                              <item>px</item>
+                            </items>
+                          </object>
+                        </property>
+                      </object>
+                    </property>
+                    <child>
+                      <object class="AdwSpinRow" id="margin_horizontal">
+                        <property name="title" translatable="yes">_Horizontal</property>
+                        <property name="use-underline">true</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwSpinRow" id="margin_vertical">
+                        <property name="title" translatable="yes">_Vertical</property>
+                        <property name="use-underline">true</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwPreferencesGroup">
+                    <property name="title" translatable="yes">Image Size</property>
+                    <property name="header-suffix">
+                      <object class="GtkDropDown" id="size_unit">
+                        <property name="tooltip-text" translatable="yes">Image Size Units</property>
+                        <style>
+                          <class name="flat" />
+                        </style>
+                        <property name="model">
+                          <object class="GtkStringList">
+                            <items>
+                              <item>cm</item>
+                              <item>in</item>
+                              <item>px</item>
+                              <item>%</item>
+                            </items>
+                          </object>
+                        </property>
+                      </object>
+                    </property>
+                    <child>
+                      <object class="AdwSwitchRow" id="fill_space">
+                        <property name="title" translatable="yes">_Fill Space</property>
+                        <property name="use-underline">true</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwSpinRow" id="width">
+                        <property name="use-underline">true</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwSpinRow" id="height">
+                        <property name="title" translatable="yes">H_eight</property>
+                        <property name="use-underline">true</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+            <property name="content">
+              <object class="LpPrintPreview" id="preview">
+                <property name="vexpand">true</property>
+                <property name="hexpand">true</property>
+                <property name="width-request">260</property>
+                <property name="height-request">260</property>
+                <binding name="print">
+                  <constant>LpPrint</constant>
+                </binding>
+              </object>
+            </property>
+          </object>
+        </property>
+      </object>
+    </property>
+  </template>
+</interface>

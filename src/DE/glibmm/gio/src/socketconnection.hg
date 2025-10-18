@@ -1,0 +1,95 @@
+/* Copyright (C) 2010 Jonathon Jongsma
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/iostream.h>
+#include <giomm/enums.h>
+#include <giomm/socket.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/iostream_p.h)
+
+namespace Gio
+{
+
+/**
+ * A socket connection
+ *
+ * @see IOStream, SocketClient, SocketListener
+ *
+ * SocketConnection is a IOStream for a connected socket. They
+ * can be created either by SocketClient when connecting to a host,
+ * or by SocketListener when accepting a new client.
+ *
+ * The type of the SocketConnection object returned from these calls
+ * depends on the type of the underlying socket that is in use. For
+ * instance, for a TCP/IP connection it will be a TcpConnection.
+ *
+ * Chosing what type of object to construct is done with the socket
+ * connection factory, and it is possible for 3rd parties to register
+ * custom socket connection types for specific combination of socket
+ * family/type/protocol using g_socket_connection_factory_register_type().
+ *
+ * @newin{2,24}
+ * @ingroup NetworkIO
+ */
+class GIOMM_API SocketConnection : public Gio::IOStream
+{
+  _CLASS_GOBJECT(SocketConnection, GSocketConnection, G_SOCKET_CONNECTION, Gio::IOStream, GIOStream, , , GIOMM_API)
+
+public:
+  _WRAP_METHOD(bool connect(const Glib::RefPtr<SocketAddress>& address, const Glib::RefPtr<Cancellable>& cancellable{?}), g_socket_connection_connect, errthrow)
+
+  /**  Asynchronously connect this connection to the specified remote address.
+   * This clears the "blocking" flag on this connection's underlying socket if
+   * it is currently set.
+   *
+   * Use connect_finish() to retrieve the result.
+   *
+   * @param address A SocketAddress specifying the remote address.
+   * @param slot A SlotAsyncReady slot.
+   * @param cancellable A Cancellable.
+   * @newin{2,36}
+   */
+  void connect_async(const Glib::RefPtr<SocketAddress>& address,
+    const SlotAsyncReady& slot, const Glib::RefPtr<Cancellable>& cancellable);
+  _IGNORE(g_socket_connection_connect_async)
+
+  /// A non-cancellable version of connect_async().
+  void connect_async(const Glib::RefPtr<SocketAddress>& address,
+    const SlotAsyncReady& slot);
+
+  _WRAP_METHOD(bool connect_finish(const Glib::RefPtr<AsyncResult>& result), g_socket_connection_connect_finish, errthrow)
+
+  _WRAP_METHOD(bool is_connected() const, g_socket_connection_is_connected)
+
+  _WRAP_METHOD(Glib::RefPtr<Socket> get_socket(), g_socket_connection_get_socket, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<const Socket> get_socket() const, g_socket_connection_get_socket, constversion, refreturn)
+  _WRAP_METHOD(Glib::RefPtr<SocketAddress> get_local_address(), g_socket_connection_get_local_address, errthrow)
+  _WRAP_METHOD(Glib::RefPtr<const SocketAddress> get_local_address() const, g_socket_connection_get_local_address, constversion, errthrow)
+  _WRAP_METHOD(Glib::RefPtr<SocketAddress> get_remote_address(), g_socket_connection_get_remote_address, errthrow)
+  _WRAP_METHOD(Glib::RefPtr<const SocketAddress> get_remote_address() const, g_socket_connection_get_remote_address, constversion, errthrow)
+
+  // Not sure that registering new GTypes with the factory is useful for the C++ binding
+  //_WRAP_METHOD(void factory_register_type(GType g_type, GSocketFamily family, GSocketType type, gint protocol);
+  //_WRAP_METHOD(GType factory_lookup_type(GSocketFamily family, GSocketType type, gint protocol_id);
+
+  _WRAP_METHOD(static Glib::RefPtr<SocketConnection> create(const Glib::RefPtr<Socket>& socket), g_socket_connection_factory_create_connection)
+
+  _WRAP_PROPERTY("socket", Glib::RefPtr<Socket>)
+};
+
+} // namespace Gio

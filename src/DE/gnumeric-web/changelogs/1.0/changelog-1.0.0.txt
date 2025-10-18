@@ -1,0 +1,101 @@
+2001-12-31  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.0.0
+
+2001-12-31  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-autofill.c (in_list) : remove pointless checking for lists
+	  in english and another language.
+
+	* src/sheet-object-widget.c (sheet_widget_checkbox_read_xml) : do not
+	  set the sheet here.  That happens latter.  Handle no input smoothly.
+	(sheet_widget_checkbox_write_xml) : handle no input smoothly.
+
+	* src/format.c (append_second_elapsed) : use doubles.
+	(append_minute_elapsed) : use unsigned long.
+	(append_hour_elapsed) : use unsigned long.
+
+	* src/commands.c (cmd_insert_rows) : avoid using g_strdup_printf.  It
+	  does not support positional arguments, which makes translation
+	  difficult.
+	(cmd_insert_cols) : ditto.
+
+	* src/auto-correct.c (autocorrect_tool) : ispunct is too liberal for
+	  what we want. Use a translated set of names for the capitalization.
+
+	* src/GNOME_Gnumeric.xml : sync with non-bonobo text and fix some
+	  mis-named items.  disable the combo and list until 1.0.1
+
+	* src/cell.h : fix warning on s390
+	* src/collect.h : ditto.
+	* src/parse-util.h : ditto.
+	* src/gnumeric.h : ditto.
+	* src/style.h : ditto.
+	* src/consolidate.h : ditto.
+
+2001-12-29  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (sheet_menu_label_run) : make the context menu
+	  match the standard menus.
+
+	* src/auto-correct.c (autocorrect_tool) : Use ispunct and ignore ','
+
+	* src/sheet-merge.c (sheet_merge_add) : update the status of the
+	  merged region.
+	(sheet_merge_remove) : ditto.
+
+	* src/gnumeric-canvas.c (gnm_canvas_key_mode_object) : Use
+	  cmd_object_delete so that deleting an object with the keyboard is
+	  undoable.
+
+	* src/sheet-object-widget.c (sheet_widget_checkbox_clear_sheet) :
+	  clear the sheet after unlinking.
+	(sheet_widget_radio_button_clear_sheet) : ditto.
+	(sheet_widget_list_clear_sheet) : ditto.
+	(sheet_widget_combo_clear_sheet) : ditto.
+
+2001-12-29  Abel Cheung  <maddog@linux.org.hk>
+
+	* configure.in: Added "ko" to ALL_LINGUAS.
+
+2001-12-28  Jody Goldberg <jody@gnome.org>
+
+	* src/cmd-edit.c (cmd_select_cur_array) : fence post error.
+
+	* src/sheet.c (sheet_destroy) : be more forgiving about exit errors.
+	(sheet_destroy_contents) : Remove stupid hash clearing.  Just delete
+	  the thing.
+
+	* src/eval.c (dependent_unlink) : Add a bogus krufty nasty unpleasant
+	  hack to disable the unlink optimization for sheet objects.
+
+2001-12-27  Jody Goldberg <jody@gnome.org>
+
+	* plugins/*/plugins.xml.in : make the probable openers available from
+	  the import menu to simplify the user experience until we can revisit
+	  the distinction between import and open.
+
+	* src/value-sheet.c (value_area_get_width) : rip out the clipping.
+	(value_area_get_height) : rip out the clipping.  This slows graphs
+	  but fixes countblank, cols, and rows.
+
+	* src/sheet-object-widget.c (sheet_widget_checkbox_construct_with_ref) :
+	  remove attempt to assign the corner of the current selection.
+	(sheet_widget_checkbox_clone) : be safer when dealing with checkboxes
+	  without expressions.
+	(sheet_widget_checkbox_get_ref) : fix..
+
+	* src/sheet-object.c (sheet_object_clone_sheet) : more protection.
+
+	* src/commands.c (cmd_area_set_text_redo) : the content list was in
+	  reversed compared to the range list.
+	(cmd_paste_cut) : don't register a cmd for a paste that does nothing.
+
+	* src/gnumeric-canvas.c (gnm_canvas_realize) : formating.
+
+2001-12-26  Jody Goldberg <jody@gnome.org>
+
+	http://bugzilla.gnome.org/show_bug.cgi?id=66842
+	* src/item-edit.c (point_is_inside_range) : check for alternate sheets
+	  both times.  This code is very hackish.  Rewrite it and merge the
+	  logic from expr-entry.

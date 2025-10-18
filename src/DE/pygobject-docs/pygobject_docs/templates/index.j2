@@ -1,0 +1,62 @@
+{{ namespace }}
+===================================================
+
+.. module:: ~gi.repository.{{ namespace }}
+
+Module version: {{ version }}
+
+Library version: {{ library_version }}
+
+{% if c_api_doc_link%}
+C API documentation: `{{ c_api_doc_link }} <{{ c_api_doc_link }}>`_
+{% endif %}
+
+Usage:
+
+.. code-block::
+   :dedent:
+   
+   import gi
+   gi.require_version("{{ namespace}}", "{{ version }}")
+   
+   from gi.repository import {{ namespace }}
+{% if init_function %}
+   {{ namespace }}.init()
+{% endif%}
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API
+
+   {% if classes %}
+   classes
+   {% endif %}
+   {% if interfaces %}
+   interfaces
+   {% endif %}
+   {% if structures %}
+   structures
+   {% endif %}
+   {% if enums %}
+   enums
+   {% endif %}
+   {% if functions %}
+   functions
+   {% endif %}
+   {% if unions %}
+   unions
+   {% endif %}
+   {% if constants %}
+   constants
+   {% endif %}
+
+Dependencies
+------------
+
+{% for dep in dependencies %}
+{% if dep == "cairo-1.0" %}
+* `cairo-1.0 <https://pycairo.readthedocs.io/>`__
+{% else %}
+*  :doc:`{{ dep }} ../{{ dep }}/index`
+{% endif %}
+{% endfor%}

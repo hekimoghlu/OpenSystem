@@ -1,0 +1,128 @@
+{
+    "app-id" : "org.gnome.Rygel",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "master",
+    "sdk" : "org.gnome.Sdk",
+    "command" : "rygel",
+    "finish-args" : [
+        "--share=network",
+        "--share=ipc",
+        "--talk-name=org.gtk.vfs",
+        "--talk-name=org.gtk.vfs.*",
+        "--filesystem=xdg-pictures",
+        "--filesystem=xdg-videos",
+        "--filesystem=xdg-music",
+        "--own-name=org.gnome.Rygel1"
+    ],
+    "build-options" : {
+        "cflags" : "-O2 -g",
+        "cxxflags" : "-O2 -g",
+        "env" : {
+            "V" : "1"
+        }
+    },
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name" : "gssdp",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dmanpages=false",
+                "-Dgtk_doc=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gssdp.git/",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "gupnp",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "-Dgtk_doc=false"
+            ],
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gupnp.git/",
+                    "branch" : "master"
+                }
+            ]
+        },
+        {
+            "name" : "gupnp-av",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gupnp-av.git/"
+                }
+            ]
+        },
+        {
+            "name" : "gupnp-dlna",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/gupnp-dlna.git/"
+                }
+            ]
+        },
+        {
+            "name" : "libmediaart",
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/libmediaart.git/"
+                }
+            ]
+        },
+        {
+            "name": "gst-editing-services",
+            "buildsystem": "meson",
+            "builddir": true,
+            "subdir": "subprojects/gst-editing-services",
+            "config-opts": [
+                "-Ddoc=disabled"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "branch": "1.20.3",
+                    "url": "https://gitlab.freedesktop.org/gstreamer/gstreamer.git",
+                    "commit" : "ccf22e315cedf81e0075ab179ffb1b733da5206e"
+                }
+            ]
+        },
+        {
+            "name" : "rygel",
+            "buildsystem" : "meson",
+            "config-opts" : [
+                "--libdir=lib",
+                "-Dsystemd-user-units-dir=none"
+            ],
+            "builddir" : true,
+            "sources" : [
+                {
+                    "type" : "git",
+                    "url" : "https://gitlab.gnome.org/GNOME/rygel.git/"
+                }
+            ]
+        }
+    ]
+}

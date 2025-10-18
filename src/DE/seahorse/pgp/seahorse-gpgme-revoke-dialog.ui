@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<interface>
+  <template class="SeahorseGpgmeRevokeDialog" parent="GtkApplicationWindow">
+    <property name="title" bind-source="window_title" bind-property="title" bind-flags="sync-create|bidirectional" />
+
+    <child>
+      <object class='GtkShortcutController'>
+        <child>
+          <object class='GtkShortcut'>
+            <property name='trigger'>Escape</property>
+            <property name='action'>action(window.close)</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child type="titlebar">
+      <object class="GtkHeaderBar">
+        <property name="show-title-buttons">False</property>
+
+        <child>
+          <object class="GtkButton">
+            <property name="label" translatable="yes">_Cancel</property>
+            <property name="use-underline">True</property>
+            <property name="action-name">window.close</property>
+          </object>
+        </child>
+
+        <property name="title-widget">
+          <object class="AdwWindowTitle" id="window_title">
+            <property name="title" translatable="yes">Revoke Key</property>
+          </object>
+        </property>
+
+        <child type="end">
+          <object class="GtkButton">
+            <property name="label" translatable="yes">Re_voke</property>
+            <property name="use-underline">True</property>
+            <property name="action-name">revoke</property>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwPreferencesPage">
+        <child>
+          <object class="AdwPreferencesGroup">
+            <child>
+              <object class="AdwComboRow" id="reason_row">
+                <property name="title" translatable="yes">_Reason</property>
+                <property name="use-underline">True</property>
+                <signal name="notify::selected" handler="reason_row_notify_selected"/>
+                <property name="expression">
+                  <closure type="gchararray" function="reason_to_string">
+                    <lookup name="value" type="AdwEnumListItem"/>
+                  </closure>
+                </property>
+                <property name="model">
+                  <object class="AdwEnumListModel">
+                    <property name="enum-type">SeahorsePgpRevokeReason</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwEntryRow" id="description_row">
+                <property name="title" translatable="yes">_Description</property>
+                <property name="use-underline">True</property>
+                <property name="tooltip-text" translatable="yes">Optional description of revocation</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

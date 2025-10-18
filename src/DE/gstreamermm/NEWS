@@ -1,0 +1,501 @@
+1.10.0:
+ * Remove gstreamermm-plugins-bad experimental module
+ * Deprecate plugins API
+ * Add more examples
+ * Implement GstNetClientClock wrapper
+ * Add GstSDPMedia wrapper
+
+1.8.0:
+ * Wrap more methods and classes
+ * Fix base plugin classes
+ * Review Gst::Structure and Gst::Caps API
+ * Add multiple examples, tests
+ * Enable C++11 interface
+
+1.4.3 (unstable):
+ * Add more methods to a wrapped classes.
+ * Wrapp classes: GstAllocator, GstAtomicQueue, GstContext.
+ * Fix miniobject's make_writable method.
+ * Add msvc support (vcxproj).
+ * Add example for elements with sometimes pads.
+ * Improve main page in documentation
+ * Fix refcount bug in Gst::Buffer::copy and QueryCaps::parse.
+ * Fix segfault Gst::QueryAllocation::parse_nth_allocation_meta.
+ * Add more unittests. 
+
+1.0.10 (unstable):
+
+ * Wrapped more methods
+
+1.0.8 (unstable):
+
+* Ported code to gstreamer-1.0
+
+0.10.11 (unstable):
+
+* Fix the media player example for MinGW.
+* Fix the MiniObject wrapper memory leak (Bug #608702).
+* Have the create() methods of the MiniObject derived classes return a derived
+  type and not the base type (Bug #683580).
+* Speed up library start-up by not loading plug-ins on initialization (Bug
+  #684006).
+
+0.10.10.2 (unstable):
+
+* Plugins: Remove conflict with GStreamer *_get_type() function names.
+
+0.10.10.1 (unstable):
+
+* Add a "Hello World" example.
+* Fix the build with the latest GStreamer and glibmm git sources.
+* Fix the build (hopefully) for MinGW32.
+
+0.10.10 (unstable):
+
+API:
+* Add new properties in classes.
+* AudioSink, AudioSrc, BaseSrc: Wrap the virtual functions.
+* BaseAudioSink:
+  - Add the [get|set]_drift_tolerance() methods.
+* BaseSink:
+  - Add the set_last_buffer(), is_last_buffer(), [get|set]_throttle_time()
+    methods.
+* Caps:
+  - Add the steal_structure() method and get_intersect() method accepting a
+    Gst::CapsIntersectMode enum.
+* Discover, DiscoverInfo:
+  - Add new API allowing for discovering information on URI's.
+* Element:
+  - Add the reguest_pad() and link_pads() methods.
+* ElementFactory:
+  - Add the can_[sink|src]_[all|any]_caps() get_documentation_uri(),
+    get_icon_name(), filter(), get_elements() and is_of_type() methods.
+* XOverlay:
+  - Add the got_window_handle(), set_window_handle() and set_render_rectangle()
+    methods.
+Plugins:
+* Add the funnel plug-in.
+
+0.10.9.1 (unstable):
+
+* Wrap the input-selector, output-selector and valve core plugins.
+* BaseTransform: Revisit the vfunc implementations.
+
+0.10.9 (unstable):
+
+* BaseTransform: Fix the vfunc implementations.
+* Documentation: Improve the main page.
+(José Alburquerque)
+
+0.10.8 (unstable):
+API:
+* BaseSink:
+  - Wrapped the "enable-last-buffer" property.
+  - Wrapped the set_caps_vfunc(), start_vfunc(), stop_vfunc(), unlock_vfunc(),
+    event_vfunc(), activate_pull_vfunc(), unlock_stop_vfunc(), and
+    render_list_vfunc() virtual functions (mostly manually).
+* Added BufferList and BufferListIterator.
+* Removed the optional API #ifdefs.  All the optional API is always built.
+(José Alburquerque)
+Fixes:
+* Really fix the build with GCC 4.5 (Diego E. Flameeyes Pettenò) Bug #626203
+  (Diego E. Flameeyes Pettenò).
+
+0.10.7.3 (unstable):
+* .Fix the build with GCC 4.5.
+  (Daniel Elstner)
+
+0.10.7.2 (unstable):
+* Refine the Doxygen main page.
+  (José Alburquerque)
+
+0.10.7.1 (unstable):
+* Add a main page to the Doxygen documentation.
+ (José Alburquerque)
+
+0.10.7 (unstable):
+
+Plugins:
+* Added AudioRate, Queue2 and SubtitleOvelay plugins.
+API:
+* BaseSrc: Wrapped new_seamless_segment().
+* Caps: Wrapped set_value() and can_intersect().
+* Event: Wrapped new EventSinkMessage() event.
+* MiniObject: Wrapped virtual functions along with the virtual functions of
+  its derived classes.
+* Registry: Wrapped get_feature_list_cookie().
+Maintenance:
+* Cleaned up class header docs.
+Fixes:
+* Gst::Message duration should use 'duration' for parameter names in methods.
+  (kitone) Bug #613311 (kitone).
+* gstreamermm should use correct GStreamer dependency. (David King, José
+  Alburquerque) Bug #612563 (David King).
+
+0.10.6 (unstable):
+
+Build:
+* Optimizations and library robustness
+  (Daniel Elstner)
+Plugin Generator:
+* Added convenience methods for plug-in action signals.  This allows signals
+  that are used in the C API by calling them with g_signal_emit() to be used
+  conveniently in C++.
+  (José Alburquerque)
+API:
+* CddaBaseSrc:
+  - Wrapped add_track() method.
+  - Wrapped virtual functions.
+* Refined MiniObject so that it is registered in the GType system.
+* MixerTrack:
+  - Added convenience method has_flags().
+* RingBuffer:
+  - Wrapped virtual functions.
+  - Re-wrote its helper class RingBufferSpec.
+* Added StreamVolume interface.
+* TaskPool:
+  - Wrapped virtual functions.
+* VideoSink:
+  - Wrapped center_rect() method.
+  - Wrapped property_show_preroll_frame().
+* Some documentation improvements.
+(José Alburquerque)
+Fixes:
+* Gst::Message[Waring|Error|Info]::parse_debug() segfaults. Bug #602949.
+  (kitone)
+* Use g_new() instead of new[] if memory will be freed with g_free(). Bug
+  #602928. (Carlo Wood)
+
+0.10.5.2 (unstable):
+
+* This release is a minor bug fix release mainly focusing on the devhelp
+  documentation.  With a new mm-common release, the devhelp documentation
+  will be correctly compiled even on systems with Automake 1.11.
+
+0.10.5.1 (unstable):
+
+* Move gstreamermm to the new mm-common build system.  The documentation is now
+  more glibmm and gtkmm-like.  Devhelp pages are also included and it is now
+  possible for the docs to appear on library.gnome.org.  This all thanks to the
+  new mm-common module.
+
+0.10.5 (unstable):
+
+* Distribute a local beautify docs script to fix the build with the latest
+  glibmm version (2.21.4.2).
+
+0.10.4 (unstable):
+
+* Fixed Gst::BufferFlag enum definition. Critial bug #590923 (missed in 0.10.3
+  release).
+
+0.10.3 (unstable):
+
+Plugins:
+* Added decodebin2, multifdsink, playbin, tcpserversink, theoraparse,
+  uridecodebin plug-ins.
+  (José Alburquerque)
+Examples:
+* Added new typefind example showing how to extract the mime type from a
+  stream/file.
+  (Murray Cumming)
+API:
+* Structure: Replace use of Glib::QueryQuark with Glib::ustrig in slots.
+* TagList: Added add_value(), add(), get_value() and get() Glib::ustring
+  overrides for tags not in the Gst::Tag enum.
+  (Murray Cumming)
+* Bin: Added convenience method add_ghost_pad().
+* GhostPad: Made ghost pad name in constructors optional.
+* TagSetter: Add Glib::ustring tag overrides for custom tags (not in Gst::Tag
+  enum).
+  (José Alburquerque, Murray Cumming)
+* BaseAudioSrc: Wrapped {get,set}_slave_method().
+* BaseSink: Wrapped do_preroll(), {get,set}_blocksize().
+* BaseSrc: Wrapped {get,set}_blocksize().
+* BaseTransform: Wrapped suggest(), reconfigure().
+* ColorBalance: Wrapped get_balance_type().
+* Element: Wrapped {get,set}_start_time(), lost_state().
+* Event: Overloaded the Event classes parse() methods.
+* Added MessageStepDone, MessageStepStart, MessageStructureChange,
+  MessageRequestState and MessageStreamStatus message classes.
+* Mixer: Wrapped get_mixer_type().
+* Navigation: Wrapped send_command().
+* Added TaskPool class.
+* Plugin: Wrapped add_dependency() and register_static() methods.
+* PropertyProbe: Wrapped methods and vfuncs.
+* Segment: Wrapped to_position() and set_running_time() methods.
+* Task: Wrapped {get,set}_pool(), set_priority(), set_state() and
+  set_thread_slots() methods.
+* Added TypeFind and TypeFindFactory classes to complement the new typefind
+* example.
+  (José Alburquerque)
+Fixes:
+* Removed no longer needed gst-inspect check from configure.ac.  Bug #587306.
+  (David King)
+
+0.10.2 (unstable):
+
+* Event: Added get_seqnum() and set_seqnum().
+* Message: Added get_seqnum() and set_seqnum().
+  (Murray Cumming)
+* AudioFilter: Added setup_vfunc().
+* AudioSink: Added prepare_vfunc(), write_vfunc(), get_delay_vfunc() and
+  reset_vfunc().
+* AudioSrc: Added prepare_vfunc(), read_vfunc(), get_delay_vfunc() and
+  reset_vfunc().
+* BaseAudioSink, BaseAudioSrc: Added create_ring_buffer() and
+  create_ring_buffer_vfunc().
+* BaseSink: Added buffer_alloc_vfunc().
+* BaseSrc: Added create_vfunc() do_seek_vfunc() and
+  prepare_seek_segment_vfunc().
+* BaseTransform: Added prepare_output_buffer_vfunc() and
+  before_transform_vfunc().
+* ChildProxy: Added lookup().
+* Clock: Added wait_vfunc().
+* ColorBalance: Added list_channels_vfunc().
+* Element: Added set_clock_vfunc() and get_query_types_vfunc().
+* Index: Added property_resolver(), get_writer_id_vfunc(), commit_vfunc() and
+  add_entry_vfun().
+* Interface: Added supported_vfunc().
+* Mixer:
+  - Added get_message_type(), list_tracks_vfunc(), set_volume_vfunc(),
+    get_option_vfunc() and get_mixer_flags_vfunc().
+  - Added and integrated mixer message classes with regular Gst::Message
+    classes.
+* Navigation: Added send_event_vfunc().
+* Preset, Tuner and VideoOrientation: Added vfuncs.
+* Added RingBuffer.
+* TagList, TagSetter: Replaced constants in namespace Tag with an enum Tag.
+  (Suggested by Daniel Elstner)
+* Added plug-ins TCPClientSrc, TCPClientSink and TCPServerSrc.
+* URIHandler: Added get_uri_vfunc() and set_uri_vfunc().
+  (José Alburquerque)
+
+Fixes:
+* Added --enable-warnings option using Daniel Elstner's dk-warn.m4 macro. Bug
+  #574648.
+  (David King)
+* Corrected the GstState cast in Gst::MessageStateChanged::parse(). Bug #574651.
+  (David King)
+* Fixed the build to be successful on Maemo platform. Bug #582439.
+  (Johannes Schmid, Murray Cumming, José Alburquerque)
+* General build fixes. Bugs #574844, #583568.
+  (José Alburquerque)
+
+0.10.1 (unstable):
+
+* Corrected version number in docs.
+
+0.10.0 (unstable):
+
+* Interface
+  - Added virtual function supported_vfunc().
+* XOverlay
+  - Added virtual functions set_xwindow_id_vfunc(), expose_vfunc() and
+    handle_events_vfunc().
+* Fixed video embedding of media player example with above changes.
+
+0.9.9 (unstable):
+
+* Merged gstreamerbase branch into the gstreamer branch (everything that
+  existed in the GstBase namespace now resides in the Gst namespace; GstBase
+  namespace does not exist).
+* Distributed plug-in source files instead of expecting them to be generated
+  after tarball is distributed (Deng Xiyue) Bug #565454.
+* Repaired Licensing inconsistencies (Deng Xiyue) Bugs #568950 and #545892.
+* Added Mixer, Navigation, PropertyProbe, Tuner, and VideoOrientation
+  interfaces and their related classes MixerTrack, MixerOptions, TunerChannel,
+  and TunerNorm.  Modified plug-in generated classes to derive from the
+  interfaces that the underlying GObject implements.
+* Re-added GhostPad (Marcus Brinkmann) Bug #539063.
+* BaseSink
+  - Added wait_clock() and wait_eos() overrides.
+* Added Preset interface.
+* Many const corrections.
+
+0.9.8 (unstable):
+
+* Added Gst::Event::get_flags().
+* Added default name overloads for Gst::Bin::create(), Gst::Pad::create() and
+  Gst::Pipeline::create().
+* Moved const tags to namespace Gst::Tag.
+* Added a generic INSTALL file and updated the README to fix bug #556570.
+* Removed gstreamermm dependency on gstreamerbasemm to fix bug #560601.  Added
+  GstBase::init*() methods with docs that initialize both gstreamermm and
+  gstreamerbasemm to compensate so that two init() calls (one for gstreamermm
+  and another for gstreamerbasemm) are not needed.
+* Added base classes AudioFilter, AudioSink, AudioSrc, BaseAudioSink,
+  BaseAudioSrc and CddaBaseSrc in gstreamerbasemm from which many plug-ins
+  derive.
+* Added the following core plug-ins: Gst::CapsFilter, Gst::FakeSink,
+  Gst::FakeSrc, Gst::FdSink, Gst::FdSrc, Gst::FileSink, Gst::FileSrc,
+  Gst::Identity, Gst::MultiQueue, Gst::Queue, Gst::Tee and Gst::TypeFind.
+* Added the following base plug-ins: GstBase::Adder, GstBase::AlsaMixer,
+  GstBase::AlsaSink, GstBase::AlsaSrc, GstBase::AudioConvert,
+  GstBase::AudioResample, GstBase::TestSrc, GstBase::CdParanoiaSrc,
+  GstBase::ClockOverlay, GstBase::DecodeBin, Gst::FfmpegColorSpace,
+  GstBase::GioSink, GstBase::GioSrc, GstBase::GioStreamSink,
+  GstBase::GioStreamSrc, GstBase::OggDemux, GstBase::OggMux, GstBase::PlayBin2,
+  GstBase::TextOverlay, GstBase::TextRenderer, GstBase::TheoraDec,
+  GstBase::TheoraEnc, GstBase::TimeOverlay, GstBase::VideoRate,
+  GstBase::VideoScale, GstBase, VideoTestSrc, GstBase::Volume,
+  GstBase::VorbisDec, GstBase::VorbisParse, GstBase::VorbisTag,
+  GstBase::XImageSink and GstBase::XvImageSink.
+* Modified examples to use the plug-ins where possible; added plug-in tests.
+
+0.9.7 (unstable):
+
+* Added AudioClock.
+* Bin:
+  - Added iterate_*() methods.
+  - Renamed find_unconnected_pad() to find_unlinked_pad().
+  - Added get_children_cookie().
+* Element: Renamed get_compatible_pad() to create_compatible_pad().
+* Event: Added copy() and create_writable().
+* Format: Added register_format(), formats_contain()
+  and iterate_format_definitions().
+  Renamed get_details(Format f, ...) to get_format_details().
+* Added Iterator.
+* MessageBuffering:
+  - Renamed get_*() methods to parse_*().
+  - Added set/get_stats*().
+* MiniObject:
+  - Added get_flags(), flag_is_set(), set_flag() and
+  unset_flags(). Uncommented copy().
+  - Added is_writable(), make_writable().
+* Object: Added save_thyself() and restore_thyself().
+* Added QueryApplication().
+* Structure: Addded fixate*() methods.
+* Xml: Made write_xml() Gst::write_xml_file(, and make_element()
+  static member of Gst::XML.
+* Added libxml++ and gstreamer-audio-0.10 as dependencies.
+* Documentation improvements.
+
+0.9.6 (unstable):
+
+* Added Gst::init() with no arguments to fix bug #539059.
+  (José Alburquerque)
+* Added BaseSink.
+* Added BaseSrc.
+* Added BaseTransform.
+  (José Alburquerque)
+* Bin:
+  - Make add() throw an exception, needed for chaining.
+    (Murray Cumming)
+  - Added get_children() and get_num_children().
+    (José Alburquerque)
+* Caps: Added set_simple().
+  (José Alburquerque)
+* Added ColorBalance and ColorBalanceChannel.
+  (José Alburquerque)
+* ElementFactory:
+  - Rename create() to create_element()
+  and add an override that takes no name.
+  (Murray Cumming)
+* GhostPad: Corrected the constructor implementations.
+  (José Alburquerque
+* Message: Implement MessageInfo::parse() and add a
+  method overload without the debug parameter.
+  (Murray Cumming)
+* Pad, PadTemplate: Corrected the constructor implementations.
+  (José Alburquerque)
+* Added PushSrc
+  (José Alburquerque)
+* Structure:
+  - Simplified memory management.
+  - Added several set_field() method overloads.
+  - Renamed get_*() to get_field(), and made them take actual types.
+    (Murray Cumming, José Alburquerque)
+  - Added get_*_error_quark().
+    (José Alburquerque)
+* TagList:
+  - Simplified memory management.
+    (Murray Cumming)
+  - Added add/get methods.
+  (José Alburquerque)
+* TagSetter:
+  - Added add_tag(), get_tag_list(), set_tag_merge_mode(), and get_tag_merge_mode().
+  - Added default value for merge_tags() mode parameter.
+  (José Alburquerque)
+* Const corrections.
+  (Murray Cumming, José Alburquerque)
+* Documentation Improvements
+  (José Alburquerque)
+
+
+0.9.5 (unstable):
+
+* Bin: Added properties and vfuncs.
+* ChildProxy: Added properties and vfuncs.
+* Clock:
+  - Added get/set_calibration().
+  - Added properties and vfuncs.
+* Element:
+  - Added found_tags() and found_tags_for_pad(), create() and parse().
+  - Used ArrayHandle<> for methods that return an array of QueryType.
+  - Added vfuncs.
+  - Derive from Gst::Interface.
+* Added GhostPad
+* Index: Added signals and properties. Made IndexEntry::assoc_map() const.
+* Added MessageTag.
+* Pad: Added add_{data,buffer,event}_probe() methods.
+* PadTemplate: Wrapped members name_template, direction, and presence.
+* Parse: Throw errors as exceptions.
+* Pipeline: Added properties.
+* Structure: Renamed is_empty() and get_size() methods to empty() and size(),
+  for consistency with the standard C++ library.
+* Added TagList.
+* Added TagSetter.
+* Xml: Added "object-loaded" signal.
+* Documentation:
+  - New media_player_gtkmm example which can play music or video files.
+  - Improved reference documenation.
+* A huge number of other improvements.
+  (José Alburquerque, José Alburquerque, and José Alburquerque)
+
+
+
+0.9.4 (unstable):
+
+* Bin: Added signals.
+  (José Alburquerque)
+* Bus: Added pop() methods.
+* Pad: Added  get_pad_template_caps(), alloc_buffer(),
+  alloc_buffer_and_set_caps(), get_range(), proxy_getcaps(), push, push_event(),
+  send_event(), event_default(), query, peer_query(), query_default(),
+  get_query_types(), get_query_types_default(), get_internal_links(),
+  get_internal_links_default(), chain().
+  Added have_data signal.
+  (Siavash Safi. Bug #517208.)
+* Element: Added get_factory().
+  (José Alburquerque)
+* Added ElementFactory, Filter, IndexFactory, Parse, Plugin, PluginFeature,
+  Task, UriHandler
+  (José Alburquerque)
+
+
+0.9.3 (unstable):
+
+* Added Buffer.
+  (Siavash Safi)
+* Bin: Derive from ChildProxy.
+* Added ChildProxy.
+* Caps: Added create_simple() and set_simple() methods that
+  work with Caps with only one structure.
+* Added PluginFeature, Plugin and ElementFactory.
+  (José Alburquerque)
+* Added Index.
+  (Siavash Safi. Bug #515373)
+* Improved tests and examples.
+* More build fixes.
+  (José Alburquerque)
+
+0.9.2 (unstable):
+
+Build fixes and installation fixes.
+(José Alburquerque)
+
+0.9.1 (unstable):
+
+First version, with some simple examples.
+(José Alburquerque, Siavash Safi, Milosz Derezynski, Murray Cumming)

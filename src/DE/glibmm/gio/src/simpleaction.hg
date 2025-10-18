@@ -1,0 +1,163 @@
+/* Copyright (C) 2011 The giomm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <glibmm/object.h>
+#include <giomm/action.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(glibmm/private/object_p.h)
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+typedef struct _GSimpleAction GSimpleAction;
+using GSimpleActionClass = GObjectClass;
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+
+namespace Gio
+{
+
+/** SimpleAction - A simple Action implementation.
+ * A SimpleAction is the obvious simple implementation of the Action
+ * interface. This is the easiest way to create an action for purposes of
+ * adding it to a SimpleActionGroup.
+ *
+ * See also Gtk::Action.
+ *
+ * @newin{2,32}
+ */
+class GIOMM_API SimpleAction : public Glib::Object, public Action
+{
+  _CLASS_GOBJECT(SimpleAction, GSimpleAction, G_SIMPLE_ACTION, Glib::Object, GObject, , , GIOMM_API)
+  _IMPLEMENTS_INTERFACE(Action)
+  _STRUCT_NOT_HIDDEN
+
+protected:
+  /** Creates a new action.
+   *
+   * The created action is stateless.
+   *
+   * @param name The name of the action.
+   */
+  explicit SimpleAction(const Glib::ustring& name);
+
+  /** Creates a new stateful action.
+   *
+   * @a state is the initial state of the action.  All future state values
+   * must have the same VariantType as the initial state.
+   *
+   * @param name The name of the action.
+   * @param state The initial state of the action.
+   */
+  SimpleAction(const Glib::ustring& name, const Glib::VariantBase& state);
+
+#m4 _CONVERSION(`const Glib::VariantType&',`const GVariantType*',`$3.gobj()')
+  _WRAP_CTOR(SimpleAction(const Glib::ustring& name, const Glib::VariantType& parameter_type), g_simple_action_new)
+
+  _WRAP_CTOR(SimpleAction(const Glib::ustring& name, const Glib::VariantType& parameter_type, const Glib::VariantBase& state), g_simple_action_new_stateful)
+
+public:
+
+  _WRAP_CREATE(const Glib::ustring& name)
+
+  _WRAP_METHOD_DOCS_ONLY(g_simple_action_new)
+  _WRAP_CREATE(const Glib::ustring& name, const Glib::VariantType& parameter_type)
+
+  //TODO: Add a templated version of this to avoid the need fo Gio::Variant by the caller.
+  _WRAP_METHOD_DOCS_ONLY(g_simple_action_new_stateful)
+  _WRAP_CREATE(const Glib::ustring& name, const Glib::VariantType& parameter_type, const Glib::VariantBase& state)
+
+  //TODO: Add a templated version of this to avoid the need fo Gio::Variant by the caller.
+  /** Creates a new stateful action.
+   *
+   * @a state is the initial state of the action.  All future state values
+   * must have the same VariantType as the initial state.
+   *
+   * @newin{2,38}
+   *
+   * @param name The name of the action.
+   * @param state The initial state of the action.
+   * @return A new SimpleAction.
+   */
+  _WRAP_CREATE(const Glib::ustring& name, const Glib::VariantBase& state)
+
+  //TODO: Use similar C API if they ever add it. Doing this manually is tedious. See https://bugzilla.gnome.org/show_bug.cgi?id=705655
+  //TODO: Create a derived SimpleToggleAction class for this?
+  //TODO: Document how the app must handle signal_activate() to call change_state().
+  /** Creates a new boolean stateful action.
+   *
+   * @a state is the initial state of the action.  All future state values
+   * must also be bool.
+   *
+   * @newin{2,38}
+   *
+   * @param name The name of the action.
+   * @param state The initial state of the action.
+   * @return A new SimpleAction.
+   */
+  static Glib::RefPtr<SimpleAction> create_bool(const Glib::ustring&name, bool state = false);
+
+  //TODO: Use similar C API if they ever add it. Doing this manually is tedious. See https://bugzilla.gnome.org/show_bug.cgi?id=705655
+  //TODO: Create a derived SimpleToggleAction class for this?
+  //TODO: Create convenience API that auto-changes the state, like Gtk::TreeView's append_column_editable()?
+  //  See https://bugzilla.gnome.org/show_bug.cgi?id=705133 (it's not documented clearly at all).
+  //TODO: Check whether glib now has API to use enums for this: See https://bugzilla.gnome.org/show_bug.cgi?id=705483
+  //TODO: Suggest other API that could be used to activate or discover the currently-select radio value.
+  /** Creates a new radio action with a string-based target value.
+   *
+   * @newin{2,38}
+   *
+   * @param name The name of the action.
+   * @param initial_state The initial state of the action.
+   * @return A new SimpleAction.
+   */
+  static Glib::RefPtr<SimpleAction> create_radio_string(const Glib::ustring& name, const Glib::ustring& initial_state);
+
+  //TODO: Use similar C API if they ever add it. Doing this manually is tedious. See https://bugzilla.gnome.org/show_bug.cgi?id=705655
+  //TODO: Create a derived SimpleToggleAction class for this?
+  //TODO: Create convenience API that auto-changes the state, like Gtk::TreeView's append_column_editable()?
+  //  See https://bugzilla.gnome.org/show_bug.cgi?id=705133 (it's not documented clearly at all).
+  //TODO: Check whether glib now has API to use enums for this: See https://bugzilla.gnome.org/show_bug.cgi?id=705483
+  //TODO: Suggest other API that could be used to activate or discover the currently-select radio value.
+  //TODO: Check that the need for type="i" in the XML is documented: See https://bugzilla.gnome.org/show_bug.cgi?id=704392#c14
+  /** Creates a new radio action with an integer-based target value.
+   *
+   * @newin{2,38}
+   *
+   * @param name The name of the action.
+   * @param initial_state The initial state of the action.
+   * @return A new SimpleAction.
+   */
+  static Glib::RefPtr<SimpleAction> create_radio_integer(const Glib::ustring& name, gint32 initial_state);
+
+  _WRAP_METHOD(void set_enabled(bool enabled = true), g_simple_action_set_enabled)
+
+  //TODO: Add templated version of this, renaming this to set_state_variant(), like Action::change_state()?
+  _WRAP_METHOD(void set_state(const Glib::VariantBase& value), g_simple_action_set_state)
+
+  _WRAP_METHOD(void set_state_hint(const Glib::VariantBase& state_hint), g_simple_action_set_state_hint)
+
+  _WRAP_PROPERTY("enabled", bool)
+  _WRAP_PROPERTY("name", Glib::ustring)
+  _WRAP_PROPERTY("parameter-type", Glib::VariantType)
+  _WRAP_PROPERTY("state", Glib::VariantBase)
+  _WRAP_PROPERTY("state-type", Glib::VariantType)
+
+#m4 _CONVERSION(`GVariant*',`const Glib::VariantBase&',`Glib::wrap($3, true)')
+
+  _WRAP_SIGNAL(void activate(const Glib::VariantBase& parameter), "activate", no_default_handler)
+  _WRAP_SIGNAL(void change_state(const Glib::VariantBase& value), "change-state", no_default_handler)
+};
+
+} // namespace Gio

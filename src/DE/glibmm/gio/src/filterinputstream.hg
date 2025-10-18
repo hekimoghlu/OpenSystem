@@ -1,0 +1,58 @@
+/* Copyright (C) 2008 The gtkmm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <giomm/inputstream.h>
+#include <glibmm/object.h>
+
+_DEFS(giomm,gio)
+_PINCLUDE(giomm/private/inputstream_p.h)
+
+namespace Gio
+{
+
+/** Filter Input Stream.
+ * This is a base class for input stream implementations that perform some kind of filtering operation on a base stream.
+ & Typical examples of filtering operations are character set conversion, compression and byte order flipping.
+ *
+ * @ingroup Streams
+ *
+ * @newin{2,16}
+ */
+class GIOMM_API FilterInputStream : public Gio::InputStream
+{
+  _CLASS_GOBJECT(FilterInputStream, GFilterInputStream, G_FILTER_INPUT_STREAM, Gio::InputStream, GInputStream, , , GIOMM_API)
+
+protected:
+  // This needs to be hand-coded because there is no public GFilterInputStream constructor.
+  explicit FilterInputStream(const Glib::RefPtr<InputStream>& base_stream);
+
+public:
+  _WRAP_METHOD(Glib::RefPtr<InputStream> get_base_stream(),
+               g_filter_input_stream_get_base_stream,
+               refreturn)
+
+  _WRAP_METHOD(Glib::RefPtr<const InputStream> get_base_stream() const,
+               g_filter_input_stream_get_base_stream,
+               refreturn, constversion)
+
+  _WRAP_METHOD(bool get_close_base_stream() const, g_filter_input_stream_get_close_base_stream)
+  _WRAP_METHOD(void set_close_base_stream(bool close_base = true), g_filter_input_stream_set_close_base_stream)
+
+  _WRAP_PROPERTY("base-stream", Glib::RefPtr<InputStream>)
+  _WRAP_PROPERTY("close-base-stream", bool)
+};
+
+} // namespace Gio

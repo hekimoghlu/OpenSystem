@@ -1,0 +1,115 @@
+/* completioncontext.h
+ *
+ * Copyright (C) 2009, 2010, 2011 Krzesimir Nowak
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <vector>
+
+#include <gtksourceview/gtksource.h>
+
+#include <glibmm/object.h>
+
+#include <gtksourceviewmm/completionactivation.h>
+#include <gtksourceviewmm/view.h>
+#include <gtksourceviewmm/completionprovider.h>
+#include <gtksourceviewmm/completionproposal.h>
+#include <gtksourceviewmm/completion.h>
+
+_DEFS(gtksourceviewmm,gtksourceview)
+_PINCLUDE(glibmm/private/object_p.h)
+
+
+namespace Gsv
+{
+
+class CompletionProvider;
+class Completion;
+class View;
+
+// TODO: need docs here. krnowak
+/** CompletionContext
+ *
+ * @newin{2,10}
+ */
+class CompletionContext : public Glib::Object
+{
+  _CLASS_GOBJECT(CompletionContext, GtkSourceCompletionContext, GTK_SOURCE_COMPLETION_CONTEXT, Glib::Object, GObject)
+public:
+#m4 _CONVERSION(`const Glib::RefPtr<CompletionProvider>&',`struct _GtkSourceCompletionProvider*',`Glib::unwrap($3)')
+#m4 _CONVERSION(`const std::vector<Glib::RefPtr<CompletionProposal> >&',`GList*',`Glib::ListHandler<Glib::RefPtr<CompletionProposal> >::vector_to_list($3).data()')
+
+  /** Providers can use this function to add proposals to the completion.
+   *
+   * They can do so asynchronously by means of the @a finished argument.
+   * Providers must ensure that they always call this function with @a finished
+   * set to @c true once each population (even if no proposals need to be
+   * added).
+   *
+   * @param provider A CompletionProvider.
+   * @param proposals The list of proposals to add.
+   * @param finished Whether the provider is finished adding proposals.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(void add_proposals(const Glib::RefPtr<CompletionProvider>& provider, const std::vector<Glib::RefPtr<CompletionProposal> >& proposals, bool finished), gtk_source_completion_context_add_proposals)
+
+  _IGNORE(gtk_source_completion_context_get_iter)
+  
+  /** Get the iter at which the completion was invoked.
+   *
+   * Providers can use this to determine how and if to match proposals.
+   *
+   * @return A Gtk::TextBuffer::iterator.
+   *
+   * @newin{2,10}
+   */
+  Gtk::TextBuffer::iterator get_iter();
+
+  /** Get the iter at which the completion was invoked.
+   *
+   * Providers can use this to determine how and if to match proposals.
+   *
+   * @return A Gtk::TextBuffer::const_iterator.
+   *
+   * @newin{2,10}
+   */
+  Gtk::TextBuffer::const_iterator get_iter() const;
+
+  /** Get the context activation
+   *
+   * @return The context activation.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_METHOD(CompletionActivation get_activation() const, gtk_source_completion_context_get_activation)
+
+  _WRAP_PROPERTY("activation", CompletionActivation)
+  _WRAP_PROPERTY("completion", Glib::RefPtr<Completion>)
+  // TODO? _WRAP_PROPERTY("iter", Gtk::TextBuffer::iterator)
+
+  /** Emitted when the current population of proposals has been cancelled.
+   *
+   * Providers adding proposals asynchronously should connect to this signal
+   * to know when to cancel running proposal queries.
+   *
+   * @newin{2,10}
+   */
+  _WRAP_SIGNAL(void cancelled(), "cancelled")
+};
+
+} /* namespace Gsv */
+

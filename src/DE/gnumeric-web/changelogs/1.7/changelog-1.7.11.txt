@@ -1,0 +1,585 @@
+2007-07-24  Jody Goldberg <jody@gnome.org>
+
+	* Release 1.7.11
+
+2007-07-23  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-control-gui.c (wbcg_set_transient) : renamed from
+	  wbcg_set_transient_for and remove the old virtual wrapper.
+
+	* icons/win32-gnumeric.ico : regenerate using icotool and the new
+	  tango icons.  Fixes the background. [#305311]
+
+2007-07-23  Morten Welinder  <terra@gnome.org>
+
+	* configure.in (python): survive missing python stuff.
+
+2007-07-22  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Beef up the python test logic from the gimp and try
+	  to make win32 work with it.
+
+2007-07-18  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the goffice req to svn trunk to get the new
+	  function.
+	* src/sheet-object-graph.c (sheet_object_graph_guru) : Use the new
+	  gog_guru_get_help_button to solve [#394181] until we split the docs
+	  between gnumeric and goffice.
+
+2007-07-22  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_move_range) : be more adaptive about how we
+	  invalidate the region.  If things are just being shifted we can
+	  pretend that we're moving whole cols/rows so that the relocation
+	  code can use the magic heuristics to extend/shorten partial regions.
+	[#439347]
+
+2007-07-22  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c: Move sheet direction from main toolbar to
+	Format->Sheet menu.
+
+2007-07-22  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c (handle_delayed_names) : don't dup ids.
+
+2007-07-22  Jody Goldberg <jody@gnome.org>
+
+	Coverity
+	* src/tools/goal-seek.c (goal_seek_bisection) : fix typo.
+
+2007-07-22  Jody Goldberg  <jody@gnome.org>
+
+	* src/sheet.c (PROP_CONVENTIONS) : new property.
+	(PROP_USE_R1C1) : made this a convenience wrapper for
+	(sheet_set_conventions) : rename.
+	(sheet_get_conventions) : renamed from sheet_conventions.
+
+	* src/workbook.c (RECALC_MODE) : new property.
+
+	* src/xml-sax-read.c (gnm_xml_attr_int) : make more rigorous.
+	(xml_sax_calculation) : add DateConvention.
+	(xml_sax_old_dateconvention) : new.
+	(xml_sax_sheet_start) : store the name of the expr conv.
+	(xml_sax_sheet_name) : assigned the named expr conv.
+
+	* src/xml-sax-write.c (xml_write_sheet) : Use an enum in place of a
+	  bool to store R1C1, for future expandability
+	(xml_write_calculation) : Store the DateConvention here, rather than
+	  in a magic element missing from the schema.
+	* src/xml-io.c (xml_sheet_read) : support new ExprConvention hook.
+	(xml_workbook_read) : support DateConvention in Calculation.
+
+2007-07-21  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_repeat_top): new
+	(xml_sax_repeat_left): new
+	(gnumeric_1_0_dtd): hook up xml_sax_repeat_top and xml_sax_repeat_left
+
+2007-07-21  Jody Goldberg <jody@gnome.org>
+
+	* src/selection.c (sv_selection_walk_step) : Be smarter about choosing
+	  a first col for tabs.  Going backwards can adjust the bounds.
+
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet) : invalidate the
+	  'first_tab_col' so that that when Enter is switched from moving to
+	  the right, to going up and down we do not jump back to the left as
+	  if the previous movement had been a tab.
+
+2007-07-19  Morten Welinder  <terra@gnome.org>
+
+	* src/parser.y (yylex): Fix long/int mixup causing #458158 on x64.
+
+2007-07-18  Jon K Hellan  <hellan@acm.org>
+
+	* configure.in: Fix build
+
+2007-07-17  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Add an icons subdir to figures to facilitate the
+	  creation chm files.  The stylesheets map 'warning' and the like to
+	  figures/icons/warning.png, I do not see where.  The simple solution
+	  is to dup the icons out of yelp, and into our tree with the correct
+	  names and location.
+
+2007-07-16  Jody Goldberg <jody@gnome.org>
+
+	From Coverity.
+	* src/xml-sax-read.c (xml_sax_hlink) : typo that would store the tip
+	  as the target.
+	* src/sheet.c (sheet_set_name) : Be extra anal about wb=NULL case.
+
+2007-07-15  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump to libgda-3.1.x, and libgnomedb-3.0.x
+
+2007-07-15  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_style_feedback) : We need to update the
+	  validation combo even if the style is the same. [#453525]
+
+2007-07-12  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-gconf.c : split out each of the implementations into.
+	* src/gnm-conf-gconf.c : here.
+	* src/gnm-conf-win32.c : here.
+	* src/gnm-conf-keyfile.c : and here.
+
+	* schemas/gnumeric-general.schemas.in : Add enter_moves_dir
+	* src/gnm-pane.c (gnm_pane_key_mode_sheet) : use it here.
+
+2007-07-13  Jody Goldberg <jody@gnome.org>
+
+	* gnumeric.xsd : update the schema with the ExprConventions and add
+	  some defaults.
+
+	* src/xml-sax-read.c (xml_sax_sheet_name) : handle the new
+	  ExprConvention flags, just A1/R1C1 for now, but future proof it.
+	* src/xml-sax-write.c (xml_write_sheet) : ditto.
+
+	* src/sheet.c (sheet_set_conventions) : replaces sheet_set_use_r1c1.
+	(gnm_sheet_set_property) : added 'conventions' and made use-r1c1 a
+	  convenience flag.
+	(gnm_sheet_get_property) : ditto.
+	(gnm_sheet_class_init) : ditto.
+	(sheet_dup) : use conventions rather than r1c1 flag.
+	(gnm_sheet_init) : init the convs directly.
+	(sheet_get_conventions) : renamed from sheet_conventions.
+
+2007-07-13  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : remove GTK_DISABLE_DEPRECATED for now.  Gtk trunk has
+	  deprecated GtkTooltips.
+
+2007-07-12  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet-control-gui.c (scg_redraw_headers) : fix logic reversal
+	  from the gnm-canvas/gnm-pane merging.
+
+2007-07-12  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (gnm_conventions_new_full) : init input.range_ref
+	  here so that all implemenations have something.  Fixes crash on oleo
+	  import.
+	(parse_util_init) : not here.
+
+2007-07-09  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* Makefile.am: don't compile the component for now as it is
+	unusable after gnome-print support removal.
+	* configure.in: ditto.
+
+2007-07-06  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : Provide a way to redirect the python headers for
+	  cross compilation.
+
+2007-07-02  Jody Goldberg <jody@gnome.org>
+
+	* src/parse-util.c (std_output_string) : virtualize string escaping.
+	* src/expr.c (do_expr_as_string) : use it here.
+
+2007-07-02  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : avoid putting newlines at the end of python output.
+
+2007-07-02  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : handle missing gconf m4 macros
+
+2007-07-01  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_edit_line_set) : doh! order things
+	  consistently.
+
+2007-06-27  Jody Goldberg <jody@gnome.org>
+
+	* src/gnm-pane.c (gnm_pane_dispose) : chain up properly to avoid
+	  crashing on exit with canvas widgets.
+
+2007-06-27  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.c (print_info_load_defaults) : Do _not_ clear the
+	  page breaks here, that wipes out any that already existed.
+	(print_info_new) : do it here instead.
+
+	* src/print-info.h : rename from v_pagebreak/h_pagebreak ->
+	  pagebreak.{v,h}.  Remove first/last until we know what they do.
+
+2007-06-27  Jody Goldberg <jody@gnome.org>
+
+	* src/colrow.c (colrow_reset_defaults) : new utility routine for the
+	  ODF importer to search for cols/rows that are effectively the same
+	  as the defaults and to reset their default status.
+
+	* src/colrow.h (colrow_free) : new, to help clarify the code.
+
+	* src/sheet.c (sheet_col_destroy) : use colrow_free instead of a
+	  direct call to g_free.
+	(sheet_row_destroy) : ditto.
+
+2007-06-25  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_order): new
+	(GsfXMLInNode): hook up xml_sax_print_order
+	* src/print.c (compute_sheet_pages): add warning
+
+2007-06-25  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/gnumeric-gconf.c (gnm_gconf_set_printer_header): do not call
+	  go_conf_set_str_list with null arguments
+
+2007-06-19  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (sheet_set_direction) : queue the respan _after_ we
+	  toggle the direction otherwise the redraw might do a span calc based
+	  on the old value.
+
+	* src/print-info.c (gnm_page_breaks_dup) : handle NULL for the
+	  sheet_dup case.
+
+2007-06-18  Jody Goldberg <jody@gnome.org>
+
+	* src/gnumeric-pane.c : Merge with
+	* src/gnumeric-canvas.c : into
+	* src/gnm-pane.c : this new amalgamated file.  The difference between
+	  the old GnmCanvas and GnumericPane was arbitrary and more of a
+	  result of history than design.  Their state was co-mingled and it
+	  was long past time to cleanup the mess and merge them.
+
+2007-06-18  Morten Welinder  <terra@gnome.org>
+
+	* src/print-cell.c (print_cell_gtk): Tentatively fix crash.
+	[#448864]
+
+	* src/xml-sax-read.c (xml_sax_cell_content): Use gnm_cell_set_text
+	only as a last resort.
+	(struct XMLSaxParseState): Add convs member.
+	(xml_sax_validation_expr_end, xml_sax_condition_expr_end,
+	xml_cell_set_array_expr, xml_sax_cell_content,
+	handle_delayed_names): Use conventions.
+	(xml_sax_sheet_name): Handle forgotten "protected" attribute.
+	(xml_sax_sheet_start, xml_sax_sheet_start, xml_sax_sheet_name):
+	Handle R1C1.  Fixes #448714.
+
+	* src/xml-sax-write.c (xml_write_sheet): Save R1C1 flag when set.
+	(gnm_xml_io_conventions): Globalize and rename from
+	xml_io_conventions.
+
+2007-06-17  Jody Goldberg <jody@gnome.org>
+
+	* src/xml-sax-read.c (gnm_xml_file_open): Init progress counter to
+	  avoid use of uninitialized memory.
+
+2007-06-17  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-control-gui.c (scg_redraw_range): Restrict to visible
+	pane area here.
+	* src/sheet-view.c (sv_redraw_range): Not here.
+
+2007-06-15  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.c (print_info_free) : release the page breaks.
+	(print_info_load_defaults) : init them.
+	(print_info_dup) : dup them.
+	(print_info_set_breaks) : new.
+	(gnm_page_breaks_new) : new.
+	(gnm_page_breaks_dup) : new.
+	(gnm_page_breaks_free) : new.
+	(gnm_page_breaks_append_break) : new.
+
+	* src/print-info.h (GnmPageBreakType) : new.
+	(GnmPageBreak) : new.
+
+	* src/parse-util.c (gnm_expr_parse_str_simple) : rename arg to be more
+	  consistent.
+
+2007-06-15  Morten Welinder  <terra@gnome.org>
+
+	* src/sheet-view.c (sv_redraw_range): Restrict to drawing to what
+	is visible.  Fixes #445617.
+
+	* src/sheet-control-gui.c (scg_recompute_visible_region): Renamed
+	from scg_compute_visible_region.  All users changed.
+	(scg_get_visible_region): New virtual.
+
+2007-06-14  Jody Goldberg <jody@gnome.org>
+
+	* src/item-edit.c (ie_layout) : Fix RTL mode and cleanup the handling
+	  of merges and margins.
+	(get_top_left) : We handle the +1 extension to get inclusion of the
+	  bounds when drawing not when measuring.
+	(item_edit_set_property) : Merges in RTL need special handling.
+
+	* src/gnumeric-pane.c (gnm_pane_edit_start) : remove visibility check
+	  on creation.  That is wrong in multiple ways that would seemingly
+	  disable editing for no obvious reason.
+	    - editing a merged cell with corner outside the visible range
+	    - editing a position where the user had scrolled away from the
+	      editpos
+
+2007-06-13  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Prevent crash if we fail to load
+	the workbook.
+
+2007-06-10  Jody Goldberg <jody@gnome.org>
+
+	* src/item-grid.c (item_grid_button_press) : Limit mouse button
+	  selection capability in protected sheets.
+
+	* src/selection.c (sheet_selection_is_allowed) : new.
+	(walk_boundaries) : some initial work on walking only permissible
+	  cells in a protected sheet.  There are still some performance issues
+	  when wrapping.
+	* src/selection.c (sv_selection_walk_step) : when protected, we can
+	  wrap into other rows and columns.
+
+2007-06-10  Jody Goldberg <jody@gnome.org>
+
+	* src/print-info.c (pdf_write_workbook) : move here from sscovert.
+	(print_init) : and register the saver here.
+
+	* src/ssconvert.c (main) : moved registration from here.
+
+2007-06-10  Jody Goldberg <jody@gnome.org>
+
+	* src/workbook-view.c (wb_view_style_feedback) : fix placement when
+	  applied to merged cells.
+
+2007-06-10  Jody Goldberg <jody@gnome.org>
+
+	* configure.in : bump the gsf req to get the OpenPkg code that just
+	  moved there from our excel plugin.
+
+2007-06-10  Jody Goldberg <jody@gnome.org>
+
+	* src/sheet.c (gnm_sheet_set_property) : Support the XL style sheet
+	  protection capabilities.
+	(gnm_sheet_get_property) : ditto.
+	(gnm_sheet_init) : ditto.
+	(gnm_sheet_class_init) : ditto.
+	(sheet_dup) : ditto.
+
+	(sheet_col_set_default_size_pts) : add some validation just in case.
+
+2007-06-08  Jody Goldberg <jody@gnome.org>
+
+	* src/item-grid.c (item_grid_draw) : offset needs to know about RTL
+	  when skipping a merged region. [#442463]
+	(item_grid_draw_merged_range) : drawing diagonals needs to respect
+	  RTL.  [442467]
+
+2007-06-08  Jody Goldberg <jody@gnome.org>
+
+	* src/item-cursor.c (item_cursor_reposition) : simplify slightly.
+	(item_cursor_bound_set) : patch logic error.
+	(cb_move_cursor) : now that we do not need to clip, handle the
+	  make-visible here...
+	(cb_autofill_scroll) : and here.
+	(item_cursor_update) : remove the clip here. [#444610]
+
+2007-06-04  Morten Welinder  <terra@gnome.org>
+
+	* src/selection.c (cb_range_to_string): Use rangeref_as_string to
+	get r1c1 right.  [#443832]
+
+2007-06-03  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* src/collect.c: (gnm_slist_sort_merge), (gnm_strip_missing),
+	(float_range_function2): replace union_of_int_sets by a more
+	performant functon, and rename strip_missing.
+	* src/collect.h: ditto.
+
+2007-05-30  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_page_cells): remove unused clipping
+	(print_page_col_headers): fix rtl case
+	(print_page_row_headers): fix rtl case
+	(print_page): fix rtl case
+
+2007-05-28  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_titles): deleted
+	(print_header_gtk): new
+	(print_page_col_headers): new
+	(print_page_row_headers): new
+	(setup_scale): deleted
+	(print_page): some cleanup
+	(compute_scale_fit_to): some simplification
+	  and handle header
+	(compute_sheet_pages_across_then_down): handle headers
+	(compute_sheet_pages): ditto
+
+2007-05-25  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-io.c (xml_init): Install a mime type for the saver if
+	goffice supports it.
+
+2007-05-22  Morten Welinder  <terra@gnome.org>
+
+	* src/item-bar.c (item_bar_calc_size): Tentative fix for Pango
+	critical, #440514.
+
+2007-05-21  Morten Welinder  <terra@gnome.org>
+
+	* src/wbcg-actions.c (cb_file_quit): Call new dialog_quit.
+
+	* src/gui-file.c (gui_file_save): Grab the size from a wbcg that
+	refers to the right workbook.
+	(gui_file_save_as): Ditto.  Also refer to the right wbcg when
+	looking for saver type.
+
+	* src/workbook-control-gui.c (wbcg_close_if_user_permits): Make
+	static.
+	(wbcg_show_save_dialog): Make static.
+	(wbcg_find_for_workbook): New function.
+
+2007-05-19  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* xml-sax-read.c (xml_sax_print_titles): new
+	(GsfXMLInNode): hook up xml_sax_print_titles
+
+2007-05-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* xml-sax-read.c (xml_sax_print_grid): new
+	(GsfXMLInNode): hook up xml_sax_print_grid
+	* style-border.c (style_border_set_gtk_dash): even for 
+	  GNM_STYLE_BORDER_NONE (gridline only) do we need to set the 
+	  line width.
+
+2007-05-17  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/sheet-style.c (cb_style_extent): also adjust top left
+	(sheet_style_get_extent): fix description
+
+2007-05-17  Morten Welinder  <terra@gnome.org>
+
+	* src/application.c (gnm_app_history_get_list): Take max-length
+	argument to avoid potential stat-storm.  All callers changed.
+
+	* src/wbcg-actions.c: Hook up FileHistoryFull.
+
+2007-05-16  Morten Welinder  <terra@gnome.org>
+
+	* src/main-application.c (main): Put files from the command line
+	into the history.
+
+	* src/application.c (gnm_app_create_opener_filter): Don't add
+	mimes.  Avoid adding very generic suffixes.
+
+	* src/wbc-gtk.c (wbc_gtk_reload_recent_file_menu): Show no more
+	than 9 entries.
+
+	* src/xml-io.c (xml_init): The sax importer is no longer
+	experimental.
+
+	* src/application.c (compare_mru): Sort by last-visited.
+
+2007-05-15  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_vcenter): simplify
+	(ml_sax_print_hcenter): simplify
+	(xml_sax_monochrome): new
+	(xml_sax_even_if_only_styles):
+	(xml_sax_orientation): explicitly mention "landscape" but default
+	  portrait
+	(GsfXMLInNode): hook up xml_sax_monochrome and 
+	  xml_sax_even_if_only_styles
+	* src/print.c (cp_gtk_page_setup): new
+	(gnm_request_page_setup_cb): new
+	(gnm_print_sheet) : set monochrome if required and hook up
+	  gnm_request_page_setup_cb.
+	
+2007-05-15  Jean Brefort  <jean.brefort@normalesup.org>
+
+	* configure.in: test for go_render_generall instead
+	of go_render_numberl which is gone.
+
+2007-05-11  Morten Welinder  <terra@gnome.org>
+
+	* src/xml-sax-read.c (xml_sax_sheet_start): Load tab text colour
+	too.  [#437743]
+
+2007-05-11  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* xml-sax-read.c (xml_sax_print_vcenter): new
+	(xml_sax_print_hcenter): new
+	(GsfXMLInNode): hook up above functions
+	* print.c (print_page): center printout if requested
+
+2007-05-09  Morten Welinder  <terra@gnome.org>
+
+	* src/cell-draw.c (cell_finish_layout): Fix problem with
+	non-expanded format fillers.
+
+2007-05-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/print.c (print_page): leave space for headers and footers
+	(compute_sheet_pages_across_then_down): ditto
+
+2007-05-07  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* src/xml-sax-read.c (xml_sax_print_margins): use 
+	  print_info_set_edge_to_*
+	* src/gnumeric-gconf.h (gnm_gconf_set_print_tb_margins): new 
+	  arguments
+	* src/gnumeric-gconf.c (gnm_gconf_set_print_tb_margins): new
+	  individual arguments
+	* src/xml-sax-write.c (xml_write_print_info): adjust 
+	  print_info_get_margins for new arguments
+	* src/xml-io.c (xml_sax_print_margins): use
+	  print_info_set_edge_to_*
+	* src/print-info.h (PrintMargins): delete
+	(PrintInformation): new fields
+	(print_info_get_margins): new arguments
+	(print_info_set_edge_to_above_footer): new
+	(print_info_set_edge_to_below_header): new
+	* src/print-info.c (print_info_get_margins): new arguments
+	(print_info_set_edge_to_above_footer): new
+	(print_info_set_edge_to_below_header): new
+	(print_info_load_defaults): handle new fields
+	(page_setup_get_paper): work around gtk bug 426416
+	(print_info_set_page_setup): adjust for new arguments of 
+	  print_info_get_margins
+
+2007-05-04  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: new paper-orientation schema
+	* src/gnumeric-gconf.c (gnm_conf_init_page_setup): initialize orientation
+	(gnm_gconf_set_page_setup): save orientation
+	* src/gnumeric-gconf-priv.h (PRINTSETUP_GCONF_PAPER_ORIENTATION): new
+	
+2007-05-04  Morten Welinder  <terra@gnome.org>
+
+	* src/ssconvert.c (main): Install a PDF exporter.
+
+	* src/print.c (gnm_print_sheet): Add parameter export_dst for pdf
+	file generation.  All callers changed.
+
+2007-05-03  Andreas J. Guelzow <aguelzow@pyrshep.ca>
+
+	* schemas/gnumeric-dialogs.schemas.in: add new schemas for margins
+	and paper
+	* src/gnumeric-gconf-priv.h (PRINTSETUP_GCONF_MARGIN_GTK_TOP): new
+	(PRINTSETUP_GCONF_MARGIN_GTK_BOTTOM): new
+	(PRINTSETUP_GCONF_MARGIN_GTK_LEFT): new
+	(PRINTSETUP_GCONF_MARGIN_GTK_RIGHT): new
+	(PRINTSETUP_GCONF_PAPER): new
+	* src/gnumeric-gconf.c (gnm_conf_init_page_setup): new
+	(gnm_conf_init_print_settings): call gnm_conf_init_page_setup
+	(gnm_gconf_set_page_setup): save page setup
+	* src/print-info.h (page_setup_set_paper): new
+	(print_info_set_paper_width_height): delete
+	(page_setup_get_paper): new
+	* src/print-info.c (page_setup_set_paper): new
+	(print_info_set_paper_width_height): delete
+	(page_setup_get_paper): new
+	(print_info_set_paper): use page_setup_set_paper
+	(print_info_get_paper): use page_setup_get_paper
+	(print_info_set_page_setup): preserve margins
+	
+2007-05-03  Morten Welinder <terra@gnome.org>
+
+	* configure.in: Post-release bump.

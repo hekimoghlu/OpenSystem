@@ -1,0 +1,89 @@
+/* gstreamermm - a C++ wrapper for gstreamer
+ *
+ * Copyright 2008-2016 The gstreamermm Development Team
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free
+ * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <gst/audio/gstaudioclock.h>
+
+_PINCLUDE(gstreamermm/private/systemclock_p.h)
+
+// TODO: remove this check after we require at least gstreamer 1.12
+#if GST_VERSION_MINOR < 12
+#define GSTMM_AUDIO_CLOCK_CAST(obj) GST_CLOCK(obj)
+#else
+#define GSTMM_AUDIO_CLOCK_CAST(obj) GST_AUDIO_CLOCK(obj)
+#endif
+
+namespace
+{
+
+extern "C"
+{
+
+static GstClockTime AudioClock_GetTime_gstreamermm_callback(GstClock* clock, void* data)
+{
+  Gst::AudioClock::SlotGetTime* the_slot = static_cast<Gst::AudioClock::SlotGetTime*>(data);
+
+  try
+  {
+    return (*the_slot)(Glib::wrap(clock, true));
+  }
+  catch(...)
+  {
+    Glib::exception_handlers_invoke();
+  }
+
+  return 0; // arbitrary value
+}
+
+} // extern "C"
+
+} // anonymous namespace
+
+namespace Gst
+{
+
+AudioClock::AudioClock(const Glib::ustring& name, const SlotGetTime& time_slot)
+  : _CONSTRUCT("name", (name.empty() ? static_cast<char*>(0) : name.c_str()))
+{
+  // The slot is dynamically allocated because it is called each time the time
+  // is gotten.
+  m_slot.reset(new SlotGetTime(time_slot));
+
+  // The following lines are taken verbatim from gst_audio_clock_new() after
+  // the call to g_object_new() because it seems that bug #545782 will not be
+  // accepted.
+  gobj()->func = &AudioClock_GetTime_gstreamermm_callback;
+  gobj()->user_data = m_slot.get();
+}
+
+Gst::ClockTime AudioClock::adjust(Gst::ClockTime time)
+{
+  return static_cast<Gst::ClockTime>(gst_audio_clock_adjust(GSTMM_AUDIO_CLOCK_CAST(gobj()), static_cast<GstClockTime>(time)));
+}
+
+Gst::ClockTime AudioClock::get_time() const
+{
+  return static_cast<Gst::ClockTime>(gst_audio_clock_get_time(GSTMM_AUDIO_CLOCK_CAST(gobj())));
+}
+
+void AudioClock::invalidate()
+{
+  gst_audio_clock_invalidate(GSTMM_AUDIO_CLOCK_CAST(gobj()));
+}
+
+} //namespace Gst

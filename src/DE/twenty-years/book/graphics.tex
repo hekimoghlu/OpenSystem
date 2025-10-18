@@ -1,0 +1,109 @@
+\chapter{The Quest for Beautiful Graphics}
+
+Starting \GNOME\ was possible because the \gls{GTK} toolkit had already
+been extracted from the \gls{GIMP} --- this made it possible to write
+stand-alone applications without having the \gls{GIMP} installed.
+
+And before that?  \gls{GTK} was started precisely because there was no
+good, free toolkit for graphical user interfaces before that.  There
+was the ``standard'' X Toolkit --- really, a toolkit construction kit --- and
+the X Athena Widgets (Xaw), which were hard to program and looked
+ugly.  There was Motif, a proprietary toolkit which was very much in
+vogue for proprietary applications for Unix.\footnote{For a detailed
+  explanation of how the X window system works, and for the history of
+  the ``new'' additions to make it friendly to high-quality graphics,
+  you may want to read \cite{magcius-xplain}.}
+
+The first versions of the \gls{GIMP} were written with Motif.  This
+made it impossible for people to write plug-ins, or even to contribute
+to the core, without having Motif licenses.  The \gls{GIMP}'s authors
+wrote the plugin API so that it would let plugins create very simple
+user interfaces by requesting a few text-entry or numerical fields.
+In turn, the core GIMP process, which was linked to Motif, would
+generate the appropriate dialogs and widgets based on the plugins'
+requests.
+
+For the \gls{GIMP} 0.60, Peter Mattis started writing an entirely new
+toolkit called GTK: the GIMP Toolkit.  The API looked very different
+from what we have now.  But from the start --- being the core of a
+graphics-heavy program --- it had good support for displaying RGB
+bitmaps, something that was hard to do in toolkits derived from Xt.
+At that time, graphics cards with 24 bits per pixel were rare; most
+PCs and workstations had 8-bit indexed color graphics.  GTK had all
+the necessary machinery to quantize, dither, and display 24-bit RGB
+buffers relatively easily.
+
+Still, we didn't have an easy, generic way to load image files.  The
+GIMP knew how to load formats like GIF, PNG, and JPEG with its
+plugins, but even its internal icons for the user interface were
+defined in simple, ad-hoc formats that were easy to parse from a C
+program.
+
+\section{Imlib}
+
+Imlib was the library that the Enlightenment window manager used to
+load raster image files.  It had been written exactly to do that, and
+the API reflected it.\footnote{The Imlib source code is still
+  available at \url{https://git.gnome.org/browse/archive/imlib/}}
+
+Imlib had an API that was good for Enlightenment, but not very
+convenient for a general-purpose image loader.  You could specify a
+filename to load, and you would get back a handle to an Imlib object.
+From that handle you could render the image into an X pixmap, which is
+a server-side resource.
+
+Imlib had some peculiarities due to being used for a window manager's
+graphics.  It included a cache for loading images from files, so that
+the window manager could ask it to repeatedly load the same image ---
+say, a beveled button that was reused several times in a window's
+title bar --- and get the same X pixmap back.  It was not possible to
+separate the caching from loading or rendering.  And when an image was
+finally freed, its data could remain in the cache indefinitely.
+
+Also, Imlib really wanted the user to render the whole image into an X
+pixmap.  It was not possible to render only a sub-region.  This put a
+lot of pressure on the X server whenever a large picture was
+loaded.\footnote{Although at that time digital cameras were just
+  started to get popular, they only generated 640x480 pixel images.
+  To get high-quality raster images, one used a scanner.  Still,
+  images larger than about the size of a computer monitor's resolution
+  were considered ``very big''.}
+
+Also, Imlib only supported 1-bit transparency, that is, a simple mask
+for ``shaped'' images.  It was pretty hard to support full
+transparency, or an alpha channel, with the graphics hardware and X
+APIs available back then.
+
+Imlib was very constrained to the hardware limitations at the time.
+For example, it was very concerned with having the correct X colormap
+(an RGB palette with a limited number of colors) and X visual (a
+description of a graphics card's capabilities) corresponding to the
+window on which you were going to render your image.  This is very
+different from today's APIs, which all assume ARGB buffers and 24-bit
+color displays.
+
+\section{Libart}
+
+
+
+\section{GdkPixbuf}
+
+
+
+Libart
+
+librsvg
+
+Itsy / handhelds, Xfixes, XRANDR, Xrender - the modernization of X
+
+Cairo
+
+Compiz and XGL.  David Reveman.
+
+GLX
+
+Clutter
+
+Mutter
+
+iains-blingstastic-bucket-of-bling
